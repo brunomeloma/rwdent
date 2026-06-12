@@ -2710,13 +2710,28 @@ async function loadFinanceiro(){
     try{ taxasCfg    = JSON.parse(data.taxas_cfg   || '{}'); }catch(e){}
     try{ combos      = JSON.parse(data.combos      || '[]'); }catch(e){ combos=[]; }
     try{ descCfg     = JSON.parse(data.desc_cfg    || '{}'); }catch(e){}
+    // Se veio vazio do banco, carrega os padrões
+    if(!procs.length){
+      procs  = DEFAULT_PROCS_FIN.map((p,i)=>({...p,id:p.id||i+1}));
+      nextProcId = 103;
+    }
+    if(!mats.length){
+      mats   = DEFAULT_MATS_FIN.map((m,i)=>({...m,id:m.id||i+1}));
+      nextMatId = 91;
+    }
+    if(!combos.length){
+      combos = DEFAULT_COMBOS_FIN.map(c=>({...c}));
+      nextComboId = 207;
+    }
+    // Salva se veio vazio (garante que próxima vez já tem dados)
+    if(!data.procs || data.procs==='[]') await saveFinanceiro();
     // Reconstrói nextIds
-    nextProcId  = procs.length  ? Math.max(...procs.map(p=>p.id||0))   + 1 : 1;
-    nextMatId   = mats.length   ? Math.max(...mats.map(m=>m.id||0))    + 1 : 1;
+    nextProcId  = procs.length  ? Math.max(...procs.map(p=>p.id||0))   + 1 : 103;
+    nextMatId   = mats.length   ? Math.max(...mats.map(m=>m.id||0))    + 1 : 91;
     nextVendaId = vendas.length ? Math.max(...vendas.map(v=>v.id||0))  + 1 : 1;
-    nextComboId = combos.length ? Math.max(...combos.map(c=>c.id||200))+ 1 : 201;
+    nextComboId = combos.length ? Math.max(...combos.map(c=>c.id||200))+ 1 : 207;
   } else {
-    // Primeira vez — carrega dados padrão completos do Pétala
+    // Primeira vez — sem registro no banco
     procs   = DEFAULT_PROCS_FIN.map((p,i)=>({...p,id:p.id||i+1}));
     mats    = DEFAULT_MATS_FIN.map((m,i)=>({...m,id:m.id||i+1}));
     combos  = DEFAULT_COMBOS_FIN.map(c=>({...c}));
