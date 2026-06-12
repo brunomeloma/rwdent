@@ -1236,15 +1236,19 @@ function renderPatientDetail(abaAtiva){
       <div id="pac-aba-odonto" style="display:${abaAtiva==='odonto'?'':'none'};">
         <div style="margin-top:14px;">
           <div style="overflow-x:auto;padding:8px 0;">
-            <div style="text-align:center;font-size:11px;font-weight:700;color:var(--rose-text);text-transform:uppercase;margin-bottom:6px;">Superior</div>
+            <div style="text-align:center;font-size:11px;font-weight:700;color:var(--rose-text);text-transform:uppercase;margin-bottom:6px;">Superior — Permanentes</div>
             <div class="odonto-arcada" id="pac-arc-sup"></div>
+            <div style="text-align:center;font-size:10px;color:var(--rose-text);margin:4px 0;">— Decíduos superiores —</div>
+            <div class="odonto-arcada" id="pac-arc-dec-sup"></div>
             <div style="display:flex;align-items:center;gap:8px;margin:6px 0;">
               <div style="flex:1;height:1px;background:var(--rose-light);"></div>
               <span style="font-size:10px;color:var(--rose-text);font-weight:700;">DIR ←→ ESQ</span>
               <div style="flex:1;height:1px;background:var(--rose-light);"></div>
             </div>
+            <div class="odonto-arcada" id="pac-arc-dec-inf"></div>
+            <div style="text-align:center;font-size:10px;color:var(--rose-text);margin:4px 0;">— Decíduos inferiores —</div>
             <div class="odonto-arcada" id="pac-arc-inf"></div>
-            <div style="text-align:center;font-size:11px;font-weight:700;color:var(--rose-text);text-transform:uppercase;margin-top:6px;">Inferior</div>
+            <div style="text-align:center;font-size:11px;font-weight:700;color:var(--rose-text);text-transform:uppercase;margin-top:6px;">Inferior — Permanentes</div>
           </div>
           <!-- legenda -->
           <div style="display:flex;flex-wrap:wrap;gap:6px;margin:10px 0;justify-content:center;" id="pac-odonto-legenda"></div>
@@ -1854,7 +1858,11 @@ const DENTE_NOME = {
   11:'Inc. Central',12:'Inc. Lateral',13:'Canino',14:'Pré-molar 1',15:'Pré-molar 2',16:'Molar 1',17:'Molar 2',18:'Siso',
   21:'Inc. Central',22:'Inc. Lateral',23:'Canino',24:'Pré-molar 1',25:'Pré-molar 2',26:'Molar 1',27:'Molar 2',28:'Siso',
   31:'Inc. Central',32:'Inc. Lateral',33:'Canino',34:'Pré-molar 1',35:'Pré-molar 2',36:'Molar 1',37:'Molar 2',38:'Siso',
-  41:'Inc. Central',42:'Inc. Lateral',43:'Canino',44:'Pré-molar 1',45:'Pré-molar 2',46:'Molar 1',47:'Molar 2',48:'Siso'
+  41:'Inc. Central',42:'Inc. Lateral',43:'Canino',44:'Pré-molar 1',45:'Pré-molar 2',46:'Molar 1',47:'Molar 2',48:'Siso',
+  51:'Dec. Inc. Central',52:'Dec. Inc. Lateral',53:'Dec. Canino',54:'Dec. Molar 1',55:'Dec. Molar 2',
+  61:'Dec. Inc. Central',62:'Dec. Inc. Lateral',63:'Dec. Canino',64:'Dec. Molar 1',65:'Dec. Molar 2',
+  71:'Dec. Inc. Central',72:'Dec. Inc. Lateral',73:'Dec. Canino',74:'Dec. Molar 1',75:'Dec. Molar 2',
+  81:'Dec. Inc. Central',82:'Dec. Inc. Lateral',83:'Dec. Canino',84:'Dec. Molar 1',85:'Dec. Molar 2'
 };
 const COND_PT = {higido:'Hígido',carie:'Cárie',restaurado:'Restaurado',extraido:'Extraído',canal:'Canal',coroa:'Coroa',implante:'Implante',fratura:'Fratura',selante:'Selante',outro:'Outro'};
 const COND_COR = {higido:'#fff',carie:'#ffcdd2',restaurado:'#c8e6c9',extraido:'#eee',canal:'#fff9c4',coroa:'#bbdefb',implante:'#e1bee7',fratura:'#ffccbc',selante:'#b2ebf2',outro:'#f5f5f5'};
@@ -2234,6 +2242,8 @@ function pacRenderPlanoLista(){
 // ══════════════════════════════════════════════════════
 const PAC_FDI_SUP = [18,17,16,15,14,13,12,11,21,22,23,24,25,26,27,28];
 const PAC_FDI_INF = [48,47,46,45,44,43,42,41,31,32,33,34,35,36,37,38];
+const PAC_FDI_DEC_SUP = [55,54,53,52,51,61,62,63,64,65];
+const PAC_FDI_DEC_INF = [85,84,83,82,81,71,72,73,74,75];
 const PAC_COND_PT = {higido:'Hígido',carie:'Cárie',restaurado:'Restaurado',extraido:'Extraído',canal:'Canal',coroa:'Coroa',implante:'Implante',fratura:'Fratura',selante:'Selante',outro:'Outro'};
 
 let pacDentesMap  = {};  // { dente_num: registro }
@@ -2252,8 +2262,10 @@ async function pacCarregarOdonto(pacId){
 }
 
 function pacRenderArcadas(){
-  pacRenderArcada('pac-arc-sup', PAC_FDI_SUP);
-  pacRenderArcada('pac-arc-inf', PAC_FDI_INF);
+  pacRenderArcada('pac-arc-sup',     PAC_FDI_SUP);
+  pacRenderArcada('pac-arc-dec-sup', PAC_FDI_DEC_SUP);
+  pacRenderArcada('pac-arc-dec-inf', PAC_FDI_DEC_INF);
+  pacRenderArcada('pac-arc-inf',     PAC_FDI_INF);
 }
 
 function pacRenderArcada(id, dentes){
