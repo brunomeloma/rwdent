@@ -1381,9 +1381,9 @@ function renderPatientDetail(abaAtiva){
   `;
 
   // Carrega dados das abas
-  if(abaAtiva==='odonto') pacCarregarOdonto(${p.id});
-  if(abaAtiva==='procs') pacCarregarProcs(${p.id});
-  if(abaAtiva==='plano') pacCarregarPlano(${p.id});
+  if(abaAtiva==='odonto') pacCarregarOdonto(p.id);
+  if(abaAtiva==='procs') pacCarregarProcs(p.id);
+  if(abaAtiva==='plano') pacCarregarPlano(p.id);
 }
 
 function editPatient(id){
