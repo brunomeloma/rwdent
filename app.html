@@ -2674,19 +2674,16 @@ const fmtN2  = v => isNaN(v)?'—':Number(v).toLocaleString('pt-BR',{minimumFrac
 // ── Estado financeiro (salvo no Supabase por clínica) ──
 let procs       = [];   // procedimentos com precificação
 let mats        = [];   // materiais/insumos
-let combos      = [];   // combos promocionais
 let estoque     = {};   // { matId: { atual, min, compra } }
 let procInsumos = {};   // { procId: [{matId, qtd}] }
 let vendas      = [];   // histórico de vendas/orçamentos
 let cfg         = { salario:3000, horas:132, trib:0, desperd:5, margem:100, colabPct:50 };
 let taxasCfg    = { debito:1.5, credito:[2.49,5.1,6.12,7.15,8.19,9.24,10.3,11.36,12.44,13.52,14.61,15.71] };
-let descCfg     = { val:0, tipo:'pct', maxPar:6 };
 
-// IDs locais
+// IDs locais (não precisam ser únicos globalmente, só para UI)
 let nextProcId  = 1;
 let nextMatId   = 1;
 let nextVendaId = 1;
-let nextComboId = 201;
 
 // Orçamento atual do simulador (dentro do plano do paciente)
 let orcamento      = [];
@@ -2708,21 +2705,14 @@ async function loadFinanceiro(){
     try{ vendas      = JSON.parse(data.vendas      || '[]'); }catch(e){ vendas=[]; }
     try{ cfg         = JSON.parse(data.cfg         || '{}'); }catch(e){}
     try{ taxasCfg    = JSON.parse(data.taxas_cfg   || '{}'); }catch(e){}
-    try{ combos      = JSON.parse(data.combos      || '[]'); }catch(e){ combos=[]; }
-    try{ descCfg     = JSON.parse(data.desc_cfg    || '{}'); }catch(e){}
     // Reconstrói nextIds
-    nextProcId  = procs.length  ? Math.max(...procs.map(p=>p.id||0))   + 1 : 1;
-    nextMatId   = mats.length   ? Math.max(...mats.map(m=>m.id||0))    + 1 : 1;
-    nextVendaId = vendas.length ? Math.max(...vendas.map(v=>v.id||0))  + 1 : 1;
-    nextComboId = combos.length ? Math.max(...combos.map(c=>c.id||200))+ 1 : 201;
+    nextProcId  = procs.length  ? Math.max(...procs.map(p=>p.id||0))  + 1 : 1;
+    nextMatId   = mats.length   ? Math.max(...mats.map(m=>m.id||0))   + 1 : 1;
+    nextVendaId = vendas.length ? Math.max(...vendas.map(v=>v.id||0)) + 1 : 1;
   } else {
-    // Primeira vez — carrega dados padrão completos do Pétala
-    procs   = DEFAULT_PROCS_FIN.map((p,i)=>({...p,id:p.id||i+1}));
-    mats    = DEFAULT_MATS_FIN.map((m,i)=>({...m,id:m.id||i+1}));
-    combos  = DEFAULT_COMBOS_FIN.map(c=>({...c}));
-    nextProcId  = 103;
-    nextMatId   = 91;
-    nextComboId = 207;
+    // Primeira vez — carrega procedimentos padrão
+    procs = DEFAULT_PROCS_FIN.map((p,i)=>({...p,id:i+1}));
+    nextProcId = procs.length + 1;
     await saveFinanceiro();
   }
   recalcularInsumos(true);
@@ -2739,9 +2729,7 @@ async function saveFinanceiro(){
     vendas       : JSON.stringify(vendas),
     cfg          : JSON.stringify(cfg),
     taxas_cfg    : JSON.stringify(taxasCfg),
-    updated_at   : new Date().toISOString(),
-    combos       : JSON.stringify(combos),
-    desc_cfg     : JSON.stringify(descCfg)
+    updated_at   : new Date().toISOString()
   };
   // Upsert
   const { data: existing } = await _sb.from('financeiro_config').select('id').eq('clinica_id',clinicaId).single();
@@ -3278,7 +3266,7 @@ function renderVendas(){
     return(!q||txt.includes(q))&&(!sf||v.status===sf);
   }).slice().reverse();
   const fin     = vendas.filter(v=>v.status==='finalizada');
-  const fat     = fin.reduce((a,v)=>a+(Number(v.total||v.total)||0),0);
+  const fat     = fin.reduce((a,v)=>a+(Number(v.total)||0),0);
   const orcAbertos = vendas.filter(v=>v.status==='orcamento').length;
   const vm = document.getElementById('vendas-metrics');
   if(vm) vm.innerHTML=[
@@ -3381,49 +3369,23 @@ function renderPlanoSimulador(pacId){
   c.innerHTML = `
     <div style="border:1.5px solid var(--rose-light);border-radius:12px;padding:14px;margin-bottom:14px;">
       <h2 style="font-size:13px;font-weight:700;color:var(--rose-dark);margin-bottom:12px;"><i class="ti ti-calculator"></i> Simulador de Orçamento</h2>
-
-      <!-- Busca e filtro -->
       <div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;">
-        <input type="text" id="sim-search-pac" placeholder="Pesquisar..." oninput="renderSimSelectPac()" style="flex:1;min-width:120px;"/>
+        <input type="text" id="sim-search-pac" placeholder="Pesquisar procedimento..." oninput="renderSimSelectPac()" style="flex:1;min-width:140px;"/>
         <select id="sim-grupo-pac" onchange="renderSimSelectPac()">
-          <option value="">Todos</option>
-          <option value="__combo__">🎁 Combos</option>
+          <option value="">Todos os grupos</option>
           ${grupos.map(g=>`<option value="${g}">${g}</option>`).join('')}
         </select>
       </div>
       <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
         <select id="sim-select-pac" style="flex:1;"></select>
-        <input type="number" id="sim-qtd-pac" value="1" min="1" max="99" style="width:56px;"/>
+        <input type="number" id="sim-qtd-pac" value="1" min="1" max="99" style="width:60px;"/>
         <button class="btn-primary" onclick="addOrcPac()"><i class="ti ti-plus"></i></button>
       </div>
-
-      <!-- Lista de itens -->
       <div id="sim-orc-list-pac" style="margin-bottom:12px;"></div>
-
-      <!-- Desconto -->
-      <div style="background:var(--rose-lighter);border-radius:8px;padding:10px 12px;margin-bottom:10px;">
-        <div style="font-size:11px;font-weight:700;color:var(--rose-text);text-transform:uppercase;margin-bottom:8px;">Desconto</div>
-        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-          <input type="number" id="sim-desc-val-pac" min="0" step="0.1" value="${descCfg.val||0}" oninput="updateDescPac()" style="width:80px;padding:6px 8px;border:1px solid var(--rose-light);border-radius:8px;font-size:13px;"/>
-          <select id="sim-desc-tipo-pac" onchange="updateDescPac()" style="padding:6px 8px;border:1px solid var(--rose-light);border-radius:8px;font-size:13px;">
-            <option value="pct" ${(descCfg.tipo||'pct')==='pct'?'selected':''}>%</option>
-            <option value="val" ${descCfg.tipo==='val'?'selected':''}>R$</option>
-          </select>
-          <span style="font-size:12px;color:var(--rose-text);" id="sim-desc-info-pac"></span>
-        </div>
+      <div style="background:var(--rose-lighter);border-radius:8px;padding:10px 14px;display:flex;justify-content:space-between;align-items:center;font-size:14px;font-weight:700;color:var(--rose-dark);margin-bottom:10px;">
+        <span>Total</span>
+        <span id="sim-orc-total-pac">R$ 0,00</span>
       </div>
-
-      <!-- Total + Lucro (só dentista vê) -->
-      <div style="background:var(--rose-lighter);border-radius:8px;padding:10px 14px;margin-bottom:10px;">
-        <div style="display:flex;justify-content:space-between;align-items:center;font-size:14px;font-weight:700;color:var(--rose-dark);">
-          <span>Total</span>
-          <span id="sim-orc-total-pac">R$ 0,00</span>
-        </div>
-        <div id="sim-desc-total-pac" style="display:none;font-size:12px;color:#2e7d32;margin-top:4px;text-align:right;"></div>
-        <div id="sim-orc-lucro-pac" style="font-size:11px;color:var(--rose-text);margin-top:6px;border-top:1px solid var(--rose-light);padding-top:6px;"></div>
-      </div>
-
-      <!-- Ações -->
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
         <button class="btn-secondary" onclick="salvarOrcPac(${pacId})" style="justify-content:center;"><i class="ti ti-device-floppy"></i> Salvar orçamento</button>
         <button class="btn-primary" onclick="finalizarVendaPac(${pacId})" style="justify-content:center;"><i class="ti ti-circle-check"></i> Finalizar venda</button>
@@ -3434,144 +3396,64 @@ function renderPlanoSimulador(pacId){
   renderSimSelectPac();
   renderOrcPac();
 }
-
-function updateDescPac(){
-  descCfg.val  = Number(document.getElementById('sim-desc-val-pac')?.value)||0;
-  descCfg.tipo = document.getElementById('sim-desc-tipo-pac')?.value||'pct';
-  renderOrcPac();
-}
 function renderSimSelectPac(){
   const sel = document.getElementById('sim-select-pac'); if(!sel) return;
   const q = (document.getElementById('sim-search-pac')||{value:''}).value.toLowerCase();
   const g = (document.getElementById('sim-grupo-pac')||{value:''}).value;
-  let html2 = '';
-  // Combos
-  if(g===''||g==='__combo__'){
-    let cl = combos.filter(c=>!q||c.nome.toLowerCase().includes(q));
-    if(cl.length) html2 += '<optgroup label="🎁 Combos Promocionais">' + cl.map(c=>`<option value="combo:${c.id}">${escapeHtml(c.nome)} — ${fmtBRL(c.preco)}</option>`).join('') + '</optgroup>';
-  }
-  // Procedimentos
-  if(g!=='__combo__'){
-    let list = procs.filter(p=>(!q||p.nome.toLowerCase().includes(q))&&(!g||g==='__combo__'||p.grupo===g));
-    if(list.length) html2 += (g===''?'<optgroup label="Procedimentos">':'') + list.map(p=>`<option value="proc:${p.id}">${escapeHtml(p.nome)} — ${fmtBRL(p.precoFinal)}</option>`).join('') + (g===''?'</optgroup>':'');
-  }
-  sel.innerHTML = html2 || '<option value="">Nenhum item encontrado</option>';
+  let list = procs.filter(p=>(!q||p.nome.toLowerCase().includes(q))&&(!g||p.grupo===g));
+  sel.innerHTML = list.length
+    ? list.map(p=>`<option value="${p.id}">${escapeHtml(p.nome)} — ${fmtBRL(p.precoFinal)}</option>`).join('')
+    : '<option value="">Nenhum procedimento encontrado</option>';
 }
 function addOrcPac(){
-  const raw  = document.getElementById('sim-select-pac')?.value || '';
-  const qtd  = Number(document.getElementById('sim-qtd-pac')?.value)||1;
-  if(!raw) return;
-  if(raw.startsWith('combo:')){
-    const cid = Number(raw.split(':')[1]);
-    const c = combos.find(x=>x.id===cid); if(!c) return;
-    orcamento.push({tipo:'combo',comboId:cid,qtd,nome:'🎁 '+c.nome,precoUnit:c.preco,custo:combosCusto(c)});
-  } else {
-    const procId = Number(raw.startsWith('proc:')?raw.split(':')[1]:raw);
-    const p = procs.find(x=>x.id===procId); if(!p) return;
-    orcamento.push({tipo:'proc',procId,qtd,nome:p.nome,precoUnit:p.precoFinal,custo:custoProc(p)});
-  }
+  const procId = Number(document.getElementById('sim-select-pac')?.value);
+  const qtd    = Number(document.getElementById('sim-qtd-pac')?.value)||1;
+  const p = procs.find(x=>x.id===procId); if(!p) return;
+  orcamento.push({procId, qtd, nome:p.nome, precoUnit:p.precoFinal, override:null});
   renderOrcPac();
-}
-
-function combosCusto(c){
-  return (c.itens||[]).reduce((a,it)=>{const p=procs.find(x=>x.id===it.procId);return a+(p?custoProc(p)*it.qtd:0);},0);
 }
 function renderOrcPac(){
   const c = document.getElementById('sim-orc-list-pac'); if(!c) return;
-  if(!orcamento.length){
-    c.innerHTML='<div style="color:var(--rose-text);font-size:13px;text-align:center;padding:10px;">Nenhum item adicionado</div>';
-    const t=document.getElementById('sim-orc-total-pac'); if(t) t.textContent='R$ 0,00';
-    const l=document.getElementById('sim-orc-lucro-pac'); if(l) l.textContent='';
-    return;
-  }
+  if(!orcamento.length){ c.innerHTML='<div style="color:var(--rose-text);font-size:13px;text-align:center;padding:10px;">Nenhum item adicionado</div>'; document.getElementById('sim-orc-total-pac').textContent='R$ 0,00'; return; }
   c.innerHTML = orcamento.map((it,i)=>`
     <div class="sim-orcamento-item">
-      <span style="flex:1;font-size:13px;">${escapeHtml(it.nome)}</span>
+      <span style="flex:1;">${escapeHtml(it.nome)}</span>
       <input type="number" min="1" value="${it.qtd}" onchange="orcamento[${i}].qtd=Math.max(1,Number(this.value));renderOrcPac();" style="width:46px;padding:4px;border:1px solid var(--rose-light);border-radius:6px;text-align:center;font-size:12px;"/>
       <strong style="color:var(--rose-dark);min-width:80px;text-align:right;">${fmtBRL(it.precoUnit*it.qtd)}</strong>
       <button class="btn-danger" style="padding:3px 7px;" onclick="orcamento.splice(${i},1);renderOrcPac();"><i class="ti ti-x"></i></button>
     </div>
   `).join('');
-
-  // Subtotal, desconto, total com desconto
-  const subtotal = orcamento.reduce((a,it)=>a+it.precoUnit*it.qtd, 0);
-  const descVal  = descCfg.val||0;
-  const descTipo = descCfg.tipo||'pct';
-  const descAmt  = descVal>0 ? (descTipo==='pct' ? subtotal*descVal/100 : Math.min(descVal,subtotal)) : 0;
-  const totalFinal = Math.max(0, subtotal - descAmt);
-
-  const elTotal = document.getElementById('sim-orc-total-pac');
-  if(elTotal) elTotal.textContent = fmtBRL(subtotal);
-
-  const elDescTotal = document.getElementById('sim-desc-total-pac');
-  if(elDescTotal){
-    if(descAmt>0){
-      elDescTotal.style.display='';
-      elDescTotal.textContent = `Com desconto: ${fmtBRL(totalFinal)} (economia de ${fmtBRL(descAmt)})`;
-    } else {
-      elDescTotal.style.display='none';
-    }
-  }
-
-  // Info desconto
-  const elDescInfo = document.getElementById('sim-desc-info-pac');
-  if(elDescInfo) elDescInfo.textContent = descAmt>0 ? `− ${fmtBRL(descAmt)}` : '';
-
-  // Lucro (só dentista vê, não aparece para paciente)
-  const custoTotal = orcamento.reduce((a,it)=>a+(it.custo||0)*it.qtd, 0);
-  const lucroTotal = totalFinal - custoTotal;
-  const elLucro = document.getElementById('sim-orc-lucro-pac');
-  if(elLucro) elLucro.innerHTML = `
-    <span>Custo: <strong>${fmtBRL(custoTotal)}</strong></span>
-    &nbsp;·&nbsp;
-    <span>Seu lucro: <strong style="color:${lucroTotal>=0?'#2e7d32':'#dc2626'}">${fmtBRL(lucroTotal)}</strong></span>
-  `;
+  const total = orcamento.reduce((a,it)=>a+it.precoUnit*it.qtd,0);
+  document.getElementById('sim-orc-total-pac').textContent = fmtBRL(total);
 }
-function calcTotalOrc(){
-  const sub = orcamento.reduce((a,it)=>a+it.precoUnit*it.qtd,0);
-  const dv  = descCfg.val||0;
-  const dt  = descCfg.tipo||'pct';
-  const da  = dv>0 ? (dt==='pct'?sub*dv/100:Math.min(dv,sub)) : 0;
-  return { subtotal:sub, desconto:parseFloat(da.toFixed(2)), total:parseFloat(Math.max(0,sub-da).toFixed(2)) };
-}
-
 async function salvarOrcPac(pacId){
   if(!orcamento.length){ showToast('Adicione procedimentos ao orçamento.','warn'); return; }
   const pac = pacientes.find(p=>p.id===pacId);
-  const { subtotal, desconto, total } = calcTotalOrc();
+  const total = orcamento.reduce((a,it)=>a+it.precoUnit*it.qtd,0);
   const venda = {
     id: nextVendaId++, status:'orcamento',
     pacienteId: pacId, pacienteNome: pac?.nome||'',
-    itens: orcamento.map(it=>({procId:it.procId||null,comboId:it.comboId||null,qtd:it.qtd,nome:it.nome})),
-    subtotal: parseFloat(subtotal.toFixed(2)),
-    desconto, total,
-    descCfg: {...descCfg},
+    itens: orcamento.map(it=>({procId:it.procId,qtd:it.qtd,nome:it.nome})),
+    total: parseFloat(total.toFixed(2)),
     data: new Date().toISOString()
   };
   vendas.push(venda);
   showLoading(true); await saveFinanceiro(); showLoading(false);
   showToast('Orçamento salvo! Acesse Vendas para finalizar.');
 }
-
 async function finalizarVendaPac(pacId){
   if(!orcamento.length){ showToast('Adicione procedimentos ao orçamento.','warn'); return; }
-  const { subtotal, desconto, total } = calcTotalOrc();
-  if(!confirm(`Finalizar venda de ${fmtBRL(total)}? O estoque dos materiais usados será descontado.`)) return;
+  if(!confirm('Finalizar venda? O estoque dos materiais usados será descontado.')) return;
   const pac = pacientes.find(p=>p.id===pacId);
-  const itensProc = orcamento.filter(it=>it.tipo==='proc'||it.procId).map(it=>({procId:it.procId,qtd:it.qtd}));
-  // Para combos, expande os procedimentos internos
-  orcamento.filter(it=>it.tipo==='combo').forEach(it=>{
-    const cb = combos.find(c=>c.id===it.comboId);
-    if(cb)(cb.itens||[]).forEach(ci=>itensProc.push({procId:ci.procId,qtd:ci.qtd*it.qtd}));
-  });
-  const consumo = computeConsumo(itensProc);
+  const total = orcamento.reduce((a,it)=>a+it.precoUnit*it.qtd,0);
+  const consumo = computeConsumo(orcamento.map(it=>({procId:it.procId,qtd:it.qtd})));
   const aplicado = aplicarBaixaEstoque(consumo);
   const venda = {
     id: nextVendaId++, status:'finalizada',
     pacienteId: pacId, pacienteNome: pac?.nome||'',
-    itens: orcamento.map(it=>({procId:it.procId||null,comboId:it.comboId||null,qtd:it.qtd,nome:it.nome})),
-    subtotal: parseFloat(subtotal.toFixed(2)),
-    desconto, total, consumo: aplicado,
+    itens: orcamento.map(it=>({procId:it.procId,qtd:it.qtd,nome:it.nome})),
+    total: parseFloat(total.toFixed(2)),
+    consumo: aplicado,
     data: new Date().toISOString(),
     dataFinal: new Date().toISOString()
   };
@@ -3587,225 +3469,29 @@ async function finalizarVendaPac(pacId){
 function openModal(id){ const m=document.getElementById(id); if(m) m.classList.add('open'); }
 function closeModal(id){ const m=document.getElementById(id); if(m) m.classList.remove('open'); }
 
-// Procedimentos padrão completos (51 procedimentos do Pétala)
+// Procedimentos padrão (portados do Pétala)
 const DEFAULT_PROCS_FIN = [
-  {id:1,nome:"Consulta Inicial + Profilaxia",grupo:"Preventivo",tempo:60,insumos:10.43,horaClin:70.85,laboratorio:0,margem:100,precoFinal:175.57},
-  {id:2,nome:"Profilaxia simples",grupo:"Preventivo",tempo:45,insumos:10.06,horaClin:53.14,laboratorio:0,margem:100,precoFinal:136.50},
-  {id:3,nome:"Aplicação de Flúor",grupo:"Preventivo",tempo:20,insumos:1.94,horaClin:23.62,laboratorio:0,margem:100,precoFinal:55.21},
-  {id:4,nome:"Selamento de Fossas e Fissuras",grupo:"Preventivo",tempo:45,insumos:102.06,horaClin:53.14,laboratorio:0,margem:100,precoFinal:335.23},
-  {id:5,nome:"Restauração Resina Composta Posterior",grupo:"Dentística",tempo:75,insumos:21.29,horaClin:88.56,laboratorio:0,margem:100,precoFinal:237.29},
-  {id:6,nome:"Restauração Resina Composta Anterior",grupo:"Dentística",tempo:90,insumos:24.26,horaClin:106.28,laboratorio:0,margem:100,precoFinal:281.95},
-  {id:7,nome:"CIV Mod por Resina",grupo:"Dentística",tempo:60,insumos:16.74,horaClin:70.85,laboratorio:0,margem:100,precoFinal:189.19},
-  {id:8,nome:"Facetas de Resina Composta",grupo:"Dentística",tempo:120,insumos:33.49,horaClin:141.70,laboratorio:0,margem:100,precoFinal:378.41},
-  {id:9,nome:"Clareamento Caseiro",grupo:"Dentística",tempo:60,insumos:10.44,horaClin:70.85,laboratorio:0,margem:100,precoFinal:175.60},
-  {id:10,nome:"Clareamento de Consultório",grupo:"Dentística",tempo:90,insumos:35.44,horaClin:106.28,laboratorio:0,margem:100,precoFinal:306.10},
-  {id:11,nome:"Tratamento Dessensibilizante",grupo:"Dentística",tempo:30,insumos:2.17,horaClin:35.43,laboratorio:0,margem:100,precoFinal:81.20},
-  {id:12,nome:"Recontornos Estéticos",grupo:"Dentística",tempo:45,insumos:25.10,horaClin:53.14,laboratorio:0,margem:100,precoFinal:169.00},
-  {id:13,nome:"Manutenção de Facetas",grupo:"Dentística",tempo:45,insumos:14.82,horaClin:53.14,laboratorio:0,margem:100,precoFinal:146.79},
-  {id:14,nome:"Restauração Provisória",grupo:"Dentística",tempo:30,insumos:8.93,horaClin:35.43,laboratorio:0,margem:100,precoFinal:95.81},
-  {id:15,nome:"Tratamento Expectante",grupo:"Dentística",tempo:45,insumos:11.45,horaClin:53.14,laboratorio:0,margem:100,precoFinal:139.52},
-  {id:16,nome:"Exodontia Simples",grupo:"Cirurgia",tempo:30,insumos:10.55,horaClin:35.43,laboratorio:0,margem:100,precoFinal:99.31},
-  {id:17,nome:"Exodontia Complexa",grupo:"Cirurgia",tempo:60,insumos:20.22,horaClin:70.85,laboratorio:0,margem:100,precoFinal:196.72},
-  {id:18,nome:"Exodontia de Siso",grupo:"Cirurgia",tempo:90,insumos:51.26,horaClin:106.28,laboratorio:0,margem:100,precoFinal:340.28},
-  {id:19,nome:"Cirurgia Parendodôntica",grupo:"Cirurgia",tempo:120,insumos:57.05,horaClin:141.70,laboratorio:0,margem:100,precoFinal:429.31},
-  {id:20,nome:"Biópsia",grupo:"Cirurgia",tempo:45,insumos:29.31,horaClin:53.14,laboratorio:0,margem:100,precoFinal:178.09},
-  {id:21,nome:"Urgência Endodôntica",grupo:"Endodontia",tempo:60,insumos:9.44,horaClin:70.85,laboratorio:0,margem:100,precoFinal:173.42},
-  {id:22,nome:"Endodontia - Necro (1 canal)",grupo:"Endodontia",tempo:180,insumos:72.20,horaClin:212.55,laboratorio:0,margem:100,precoFinal:615.07},
-  {id:23,nome:"Endodontia - Vital (1 canal)",grupo:"Endodontia",tempo:150,insumos:68.23,horaClin:177.13,laboratorio:0,margem:100,precoFinal:529.98},
-  {id:24,nome:"Endodontia - 2 canais",grupo:"Endodontia",tempo:240,insumos:127.82,horaClin:283.41,laboratorio:0,margem:100,precoFinal:888.24},
-  {id:25,nome:"Endodontia - 3 canais",grupo:"Endodontia",tempo:300,insumos:190.02,horaClin:354.26,laboratorio:0,margem:100,precoFinal:1175.65},
-  {id:26,nome:"Retratamento Endodôntico",grupo:"Endodontia",tempo:300,insumos:196.88,horaClin:354.26,laboratorio:0,margem:100,precoFinal:1190.47},
-  {id:27,nome:"Raspagem Supragengival",grupo:"Periodontia",tempo:60,insumos:2.54,horaClin:70.85,laboratorio:0,margem:100,precoFinal:158.52},
-  {id:28,nome:"Raspagem Subgengival por Sextante",grupo:"Periodontia",tempo:60,insumos:5.48,horaClin:70.85,laboratorio:0,margem:100,precoFinal:164.88},
-  {id:29,nome:"Gengivoplastia",grupo:"Periodontia",tempo:75,insumos:37.75,horaClin:88.56,laboratorio:0,margem:100,precoFinal:272.84},
-  {id:30,nome:"Frenectomia",grupo:"Periodontia",tempo:60,insumos:40.81,horaClin:70.85,laboratorio:0,margem:100,precoFinal:241.20},
-  {id:31,nome:"Prótese Total",grupo:"Prótese",tempo:60,insumos:6.68,horaClin:70.85,laboratorio:200,margem:100,precoFinal:167.46},
-  {id:32,nome:"Prótese Parcial Removível",grupo:"Prótese",tempo:60,insumos:5.89,horaClin:70.85,laboratorio:180,margem:100,precoFinal:165.76},
-  {id:33,nome:"Coroa Provisória",grupo:"Prótese",tempo:75,insumos:17.41,horaClin:88.56,laboratorio:0,margem:100,precoFinal:228.90},
-  {id:34,nome:"Cimentação de Coroa",grupo:"Prótese",tempo:45,insumos:25.67,horaClin:53.14,laboratorio:0,margem:100,precoFinal:170.22},
-  {id:35,nome:"Implante Cirúrgico",grupo:"Implantodontia",tempo:120,insumos:70.70,horaClin:141.70,laboratorio:0,margem:100,precoFinal:458.79},
-  {id:36,nome:"Implante - Fase Protética",grupo:"Implantodontia",tempo:90,insumos:19.54,horaClin:106.28,laboratorio:250,margem:100,precoFinal:271.77},
-  {id:37,nome:"Instalação de Aparelho Fixo",grupo:"Ortodontia",tempo:90,insumos:19.59,horaClin:106.28,laboratorio:0,margem:100,precoFinal:271.87},
-  {id:38,nome:"Manutenção Mensal Ortodôntica",grupo:"Ortodontia",tempo:30,insumos:2.06,horaClin:35.43,laboratorio:0,margem:100,precoFinal:80.98},
-  {id:39,nome:"Placa Miorrelaxante",grupo:"ATM",tempo:75,insumos:10.13,horaClin:88.56,laboratorio:120,margem:100,precoFinal:213.19},
-  {id:40,nome:"Toxina Botulínica (Bruxismo)",grupo:"ATM",tempo:30,insumos:2.58,horaClin:35.43,laboratorio:0,margem:100,precoFinal:82.09},
-  {id:41,nome:"Documentação Ortodôntica",grupo:"Ortodontia",tempo:60,insumos:1.69,horaClin:70.85,laboratorio:0,margem:100,precoFinal:156.68},
-  {id:42,nome:"Moldagem Ortodôntica",grupo:"Ortodontia",tempo:30,insumos:6.68,horaClin:35.43,laboratorio:0,margem:100,precoFinal:90.94},
-  {id:43,nome:"Instalação Aparelho Metálico",grupo:"Ortodontia",tempo:120,insumos:251.72,horaClin:141.70,laboratorio:400,margem:100,precoFinal:849.79},
-  {id:44,nome:"Instalação Aparelho Estético (Cerâmico)",grupo:"Ortodontia",tempo:120,insumos:482.60,horaClin:141.70,laboratorio:800,margem:100,precoFinal:1348.50},
-  {id:45,nome:"Manutenção - Troca de Fio",grupo:"Ortodontia",tempo:30,insumos:11.64,horaClin:35.43,laboratorio:0,margem:100,precoFinal:101.65},
-  {id:46,nome:"Recolagem de Braquete",grupo:"Ortodontia",tempo:20,insumos:13.99,horaClin:23.62,laboratorio:0,margem:100,precoFinal:81.23},
-  {id:47,nome:"Remoção de Aparelho Fixo",grupo:"Ortodontia",tempo:60,insumos:24.00,horaClin:70.85,laboratorio:0,margem:100,precoFinal:204.88},
-  {id:48,nome:"Contenção Fixa (Fio Colado)",grupo:"Ortodontia",tempo:45,insumos:13.69,horaClin:53.14,laboratorio:0,margem:100,precoFinal:144.35},
-  {id:49,nome:"Contenção Removível (Placa Essix)",grupo:"Ortodontia",tempo:30,insumos:15.58,horaClin:35.43,laboratorio:150,margem:100,precoFinal:110.17},
-  {id:50,nome:"Orientação e Higiene com Aparelho",grupo:"Ortodontia",tempo:20,insumos:4.21,horaClin:23.62,laboratorio:0,margem:100,precoFinal:60.11},
-  {id:51,nome:"Instalação Aparelho Autoligado Metálico",grupo:"Ortodontia",tempo:120,insumos:384.03,horaClin:141.70,laboratorio:600,margem:100,precoFinal:1135.58},
-  // Diagnóstico e Radiologia
-  {id:52,nome:"Consulta Odontológica",grupo:"Diagnóstico",tempo:30,insumos:2.00,horaClin:35.43,laboratorio:0,margem:100,precoFinal:80.00},
-  {id:53,nome:"Radiografia Periapical",grupo:"Diagnóstico",tempo:15,insumos:3.00,horaClin:17.71,laboratorio:0,margem:100,precoFinal:50.00},
-  {id:54,nome:"Radiografia Panorâmica",grupo:"Diagnóstico",tempo:20,insumos:5.00,horaClin:23.62,laboratorio:0,margem:100,precoFinal:120.00},
-  {id:55,nome:"Radiografia Interproximal (Bite-Wing)",grupo:"Diagnóstico",tempo:15,insumos:3.00,horaClin:17.71,laboratorio:0,margem:100,precoFinal:45.00},
-  {id:56,nome:"Tomografia Cone Beam",grupo:"Diagnóstico",tempo:30,insumos:10.00,horaClin:35.43,laboratorio:0,margem:100,precoFinal:350.00},
-  {id:57,nome:"Documentação Ortodôntica Completa",grupo:"Diagnóstico",tempo:60,insumos:15.00,horaClin:70.85,laboratorio:0,margem:100,precoFinal:350.00},
-  {id:58,nome:"Fotografias Clínicas",grupo:"Diagnóstico",tempo:20,insumos:2.00,horaClin:23.62,laboratorio:0,margem:100,precoFinal:60.00},
-  // Endodontia complementar
-  {id:59,nome:"Pulpotomia",grupo:"Endodontia",tempo:45,insumos:15.00,horaClin:53.14,laboratorio:0,margem:100,precoFinal:150.00},
-  {id:60,nome:"Pulpectomia",grupo:"Endodontia",tempo:60,insumos:20.00,horaClin:70.85,laboratorio:0,margem:100,precoFinal:180.00},
-  {id:61,nome:"Capeamento Pulpar Direto",grupo:"Endodontia",tempo:45,insumos:18.00,horaClin:53.14,laboratorio:0,margem:100,precoFinal:160.00},
-  {id:62,nome:"Capeamento Pulpar Indireto",grupo:"Endodontia",tempo:30,insumos:10.00,horaClin:35.43,laboratorio:0,margem:100,precoFinal:100.00},
-  {id:63,nome:"Tratamento Endodôntico Dente Decíduo",grupo:"Endodontia",tempo:60,insumos:18.00,horaClin:70.85,laboratorio:0,margem:100,precoFinal:200.00},
-  {id:64,nome:"Curativo de Demora",grupo:"Endodontia",tempo:30,insumos:8.00,horaClin:35.43,laboratorio:0,margem:100,precoFinal:100.00},
-  {id:65,nome:"Remoção de Núcleo Intrarradicular",grupo:"Endodontia",tempo:60,insumos:25.00,horaClin:70.85,laboratorio:0,margem:100,precoFinal:220.00},
-  {id:66,nome:"Apicectomia com Obturação Retrógrada",grupo:"Endodontia",tempo:90,insumos:45.00,horaClin:106.28,laboratorio:0,margem:100,precoFinal:380.00},
-  // Periodontia complementar
-  {id:67,nome:"Cirurgia Periodontal a Retalho",grupo:"Periodontia",tempo:90,insumos:45.00,horaClin:106.28,laboratorio:0,margem:100,precoFinal:380.00},
-  {id:68,nome:"Enxerto Gengival Livre",grupo:"Periodontia",tempo:90,insumos:30.00,horaClin:106.28,laboratorio:0,margem:100,precoFinal:450.00},
-  {id:69,nome:"Enxerto de Tecido Conjuntivo",grupo:"Periodontia",tempo:120,insumos:40.00,horaClin:141.70,laboratorio:0,margem:100,precoFinal:600.00},
-  {id:70,nome:"Aplicação de Cariostático",grupo:"Preventivo",tempo:20,insumos:5.00,horaClin:23.62,laboratorio:0,margem:100,precoFinal:60.00},
-  {id:71,nome:"Controle de Placa Bacteriana",grupo:"Preventivo",tempo:30,insumos:3.00,horaClin:35.43,laboratorio:0,margem:100,precoFinal:80.00},
-  {id:72,nome:"Remineralização Dentária",grupo:"Preventivo",tempo:30,insumos:8.00,horaClin:35.43,laboratorio:0,margem:100,precoFinal:90.00},
-  {id:73,nome:"Orientação de Higiene Bucal",grupo:"Preventivo",tempo:20,insumos:2.00,horaClin:23.62,laboratorio:0,margem:100,precoFinal:55.00},
-  // Prótese complementar
-  {id:74,nome:"Prótese Fixa Unitária (Coroa)",grupo:"Prótese",tempo:120,insumos:30.00,horaClin:141.70,laboratorio:500,margem:100,precoFinal:850.00},
-  {id:75,nome:"Prótese sobre Implante",grupo:"Prótese",tempo:90,insumos:25.00,horaClin:106.28,laboratorio:600,margem:100,precoFinal:950.00},
-  {id:76,nome:"Faceta Cerâmica",grupo:"Prótese",tempo:90,insumos:20.00,horaClin:106.28,laboratorio:400,margem:100,precoFinal:750.00},
-  {id:77,nome:"Inlay / Onlay Cerâmico",grupo:"Prótese",tempo:90,insumos:25.00,horaClin:106.28,laboratorio:350,margem:100,precoFinal:680.00},
-  {id:78,nome:"Núcleo de Preenchimento",grupo:"Prótese",tempo:45,insumos:20.00,horaClin:53.14,laboratorio:0,margem:100,precoFinal:180.00},
-  {id:79,nome:"Reembasamento de Prótese",grupo:"Prótese",tempo:45,insumos:25.00,horaClin:53.14,laboratorio:80,margem:100,precoFinal:220.00},
-  {id:80,nome:"Reparação de Prótese",grupo:"Prótese",tempo:30,insumos:15.00,horaClin:35.43,laboratorio:50,margem:100,precoFinal:130.00},
-  // Implantodontia complementar
-  {id:81,nome:"Enxerto Ósseo",grupo:"Implantodontia",tempo:120,insumos:200.00,horaClin:141.70,laboratorio:0,margem:100,precoFinal:800.00},
-  {id:82,nome:"Levantamento de Seio Maxilar",grupo:"Implantodontia",tempo:120,insumos:250.00,horaClin:141.70,laboratorio:0,margem:100,precoFinal:1200.00},
-  {id:83,nome:"Instalação de Mini-implante",grupo:"Implantodontia",tempo:60,insumos:80.00,horaClin:70.85,laboratorio:0,margem:100,precoFinal:400.00},
-  // Cirurgia complementar
-  {id:84,nome:"Frenectomia Lingual",grupo:"Cirurgia",tempo:45,insumos:30.00,horaClin:53.14,laboratorio:0,margem:100,precoFinal:200.00},
-  {id:85,nome:"Drenagem de Abscesso",grupo:"Cirurgia",tempo:30,insumos:20.00,horaClin:35.43,laboratorio:0,margem:100,precoFinal:150.00},
-  {id:86,nome:"Remoção de Cisto",grupo:"Cirurgia",tempo:60,insumos:35.00,horaClin:70.85,laboratorio:0,margem:100,precoFinal:350.00},
-  {id:87,nome:"Alveoloplastia",grupo:"Cirurgia",tempo:60,insumos:25.00,horaClin:70.85,laboratorio:0,margem:100,precoFinal:280.00},
-  // Odontopediatria
-  {id:88,nome:"Consulta Odontopediátrica",grupo:"Odontopediatria",tempo:30,insumos:3.00,horaClin:35.43,laboratorio:0,margem:100,precoFinal:90.00},
-  {id:89,nome:"Restauração Dente Decíduo",grupo:"Odontopediatria",tempo:45,insumos:12.00,horaClin:53.14,laboratorio:0,margem:100,precoFinal:130.00},
-  {id:90,nome:"Exodontia Dente Decíduo",grupo:"Odontopediatria",tempo:20,insumos:8.00,horaClin:23.62,laboratorio:0,margem:100,precoFinal:80.00},
-  {id:91,nome:"Coroa de Aço Inoxidável",grupo:"Odontopediatria",tempo:45,insumos:35.00,horaClin:53.14,laboratorio:0,margem:100,precoFinal:180.00},
-  {id:92,nome:"Mantenedor de Espaço",grupo:"Odontopediatria",tempo:45,insumos:20.00,horaClin:53.14,laboratorio:80,margem:100,precoFinal:220.00},
-  // Dentística complementar
-  {id:93,nome:"Clareamento Dente Desvitalizado",grupo:"Dentística",tempo:45,insumos:15.00,horaClin:53.14,laboratorio:0,margem:100,precoFinal:160.00},
-  {id:94,nome:"Restauração com Amálgama",grupo:"Dentística",tempo:45,insumos:8.00,horaClin:53.14,laboratorio:0,margem:100,precoFinal:120.00},
-  {id:95,nome:"Fechamento de Diastema",grupo:"Dentística",tempo:90,insumos:30.00,horaClin:106.28,laboratorio:0,margem:100,precoFinal:350.00},
-  // ATM complementar
-  {id:96,nome:"Desprogramador Oclusal",grupo:"ATM",tempo:60,insumos:15.00,horaClin:70.85,laboratorio:0,margem:100,precoFinal:200.00},
-  {id:97,nome:"Ajuste Oclusal",grupo:"ATM",tempo:45,insumos:5.00,horaClin:53.14,laboratorio:0,margem:100,precoFinal:140.00},
-  {id:98,nome:"Terapia de Bruxismo",grupo:"ATM",tempo:60,insumos:10.00,horaClin:70.85,laboratorio:120,margem:100,precoFinal:300.00},
-  // Estética Facial
-  {id:99,nome:"Preenchimento Labial",grupo:"Estética Facial",tempo:45,insumos:150.00,horaClin:53.14,laboratorio:0,margem:100,precoFinal:600.00},
-  {id:100,nome:"Toxina Botulínica (Estético)",grupo:"Estética Facial",tempo:30,insumos:120.00,horaClin:35.43,laboratorio:0,margem:100,precoFinal:550.00},
-  {id:101,nome:"Bichectomia",grupo:"Estética Facial",tempo:60,insumos:40.00,horaClin:70.85,laboratorio:0,margem:100,precoFinal:400.00},
-  {id:102,nome:"Bioestimulador de Colágeno",grupo:"Estética Facial",tempo:45,insumos:200.00,horaClin:53.14,laboratorio:0,margem:100,precoFinal:800.00},
-];
-
-// 50 materiais padrão do Pétala
-const DEFAULT_MATS_FIN = [
-  {id:1,nome:"Ácido Fosfórico Ultradent",cat:"Dentística",unid:"ml",qtde:30,preco:218.15,custo:7.27},
-  {id:2,nome:"Ácido Fluorídrico",cat:"Dentística",unid:"ml",qtde:2.5,preco:32.97,custo:13.19},
-  {id:3,nome:"Ácido Poliacrílico",cat:"Dentística",unid:"ml",qtde:10,preco:79.44,custo:7.94},
-  {id:4,nome:"Ácido Tranexâmico",cat:"Cirurgia",unid:"UNID",qtde:12,preco:38.99,custo:3.25},
-  {id:5,nome:"Agulha Curta",cat:"Geral",unid:"UNID",qtde:100,preco:48.40,custo:0.48},
-  {id:6,nome:"Agulha Longa",cat:"Geral",unid:"UNID",qtde:100,preco:48.40,custo:0.48},
-  {id:7,nome:"Alginato Tipo I Dentsply",cat:"Prótese",unid:"Grama",qtde:410,preco:32.00,custo:0.08},
-  {id:8,nome:"Babador",cat:"Geral",unid:"unid",qtde:100,preco:24.90,custo:0.25},
-  {id:9,nome:"Barreira Gengival Gingi Dam",cat:"Dentística",unid:"grama",qtde:3,preco:16.48,custo:5.49},
-  {id:10,nome:"Benzocaína 20% Pomada",cat:"Anestesia",unid:"grama",qtde:30,preco:19.99,custo:0.67},
-  {id:11,nome:"Campo Estéril",cat:"Cirurgia",unid:"unid",qtde:1,preco:18.99,custo:18.99},
-  {id:12,nome:"Cimento Endodôntico",cat:"Endodontia",unid:"Grama",qtde:4,preco:47.52,custo:11.88},
-  {id:13,nome:"Cimento Ionômero de Vidro",cat:"Dentística",unid:"Porção",qtde:30,preco:77.59,custo:2.59},
-  {id:14,nome:"Cimento Provisório Cotosol",cat:"Prótese",unid:"grama",qtde:38,preco:53.25,custo:1.40},
-  {id:15,nome:"Cimento Resinoso RIVA",cat:"Dentística",unid:"Porção",qtde:20,preco:290.00,custo:14.50},
-  {id:16,nome:"Clorexidina 0.12%",cat:"Geral",unid:"ml",qtde:250,preco:10.66,custo:0.04},
-  {id:17,nome:"Clorexidina 2%",cat:"Cirurgia",unid:"ml",qtde:1000,preco:26.09,custo:0.03},
-  {id:18,nome:"Cone de Guta Percha",cat:"Endodontia",unid:"UNID",qtde:120,preco:34.91,custo:0.29},
-  {id:19,nome:"Cones de Papel",cat:"Endodontia",unid:"unid",qtde:300,preco:19.39,custo:0.06},
-  {id:20,nome:"Copo Descartável 50ml",cat:"Geral",unid:"unid",qtde:300,preco:49.99,custo:0.17},
-  {id:21,nome:"Cunhas de Plástico",cat:"Dentística",unid:"unid",qtde:40,preco:45.90,custo:1.15},
-  {id:22,nome:"Discos de Lixa Sof-lex",cat:"Dentística",unid:"unid",qtde:30,preco:155.19,custo:5.17},
-  {id:23,nome:"Diques de Borracha",cat:"Geral",unid:"unid",qtde:36,preco:76.90,custo:2.14},
-  {id:24,nome:"EDTA",cat:"Endodontia",unid:"ml",qtde:20,preco:9.60,custo:0.48},
-  {id:25,nome:"Escova Robinson",cat:"Profilaxia",unid:"unid",qtde:1,preco:7.75,custo:7.75},
-  {id:26,nome:"Esponja Hemostática Fibrina",cat:"Cirurgia",unid:"unid",qtde:10,preco:69.83,custo:6.98},
-  {id:27,nome:"Fio de Sutura Absorvível",cat:"Cirurgia",unid:"UNID",qtde:36,preco:387.02,custo:10.75},
-  {id:28,nome:"Fio de Sutura Seda",cat:"Cirurgia",unid:"UNID",qtde:24,preco:52.37,custo:2.18},
-  {id:29,nome:"Fio Dental Comum",cat:"Geral",unid:"m",qtde:100,preco:15.00,custo:0.15},
-  {id:30,nome:"Gaze Estéril",cat:"Geral",unid:"unid",qtde:500,preco:20.36,custo:0.04},
-  {id:31,nome:"Hipoclorito de Sódio",cat:"Endodontia",unid:"ml",qtde:1000,preco:9.59,custo:0.01},
-  {id:32,nome:"Kit de Limas",cat:"Endodontia",unid:"unid",qtde:6,preco:300.00,custo:50.00},
-  {id:33,nome:"Lidocaína 2% c/ Epinefrina",cat:"Anestesia",unid:"UNID",qtde:50,preco:129.88,custo:2.60},
-  {id:34,nome:"Luva Nitrílica",cat:"Geral",unid:"unid",qtde:100,preco:43.99,custo:0.44},
-  {id:35,nome:"Máscara",cat:"Geral",unid:"unid",qtde:50,preco:18.42,custo:0.37},
-  {id:36,nome:"Matriz Metálica Pré-fabricada",cat:"Dentística",unid:"unid",qtde:50,preco:193.02,custo:3.86},
-  {id:37,nome:"Microbrush",cat:"Dentística",unid:"unid",qtde:100,preco:15.42,custo:0.15},
-  {id:38,nome:"Roletes de Algodão",cat:"Geral",unid:"unid",qtde:500,preco:10.66,custo:0.02},
-  {id:39,nome:"Selante de Fossas",cat:"Dentística",unid:"unid",qtde:1,preco:89.90,custo:89.90},
-  {id:40,nome:"Sistema Adesivo Kerr",cat:"Dentística",unid:"unid",qtde:16,preco:505.27,custo:31.58},
-  {id:41,nome:"Tiras de Lixa Epitex",cat:"Dentística",unid:"unid",qtde:1000,preco:256.95,custo:0.26},
-  {id:42,nome:"Touca Descartável",cat:"Geral",unid:"unid",qtde:100,preco:17.36,custo:0.17},
-  {id:43,nome:"Braquete Metálico Kit",cat:"Ortodontia",unid:"kit",qtde:1,preco:189.00,custo:189.00},
-  {id:44,nome:"Braquete Estético Cerâmico Kit",cat:"Ortodontia",unid:"kit",qtde:1,preco:420.00,custo:420.00},
-  {id:45,nome:"Braquete Autoligado Metálico Kit",cat:"Ortodontia",unid:"kit",qtde:1,preco:320.00,custo:320.00},
-  {id:46,nome:"Fio Ortodôntico NiTi 0.014",cat:"Ortodontia",unid:"unid",qtde:10,preco:89.00,custo:8.90},
-  {id:47,nome:"Fio Ortodôntico NiTi 0.016",cat:"Ortodontia",unid:"unid",qtde:10,preco:89.00,custo:8.90},
-  {id:48,nome:"Adesivo Ortodôntico Transbond XT",cat:"Ortodontia",unid:"ml",qtde:5,preco:189.90,custo:37.98},
-  {id:49,nome:"Seringa 3ml",cat:"Geral",unid:"unid",qtde:120,preco:20.36,custo:0.17},
-  {id:50,nome:"Vaselina Sólida",cat:"Geral",unid:"unid",qtde:30,preco:10.57,custo:0.35},
-  // Materiais adicionais
-  {id:51,nome:"Resina Composta A1",cat:"Dentística",unid:"grama",qtde:4,preco:85.00,custo:21.25},
-  {id:52,nome:"Resina Composta A2",cat:"Dentística",unid:"grama",qtde:4,preco:85.00,custo:21.25},
-  {id:53,nome:"Resina Composta A3",cat:"Dentística",unid:"grama",qtde:4,preco:85.00,custo:21.25},
-  {id:54,nome:"Resina Composta A3.5",cat:"Dentística",unid:"grama",qtde:4,preco:85.00,custo:21.25},
-  {id:55,nome:"Hidróxido de Cálcio",cat:"Endodontia",unid:"grama",qtde:25,preco:32.00,custo:1.28},
-  {id:56,nome:"MTA (Mineral Trióxido Agregado)",cat:"Endodontia",unid:"grama",qtde:1,preco:180.00,custo:180.00},
-  {id:57,nome:"Amálgama dental",cat:"Dentística",unid:"cápsula",qtde:50,preco:145.00,custo:2.90},
-  {id:58,nome:"Gesso Tipo III",cat:"Prótese",unid:"kg",qtde:1,preco:22.00,custo:22.00},
-  {id:59,nome:"Gesso Tipo IV",cat:"Prótese",unid:"kg",qtde:1,preco:55.00,custo:55.00},
-  {id:60,nome:"Silicone de Condensação",cat:"Prótese",unid:"kit",qtde:1,preco:120.00,custo:120.00},
-  {id:61,nome:"Silicone de Adição",cat:"Prótese",unid:"kit",qtde:1,preco:280.00,custo:280.00},
-  {id:62,nome:"Cera Utilidade",cat:"Prótese",unid:"unid",qtde:20,preco:15.00,custo:0.75},
-  {id:63,nome:"Resina Acrílica Autopolimerizável",cat:"Prótese",unid:"kit",qtde:1,preco:45.00,custo:45.00},
-  {id:64,nome:"Gel Clareador 35%",cat:"Dentística",unid:"unid",qtde:3,preco:89.00,custo:29.67},
-  {id:65,nome:"Gel Clareador Caseiro 10%",cat:"Dentística",unid:"seringa",qtde:4,preco:45.00,custo:11.25},
-  {id:66,nome:"Fio Retrator Gengival",cat:"Prótese",unid:"m",qtde:270,preco:35.00,custo:0.13},
-  {id:67,nome:"Pasta Profilática",cat:"Profilaxia",unid:"pote",qtde:1,preco:18.00,custo:18.00},
-  {id:68,nome:"Bicarbonato de Sódio (jato)",cat:"Profilaxia",unid:"kg",qtde:1,preco:12.00,custo:12.00},
-  {id:69,nome:"Fotopolimerizador LED (ponta)",cat:"Dentística",unid:"unid",qtde:1,preco:25.00,custo:25.00},
-  {id:70,nome:"Ligas de Titânio (limas rotatórias)",cat:"Endodontia",unid:"unid",qtde:1,preco:180.00,custo:180.00},
-  {id:71,nome:"Óxido de Zinco e Eugenol",cat:"Dentística",unid:"kit",qtde:1,preco:38.00,custo:38.00},
-  {id:72,nome:"Hidróxido de Cálcio em Pó",cat:"Endodontia",unid:"grama",qtde:50,preco:28.00,custo:0.56},
-  {id:73,nome:"Cimento Fosfato de Zinco",cat:"Prótese",unid:"kit",qtde:1,preco:42.00,custo:42.00},
-  {id:74,nome:"Primer Ortodôntico",cat:"Ortodontia",unid:"frasco",qtde:1,preco:95.00,custo:95.00},
-  {id:75,nome:"Elástico Ortodôntico",cat:"Ortodontia",unid:"pacote",qtde:1,preco:12.00,custo:12.00},
-  {id:76,nome:"Arco NiTi 0.012",cat:"Ortodontia",unid:"unid",qtde:10,preco:75.00,custo:7.50},
-  {id:77,nome:"Arco NiTi 0.014x0.025",cat:"Ortodontia",unid:"unid",qtde:10,preco:85.00,custo:8.50},
-  {id:78,nome:"Arco de Aço 0.019x0.025",cat:"Ortodontia",unid:"unid",qtde:10,preco:70.00,custo:7.00},
-  {id:79,nome:"Mola de Níquel-Titânio",cat:"Ortodontia",unid:"unid",qtde:5,preco:45.00,custo:9.00},
-  {id:80,nome:"Biomaterial de Enxerto Ósseo",cat:"Cirurgia",unid:"grama",qtde:0.5,preco:350.00,custo:700.00},
-  {id:81,nome:"Membrana Reabsorvível (colágeno)",cat:"Cirurgia",unid:"unid",qtde:1,preco:180.00,custo:180.00},
-  {id:82,nome:"Implante Osseointegrado",cat:"Implantodontia",unid:"unid",qtde:1,preco:800.00,custo:800.00},
-  {id:83,nome:"Cicatrizador de Implante",cat:"Implantodontia",unid:"unid",qtde:1,preco:80.00,custo:80.00},
-  {id:84,nome:"Coroa de Aço Inox (pediátrica)",cat:"Odontopediatria",unid:"kit",qtde:10,preco:95.00,custo:9.50},
-  {id:85,nome:"Ionômero de Vidro Modificado",cat:"Dentística",unid:"kit",qtde:1,preco:65.00,custo:65.00},
-  {id:86,nome:"Bisturi Descartável",cat:"Cirurgia",unid:"unid",qtde:10,preco:28.00,custo:2.80},
-  {id:87,nome:"Porta Amálgama",cat:"Dentística",unid:"unid",qtde:1,preco:15.00,custo:15.00},
-  {id:88,nome:"Ácido Polilático (bioestimulador)",cat:"Estética Facial",unid:"frasco",qtde:1,preco:450.00,custo:450.00},
-  {id:89,nome:"Hialuronato de Sódio (preenchedor)",cat:"Estética Facial",unid:"seringa",qtde:1,preco:380.00,custo:380.00},
-  {id:90,nome:"Toxina Botulínica 100U",cat:"Estética Facial",unid:"frasco",qtde:1,preco:650.00,custo:650.00},
-];
-
-// 6 combos promocionais padrão
-const DEFAULT_COMBOS_FIN = [
-  {id:201,nome:"Day Clareamento",desc:"Profilaxia + Clareamento de Consultório",itens:[{procId:2,qtd:1},{procId:10,qtd:1}],preco:399.00},
-  {id:202,nome:"Clareamento Duplo",desc:"Clareamento consultório + caseiro",itens:[{procId:10,qtd:1},{procId:9,qtd:1}],preco:429.00},
-  {id:203,nome:"Sorriso Renovado",desc:"Consulta + profilaxia + clareamento caseiro",itens:[{procId:1,qtd:1},{procId:9,qtd:1}],preco:319.00},
-  {id:204,nome:"Saúde em Dia",desc:"Consulta + profilaxia + aplicação de flúor",itens:[{procId:1,qtd:1},{procId:3,qtd:1}],preco:199.00},
-  {id:205,nome:"Sorriso Renovado Premium",desc:"Profilaxia + clareamento + recontornos",itens:[{procId:2,qtd:1},{procId:10,qtd:1},{procId:12,qtd:1}],preco:549.00},
-  {id:206,nome:"Harmonia do Sorriso",desc:"Clareamento + 4 facetas + recontornos",itens:[{procId:10,qtd:1},{procId:8,qtd:4},{procId:12,qtd:1}],preco:1790.00},
+  {nome:"Consulta Inicial + Profilaxia",grupo:"Preventivo",tempo:60,insumos:10.43,horaClin:70.85,laboratorio:0,margem:100,precoFinal:175.57},
+  {nome:"Profilaxia simples",grupo:"Preventivo",tempo:45,insumos:10.06,horaClin:53.14,laboratorio:0,margem:100,precoFinal:136.50},
+  {nome:"Aplicação de Flúor",grupo:"Preventivo",tempo:20,insumos:1.94,horaClin:23.62,laboratorio:0,margem:100,precoFinal:55.21},
+  {nome:"Restauração Resina Composta Posterior",grupo:"Dentística",tempo:75,insumos:21.29,horaClin:88.56,laboratorio:0,margem:100,precoFinal:237.29},
+  {nome:"Restauração Resina Composta Anterior",grupo:"Dentística",tempo:90,insumos:24.26,horaClin:106.28,laboratorio:0,margem:100,precoFinal:281.95},
+  {nome:"Facetas de Resina Composta",grupo:"Dentística",tempo:120,insumos:33.49,horaClin:141.70,laboratorio:0,margem:100,precoFinal:378.41},
+  {nome:"Clareamento Caseiro",grupo:"Dentística",tempo:60,insumos:10.44,horaClin:70.85,laboratorio:0,margem:100,precoFinal:175.60},
+  {nome:"Clareamento de Consultório",grupo:"Dentística",tempo:90,insumos:35.44,horaClin:106.28,laboratorio:0,margem:100,precoFinal:306.10},
+  {nome:"Exodontia Simples",grupo:"Cirurgia",tempo:30,insumos:10.55,horaClin:35.43,laboratorio:0,margem:100,precoFinal:99.31},
+  {nome:"Exodontia de Siso",grupo:"Cirurgia",tempo:90,insumos:51.26,horaClin:106.28,laboratorio:0,margem:100,precoFinal:340.28},
+  {nome:"Urgência Endodôntica",grupo:"Endodontia",tempo:60,insumos:9.44,horaClin:70.85,laboratorio:0,margem:100,precoFinal:173.42},
+  {nome:"Endodontia (1 canal)",grupo:"Endodontia",tempo:180,insumos:72.20,horaClin:212.55,laboratorio:0,margem:100,precoFinal:615.07},
+  {nome:"Endodontia (2 canais)",grupo:"Endodontia",tempo:240,insumos:127.82,horaClin:283.41,laboratorio:0,margem:100,precoFinal:888.24},
+  {nome:"Endodontia (3 canais)",grupo:"Endodontia",tempo:300,insumos:190.02,horaClin:354.26,laboratorio:0,margem:100,precoFinal:1175.65},
+  {nome:"Raspagem Supragengival",grupo:"Periodontia",tempo:60,insumos:2.54,horaClin:70.85,laboratorio:0,margem:100,precoFinal:158.52},
+  {nome:"Raspagem Subgengival por Sextante",grupo:"Periodontia",tempo:60,insumos:5.48,horaClin:70.85,laboratorio:0,margem:100,precoFinal:164.88},
+  {nome:"Implante Cirúrgico",grupo:"Implantodontia",tempo:120,insumos:70.70,horaClin:141.70,laboratorio:0,margem:100,precoFinal:458.79},
+  {nome:"Instalação de Aparelho Fixo",grupo:"Ortodontia",tempo:90,insumos:19.59,horaClin:106.28,laboratorio:0,margem:100,precoFinal:271.87},
+  {nome:"Manutenção Mensal Ortodôntica",grupo:"Ortodontia",tempo:30,insumos:2.06,horaClin:35.43,laboratorio:0,margem:100,precoFinal:80.98},
+  {nome:"Prótese Total",grupo:"Prótese",tempo:60,insumos:6.68,horaClin:70.85,laboratorio:200,margem:100,precoFinal:167.46},
+  {nome:"Coroa Provisória",grupo:"Prótese",tempo:75,insumos:17.41,horaClin:88.56,laboratorio:0,margem:100,precoFinal:228.90},
 ];
 
 
