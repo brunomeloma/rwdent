@@ -285,6 +285,34 @@ button{font-family:inherit;}
 .pac-tab.active{background:#fff;color:var(--rose-dark);box-shadow:0 2px 8px rgba(212,115,90,.15);}
 .pac-tab i{font-size:14px;}
 
+
+/* ══ FINANCEIRO ══ */
+.modal-overlay{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.45);z-index:1000;align-items:flex-start;justify-content:center;padding:40px 16px;overflow-y:auto;}
+.modal-overlay.open{display:flex;}
+.modal-box{background:#fff;border-radius:18px;padding:24px;width:100%;max-width:480px;box-shadow:0 20px 60px rgba(0,0,0,.2);}
+.modal-title{font-size:16px;font-weight:700;margin-bottom:16px;color:var(--rose-dark);display:flex;align-items:center;gap:8px;}
+.modal-title i{color:var(--rose);}
+.modal-footer{display:flex;gap:8px;justify-content:flex-end;margin-top:16px;}
+.form-row-2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.fin-badge{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:600;}
+.fin-badge.ok{background:#e8f5e9;color:#2e7d32;}
+.fin-badge.warn{background:#fff8e1;color:#856404;}
+.fin-badge.danger{background:#ffebee;color:#b33;}
+.fin-badge.orcamento{background:#e3f2fd;color:#0c5460;}
+.fin-badge.finalizada{background:#e8f5e9;color:#2e7d32;}
+.fin-badge.cancelada{background:#ffebee;color:#b33;}
+.edit-input-fin{padding:4px 6px;border:1px solid transparent;border-radius:5px;font-size:13px;background:transparent;color:var(--rose-dark);transition:border .1s;font-family:inherit;}
+.edit-input-fin:hover{border-color:var(--rose-light);}
+.edit-input-fin:focus{border-color:var(--rose);background:#fff;outline:none;}
+.prog-wrap{width:80px;background:#e9ecef;border-radius:20px;height:6px;display:inline-block;vertical-align:middle;}
+.prog-bar{height:6px;border-radius:20px;}
+.prog-ok{background:var(--rose);}
+.prog-warn{background:#f59e0b;}
+.prog-danger{background:#dc2626;}
+/* Plano de tratamento — simulador */
+.sim-orcamento-item{display:flex;align-items:center;gap:8px;padding:8px 10px;border-bottom:1px solid var(--rose-light);font-size:13px;flex-wrap:wrap;}
+.sim-orcamento-item:last-child{border-bottom:none;}
+
 /* ── MOBILE BOTTOM NAV ── */
 .mobile-bottom-nav{
   display:none;position:fixed;bottom:0;left:0;right:0;
@@ -381,8 +409,14 @@ button{font-family:inherit;}
       <button class="sidebar-item" data-tab="pacientes" onclick="switchTab('pacientes')"><i class="ti ti-users"></i><span>Pacientes</span></button>
       <button class="sidebar-item" data-tab="prontuarios" onclick="switchTab('prontuarios')"><i class="ti ti-file-text"></i><span>Prontuários</span></button>
       <button class="sidebar-item" data-tab="profissionais" onclick="switchTab('profissionais')"><i class="ti ti-briefcase"></i><span>Profissionais</span></button>
-      <button class="sidebar-item" data-tab="odontograma" onclick="switchTab('odontograma')"><i class="ti ti-tooth"></i><span>Odontograma</span></button>
-      <button class="sidebar-item" data-tab="configuracoes" onclick="switchTab('configuracoes')"><i class="ti ti-settings"></i><span>Configurações</span></button>
+      <div style="font-size:9px;font-weight:700;color:var(--rose-text);text-transform:uppercase;letter-spacing:.5px;padding:10px 16px 4px;opacity:.7;">Financeiro</div>
+      <button class="sidebar-item" data-tab="financeiro" onclick="switchTab('financeiro')"><i class="ti ti-chart-bar"></i><span>Painel</span></button>
+      <button class="sidebar-item" data-tab="procedimentos_fin" onclick="switchTab('procedimentos_fin')"><i class="ti ti-list-check"></i><span>Procedimentos</span></button>
+      <button class="sidebar-item" data-tab="materiais_fin" onclick="switchTab('materiais_fin')"><i class="ti ti-box"></i><span>Materiais</span></button>
+      <button class="sidebar-item" data-tab="estoque_fin" onclick="switchTab('estoque_fin')"><i class="ti ti-package"></i><span>Estoque</span></button>
+      <button class="sidebar-item" data-tab="vendas_fin" onclick="switchTab('vendas_fin')"><i class="ti ti-receipt"></i><span>Vendas</span></button>
+      <div style="height:1px;background:var(--rose-light);margin:8px 12px;"></div>
+            <button class="sidebar-item" data-tab="configuracoes" onclick="switchTab('configuracoes')"><i class="ti ti-settings"></i><span>Configurações</span></button>
     </nav>
     <div class="sidebar-bottom">
       <button class="btn-logout" onclick="doLogout()"><i class="ti ti-logout"></i><span>Sair</span></button>
@@ -697,6 +731,178 @@ button{font-family:inherit;}
       </div><!-- fim odonto-main -->
     </div>
 
+
+    <!-- ══════════════════════════════════════════════════
+         FINANCEIRO — PAINEL
+    ══════════════════════════════════════════════════ -->
+    <div id="tab-financeiro" class="content" style="display:none;">
+      <div class="card">
+        <div class="section-header"><h2><i class="ti ti-chart-bar"></i> Painel Financeiro</h2></div>
+        <div id="fin-metrics" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:20px;"></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;flex-wrap:wrap;">
+          <div>
+            <h2 style="font-size:13px;margin-bottom:10px;"><i class="ti ti-trending-up"></i> Vendas recentes</h2>
+            <div id="fin-vendas-recentes"></div>
+          </div>
+          <div>
+            <h2 style="font-size:13px;margin-bottom:10px;"><i class="ti ti-alert-triangle"></i> Estoque crítico</h2>
+            <div id="fin-estoque-alerta"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════
+         FINANCEIRO — PROCEDIMENTOS
+    ══════════════════════════════════════════════════ -->
+    <div id="tab-procedimentos_fin" class="content" style="display:none;">
+      <div class="card">
+        <div class="section-header">
+          <h2><i class="ti ti-list-check"></i> Procedimentos e Precificação</h2>
+          <button class="btn-primary" onclick="openAddProc()"><i class="ti ti-plus"></i> Novo</button>
+        </div>
+        <div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;">
+          <input type="text" id="proc-search" placeholder="Buscar..." oninput="filterProcs()" style="flex:1;min-width:150px;"/>
+          <select id="proc-grupo" onchange="filterProcs()"><option value="">Todos os grupos</option></select>
+          <select id="proc-ordem" onchange="filterProcs()">
+            <option value="custom">Ordem personalizada</option>
+            <option value="az">Nome A→Z</option>
+            <option value="preco_asc">Preço ↑</option>
+            <option value="preco_desc">Preço ↓</option>
+          </select>
+          <button class="btn-secondary" onclick="recalcularInsumos(false)"><i class="ti ti-refresh"></i> Recalcular custos</button>
+        </div>
+        <div style="overflow-x:auto;">
+          <table style="width:100%;border-collapse:collapse;font-size:13px;">
+            <thead><tr style="background:var(--rose-lighter);">
+              <th style="padding:10px;text-align:left;">Procedimento</th>
+              <th style="padding:10px;text-align:left;">Grupo</th>
+              <th style="padding:10px;text-align:right;">Tempo</th>
+              <th style="padding:10px;text-align:right;">Insumos</th>
+              <th style="padding:10px;text-align:right;">Hora Clínica</th>
+              <th style="padding:10px;text-align:right;">Custo Total</th>
+              <th style="padding:10px;text-align:right;">Margem %</th>
+              <th style="padding:10px;text-align:right;">Preço Final</th>
+              <th style="padding:10px;"></th>
+            </tr></thead>
+            <tbody id="proc-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════
+         FINANCEIRO — MATERIAIS
+    ══════════════════════════════════════════════════ -->
+    <div id="tab-materiais_fin" class="content" style="display:none;">
+      <div class="card">
+        <div class="section-header">
+          <h2><i class="ti ti-box"></i> Materiais</h2>
+          <button class="btn-primary" onclick="openAddMat()"><i class="ti ti-plus"></i> Novo material</button>
+        </div>
+        <div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;">
+          <input type="text" id="mat-search" placeholder="Buscar material..." oninput="filterMats()" style="flex:1;min-width:150px;"/>
+          <select id="mat-cat-filter" onchange="filterMats()"><option value="">Todas as categorias</option></select>
+          <select id="mat-ordem" onchange="filterMats()">
+            <option value="az">A→Z</option>
+            <option value="za">Z→A</option>
+            <option value="cat">Categoria</option>
+            <option value="custo_asc">Custo ↑</option>
+            <option value="custo_desc">Custo ↓</option>
+          </select>
+        </div>
+        <div id="cat-filter" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;"></div>
+        <div style="overflow-x:auto;">
+          <table style="width:100%;border-collapse:collapse;font-size:13px;">
+            <thead><tr style="background:var(--rose-lighter);">
+              <th style="padding:10px;text-align:left;">Material</th>
+              <th style="padding:10px;text-align:left;">Categoria</th>
+              <th style="padding:10px;text-align:right;">Unidade</th>
+              <th style="padding:10px;text-align:right;">Qtde/Emb.</th>
+              <th style="padding:10px;text-align:right;">Preço Emb.</th>
+              <th style="padding:10px;text-align:right;">Custo Unit.</th>
+              <th style="padding:10px;"></th>
+            </tr></thead>
+            <tbody id="mat-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════
+         FINANCEIRO — ESTOQUE
+    ══════════════════════════════════════════════════ -->
+    <div id="tab-estoque_fin" class="content" style="display:none;">
+      <div class="card">
+        <div class="section-header">
+          <h2><i class="ti ti-package"></i> Estoque</h2>
+          <div style="display:flex;gap:8px;">
+            <button class="btn-secondary" onclick="deleteEstSelecionados()" id="btn-del-est" style="display:none;"><i class="ti ti-trash"></i> Excluir selecionados</button>
+            <button class="btn-primary" onclick="openAddMat()"><i class="ti ti-plus"></i> Novo material</button>
+          </div>
+        </div>
+        <div id="est-metrics" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:16px;"></div>
+        <div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;">
+          <input type="text" id="est-search" placeholder="Buscar..." oninput="filterEstoque()" style="flex:1;min-width:150px;"/>
+          <select id="est-status-filter" onchange="filterEstoque()">
+            <option value="">Todos</option>
+            <option value="danger">Crítico</option>
+            <option value="warn">Atenção</option>
+            <option value="ok">OK</option>
+          </select>
+        </div>
+        <div style="overflow-x:auto;">
+          <table style="width:100%;border-collapse:collapse;font-size:13px;">
+            <thead><tr style="background:var(--rose-lighter);">
+              <th style="padding:10px;width:32px;"></th>
+              <th style="padding:10px;text-align:left;">Material</th>
+              <th style="padding:10px;text-align:left;">Categoria</th>
+              <th style="padding:10px;text-align:right;">Unid.</th>
+              <th style="padding:10px;text-align:right;">Atual</th>
+              <th style="padding:10px;text-align:right;">Mínimo</th>
+              <th style="padding:10px;text-align:right;">Compra</th>
+              <th style="padding:10px;text-align:left;">Nível</th>
+              <th style="padding:10px;text-align:left;">Status</th>
+              <th style="padding:10px;"></th>
+            </tr></thead>
+            <tbody id="est-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════
+         FINANCEIRO — VENDAS
+    ══════════════════════════════════════════════════ -->
+    <div id="tab-vendas_fin" class="content" style="display:none;">
+      <div class="card">
+        <div class="section-header"><h2><i class="ti ti-receipt"></i> Vendas e Orçamentos</h2></div>
+        <div id="vendas-metrics" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:16px;"></div>
+        <div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;">
+          <input type="text" id="venda-search" placeholder="Buscar venda..." oninput="renderVendas()" style="flex:1;min-width:150px;"/>
+          <select id="venda-status" onchange="renderVendas()">
+            <option value="">Todos</option>
+            <option value="orcamento">Orçamento</option>
+            <option value="finalizada">Finalizada</option>
+            <option value="cancelada">Cancelada</option>
+          </select>
+        </div>
+        <div style="overflow-x:auto;">
+          <table style="width:100%;border-collapse:collapse;font-size:13px;">
+            <thead><tr style="background:var(--rose-lighter);">
+              <th style="padding:10px;text-align:left;">Data</th>
+              <th style="padding:10px;text-align:left;">Paciente</th>
+              <th style="padding:10px;text-align:left;">Itens</th>
+              <th style="padding:10px;text-align:right;">Total</th>
+              <th style="padding:10px;text-align:left;">Status</th>
+              <th style="padding:10px;"></th>
+            </tr></thead>
+            <tbody id="vendas-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
     <!-- CONFIGURAÇÕES -->
     <div id="tab-configuracoes" class="content" style="display:none;">
       <div class="card">
@@ -737,8 +943,10 @@ button{font-family:inherit;}
       <button class="mobile-nav-item" data-tab="lista" onclick="switchTab('lista')"><i class="ti ti-list-check"></i>Agenda</button>
       <button class="mobile-nav-item" data-tab="pacientes" onclick="switchTab('pacientes')"><i class="ti ti-users"></i>Pacientes</button>
       <button class="mobile-nav-item" data-tab="prontuarios" onclick="switchTab('prontuarios')"><i class="ti ti-file-text"></i>Prontuários</button>
-      <button class="mobile-nav-item" data-tab="odontograma" onclick="switchTab('odontograma')"><i class="ti ti-tooth"></i>Odontograma</button>
       <button class="mobile-nav-item" data-tab="profissionais" onclick="switchTab('profissionais')"><i class="ti ti-briefcase"></i>Profissionais</button>
+      <button class="mobile-nav-item" data-tab="financeiro" onclick="switchTab('financeiro')"><i class="ti ti-chart-bar"></i>Financeiro</button>
+      <button class="mobile-nav-item" data-tab="vendas_fin" onclick="switchTab('vendas_fin')"><i class="ti ti-receipt"></i>Vendas</button>
+      <button class="mobile-nav-item" data-tab="estoque_fin" onclick="switchTab('estoque_fin')"><i class="ti ti-package"></i>Estoque</button>
     </div>
   </nav>
 </div><!-- end app -->
@@ -937,7 +1145,7 @@ function toggleSidebar(){
 }
 
 function switchTab(tab){
-  ['home','agendar','lista','calendario','pacientes','prontuarios','profissionais','configuracoes','odontograma'].forEach(t=>{
+  ['home','agendar','lista','calendario','pacientes','prontuarios','profissionais','configuracoes','financeiro','procedimentos_fin','materiais_fin','estoque_fin','vendas_fin'].forEach(t=>{
     const el=document.getElementById('tab-'+t);
     if(el) el.style.display = t===tab?'':'none';
   });
@@ -952,7 +1160,11 @@ function switchTab(tab){
   if(tab==='profissionais') renderProfissionais();
   if(tab==='home') renderHomeStats();
   if(tab==='configuracoes') renderConfiguracoes();
-  if(tab==='odontograma') renderOdontogramaTab();
+  if(tab==='financeiro') renderFinanceiroDash();
+  if(tab==='procedimentos_fin') renderProcs();
+  if(tab==='materiais_fin') renderMats();
+  if(tab==='estoque_fin') renderEstoque();
+  if(tab==='vendas_fin') renderVendas();
   window.scrollTo(0,0);
 }
 
@@ -1339,6 +1551,9 @@ function renderPatientDetail(abaAtiva){
           </div>
           <!-- lista plano -->
           <div id="pac-plano-lista"></div>
+          <hr style="border-color:var(--rose-light);margin:18px 0;"/>
+          <!-- SIMULADOR DE ORÇAMENTO -->
+          <div id="pac-sim-container"></div>
         </div>
       </div>
 
@@ -1387,7 +1602,7 @@ function renderPatientDetail(abaAtiva){
   // Carrega dados das abas
   if(abaAtiva==='odonto') pacCarregarOdonto(p.id);
   if(abaAtiva==='procs') pacCarregarProcs(p.id);
-  if(abaAtiva==='plano') pacCarregarPlano(p.id);
+  if(abaAtiva==='plano'){ pacCarregarPlano(p.id); setTimeout(()=>renderPlanoSimulador(p.id),50); }
 }
 
 function editPatient(id){
@@ -2450,6 +2665,837 @@ async function pacRemoverProc(id){
 }
 
 // ══════════════════════════════════════════════════════
+// FINANCEIRO — PROCEDIMENTOS, MATERIAIS, ESTOQUE, VENDAS
+// Lógica portada do Pétala e adaptada para RWDent + Supabase
+// ══════════════════════════════════════════════════════
+const fmtBRL = v => isNaN(v)?'—':Number(v).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+const fmtN2  = v => isNaN(v)?'—':Number(v).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+
+// ── Estado financeiro (salvo no Supabase por clínica) ──
+let procs       = [];   // procedimentos com precificação
+let mats        = [];   // materiais/insumos
+let estoque     = {};   // { matId: { atual, min, compra } }
+let procInsumos = {};   // { procId: [{matId, qtd}] }
+let vendas      = [];   // histórico de vendas/orçamentos
+let cfg         = { salario:3000, horas:132, trib:0, desperd:5, margem:100, colabPct:50 };
+let taxasCfg    = { debito:1.5, credito:[2.49,5.1,6.12,7.15,8.19,9.24,10.3,11.36,12.44,13.52,14.61,15.71] };
+
+// IDs locais (não precisam ser únicos globalmente, só para UI)
+let nextProcId  = 1;
+let nextMatId   = 1;
+let nextVendaId = 1;
+
+// Orçamento atual do simulador (dentro do plano do paciente)
+let orcamento      = [];
+let orcTotalOverride = null;
+let orcDescCfg     = { val:0, tipo:'pct', maxPar:6 };
+let vendaModoAtual = 'orcamento'; // 'orcamento' ou 'finalizar'
+let estSelected    = new Set();
+
+// ── Carregar dados financeiros do Supabase ──
+async function loadFinanceiro(){
+  if(!clinicaId) return;
+  const { data } = await _sb.from('financeiro_config')
+    .select('*').eq('clinica_id', clinicaId).single();
+  if(data){
+    try{ procs       = JSON.parse(data.procs       || '[]'); }catch(e){ procs=[]; }
+    try{ mats        = JSON.parse(data.mats        || '[]'); }catch(e){ mats=[]; }
+    try{ estoque     = JSON.parse(data.estoque     || '{}'); }catch(e){ estoque={}; }
+    try{ procInsumos = JSON.parse(data.proc_insumos|| '{}'); }catch(e){ procInsumos={}; }
+    try{ vendas      = JSON.parse(data.vendas      || '[]'); }catch(e){ vendas=[]; }
+    try{ cfg         = JSON.parse(data.cfg         || '{}'); }catch(e){}
+    try{ taxasCfg    = JSON.parse(data.taxas_cfg   || '{}'); }catch(e){}
+    // Reconstrói nextIds
+    nextProcId  = procs.length  ? Math.max(...procs.map(p=>p.id||0))  + 1 : 1;
+    nextMatId   = mats.length   ? Math.max(...mats.map(m=>m.id||0))   + 1 : 1;
+    nextVendaId = vendas.length ? Math.max(...vendas.map(v=>v.id||0)) + 1 : 1;
+  } else {
+    // Primeira vez — carrega procedimentos padrão
+    procs = DEFAULT_PROCS_FIN.map((p,i)=>({...p,id:i+1}));
+    nextProcId = procs.length + 1;
+    await saveFinanceiro();
+  }
+  recalcularInsumos(true);
+}
+
+async function saveFinanceiro(){
+  if(!clinicaId) return;
+  const payload = {
+    clinica_id   : clinicaId,
+    procs        : JSON.stringify(procs),
+    mats         : JSON.stringify(mats),
+    estoque      : JSON.stringify(estoque),
+    proc_insumos : JSON.stringify(procInsumos),
+    vendas       : JSON.stringify(vendas),
+    cfg          : JSON.stringify(cfg),
+    taxas_cfg    : JSON.stringify(taxasCfg),
+    updated_at   : new Date().toISOString()
+  };
+  // Upsert
+  const { data: existing } = await _sb.from('financeiro_config').select('id').eq('clinica_id',clinicaId).single();
+  if(existing){ await _sb.from('financeiro_config').update(payload).eq('clinica_id',clinicaId); }
+  else         { await _sb.from('financeiro_config').insert([payload]); }
+}
+
+// ── Helpers de cálculo ──
+function calcHora(){
+  const base = (Number(cfg.salario)||0) + gastosTotalMensal();
+  const horas = Number(cfg.horas)||132;
+  const trib  = Number(cfg.trib)||0;
+  const raw   = horas > 0 ? base / horas : 0;
+  return parseFloat((raw * (1 + trib/100)).toFixed(2));
+}
+function gastosTotalMensal(){ return 0; } // simplificado — sem gastos fixos por ora
+function custoProc(p){
+  const hc = parseFloat(((Number(p.tempo)||0) / 60 * calcHora()).toFixed(2));
+  return parseFloat((Number(p.insumos||0) + hc + Number(p.laboratorio||0)).toFixed(2));
+}
+function calcPrecoFinal(p){
+  const custo = custoProc(p);
+  const margem = Number(p.margem || cfg.margem || 100);
+  const desperd = Number(cfg.desperd||0);
+  const raw = custo * (1 + margem/100) * (1 + desperd/100);
+  return parseFloat(raw.toFixed(2));
+}
+
+// ── PAINEL FINANCEIRO ──
+function renderFinanceiroDash(){
+  const fin = vendas.filter(v=>v.status==='finalizada');
+  const orc = vendas.filter(v=>v.status==='orcamento');
+  const fat = fin.reduce((a,v)=>a+(Number(v.total)||0),0);
+  const criticos = mats.filter(m=>getEstStatus(m.id)==='danger').length;
+  document.getElementById('fin-metrics').innerHTML = [
+    {lbl:'Faturamento',val:fmtBRL(fat),cor:'var(--rose-dark)'},
+    {lbl:'Vendas finalizadas',val:fin.length,cor:'#2e7d32'},
+    {lbl:'Orçamentos abertos',val:orc.length,cor:'#856404'},
+    {lbl:'Estoque crítico',val:criticos,cor:'#dc2626'},
+  ].map(s=>`<div style="background:var(--rose-lighter);border:1px solid var(--rose-light);border-radius:12px;padding:14px 18px;">
+    <div style="font-size:11px;color:var(--rose-text);margin-bottom:4px;">${s.lbl}</div>
+    <div style="font-size:22px;font-weight:800;color:${s.cor};">${s.val}</div>
+  </div>`).join('');
+
+  // Vendas recentes
+  const recentes = [...vendas].reverse().slice(0,5);
+  document.getElementById('fin-vendas-recentes').innerHTML = recentes.length
+    ? recentes.map(v=>`<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--rose-light);font-size:13px;">
+        <span>${escapeHtml(v.pacienteNome||'—')}</span>
+        <span>${fmtBRL(v.total)} <span class="fin-badge ${v.status}">${v.status}</span></span>
+      </div>`).join('')
+    : '<div style="color:var(--rose-text);font-size:13px;">Nenhuma venda ainda.</div>';
+
+  // Estoque crítico
+  const crit = mats.filter(m=>getEstStatus(m.id)==='danger').slice(0,5);
+  document.getElementById('fin-estoque-alerta').innerHTML = crit.length
+    ? crit.map(m=>`<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--rose-light);font-size:13px;">
+        <span>${escapeHtml(m.nome)}</span>
+        <span class="fin-badge danger">Crítico: ${(estoque[m.id]||{}).atual||0} ${m.unid||''}</span>
+      </div>`).join('')
+    : '<div style="color:#2e7d32;font-size:13px;">✓ Estoque OK</div>';
+}
+
+// ── PROCEDIMENTOS ──
+let editProcId = null;
+function openAddProc(){
+  editProcId = null;
+  document.getElementById('modal-proc-title').textContent = 'Novo procedimento';
+  ['mp-nome','mp-grupo','mp-tempo','mp-insumos','mp-laboratorio','mp-margem','mp-preco'].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.value='';
+  });
+  // Popula datalist de grupos
+  const dl = document.getElementById('grupos-list');
+  if(dl) dl.innerHTML = [...new Set(procs.map(p=>p.grupo).filter(Boolean))].sort().map(g=>`<option value="${g}">`).join('');
+  const mp = document.getElementById('mp-margem'); if(mp) mp.value = cfg.margem||100;
+  calcProcPreview();
+  openModal('modal-proc');
+}
+function openEditProc(id){
+  const p = procs.find(x=>x.id===id); if(!p) return;
+  editProcId = id;
+  document.getElementById('modal-proc-title').textContent = 'Editar procedimento';
+  document.getElementById('mp-nome').value      = p.nome;
+  document.getElementById('mp-grupo').value     = p.grupo||'';
+  document.getElementById('mp-tempo').value     = p.tempo||0;
+  document.getElementById('mp-insumos').value   = p.insumos||0;
+  document.getElementById('mp-laboratorio').value = p.laboratorio||0;
+  document.getElementById('mp-margem').value    = p.margem || cfg.margem || 100;
+  document.getElementById('mp-preco').value     = p.precoFinal||0;
+  calcProcPreview();
+  openModal('modal-proc');
+}
+function calcProcPreview(){
+  const tempo = Number(document.getElementById('mp-tempo')?.value)||0;
+  const insumos = Number(document.getElementById('mp-insumos')?.value)||0;
+  const lab   = Number(document.getElementById('mp-laboratorio')?.value)||0;
+  const margem= Number(document.getElementById('mp-margem')?.value)||100;
+  const hora  = calcHora();
+  const hc    = parseFloat(((tempo/60)*hora).toFixed(2));
+  const custo = parseFloat((insumos+hc+lab).toFixed(2));
+  const lucro = parseFloat((custo*margem/100).toFixed(2));
+  const preco = parseFloat((custo+lucro).toFixed(2));
+  const set = (id,v) => { const el=document.getElementById(id); if(el) el.textContent=v; };
+  set('mp-horaClin-calc', fmtBRL(hc));
+  set('mp-custo-calc',    fmtBRL(custo));
+  set('mp-lucro-calc',    fmtBRL(lucro));
+  set('mp-preco-calc',    fmtBRL(preco));
+  const pp = document.getElementById('mp-preco');
+  if(pp && !pp.value) pp.value = preco.toFixed(2);
+}
+async function saveProc(){
+  const nome = document.getElementById('mp-nome')?.value.trim();
+  if(!nome){ showToast('Informe o nome do procedimento.','warn'); return; }
+  const hora   = calcHora();
+  const tempo  = Number(document.getElementById('mp-tempo')?.value)||0;
+  const insumos= Number(document.getElementById('mp-insumos')?.value)||0;
+  const lab    = Number(document.getElementById('mp-laboratorio')?.value)||0;
+  const margem = Number(document.getElementById('mp-margem')?.value)||100;
+  const hc     = parseFloat(((tempo/60)*hora).toFixed(2));
+  const preco  = Number(document.getElementById('mp-preco')?.value)||calcPrecoFinal({tempo,insumos,laboratorio:lab,margem});
+  const obj    = { nome, grupo:document.getElementById('mp-grupo')?.value||'Geral', tempo, insumos, laboratorio:lab, margem, horaClin:hc, precoFinal:preco };
+  if(editProcId){
+    const i = procs.findIndex(x=>x.id===editProcId);
+    procs[i] = { ...procs[i], ...obj };
+  } else {
+    procs.push({ id: nextProcId++, ...obj });
+  }
+  showLoading(true);
+  await saveFinanceiro();
+  showLoading(false);
+  closeModal('modal-proc');
+  renderProcs();
+  showToast('Procedimento salvo!');
+}
+async function deleteProc(id){
+  if(!confirm('Excluir este procedimento?')) return;
+  procs = procs.filter(x=>x.id!==id);
+  delete procInsumos[id];
+  showLoading(true);
+  await saveFinanceiro();
+  showLoading(false);
+  renderProcs();
+  showToast('Removido.');
+}
+function filterProcs(){ renderProcs(); }
+function renderProcs(){
+  const q     = (document.getElementById('proc-search')||{value:''}).value.toLowerCase();
+  const grupo = (document.getElementById('proc-grupo')||{value:''}).value;
+  const ordem = (document.getElementById('proc-ordem')||{value:'custom'}).value;
+  // Popula select de grupos
+  const gsel = document.getElementById('proc-grupo');
+  if(gsel){
+    const cur = gsel.value;
+    const gs  = [...new Set(procs.map(p=>p.grupo).filter(Boolean))].sort();
+    gsel.innerHTML = '<option value="">Todos os grupos</option>' + gs.map(g=>`<option value="${g}"${g===cur?' selected':''}>${g}</option>`).join('');
+  }
+  let list = procs.filter(p=>(!q||p.nome.toLowerCase().includes(q))&&(!grupo||p.grupo===grupo));
+  if(ordem==='az') list=[...list].sort((a,b)=>a.nome.localeCompare(b.nome,'pt-BR'));
+  else if(ordem==='preco_asc') list=[...list].sort((a,b)=>(a.precoFinal||0)-(b.precoFinal||0));
+  else if(ordem==='preco_desc') list=[...list].sort((a,b)=>(b.precoFinal||0)-(a.precoFinal||0));
+  const tb = document.getElementById('proc-tbody');
+  if(!tb) return;
+  if(!list.length){ tb.innerHTML='<tr><td colspan="9" style="text-align:center;color:var(--rose-text);padding:20px;">Nenhum procedimento encontrado.</td></tr>'; return; }
+  tb.innerHTML = list.map(p=>`<tr style="border-bottom:1px solid var(--rose-light);">
+    <td style="padding:10px;">${escapeHtml(p.nome)}</td>
+    <td style="padding:10px;"><span style="background:var(--rose-lighter);color:var(--rose-dark);border-radius:6px;padding:2px 8px;font-size:11px;">${escapeHtml(p.grupo||'—')}</span></td>
+    <td style="padding:10px;text-align:right;">${p.tempo||0} min</td>
+    <td style="padding:10px;text-align:right;">${fmtBRL(p.insumos||0)}</td>
+    <td style="padding:10px;text-align:right;">${fmtBRL(p.horaClin||0)}</td>
+    <td style="padding:10px;text-align:right;">${fmtBRL(custoProc(p))}</td>
+    <td style="padding:10px;text-align:right;">${p.margem||cfg.margem||100}%</td>
+    <td style="padding:10px;text-align:right;font-weight:700;color:var(--rose-dark);">${fmtBRL(p.precoFinal||0)}</td>
+    <td style="padding:10px;">
+      <div style="display:flex;gap:6px;justify-content:flex-end;">
+        <button class="btn-secondary" style="padding:4px 8px;font-size:11px;" onclick="openInsumos(${p.id})" title="Insumos"><i class="ti ti-flask"></i></button>
+        <button class="btn-secondary" style="padding:4px 8px;font-size:11px;" onclick="openEditProc(${p.id})"><i class="ti ti-pencil"></i></button>
+        <button class="btn-danger" style="padding:4px 8px;font-size:11px;" onclick="deleteProc(${p.id})"><i class="ti ti-trash"></i></button>
+      </div>
+    </td>
+  </tr>`).join('');
+}
+
+// ── MATERIAIS ──
+let editMatId = null;
+let activeCat = '';
+function openAddMat(){
+  editMatId = null;
+  document.getElementById('modal-mat-title').textContent = 'Novo material';
+  ['mm-nome','mm-cat','mm-unid','mm-qtde','mm-preco','mm-est-atual','mm-est-min','mm-est-compra'].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.value='';
+  });
+  document.getElementById('mm-custo-calc').textContent = '—';
+  updateCatsList();
+  openModal('modal-mat');
+}
+function openEditMat(id){
+  const m = mats.find(x=>x.id===id); if(!m) return;
+  editMatId = id;
+  document.getElementById('modal-mat-title').textContent = 'Editar material';
+  document.getElementById('mm-nome').value  = m.nome;
+  document.getElementById('mm-cat').value   = m.cat||'';
+  document.getElementById('mm-unid').value  = m.unid||'';
+  document.getElementById('mm-qtde').value  = m.qtde||1;
+  document.getElementById('mm-preco').value = m.preco||0;
+  const e = estoque[id]||{};
+  document.getElementById('mm-est-atual').value   = e.atual??'';
+  document.getElementById('mm-est-min').value     = e.min??'';
+  document.getElementById('mm-est-compra').value  = e.compra??'';
+  updateCatsList();
+  calcMatCusto();
+  openModal('modal-mat');
+}
+function updateCatsList(){
+  const dl = document.getElementById('cats-list');
+  if(dl) dl.innerHTML = [...new Set(mats.map(m=>m.cat).filter(Boolean))].sort().map(c=>`<option value="${c}">`).join('');
+}
+function calcMatCusto(){
+  const qtde  = Number(document.getElementById('mm-qtde')?.value)||1;
+  const preco = Number(document.getElementById('mm-preco')?.value)||0;
+  const el = document.getElementById('mm-custo-calc');
+  if(el) el.textContent = qtde&&preco ? 'R$ '+fmtN2(preco/qtde) : '—';
+}
+async function saveMat(){
+  const nome = document.getElementById('mm-nome')?.value.trim();
+  if(!nome){ showToast('Informe o nome do material.','warn'); return; }
+  const qtde  = Number(document.getElementById('mm-qtde')?.value)||1;
+  const preco = Number(document.getElementById('mm-preco')?.value)||0;
+  const custo = parseFloat((preco/qtde).toFixed(4));
+  const obj   = { nome, cat:document.getElementById('mm-cat')?.value||'Geral', unid:document.getElementById('mm-unid')?.value||'unid', qtde, preco, custo };
+  let matId;
+  if(editMatId){
+    matId = editMatId;
+    const i = mats.findIndex(x=>x.id===editMatId);
+    mats[i] = { ...mats[i], ...obj };
+  } else {
+    matId = nextMatId++;
+    mats.push({ id:matId, ...obj });
+  }
+  const ea = document.getElementById('mm-est-atual')?.value;
+  const em = document.getElementById('mm-est-min')?.value;
+  const ec = document.getElementById('mm-est-compra')?.value;
+  if(ea!==''||em!==''||ec!==''||estoque[matId]){
+    estoque[matId] = { atual:Number(ea)||0, min:Number(em)||0, compra:Number(ec)||0 };
+  }
+  showLoading(true);
+  await saveFinanceiro();
+  showLoading(false);
+  closeModal('modal-mat');
+  renderMats(); renderEstoque();
+  recalcularInsumos(true);
+  showToast('Material salvo!');
+}
+async function deleteMat(id){
+  if(!confirm('Excluir este material? Será removido do estoque e dos insumos dos procedimentos.')) return;
+  mats = mats.filter(x=>x.id!==id);
+  delete estoque[id];
+  for(const k in procInsumos){ procInsumos[k]=(procInsumos[k]||[]).filter(x=>x.matId!==id); }
+  showLoading(true);
+  await saveFinanceiro();
+  showLoading(false);
+  renderMats(); renderEstoque();
+  recalcularInsumos(true);
+  showToast('Material excluído.');
+}
+function filterMats(){ renderMats(); }
+function setCat(c){ activeCat=c; renderMats(); }
+function renderMats(){
+  const q     = (document.getElementById('mat-search')||{value:''}).value.toLowerCase();
+  const ordem = (document.getElementById('mat-ordem')||{value:'az'}).value;
+  const catF  = (document.getElementById('mat-cat-filter')||{value:''}).value;
+  // Atualiza filter de categorias
+  const cats = [...new Set(mats.map(m=>m.cat).filter(Boolean))].sort();
+  const cfEl = document.getElementById('cat-filter');
+  if(cfEl) cfEl.innerHTML = '<button class="btn-secondary'+(activeCat===''?' active':'')+'" style="font-size:11px;padding:4px 10px;border-radius:20px;" onclick="setCat(\'\')">Todas</button>'+
+    cats.map(c=>`<button class="btn-secondary${activeCat===c?' active':''}" style="font-size:11px;padding:4px 10px;border-radius:20px;" onclick="setCat('${c}')">${c}</button>`).join('');
+  const matCatSel = document.getElementById('mat-cat-filter');
+  if(matCatSel){
+    const cur=matCatSel.value;
+    matCatSel.innerHTML='<option value="">Todas as categorias</option>'+cats.map(c=>`<option value="${c}"${c===cur?' selected':''}>${c}</option>`).join('');
+  }
+  let list = mats.filter(m=>(!activeCat||m.cat===activeCat)&&(!catF||m.cat===catF)&&(!q||m.nome.toLowerCase().includes(q)));
+  if(ordem==='az') list=[...list].sort((a,b)=>a.nome.localeCompare(b.nome,'pt-BR'));
+  else if(ordem==='za') list=[...list].sort((a,b)=>b.nome.localeCompare(a.nome,'pt-BR'));
+  else if(ordem==='cat') list=[...list].sort((a,b)=>(a.cat||'').localeCompare(b.cat||'','pt-BR')||a.nome.localeCompare(b.nome,'pt-BR'));
+  else if(ordem==='custo_asc') list=[...list].sort((a,b)=>(a.custo||0)-(b.custo||0));
+  else if(ordem==='custo_desc') list=[...list].sort((a,b)=>(b.custo||0)-(a.custo||0));
+  const tb = document.getElementById('mat-tbody');
+  if(!tb) return;
+  if(!list.length){ tb.innerHTML='<tr><td colspan="7" style="text-align:center;color:var(--rose-text);padding:20px;">Nenhum material cadastrado.</td></tr>'; return; }
+  tb.innerHTML = list.map(m=>`<tr style="border-bottom:1px solid var(--rose-light);">
+    <td style="padding:10px;font-weight:500;">${escapeHtml(m.nome)}</td>
+    <td style="padding:10px;"><span style="background:var(--rose-lighter);color:var(--rose-dark);border-radius:6px;padding:2px 8px;font-size:11px;">${escapeHtml(m.cat||'—')}</span></td>
+    <td style="padding:10px;text-align:right;">${escapeHtml(m.unid||'—')}</td>
+    <td style="padding:10px;text-align:right;">${fmtN2(m.qtde||0)}</td>
+    <td style="padding:10px;text-align:right;">${fmtBRL(m.preco||0)}</td>
+    <td style="padding:10px;text-align:right;font-weight:700;color:var(--rose-dark);">${m.preco&&m.qtde?fmtN2(m.preco/m.qtde):'—'}</td>
+    <td style="padding:10px;">
+      <div style="display:flex;gap:6px;justify-content:flex-end;">
+        <button class="btn-secondary" style="padding:4px 8px;font-size:11px;" onclick="openEditMat(${m.id})"><i class="ti ti-pencil"></i></button>
+        <button class="btn-danger" style="padding:4px 8px;font-size:11px;" onclick="deleteMat(${m.id})"><i class="ti ti-trash"></i></button>
+      </div>
+    </td>
+  </tr>`).join('');
+}
+
+// ── ESTOQUE ──
+function getEstStatus(matId){
+  const e = estoque[matId]||{};
+  const a = e.atual||0, mn=e.min||0, cp=e.compra||0;
+  if(mn>0&&a<=mn) return 'danger';
+  if(cp>0&&a<=cp) return 'warn';
+  if(a>0) return 'ok';
+  return '';
+}
+function toggleEstSel(id, checked){ if(checked) estSelected.add(id); else estSelected.delete(id); updateEstDelBtn(); }
+function updateEstDelBtn(){
+  const btn = document.getElementById('btn-del-est');
+  if(btn) btn.style.display = estSelected.size > 0 ? '' : 'none';
+}
+async function deleteEstSelecionados(){
+  if(!confirm(`Excluir ${estSelected.size} material(is)?`)) return;
+  estSelected.forEach(id=>{ mats=mats.filter(x=>x.id!==id); delete estoque[id]; });
+  estSelected.clear();
+  showLoading(true); await saveFinanceiro(); showLoading(false);
+  renderMats(); renderEstoque(); updateEstDelBtn();
+}
+function openEstEdit(id){
+  const m = mats.find(x=>x.id===id); if(!m) return;
+  const e = estoque[id]||{};
+  document.getElementById('me-nome-label').textContent = m.nome;
+  document.getElementById('me-atual').value  = e.atual??0;
+  document.getElementById('me-min').value    = e.min??0;
+  document.getElementById('me-compra').value = e.compra??0;
+  document.getElementById('me-unid').value   = m.unid||'';
+  openModal('modal-est'); openModal('modal-est');
+  // guarda id para o save
+  document.getElementById('modal-est').dataset.matId = id;
+}
+async function saveEst(){
+  const id = Number(document.getElementById('modal-est').dataset.matId);
+  const m = mats.find(x=>x.id===id); if(!m) return;
+  const unid = document.getElementById('me-unid')?.value || m.unid;
+  estoque[id] = {
+    atual  : Number(document.getElementById('me-atual')?.value)||0,
+    min    : Number(document.getElementById('me-min')?.value)||0,
+    compra : Number(document.getElementById('me-compra')?.value)||0,
+  };
+  const i = mats.findIndex(x=>x.id===id);
+  if(i>=0) mats[i].unid = unid;
+  showLoading(true); await saveFinanceiro(); showLoading(false);
+  closeModal('modal-est');
+  renderEstoque(); renderMats();
+  showToast('Estoque atualizado!');
+}
+function filterEstoque(){ renderEstoque(); }
+function renderEstoque(){
+  const q   = (document.getElementById('est-search')||{value:''}).value.toLowerCase();
+  const sf  = (document.getElementById('est-status-filter')||{value:''}).value;
+  let list  = mats.filter(m=>(!q||m.nome.toLowerCase().includes(q))&&(!sf||getEstStatus(m.id)===sf));
+  const ok  = mats.filter(m=>getEstStatus(m.id)==='ok').length;
+  const warn= mats.filter(m=>getEstStatus(m.id)==='warn').length;
+  const dan = mats.filter(m=>getEstStatus(m.id)==='danger').length;
+  const estM = document.getElementById('est-metrics');
+  if(estM) estM.innerHTML = [
+    {lbl:'Total materiais',val:mats.length,cor:'var(--rose-dark)'},
+    {lbl:'OK',val:ok,cor:'#2e7d32'},
+    {lbl:'Atenção',val:warn,cor:'#856404'},
+    {lbl:'Crítico',val:dan,cor:'#dc2626'},
+  ].map(s=>`<div style="background:var(--rose-lighter);border:1px solid var(--rose-light);border-radius:12px;padding:12px 16px;">
+    <div style="font-size:11px;color:var(--rose-text);">${s.lbl}</div>
+    <div style="font-size:20px;font-weight:800;color:${s.cor};">${s.val}</div>
+  </div>`).join('');
+  const tb = document.getElementById('est-tbody');
+  if(!tb) return;
+  if(!list.length){ tb.innerHTML='<tr><td colspan="10" style="text-align:center;color:var(--rose-text);padding:20px;">Nenhum material no estoque.</td></tr>'; return; }
+  tb.innerHTML = list.map(m=>{
+    const e   = estoque[m.id]||{atual:0,min:0,compra:0};
+    const st  = getEstStatus(m.id);
+    const pct = e.compra>0?Math.min(100,Math.round((e.atual/e.compra)*100)):null;
+    const barCls = st==='danger'?'prog-danger':st==='warn'?'prog-warn':'prog-ok';
+    const stLbl  = st==='danger'?'Crítico':st==='warn'?'Atenção':st==='ok'?'OK':'—';
+    const stCls  = st==='danger'?'danger':st==='warn'?'warn':st==='ok'?'ok':'';
+    return `<tr style="border-bottom:1px solid var(--rose-light);">
+      <td style="padding:10px;"><input type="checkbox" ${estSelected.has(m.id)?'checked':''} onchange="toggleEstSel(${m.id},this.checked)"/></td>
+      <td style="padding:10px;font-weight:500;">${escapeHtml(m.nome)}</td>
+      <td style="padding:10px;"><span style="background:var(--rose-lighter);color:var(--rose-dark);border-radius:6px;padding:2px 8px;font-size:11px;">${escapeHtml(m.cat||'—')}</span></td>
+      <td style="padding:10px;text-align:right;">${escapeHtml(m.unid||'—')}</td>
+      <td style="padding:10px;text-align:right;"><input class="edit-input-fin" type="number" min="0" step="0.01" value="${e.atual||0}" onchange="updateEstField(${m.id},'atual',this.value)" style="width:72px;text-align:right;font-weight:700;"/></td>
+      <td style="padding:10px;text-align:right;"><input class="edit-input-fin" type="number" min="0" step="0.01" value="${e.min||0}" onchange="updateEstField(${m.id},'min',this.value)" style="width:66px;text-align:right;color:#dc2626;"/></td>
+      <td style="padding:10px;text-align:right;"><input class="edit-input-fin" type="number" min="0" step="0.01" value="${e.compra||0}" onchange="updateEstField(${m.id},'compra',this.value)" style="width:66px;text-align:right;color:#856404;"/></td>
+      <td style="padding:10px;">${pct!==null?`<div class="prog-wrap"><div class="prog-bar ${barCls}" style="width:${pct}%;"></div></div> <span style="font-size:11px;color:var(--rose-text);">${pct}%</span>`:'<span style="font-size:11px;color:var(--rose-text);">—</span>'}</td>
+      <td style="padding:10px;"><span class="fin-badge ${stCls}">${stLbl}</span></td>
+      <td style="padding:10px;">
+        <div style="display:flex;gap:6px;justify-content:flex-end;">
+          <button class="btn-secondary" style="padding:4px 8px;font-size:11px;" onclick="openEstEdit(${m.id})"><i class="ti ti-pencil"></i></button>
+          <button class="btn-danger" style="padding:4px 8px;font-size:11px;" onclick="deleteMat(${m.id})"><i class="ti ti-trash"></i></button>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+async function updateEstField(id, field, val){
+  if(!estoque[id]) estoque[id]={atual:0,min:0,compra:0};
+  estoque[id][field] = parseFloat(val)||0;
+  await saveFinanceiro();
+  renderEstoque();
+}
+
+// ── INSUMOS DOS PROCEDIMENTOS ──
+let insumosEditProcId = null;
+let insumosTemp = [];
+function openInsumos(procId){
+  const p = procs.find(x=>x.id===procId); if(!p) return;
+  insumosEditProcId = procId;
+  insumosTemp = JSON.parse(JSON.stringify(procInsumos[procId]||[]));
+  document.getElementById('mi-proc-nome').textContent = p.nome;
+  const sel = document.getElementById('mi-mat-sel');
+  if(sel) sel.innerHTML = mats.map(m=>`<option value="${m.id}">${m.nome} (${m.unid||'unid'}) — ${fmtBRL(m.custo||0)}/un.</option>`).join('');
+  renderInsumosList();
+  openModal('modal-insumos');
+}
+function addInsumoRow(){
+  const matId = Number(document.getElementById('mi-mat-sel')?.value);
+  const qtd   = parseFloat(document.getElementById('mi-qtd-add')?.value)||1;
+  if(!matId) return;
+  const ex = insumosTemp.findIndex(x=>x.matId===matId);
+  if(ex>=0) insumosTemp[ex].qtd = parseFloat((insumosTemp[ex].qtd+qtd).toFixed(4));
+  else insumosTemp.push({matId,qtd});
+  renderInsumosList();
+}
+function renderInsumosList(){
+  const ul = document.getElementById('mi-list'); if(!ul) return;
+  if(!insumosTemp.length){ ul.innerHTML='<li style="color:var(--rose-text);padding:.5rem 0;font-size:13px;">Nenhum insumo adicionado</li>'; document.getElementById('mi-total-custo').textContent='R$ 0,00'; return; }
+  let total=0;
+  ul.innerHTML = insumosTemp.map((item,idx)=>{
+    const m = mats.find(x=>x.id===item.matId); if(!m) return '';
+    const custo=m.custo*item.qtd; total+=custo;
+    const e=estoque[m.id]||{atual:0};
+    const tagCls=e.atual<item.qtd?'danger':'ok';
+    return `<li style="display:grid;grid-template-columns:1fr auto auto auto;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid var(--rose-light);font-size:12px;">
+      <span>${escapeHtml(m.nome)} <span class="fin-badge ${tagCls}" style="font-size:10px;">est:${e.atual} ${m.unid||''}</span></span>
+      <input type="number" class="edit-input-fin" style="width:66px;text-align:center;" min="0.001" step="0.001" value="${item.qtd}" onchange="updateInsumoQtd(${idx},this.value)"/>
+      <span style="font-size:11px;color:var(--rose-text);">${m.unid||''}</span>
+      <span style="display:flex;align-items:center;gap:4px;">
+        <span style="font-size:11px;color:var(--rose-text);">${fmtBRL(custo)}</span>
+        <button class="btn-danger" style="padding:2px 6px;" onclick="removeInsumo(${idx})"><i class="ti ti-x"></i></button>
+      </span>
+    </li>`;
+  }).join('');
+  document.getElementById('mi-total-custo').textContent = fmtBRL(total);
+}
+function updateInsumoQtd(idx,val){ insumosTemp[idx].qtd=parseFloat(val)||0; renderInsumosList(); }
+function removeInsumo(idx){ insumosTemp.splice(idx,1); renderInsumosList(); }
+async function saveInsumos(){
+  if(insumosEditProcId===null) return;
+  // Ajuste de estoque: diferença entre antes e agora
+  const old = procInsumos[insumosEditProcId]||[];
+  insumosTemp.forEach(item=>{
+    const prev=old.find(x=>x.matId===item.matId);
+    const diff=item.qtd-(prev?prev.qtd:0);
+    if(diff!==0){
+      if(!estoque[item.matId]) estoque[item.matId]={atual:0,min:0,compra:0};
+      estoque[item.matId].atual=Math.max(0,parseFloat(((estoque[item.matId].atual||0)-diff).toFixed(4)));
+    }
+  });
+  old.forEach(item=>{
+    const still=insumosTemp.find(x=>x.matId===item.matId);
+    if(!still){
+      if(!estoque[item.matId]) estoque[item.matId]={atual:0,min:0,compra:0};
+      estoque[item.matId].atual=parseFloat(((estoque[item.matId].atual||0)+item.qtd).toFixed(4));
+    }
+  });
+  procInsumos[insumosEditProcId]=JSON.parse(JSON.stringify(insumosTemp));
+  // Recalcula custo do procedimento
+  const totalIns=insumosTemp.reduce((acc,item)=>{const m=mats.find(x=>x.id===item.matId);return acc+(m?m.custo*item.qtd:0);},0);
+  const pi=procs.findIndex(x=>x.id===insumosEditProcId);
+  if(pi>=0){ procs[pi].insumos=parseFloat(totalIns.toFixed(2)); procs[pi].horaClin=parseFloat(((procs[pi].tempo/60)*calcHora()).toFixed(2)); procs[pi].precoFinal=calcPrecoFinal(procs[pi]); }
+  showLoading(true); await saveFinanceiro(); showLoading(false);
+  closeModal('modal-insumos');
+  renderProcs(); renderEstoque();
+  showToast('Insumos salvos!');
+}
+function recalcularInsumos(silent){
+  let atualizados=0;
+  procs.forEach(p=>{
+    const ins=procInsumos[p.id]||[];
+    if(ins.length){
+      const novo=parseFloat(ins.reduce((acc,item)=>{const m=mats.find(x=>x.id===item.matId);return acc+(m?m.custo*item.qtd:0);},0).toFixed(2));
+      if(novo!==p.insumos){p.insumos=novo;atualizados++;}
+    }
+    p.horaClin=parseFloat(((p.tempo/60)*calcHora()).toFixed(2));
+    p.precoFinal=calcPrecoFinal(p);
+  });
+  if(!silent) showToast(atualizados>0?`${atualizados} procedimento(s) atualizados.`:'Custos já atualizados.');
+}
+
+// ── VENDAS ──
+const STATUS_VENDA = {
+  orcamento : {lbl:'Orçamento', cls:'orcamento', icon:'ti-clock'},
+  finalizada: {lbl:'Finalizada', cls:'finalizada', icon:'ti-circle-check'},
+  cancelada : {lbl:'Cancelada',  cls:'cancelada',  icon:'ti-circle-x'},
+};
+
+function computeConsumo(itens){
+  const map={};
+  (itens||[]).forEach(it=>{
+    const qtd=Number(it.qtd)||1;
+    (procInsumos[it.procId]||[]).forEach(ins=>{ map[ins.matId]=(map[ins.matId]||0)+ins.qtd*qtd; });
+  });
+  return Object.keys(map).map(k=>({matId:Number(k),qtd:parseFloat(map[k].toFixed(4))}));
+}
+function aplicarBaixaEstoque(consumo){
+  const aplicado=[];
+  consumo.forEach(c=>{
+    if(!estoque[c.matId]) estoque[c.matId]={atual:0,min:0,compra:0};
+    const antes=estoque[c.matId].atual||0;
+    const depois=Math.max(0,parseFloat((antes-c.qtd).toFixed(4)));
+    aplicado.push({matId:c.matId,qtd:parseFloat((antes-depois).toFixed(4))});
+    estoque[c.matId].atual=depois;
+  });
+  return aplicado;
+}
+function devolverEstoque(consumo){
+  (consumo||[]).forEach(c=>{
+    if(!estoque[c.matId]) estoque[c.matId]={atual:0,min:0,compra:0};
+    estoque[c.matId].atual=parseFloat(((estoque[c.matId].atual||0)+c.qtd).toFixed(4));
+  });
+}
+function renderVendas(){
+  const q  = (document.getElementById('venda-search')||{value:''}).value.toLowerCase();
+  const sf = (document.getElementById('venda-status')||{value:''}).value;
+  let list = vendas.filter(v=>{
+    const txt=((v.pacienteNome||'')+' '+(v.itens||[]).map(i=>i.nome||'').join(' ')).toLowerCase();
+    return(!q||txt.includes(q))&&(!sf||v.status===sf);
+  }).slice().reverse();
+  const fin     = vendas.filter(v=>v.status==='finalizada');
+  const fat     = fin.reduce((a,v)=>a+(Number(v.total)||0),0);
+  const orcAbertos = vendas.filter(v=>v.status==='orcamento').length;
+  const vm = document.getElementById('vendas-metrics');
+  if(vm) vm.innerHTML=[
+    {lbl:'Vendas finalizadas',val:fin.length,cor:'#2e7d32'},
+    {lbl:'Faturamento',val:fmtBRL(fat),cor:'var(--rose-dark)'},
+    {lbl:'Orçamentos abertos',val:orcAbertos,cor:'#856404'},
+    {lbl:'Total registros',val:vendas.length,cor:'var(--rose-text)'},
+  ].map(s=>`<div style="background:var(--rose-lighter);border:1px solid var(--rose-light);border-radius:12px;padding:12px 16px;">
+    <div style="font-size:11px;color:var(--rose-text);">${s.lbl}</div>
+    <div style="font-size:20px;font-weight:800;color:${s.cor};">${s.val}</div>
+  </div>`).join('');
+  const tb = document.getElementById('vendas-tbody'); if(!tb) return;
+  if(!list.length){ tb.innerHTML='<tr><td colspan="6" style="text-align:center;color:var(--rose-text);padding:20px;">Nenhuma venda registrada ainda.</td></tr>'; return; }
+  tb.innerHTML = list.map(v=>{
+    const si = STATUS_VENDA[v.status]||STATUS_VENDA.orcamento;
+    const data = new Date(v.data).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'2-digit'})+' '+new Date(v.data).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+    const itensRes = (v.itens||[]).map(i=>(i.qtd>1?i.qtd+'× ':'')+escapeHtml(i.nome||'')).join(', ');
+    let acoes = `<button class="btn-secondary" style="padding:4px 8px;font-size:11px;" onclick="toggleVendaMat(${v.id})" title="Ver materiais"><i class="ti ti-box"></i></button>`;
+    if(v.status==='orcamento') acoes += `<button class="btn-secondary" style="padding:4px 8px;font-size:11px;color:#2e7d32;" onclick="finalizarVendaSalva(${v.id})" title="Finalizar venda"><i class="ti ti-circle-check"></i></button>`;
+    if(v.status==='finalizada') acoes += `<button class="btn-secondary" style="padding:4px 8px;font-size:11px;color:#856404;" onclick="cancelarVenda(${v.id})" title="Cancelar venda"><i class="ti ti-arrow-back-up"></i></button>`;
+    if(v.status==='cancelada'&&!v.estoqueDevolvido) acoes += `<button class="btn-secondary" style="padding:4px 8px;font-size:11px;color:#2e7d32;" onclick="devolverEstoqueVenda(${v.id})" title="Devolver estoque"><i class="ti ti-package-import"></i></button>`;
+    acoes += `<button class="btn-danger" style="padding:4px 8px;font-size:11px;" onclick="excluirVenda(${v.id})"><i class="ti ti-trash"></i></button>`;
+    // Detalhe materiais (linha oculta)
+    const ci = v.status==='finalizada'?{dir:'saiu',consumo:v.consumo||[]}:v.status==='cancelada'?{dir:'voltou',consumo:v.consumoRevertido||[]}:{dir:'previsto',consumo:computeConsumo(v.itens||[])};
+    const matLi = ci.consumo.length?ci.consumo.map(c=>{const m=mats.find(x=>x.id===c.matId);return `<li style="display:flex;justify-content:space-between;font-size:12px;padding:2px 0;"><span>${m?escapeHtml(m.nome):'Material #'+c.matId}</span><span>${fmtN2(c.qtd)}</span></li>`;}).join(''):'<li style="color:var(--rose-text);font-size:12px;">Nenhum insumo vinculado.</li>';
+    return `<tr style="border-bottom:1px solid var(--rose-light);">
+      <td style="padding:10px;font-size:12px;white-space:nowrap;">${data}</td>
+      <td style="padding:10px;">${escapeHtml(v.pacienteNome||'—')}</td>
+      <td style="padding:10px;font-size:12px;color:var(--rose-text);max-width:280px;">${itensRes||'—'}</td>
+      <td style="padding:10px;text-align:right;font-weight:700;color:var(--rose-dark);">${fmtBRL(v.total)}</td>
+      <td style="padding:10px;"><span class="fin-badge ${si.cls}"><i class="ti ${si.icon}"></i> ${si.lbl}</span></td>
+      <td style="padding:10px;"><div style="display:flex;gap:4px;justify-content:flex-end;">${acoes}</div></td>
+    </tr>
+    <tr id="vd-${v.id}" style="display:none;background:var(--rose-lighter);">
+      <td colspan="6" style="padding:10px 16px;">
+        <div style="font-size:12px;font-weight:600;color:var(--rose-dark);margin-bottom:4px;">Materiais — ${ci.dir}</div>
+        <ul style="list-style:none;">${matLi}</ul>
+      </td>
+    </tr>`;
+  }).join('');
+}
+function toggleVendaMat(id){ const r=document.getElementById('vd-'+id); if(r) r.style.display=r.style.display==='none'?'table-row':'none'; }
+async function finalizarVendaSalva(id){
+  const v=vendas.find(x=>x.id===id); if(!v||v.status!=='orcamento') return;
+  if(!confirm('Finalizar venda? O estoque dos materiais usados será descontado.')) return;
+  const consumo=computeConsumo(v.itens||[]);
+  const aplicado=aplicarBaixaEstoque(consumo);
+  v.status='finalizada'; v.consumo=aplicado; v.dataFinal=new Date().toISOString();
+  showLoading(true); await saveFinanceiro(); showLoading(false);
+  renderVendas(); renderEstoque();
+  showToast('Venda finalizada! Estoque atualizado.');
+}
+async function cancelarVenda(id){
+  const v=vendas.find(x=>x.id===id); if(!v||v.status!=='finalizada') return;
+  if(!confirm('Cancelar esta venda? O estoque será devolvido.')) return;
+  const consumo=(v.consumo&&v.consumo.length)?v.consumo:computeConsumo(v.itens||[]);
+  devolverEstoque(consumo);
+  v.status='cancelada'; v.consumoRevertido=consumo; v.estoqueDevolvido=true; v.consumo=null; v.dataCancel=new Date().toISOString();
+  showLoading(true); await saveFinanceiro(); showLoading(false);
+  renderVendas(); renderEstoque();
+  showToast('Venda cancelada. Estoque devolvido.');
+}
+async function devolverEstoqueVenda(id){
+  const v=vendas.find(x=>x.id===id); if(!v||v.status!=='cancelada') return;
+  if(v.estoqueDevolvido){ showToast('Estoque já foi devolvido.','warn'); return; }
+  const consumo=computeConsumo(v.itens||[]);
+  devolverEstoque(consumo);
+  v.consumoRevertido=consumo; v.estoqueDevolvido=true;
+  showLoading(true); await saveFinanceiro(); showLoading(false);
+  renderVendas(); renderEstoque();
+  showToast('Estoque devolvido!');
+}
+async function excluirVenda(id){
+  const v=vendas.find(x=>x.id===id); if(!v) return;
+  const msg = v.status==='finalizada'?'Venda finalizada — excluir NÃO devolve o estoque (cancele antes). Excluir mesmo assim?':'Excluir este registro?';
+  if(!confirm(msg)) return;
+  vendas=vendas.filter(x=>x.id!==id);
+  showLoading(true); await saveFinanceiro(); showLoading(false);
+  renderVendas();
+  showToast('Excluído.');
+}
+
+// ── SIMULADOR DE ORÇAMENTO (dentro do plano do paciente) ──
+function pacAbrirSimulador(pacId, pacNome){
+  // Atualiza o select de paciente no modal de venda
+  const mvPac = document.getElementById('mv-paciente');
+  if(mvPac){
+    mvPac.innerHTML = '<option value="">Sem vincular</option>' +
+      pacientes.map(p=>`<option value="${p.id}"${p.id===pacId?' selected':''}>${escapeHtml(p.nome)}</option>`).join('');
+  }
+  // Reseta orçamento
+  orcamento = [];
+  orcTotalOverride = null;
+  renderPlanoSimulador(pacId);
+}
+
+function renderPlanoSimulador(pacId){
+  const c = document.getElementById('pac-sim-container'); if(!c) return;
+  const grupos = [...new Set(procs.map(p=>p.grupo).filter(Boolean))].sort();
+  c.innerHTML = `
+    <div style="border:1.5px solid var(--rose-light);border-radius:12px;padding:14px;margin-bottom:14px;">
+      <h2 style="font-size:13px;font-weight:700;color:var(--rose-dark);margin-bottom:12px;"><i class="ti ti-calculator"></i> Simulador de Orçamento</h2>
+      <div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;">
+        <input type="text" id="sim-search-pac" placeholder="Pesquisar procedimento..." oninput="renderSimSelectPac()" style="flex:1;min-width:140px;"/>
+        <select id="sim-grupo-pac" onchange="renderSimSelectPac()">
+          <option value="">Todos os grupos</option>
+          ${grupos.map(g=>`<option value="${g}">${g}</option>`).join('')}
+        </select>
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
+        <select id="sim-select-pac" style="flex:1;"></select>
+        <input type="number" id="sim-qtd-pac" value="1" min="1" max="99" style="width:60px;"/>
+        <button class="btn-primary" onclick="addOrcPac()"><i class="ti ti-plus"></i></button>
+      </div>
+      <div id="sim-orc-list-pac" style="margin-bottom:12px;"></div>
+      <div style="background:var(--rose-lighter);border-radius:8px;padding:10px 14px;display:flex;justify-content:space-between;align-items:center;font-size:14px;font-weight:700;color:var(--rose-dark);margin-bottom:10px;">
+        <span>Total</span>
+        <span id="sim-orc-total-pac">R$ 0,00</span>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <button class="btn-secondary" onclick="salvarOrcPac(${pacId})" style="justify-content:center;"><i class="ti ti-device-floppy"></i> Salvar orçamento</button>
+        <button class="btn-primary" onclick="finalizarVendaPac(${pacId})" style="justify-content:center;"><i class="ti ti-circle-check"></i> Finalizar venda</button>
+      </div>
+      <button class="btn-secondary" onclick="orcamento=[];renderOrcPac();" style="width:100%;margin-top:8px;justify-content:center;"><i class="ti ti-eraser"></i> Limpar</button>
+    </div>
+  `;
+  renderSimSelectPac();
+  renderOrcPac();
+}
+function renderSimSelectPac(){
+  const sel = document.getElementById('sim-select-pac'); if(!sel) return;
+  const q = (document.getElementById('sim-search-pac')||{value:''}).value.toLowerCase();
+  const g = (document.getElementById('sim-grupo-pac')||{value:''}).value;
+  let list = procs.filter(p=>(!q||p.nome.toLowerCase().includes(q))&&(!g||p.grupo===g));
+  sel.innerHTML = list.length
+    ? list.map(p=>`<option value="${p.id}">${escapeHtml(p.nome)} — ${fmtBRL(p.precoFinal)}</option>`).join('')
+    : '<option value="">Nenhum procedimento encontrado</option>';
+}
+function addOrcPac(){
+  const procId = Number(document.getElementById('sim-select-pac')?.value);
+  const qtd    = Number(document.getElementById('sim-qtd-pac')?.value)||1;
+  const p = procs.find(x=>x.id===procId); if(!p) return;
+  orcamento.push({procId, qtd, nome:p.nome, precoUnit:p.precoFinal, override:null});
+  renderOrcPac();
+}
+function renderOrcPac(){
+  const c = document.getElementById('sim-orc-list-pac'); if(!c) return;
+  if(!orcamento.length){ c.innerHTML='<div style="color:var(--rose-text);font-size:13px;text-align:center;padding:10px;">Nenhum item adicionado</div>'; document.getElementById('sim-orc-total-pac').textContent='R$ 0,00'; return; }
+  c.innerHTML = orcamento.map((it,i)=>`
+    <div class="sim-orcamento-item">
+      <span style="flex:1;">${escapeHtml(it.nome)}</span>
+      <input type="number" min="1" value="${it.qtd}" onchange="orcamento[${i}].qtd=Math.max(1,Number(this.value));renderOrcPac();" style="width:46px;padding:4px;border:1px solid var(--rose-light);border-radius:6px;text-align:center;font-size:12px;"/>
+      <strong style="color:var(--rose-dark);min-width:80px;text-align:right;">${fmtBRL(it.precoUnit*it.qtd)}</strong>
+      <button class="btn-danger" style="padding:3px 7px;" onclick="orcamento.splice(${i},1);renderOrcPac();"><i class="ti ti-x"></i></button>
+    </div>
+  `).join('');
+  const total = orcamento.reduce((a,it)=>a+it.precoUnit*it.qtd,0);
+  document.getElementById('sim-orc-total-pac').textContent = fmtBRL(total);
+}
+async function salvarOrcPac(pacId){
+  if(!orcamento.length){ showToast('Adicione procedimentos ao orçamento.','warn'); return; }
+  const pac = pacientes.find(p=>p.id===pacId);
+  const total = orcamento.reduce((a,it)=>a+it.precoUnit*it.qtd,0);
+  const venda = {
+    id: nextVendaId++, status:'orcamento',
+    pacienteId: pacId, pacienteNome: pac?.nome||'',
+    itens: orcamento.map(it=>({procId:it.procId,qtd:it.qtd,nome:it.nome})),
+    total: parseFloat(total.toFixed(2)),
+    data: new Date().toISOString()
+  };
+  vendas.push(venda);
+  showLoading(true); await saveFinanceiro(); showLoading(false);
+  showToast('Orçamento salvo! Acesse Vendas para finalizar.');
+}
+async function finalizarVendaPac(pacId){
+  if(!orcamento.length){ showToast('Adicione procedimentos ao orçamento.','warn'); return; }
+  if(!confirm('Finalizar venda? O estoque dos materiais usados será descontado.')) return;
+  const pac = pacientes.find(p=>p.id===pacId);
+  const total = orcamento.reduce((a,it)=>a+it.precoUnit*it.qtd,0);
+  const consumo = computeConsumo(orcamento.map(it=>({procId:it.procId,qtd:it.qtd})));
+  const aplicado = aplicarBaixaEstoque(consumo);
+  const venda = {
+    id: nextVendaId++, status:'finalizada',
+    pacienteId: pacId, pacienteNome: pac?.nome||'',
+    itens: orcamento.map(it=>({procId:it.procId,qtd:it.qtd,nome:it.nome})),
+    total: parseFloat(total.toFixed(2)),
+    consumo: aplicado,
+    data: new Date().toISOString(),
+    dataFinal: new Date().toISOString()
+  };
+  vendas.push(venda);
+  orcamento = [];
+  showLoading(true); await saveFinanceiro(); showLoading(false);
+  renderOrcPac();
+  renderEstoque();
+  showToast('Venda finalizada! Estoque atualizado.');
+}
+
+// ── Modais (reutiliza funções existentes do app) ──
+function openModal(id){ const m=document.getElementById(id); if(m) m.classList.add('open'); }
+function closeModal(id){ const m=document.getElementById(id); if(m) m.classList.remove('open'); }
+
+// Procedimentos padrão (portados do Pétala)
+const DEFAULT_PROCS_FIN = [
+  {nome:"Consulta Inicial + Profilaxia",grupo:"Preventivo",tempo:60,insumos:10.43,horaClin:70.85,laboratorio:0,margem:100,precoFinal:175.57},
+  {nome:"Profilaxia simples",grupo:"Preventivo",tempo:45,insumos:10.06,horaClin:53.14,laboratorio:0,margem:100,precoFinal:136.50},
+  {nome:"Aplicação de Flúor",grupo:"Preventivo",tempo:20,insumos:1.94,horaClin:23.62,laboratorio:0,margem:100,precoFinal:55.21},
+  {nome:"Restauração Resina Composta Posterior",grupo:"Dentística",tempo:75,insumos:21.29,horaClin:88.56,laboratorio:0,margem:100,precoFinal:237.29},
+  {nome:"Restauração Resina Composta Anterior",grupo:"Dentística",tempo:90,insumos:24.26,horaClin:106.28,laboratorio:0,margem:100,precoFinal:281.95},
+  {nome:"Facetas de Resina Composta",grupo:"Dentística",tempo:120,insumos:33.49,horaClin:141.70,laboratorio:0,margem:100,precoFinal:378.41},
+  {nome:"Clareamento Caseiro",grupo:"Dentística",tempo:60,insumos:10.44,horaClin:70.85,laboratorio:0,margem:100,precoFinal:175.60},
+  {nome:"Clareamento de Consultório",grupo:"Dentística",tempo:90,insumos:35.44,horaClin:106.28,laboratorio:0,margem:100,precoFinal:306.10},
+  {nome:"Exodontia Simples",grupo:"Cirurgia",tempo:30,insumos:10.55,horaClin:35.43,laboratorio:0,margem:100,precoFinal:99.31},
+  {nome:"Exodontia de Siso",grupo:"Cirurgia",tempo:90,insumos:51.26,horaClin:106.28,laboratorio:0,margem:100,precoFinal:340.28},
+  {nome:"Urgência Endodôntica",grupo:"Endodontia",tempo:60,insumos:9.44,horaClin:70.85,laboratorio:0,margem:100,precoFinal:173.42},
+  {nome:"Endodontia (1 canal)",grupo:"Endodontia",tempo:180,insumos:72.20,horaClin:212.55,laboratorio:0,margem:100,precoFinal:615.07},
+  {nome:"Endodontia (2 canais)",grupo:"Endodontia",tempo:240,insumos:127.82,horaClin:283.41,laboratorio:0,margem:100,precoFinal:888.24},
+  {nome:"Endodontia (3 canais)",grupo:"Endodontia",tempo:300,insumos:190.02,horaClin:354.26,laboratorio:0,margem:100,precoFinal:1175.65},
+  {nome:"Raspagem Supragengival",grupo:"Periodontia",tempo:60,insumos:2.54,horaClin:70.85,laboratorio:0,margem:100,precoFinal:158.52},
+  {nome:"Raspagem Subgengival por Sextante",grupo:"Periodontia",tempo:60,insumos:5.48,horaClin:70.85,laboratorio:0,margem:100,precoFinal:164.88},
+  {nome:"Implante Cirúrgico",grupo:"Implantodontia",tempo:120,insumos:70.70,horaClin:141.70,laboratorio:0,margem:100,precoFinal:458.79},
+  {nome:"Instalação de Aparelho Fixo",grupo:"Ortodontia",tempo:90,insumos:19.59,horaClin:106.28,laboratorio:0,margem:100,precoFinal:271.87},
+  {nome:"Manutenção Mensal Ortodôntica",grupo:"Ortodontia",tempo:30,insumos:2.06,horaClin:35.43,laboratorio:0,margem:100,precoFinal:80.98},
+  {nome:"Prótese Total",grupo:"Prótese",tempo:60,insumos:6.68,horaClin:70.85,laboratorio:200,margem:100,precoFinal:167.46},
+  {nome:"Coroa Provisória",grupo:"Prótese",tempo:75,insumos:17.41,horaClin:88.56,laboratorio:0,margem:100,precoFinal:228.90},
+];
+
+
+// ══════════════════════════════════════════════════════
 // CONFIGURAÇÕES DA CLÍNICA
 // ══════════════════════════════════════════════════════
 function renderConfiguracoes(){
@@ -2526,5 +3572,120 @@ async function calSaveNewAppt(){
   showToast('Agendamento salvo!');
 }
 </script>
+
+<!-- ══ MODAIS FINANCEIRO ══ -->
+<!-- Modal Procedimento -->
+<div class="modal-overlay" id="modal-proc" onclick="if(event.target===this)closeModal('modal-proc')">
+  <div class="modal-box">
+    <h2 class="modal-title"><i class="ti ti-tooth"></i> <span id="modal-proc-title">Novo procedimento</span></h2>
+    <div class="form-group"><label>Nome do procedimento</label><input type="text" id="mp-nome"/></div>
+    <div class="form-row-2">
+      <div class="form-group"><label>Grupo</label><input type="text" id="mp-grupo" list="grupos-list"/><datalist id="grupos-list"></datalist></div>
+      <div class="form-group"><label>Tempo (min)</label><input type="number" id="mp-tempo" min="1" oninput="calcProcPreview()"/></div>
+      <div class="form-group"><label>Insumos (R$)</label><input type="number" id="mp-insumos" step="0.01" oninput="calcProcPreview()"/></div>
+      <div class="form-group"><label>Laboratório (R$)</label><input type="number" id="mp-laboratorio" step="0.01" oninput="calcProcPreview()"/></div>
+      <div class="form-group"><label>Margem de lucro (%)</label><input type="number" id="mp-margem" step="0.1" oninput="calcProcPreview()"/></div>
+    </div>
+    <div style="background:var(--rose-lighter);border-radius:10px;padding:10px 14px;margin-bottom:12px;font-size:12px;color:var(--rose-dark);display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+      <div>Hora clínica: <strong id="mp-horaClin-calc">—</strong></div>
+      <div>Custo total: <strong id="mp-custo-calc">—</strong></div>
+      <div>Lucro: <strong id="mp-lucro-calc">—</strong></div>
+      <div>Preço final: <strong id="mp-preco-calc">—</strong></div>
+    </div>
+    <div class="form-group"><label>Preço final (R$) — ajuste manual</label><input type="number" id="mp-preco" step="0.01"/></div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="closeModal('modal-proc')">Cancelar</button>
+      <button class="btn-primary" onclick="saveProc()"><i class="ti ti-check"></i> Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Material -->
+<div class="modal-overlay" id="modal-mat" onclick="if(event.target===this)closeModal('modal-mat')">
+  <div class="modal-box">
+    <h2 class="modal-title"><i class="ti ti-box"></i> <span id="modal-mat-title">Novo material</span></h2>
+    <div class="form-group"><label>Nome do material</label><input type="text" id="mm-nome"/></div>
+    <div class="form-row-2">
+      <div class="form-group"><label>Categoria</label><input type="text" id="mm-cat" list="cats-list"/><datalist id="cats-list"></datalist></div>
+      <div class="form-group"><label>Unidade (ml, g, unid...)</label><input type="text" id="mm-unid" list="unid-list"/></div>
+      <div class="form-group"><label>Qtde por embalagem</label><input type="number" id="mm-qtde" step="0.01" oninput="calcMatCusto()"/></div>
+      <div class="form-group"><label>Preço da embalagem (R$)</label><input type="number" id="mm-preco" step="0.01" oninput="calcMatCusto()"/></div>
+      <div class="form-group"><label>Qtde atual (estoque)</label><input type="number" id="mm-est-atual" min="0" step="0.01" placeholder="0"/></div>
+      <div class="form-group"><label>Ponto mínimo</label><input type="number" id="mm-est-min" min="0" step="0.01" placeholder="0"/></div>
+      <div class="form-group"><label>Ponto de compra</label><input type="number" id="mm-est-compra" min="0" step="0.01" placeholder="0"/></div>
+    </div>
+    <div style="background:var(--rose-lighter);border-radius:8px;padding:8px 12px;font-size:12px;color:var(--rose-dark);margin-bottom:8px;">
+      Custo unitário: <strong id="mm-custo-calc">—</strong>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="closeModal('modal-mat')">Cancelar</button>
+      <button class="btn-primary" onclick="saveMat()"><i class="ti ti-check"></i> Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Estoque -->
+<div class="modal-overlay" id="modal-est" onclick="if(event.target===this)closeModal('modal-est')">
+  <div class="modal-box">
+    <h2 class="modal-title"><i class="ti ti-package"></i> Atualizar estoque</h2>
+    <p style="font-size:13px;color:var(--rose-text);margin-bottom:12px;" id="me-nome-label"></p>
+    <div class="form-row-2">
+      <div class="form-group"><label>Quantidade atual</label><input type="number" id="me-atual" min="0" step="0.01"/></div>
+      <div class="form-group"><label>Ponto mínimo</label><input type="number" id="me-min" min="0" step="0.01"/></div>
+      <div class="form-group"><label>Ponto de compra</label><input type="number" id="me-compra" min="0" step="0.01"/></div>
+      <div class="form-group"><label>Unidade</label><input type="text" id="me-unid" list="unid-list"/></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="closeModal('modal-est')">Cancelar</button>
+      <button class="btn-primary" onclick="saveEst()"><i class="ti ti-check"></i> Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Insumos do Procedimento -->
+<div class="modal-overlay" id="modal-insumos" onclick="if(event.target===this)closeModal('modal-insumos')">
+  <div class="modal-box" style="max-width:560px;">
+    <h2 class="modal-title"><i class="ti ti-flask"></i> Insumos — <span id="mi-proc-nome"></span></h2>
+    <div style="display:flex;gap:8px;margin-bottom:8px;">
+      <select id="mi-mat-sel" style="flex:1;"></select>
+      <input type="number" id="mi-qtd-add" value="1" min="0.001" step="0.001" style="width:70px;" placeholder="Qtde"/>
+      <button class="btn-primary" onclick="addInsumoRow()"><i class="ti ti-plus"></i></button>
+    </div>
+    <ul id="mi-list" style="list-style:none;max-height:240px;overflow-y:auto;margin-bottom:10px;"></ul>
+    <div style="background:var(--rose-lighter);border-radius:8px;padding:8px 12px;font-size:12px;color:var(--rose-dark);margin-bottom:8px;display:flex;justify-content:space-between;">
+      <span>Total custo insumos:</span><strong id="mi-total-custo">R$ 0,00</strong>
+    </div>
+    <div style="background:#fff8e1;border-radius:7px;padding:7px 10px;font-size:11px;color:#856404;margin-bottom:8px;">
+      <i class="ti ti-info-circle"></i> Ao salvar, o estoque será descontado nas quantidades definidas.
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="closeModal('modal-insumos')">Cancelar</button>
+      <button class="btn-primary" onclick="saveInsumos()"><i class="ti ti-device-floppy"></i> Salvar e descontar estoque</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Venda/Orçamento -->
+<div class="modal-overlay" id="modal-venda" onclick="if(event.target===this)closeModal('modal-venda')">
+  <div class="modal-box">
+    <h2 class="modal-title"><i class="ti ti-receipt"></i> <span id="modal-venda-title">Salvar orçamento</span></h2>
+    <div class="form-group"><label>Paciente</label>
+      <select id="mv-paciente"><option value="">Sem vincular a paciente</option></select>
+    </div>
+    <div id="mv-info" style="background:var(--rose-lighter);border-radius:8px;padding:8px 12px;font-size:12px;color:var(--rose-dark);margin-top:8px;"></div>
+    <div id="mv-warn" style="display:none;background:#fff8e1;border-radius:8px;padding:8px 12px;font-size:12px;color:#856404;margin-top:8px;"></div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="closeModal('modal-venda')">Cancelar</button>
+      <button class="btn-primary" id="mv-confirm" onclick="confirmVenda()"><i class="ti ti-check"></i> Confirmar</button>
+    </div>
+  </div>
+</div>
+
+<datalist id="unid-list">
+  <option value="ml"/><option value="grama"/><option value="g"/><option value="kg"/>
+  <option value="unid"/><option value="m"/><option value="cm"/><option value="kit"/>
+  <option value="caixa"/><option value="frasco"/><option value="seringa"/><option value="ampola"/>
+</datalist>
+
 </body>
 </html>
