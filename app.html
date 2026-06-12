@@ -2791,6 +2791,18 @@ function renderFinanceiroDash(){
   const orc = vendas.filter(v=>v.status==='orcamento');
   const fat = fin.reduce((a,v)=>a+(Number(v.total)||0),0);
   const criticos = mats.filter(m=>getEstStatus(m.id)==='danger').length;
+
+  // Botão de reset/carregar padrões
+  const btnReset = procs.length === 0 ? `
+    <div style="background:#fff8e1;border:1px solid #ffcc80;border-radius:12px;padding:16px;margin-bottom:16px;text-align:center;">
+      <div style="font-size:13px;color:#856404;margin-bottom:10px;"><i class="ti ti-info-circle"></i> Nenhum procedimento cadastrado ainda.</div>
+      <button class="btn-primary" onclick="carregarPadroes()" style="margin:0 auto;">
+        <i class="ti ti-download"></i> Carregar 50 procedimentos padrão
+      </button>
+    </div>` : '';
+  const metricsEl = document.getElementById('fin-metrics');
+  if(metricsEl) metricsEl.insertAdjacentHTML('beforebegin', btnReset);
+
   document.getElementById('fin-metrics').innerHTML = [
     {lbl:'Faturamento',val:fmtBRL(fat),cor:'var(--rose-dark)'},
     {lbl:'Vendas finalizadas',val:fin.length,cor:'#2e7d32'},
@@ -3596,6 +3608,23 @@ async function finalizarVendaPac(pacId){
   renderOrcPac();
   renderEstoque();
   showToast('Venda finalizada! Estoque atualizado.');
+}
+
+// ── Carregar padrões manualmente ──
+async function carregarPadroes(){
+  if(procs.length > 0 && !confirm('Já existem procedimentos. Substituir pelos padrões?')) return;
+  showLoading(true);
+  procs   = DEFAULT_PROCS_FIN.map((p,i)=>({...p,id:p.id||i+1}));
+  mats    = mats.length ? mats : DEFAULT_MATS_FIN.map((m,i)=>({...m,id:m.id||i+1}));
+  combos  = combos.length ? combos : DEFAULT_COMBOS_FIN.map(c=>({...c}));
+  nextProcId  = 103;
+  nextMatId   = mats.length > 50 ? nextMatId : 91;
+  nextComboId = 207;
+  await saveFinanceiro();
+  showLoading(false);
+  showToast('50 procedimentos carregados!');
+  renderFinanceiroDash();
+  renderProcs();
 }
 
 // ── Modais (reutiliza funções existentes do app) ──
