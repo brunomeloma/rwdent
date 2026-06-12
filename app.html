@@ -1,0 +1,1974 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<meta name="theme-color" content="#d4735a" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+<title>RWDent — Gestão Odontológica</title>
+<!-- build:202606120507 -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css" />
+
+<!-- ══════════════════════════════════════════════════════
+     SUPABASE CONFIG  ←  coloque suas credenciais aqui
+     ══════════════════════════════════════════════════════ -->
+<script>
+  const SUPABASE_URL      = 'https://xdncwmxjdqiwykbcaddd.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhkbmN3bXhqZHFpd3lrYmNhZGRkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEyMjMwNDMsImV4cCI6MjA5Njc5OTA0M30.9qBm7G2xg-DifQu5NPrcNIw6YG0dbVkZ725I4WhG6yM';
+</script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<style>
+/* ── RESET & VARS ── */
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+:root{
+  --rose:#d4735a;--rose-light:#f0cfc4;--rose-lighter:#fdf0eb;
+  --rose-mid:#e0a090;--rose-dark:#7a3020;--rose-text:#a05040;
+  --sidebar-w:72px;--header-h:64px;
+}
+body{font-family:'Segoe UI',Arial,sans-serif;background:#fdf6f3;color:#3a2020;min-height:100vh;overscroll-behavior:none;}
+
+/* ── LOGIN SCREEN ── */
+#login-screen{
+  display:flex;align-items:center;justify-content:center;
+  min-height:100vh;padding:20px;background:linear-gradient(135deg,#fdf6f3 0%,#f5ddd5 100%);
+}
+.login-card{
+  background:#fff;border-radius:24px;padding:40px 36px;width:100%;max-width:420px;
+  box-shadow:0 20px 60px rgba(212,115,90,.18);
+}
+.login-logo{text-align:center;margin-bottom:28px;}
+.login-logo svg{width:80px;height:80px;}
+.login-title{font-size:20px;font-weight:800;color:var(--rose-dark);text-align:center;margin-bottom:4px;}
+.login-sub{font-size:13px;color:var(--rose-text);text-align:center;margin-bottom:28px;}
+.login-card label{font-size:12px;font-weight:700;color:var(--rose-text);text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:6px;}
+.login-card input{width:100%;border:1.5px solid var(--rose-light);border-radius:12px;padding:13px 15px;font-size:15px;color:#3a2020;background:var(--rose-lighter);outline:none;transition:border .2s,box-shadow .2s;margin-bottom:16px;}
+.login-card input:focus{border-color:var(--rose);background:#fff;box-shadow:0 0 0 3px rgba(212,115,90,.14);}
+.btn-login{width:100%;background:var(--rose);color:#fff;border:none;border-radius:12px;padding:14px;font-size:15px;font-weight:700;cursor:pointer;transition:background .2s,transform .15s;margin-top:4px;}
+.btn-login:hover{background:var(--rose-dark);}
+.btn-login:active{transform:scale(.98);}
+.login-err{background:#ffebee;color:#b33;border:1px solid #ffaaaa;border-radius:10px;padding:10px 14px;font-size:13px;margin-top:12px;display:none;}
+.login-err.show{display:block;}
+
+/* ── APP SHELL ── */
+#app{display:none;min-height:100vh;}
+
+/* ── SIDEBAR ── */
+.sidebar{
+  position:fixed;left:0;top:0;bottom:0;width:var(--sidebar-w);
+  background:#fff;box-shadow:2px 0 18px rgba(0,0,0,.08);
+  display:flex;flex-direction:column;align-items:center;
+  padding:12px 8px;transition:width .25s ease;z-index:200;
+}
+.sidebar.open{width:220px;}
+.sidebar-toggle{
+  width:46px;height:46px;border-radius:14px;border:none;
+  background:rgba(212,115,90,.08);color:var(--rose-dark);
+  cursor:pointer;display:grid;place-items:center;margin-bottom:14px;flex-shrink:0;
+}
+.sidebar-menu{width:100%;display:flex;flex-direction:column;gap:6px;overflow:hidden;}
+.sidebar-item{
+  width:100%;border:none;background:none;color:var(--rose-text);
+  padding:11px 10px;border-radius:12px;cursor:pointer;
+  display:flex;align-items:center;gap:12px;font-size:14px;
+  justify-content:flex-start;transition:background .2s,color .2s;white-space:nowrap;
+}
+.sidebar-item span{display:none;overflow:hidden;}
+.sidebar.open .sidebar-item span{display:inline;}
+.sidebar-item.active,.sidebar-item:hover{background:var(--rose-lighter);color:var(--rose-dark);}
+.sidebar-item i{font-size:18px;flex-shrink:0;}
+.sidebar-bottom{margin-top:auto;width:100%;}
+.btn-logout{
+  width:100%;border:none;background:none;color:var(--rose-text);
+  padding:11px 10px;border-radius:12px;cursor:pointer;
+  display:flex;align-items:center;gap:12px;font-size:13px;
+  transition:background .2s,color .2s;white-space:nowrap;
+}
+.btn-logout:hover{background:#ffebee;color:#b33;}
+.btn-logout i{font-size:18px;flex-shrink:0;}
+.btn-logout span{display:none;}
+.sidebar.open .btn-logout span{display:inline;}
+
+/* ── HEADER ── */
+.header{
+  position:fixed;left:var(--sidebar-w);right:0;top:0;height:var(--header-h);
+  background:#fff;border-bottom:1.5px solid var(--rose-light);
+  display:flex;align-items:center;gap:16px;padding:0 20px;z-index:100;
+  transition:left .25s;
+}
+.sidebar.open~.header{left:220px;}
+.header-text h1{font-size:16px;font-weight:700;color:var(--rose-dark);letter-spacing:.5px;text-transform:uppercase;line-height:1.2;}
+.header-text p{font-size:11px;color:var(--rose-text);margin-top:3px;}
+
+/* ── PAGE CONTENT ── */
+.page-content{
+  margin-left:var(--sidebar-w);margin-top:var(--header-h);
+  width:calc(100% - var(--sidebar-w));transition:margin-left .25s,width .25s;
+}
+.sidebar.open~.header~.page-content{margin-left:220px;width:calc(100% - 220px);}
+.content{padding:20px;max-width:1100px;margin:0 auto;}
+
+/* ── CARDS ── */
+.card{background:#fff;border-radius:16px;border:1px solid var(--rose-light);padding:22px;margin-bottom:18px;box-shadow:0 2px 20px rgba(212,115,90,.07);}
+.card h2{font-size:13px;font-weight:700;color:var(--rose-dark);margin-bottom:16px;display:flex;align-items:center;gap:8px;text-transform:uppercase;letter-spacing:.5px;}
+
+/* ── FORMS ── */
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+@media(max-width:640px){.form-grid{grid-template-columns:1fr;}}
+.form-group{display:flex;flex-direction:column;gap:5px;}
+.form-group.full{grid-column:1/-1;}
+.form-group.half{}
+label{font-size:12px;color:var(--rose-text);font-weight:700;text-transform:uppercase;letter-spacing:.4px;}
+input,select,textarea{
+  border:1.5px solid var(--rose-light);border-radius:10px;
+  padding:10px 12px;font-size:14px;color:#3a2020;
+  background:var(--rose-lighter);outline:none;
+  transition:border .2s,background .2s;font-family:inherit;
+  -webkit-appearance:none;appearance:none;width:100%;
+}
+input:focus,select:focus,textarea:focus{border-color:var(--rose);background:#fff;box-shadow:0 0 0 3px rgba(212,115,90,.12);}
+textarea{resize:vertical;min-height:68px;}
+select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23a05040' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;padding-right:32px;}
+button{font-family:inherit;}
+
+/* ── BUTTONS ── */
+.btn-primary{background:var(--rose);color:#fff;border:none;border-radius:10px;padding:11px 18px;font-size:13px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:7px;transition:background .18s,transform .15s;touch-action:manipulation;}
+.btn-primary:hover{background:var(--rose-dark);}
+.btn-primary:active{transform:scale(.97);}
+.btn-secondary{background:var(--rose-lighter);color:var(--rose);border:1px solid var(--rose-light);border-radius:10px;padding:10px 14px;font-size:13px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:7px;touch-action:manipulation;}
+.btn-secondary:hover{background:var(--rose-light);}
+.btn-danger{background:#fff5f5;color:#b33;border:1px solid #fcc;border-radius:10px;padding:10px 12px;font-size:13px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;touch-action:manipulation;}
+.btn-danger:hover{background:#fcc;}
+
+/* ── TOAST ── */
+.toast{position:fixed;top:14px;right:14px;z-index:9999;padding:13px 16px;border-radius:12px;font-size:13px;font-weight:600;max-width:300px;opacity:0;pointer-events:none;transition:opacity .3s,transform .3s;transform:translateY(-10px);}
+.toast.show{opacity:1;transform:translateY(0);}
+.toast.success{background:#edf7ee;color:#2e6b32;border:1px solid #a5d6a7;}
+.toast.error{background:#ffebee;color:#b33;border:1px solid #ffaaaa;}
+.toast.warn{background:#fff8e1;color:#b36000;border:1px solid #ffcc80;}
+
+/* ── LOADING ── */
+.loading-overlay{position:fixed;inset:0;background:rgba(255,255,255,.85);display:flex;align-items:center;justify-content:center;z-index:9998;flex-direction:column;gap:14px;}
+.spinner{width:40px;height:40px;border:4px solid var(--rose-light);border-top-color:var(--rose);border-radius:50%;animation:spin .8s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+
+/* ── LISTS ── */
+.agendamentos-list,.patient-list{display:flex;flex-direction:column;gap:10px;}
+.appt-item,.patient-card,.prof-card,.record-card{border-radius:14px;border:1px solid var(--rose-light);padding:14px;background:#fff;display:flex;gap:12px;align-items:center;transition:box-shadow .18s;}
+.appt-item:hover,.patient-card:hover,.prof-card:hover{box-shadow:0 6px 20px rgba(0,0,0,.06);}
+.appt-time{background:var(--rose-lighter);border-radius:10px;padding:9px 11px;min-width:80px;text-align:center;font-size:13px;color:var(--rose-dark);font-weight:700;flex-shrink:0;}
+.appt-time small{display:block;font-size:11px;color:var(--rose-text);margin-top:3px;}
+.appt-info{flex:1;min-width:0;}
+.appt-info .name{font-size:15px;font-weight:700;color:var(--rose-dark);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.appt-info .detail{font-size:12px;color:var(--rose-text);margin-top:5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.appt-badge{border-radius:20px;padding:5px 10px;font-size:11px;font-weight:700;white-space:nowrap;flex-shrink:0;}
+.badge-main{background:var(--rose-light);color:var(--rose-dark);border:1px solid var(--rose-mid);}
+.patient-avatar{width:44px;height:44px;border-radius:12px;display:grid;place-items:center;color:#fff;font-weight:800;font-size:15px;flex-shrink:0;}
+.patient-info{flex:1;min-width:0;}
+.patient-info .name{font-size:14px;font-weight:700;color:var(--rose-dark);}
+.patient-info .meta{font-size:12px;color:var(--rose-text);margin-top:5px;}
+.record-card{flex-direction:column;align-items:stretch;}
+.record-header{display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;}
+.record-header strong{font-size:14px;}
+.record-content{display:grid;gap:8px;margin-top:10px;}
+.empty{text-align:center;color:var(--rose-text);padding:2rem 1rem;font-size:14px;}
+.section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:10px;}
+.filter-row{display:flex;gap:10px;margin-bottom:18px;flex-wrap:wrap;}
+.filter-row input,.filter-row select{min-width:0;flex:1;}
+.badge-principal{display:inline-flex;align-items:center;gap:5px;font-size:11px;background:var(--rose-light);color:var(--rose-dark);padding:3px 9px;border-radius:20px;border:1px solid var(--rose-mid);font-weight:700;}
+
+/* ── CALENDÁRIO ── */
+.content-cal{max-width:1500px;}
+.cal-card{padding:16px;}
+.cal-toolbar{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:16px;}
+.cal-nav{display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+.cal-btn{background:var(--rose-lighter);color:var(--rose-dark);border:1px solid var(--rose-light);border-radius:10px;padding:8px 11px;font-size:13px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:5px;transition:background .18s;}
+.cal-btn:hover{background:var(--rose-light);}
+.cal-btn i{font-size:16px;}
+.cal-today{color:var(--rose);}
+.cal-full{background:var(--rose);color:#fff;border-color:var(--rose);}
+.cal-full:hover{background:var(--rose-dark);}
+.cal-range{font-size:15px;font-weight:800;color:var(--rose-dark);text-transform:capitalize;letter-spacing:.3px;}
+.cal-tools{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.cal-views{display:inline-flex;background:var(--rose-lighter);border:1px solid var(--rose-light);border-radius:12px;padding:3px;gap:3px;}
+.cal-view-btn{border:none;background:none;color:var(--rose-text);padding:7px 12px;border-radius:9px;font-size:12px;font-weight:700;cursor:pointer;transition:background .18s,color .18s;}
+.cal-view-btn.active{background:#fff;color:var(--rose-dark);box-shadow:0 1px 6px rgba(212,115,90,.18);}
+.cal-select{min-width:150px;}
+.cal-body{overflow:auto;}
+.cal-grid{display:grid;border:1px solid var(--rose-light);border-radius:14px;overflow:hidden;min-width:660px;}
+.cal-grid.dia{min-width:auto;}
+.cal-grid-head{display:contents;}
+.cal-corner{background:var(--rose-lighter);border-bottom:1px solid var(--rose-light);border-right:1px solid var(--rose-light);}
+.cal-day-head{background:var(--rose-lighter);border-bottom:1px solid var(--rose-light);border-right:1px solid var(--rose-light);padding:9px 6px;text-align:center;}
+.cal-day-head:last-child{border-right:none;}
+.cal-day-head .dow{font-size:11px;font-weight:700;color:var(--rose-text);text-transform:uppercase;letter-spacing:.5px;}
+.cal-day-head .dnum{font-size:18px;font-weight:800;color:var(--rose-dark);margin-top:3px;line-height:1;}
+.cal-day-head.is-today .dnum{background:var(--rose);color:#fff;border-radius:50%;width:30px;height:30px;display:inline-flex;align-items:center;justify-content:center;margin:3px auto 0;}
+.cal-timecol{border-right:1px solid var(--rose-light);}
+.cal-time-label{height:48px;position:relative;border-bottom:1px solid #f3e3dc;}
+.cal-time-label span{position:absolute;top:2px;right:7px;font-size:11px;color:var(--rose-text);font-weight:600;background:#fff;padding:0 2px;}
+.cal-daycol{position:relative;border-right:1px solid var(--rose-light);background:repeating-linear-gradient(#fff,#fff 47px,#f6e7e1 47px,#f6e7e1 48px);cursor:pointer;}
+.cal-daycol:last-child{border-right:none;}
+.cal-daycol.is-today{background-color:#fff8f5;}
+.cal-event{position:absolute;left:4px;right:4px;border-radius:8px;padding:4px 7px;font-size:11px;color:#fff;overflow:hidden;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,.12);border-left:4px solid rgba(0,0,0,.18);transition:transform .12s;}
+.cal-event:hover{transform:scale(1.015);}
+.cal-event .ev-time{font-size:10px;font-weight:700;opacity:.95;}
+.cal-event .ev-name{font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px;}
+.cal-event .ev-meta{font-size:10px;opacity:.92;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.cal-month{display:grid;grid-template-columns:repeat(7,1fr);border:1px solid var(--rose-light);border-radius:14px;overflow:hidden;min-width:660px;}
+.cal-month-dow{background:var(--rose-lighter);border-bottom:1px solid var(--rose-light);border-right:1px solid var(--rose-light);padding:8px 6px;text-align:center;font-size:11px;font-weight:700;color:var(--rose-text);text-transform:uppercase;letter-spacing:.5px;}
+.cal-month-dow:nth-child(7){border-right:none;}
+.cal-cell{min-height:90px;border-right:1px solid var(--rose-light);border-bottom:1px solid var(--rose-light);padding:5px;cursor:pointer;transition:background .15s;display:flex;flex-direction:column;gap:3px;}
+.cal-cell:nth-child(7n+7){border-right:none;}
+.cal-cell:hover{background:var(--rose-lighter);}
+.cal-cell.out{background:#fcfafa;color:#bfa9a0;}
+.cal-cell .cell-num{font-size:12px;font-weight:700;color:var(--rose-dark);align-self:flex-end;}
+.cal-cell.out .cell-num{color:#c9b6ae;}
+.cal-cell.is-today .cell-num{background:var(--rose);color:#fff;border-radius:50%;width:22px;height:22px;display:inline-flex;align-items:center;justify-content:center;}
+.cal-pill{font-size:10px;font-weight:700;color:#fff;border-radius:5px;padding:2px 5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.cal-more{font-size:10px;font-weight:700;color:var(--rose-text);padding:0 3px;}
+.cal-modal-bg{position:fixed;inset:0;background:rgba(60,30,20,.42);z-index:1200;display:flex;align-items:center;justify-content:center;padding:16px;opacity:0;pointer-events:none;transition:opacity .2s;}
+.cal-modal-bg.show{opacity:1;pointer-events:auto;}
+.cal-modal{background:#fff;border-radius:18px;max-width:420px;width:100%;padding:0;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.3);transform:translateY(10px);transition:transform .2s;}
+.cal-modal-bg.show .cal-modal{transform:translateY(0);}
+.cal-modal-head{padding:16px 20px;color:#fff;}
+.cal-modal-head .mh-time{font-size:12px;font-weight:700;opacity:.95;}
+.cal-modal-head .mh-name{font-size:18px;font-weight:800;margin-top:3px;}
+.cal-modal-body{padding:16px 20px;display:flex;flex-direction:column;gap:10px;max-height:60vh;overflow:auto;}
+.cal-modal-body .row{font-size:14px;color:#3a2020;display:flex;gap:8px;}
+.cal-modal-body .row i{color:var(--rose);font-size:17px;flex-shrink:0;}
+.cal-modal-form .cal-modal-body .form-group{display:flex;flex-direction:column;gap:5px;}
+.cal-form-row{display:flex;gap:10px;}
+.cal-form-row .form-group{flex:1;}
+.cal-modal-foot{padding:0 20px 18px;display:flex;justify-content:flex-end;gap:10px;}
+
+
+
+/* ── ODONTOGRAMA ── */
+.odonto-arcada{display:flex;justify-content:center;gap:2px;overflow-x:auto;padding:4px 0;-webkit-overflow-scrolling:touch;}
+.odonto-dente-wrap{display:flex;flex-direction:column;align-items:center;gap:1px;cursor:pointer;}
+.odonto-dente-wrap:hover .odonto-dente-box{border-color:var(--rose);transform:scale(1.08);}
+.odonto-dente-wrap.selected .odonto-dente-box{border-color:var(--rose);box-shadow:0 0 0 2px rgba(212,115,90,.3);}
+.odonto-dente-box{
+  width:28px;height:28px;border-radius:5px;border:2px solid var(--rose-light);
+  background:#fff;display:flex;align-items:center;justify-content:center;
+  transition:all .15s;position:relative;
+}
+.odonto-dente-box.higido{background:#fff;}
+.odonto-dente-box.carie{background:#ffcdd2;border-color:#e57373;}
+.odonto-dente-box.restaurado{background:#c8e6c9;border-color:#66bb6a;}
+.odonto-dente-box.extraido{background:#eeeeee;border-color:#bdbdbd;opacity:.55;}
+.odonto-dente-box.canal{background:#fff9c4;border-color:#fdd835;}
+.odonto-dente-box.coroa{background:#bbdefb;border-color:#42a5f5;}
+.odonto-dente-box.implante{background:#e1bee7;border-color:#ab47bc;}
+.odonto-dente-box.fratura{background:#ffccbc;border-color:#ff7043;}
+.odonto-dente-box.selante{background:#b2ebf2;border-color:#26c6da;}
+.odonto-dente-box.outro{background:#f5f5f5;border-color:#9e9e9e;}
+.odonto-dente-num{font-size:8px;font-weight:700;color:var(--rose-text);line-height:1;}
+.odonto-dente-icon{font-size:13px;line-height:1;}
+.odonto-leg{display:inline-flex;align-items:center;gap:4px;font-size:10px;color:var(--rose-text);white-space:nowrap;}
+.odonto-leg-dot{width:10px;height:10px;border-radius:2px;border:1.5px solid;}
+.atend-card{border:1px solid var(--rose-light);border-radius:12px;padding:14px;margin-bottom:10px;background:#fff;}
+.atend-card-head{display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;}
+.atend-card-date{background:var(--rose-lighter);color:var(--rose-dark);border-radius:8px;padding:4px 12px;font-size:12px;font-weight:700;}
+.atend-card-body{margin-top:10px;font-size:13px;color:#3a2020;line-height:1.6;}
+.atend-dentes{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;}
+.atend-dente-badge{background:var(--rose-lighter);color:var(--rose-dark);border-radius:6px;padding:3px 8px;font-size:11px;font-weight:700;}
+
+/* ── MOBILE BOTTOM NAV ── */
+.mobile-bottom-nav{
+  display:none;position:fixed;bottom:0;left:0;right:0;
+  background:#fff;border-top:1.5px solid var(--rose-light);
+  padding:8px 4px;z-index:200;
+  box-shadow:0 -4px 20px rgba(212,115,90,.1);
+}
+.mobile-nav-items{display:flex;align-items:center;overflow-x:auto;gap:2px;padding:0 4px;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
+.mobile-nav-items::-webkit-scrollbar{display:none;}
+.mobile-nav-item{
+  display:flex;flex-direction:column;align-items:center;gap:3px;
+  background:none;border:none;color:var(--rose-text);cursor:pointer;
+  padding:6px 10px;border-radius:12px;transition:background .18s,color .18s;
+  font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;
+  min-width:56px;flex-shrink:0;touch-action:manipulation;
+}
+.mobile-nav-item.active{color:var(--rose-dark);background:var(--rose-lighter);}
+.mobile-nav-item i{font-size:20px;}
+
+/* ── RESPONSIVE ── */
+@media(max-width:768px){
+  :root{--sidebar-w:0px;--header-h:58px;}
+  .sidebar{display:none!important;}
+  .header{left:0!important;padding:0 16px;}
+  .page-content{margin-left:0!important;width:100%!important;padding-bottom:80px;}
+  .content{padding:14px;}
+  .mobile-bottom-nav{display:block;}
+  .cal-tools{gap:6px;}
+  .cal-range{font-size:13px;}
+  .cal-btn{padding:7px 9px;font-size:12px;}
+  .cal-views{display:none;}
+  .appt-item{flex-wrap:wrap;}
+  .btn-danger span{display:none;}
+}
+@media(min-width:769px) and (max-width:960px){
+  :root{--sidebar-w:64px;}
+  .sidebar-item span{display:none!important;}
+  .btn-logout span{display:none!important;}
+}
+</style>
+</head>
+<body>
+<div id="toast" class="toast"></div>
+
+<!-- ══════════════ LOGIN ══════════════ -->
+<div id="login-screen">
+  <div class="login-card">
+    <div class="login-logo"><svg width="64" height="64" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="rwbg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#1a1a2e"/>
+      <stop offset="100%" stop-color="#16213e"/>
+    </linearGradient>
+    <linearGradient id="rwtooth" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#d4e8ff"/>
+    </linearGradient>
+  </defs>
+  <rect width="200" height="200" rx="28" fill="url(#rwbg)"/>
+  <rect width="200" height="5" rx="4" fill="#4f9cf9"/>
+  <path d="M100 48 C82 48 70 58 70 73 C70 84 74 90 74 100 C74 116 80 133 88 133 C93 133 96 126 100 118 C104 126 107 133 112 133 C120 133 126 116 126 100 C126 90 130 84 130 73 C130 58 118 48 100 48 Z" fill="url(#rwtooth)"/>
+  <path d="M85 128 C82 140 78 150 76 160" fill="none" stroke="#ffffff" stroke-width="3.5" stroke-linecap="round" opacity="0.7"/>
+  <path d="M94 132 C92 144 91 154 90 164" fill="none" stroke="#ffffff" stroke-width="3.5" stroke-linecap="round" opacity="0.7"/>
+  <path d="M115 128 C118 140 122 150 124 160" fill="none" stroke="#ffffff" stroke-width="3.5" stroke-linecap="round" opacity="0.7"/>
+  <path d="M106 132 C108 144 109 154 110 164" fill="none" stroke="#ffffff" stroke-width="3.5" stroke-linecap="round" opacity="0.7"/>
+  <circle cx="90" cy="68" r="4" fill="#4f9cf9" opacity="0.8"/>
+</svg></div>
+    <div class="login-title" id="login-title">RW<span style="color:#4f9cf9;">Dent</span></div>
+    <div class="login-sub" id="login-sub">Gestão Odontológica Inteligente</div>
+    <div style="font-size:12px;text-align:center;margin-bottom:14px;"><a href="index.html" style="color:var(--rose-text);text-decoration:none;">← Página inicial</a></div>
+    <label for="login-email">E-mail</label>
+    <input type="email" id="login-email" placeholder="secretaria@clinica.com" autocomplete="username" />
+    <label for="login-pass">Senha</label>
+    <input type="password" id="login-pass" placeholder="••••••••" autocomplete="current-password" />
+    <button class="btn-login" id="btn-login" onclick="doLogin()">
+      <span id="btn-login-text">Entrar</span>
+    </button>
+    <div class="login-err" id="login-err"></div>
+  </div>
+</div>
+
+<!-- ══════════════ APP ══════════════ -->
+<div id="app">
+  <!-- Sidebar desktop -->
+  <div class="sidebar" id="sidebar">
+    <button class="sidebar-toggle" onclick="toggleSidebar()" aria-label="Menu">
+      <i class="ti ti-dots"></i>
+    </button>
+    <nav class="sidebar-menu">
+      <button class="sidebar-item active" data-tab="home" onclick="switchTab('home')"><i class="ti ti-home"></i><span>Início</span></button>
+      <button class="sidebar-item" data-tab="agendar" onclick="switchTab('agendar')"><i class="ti ti-calendar-plus"></i><span>Agendar</span></button>
+      <button class="sidebar-item" data-tab="lista" onclick="switchTab('lista')"><i class="ti ti-list-check"></i><span>Agenda</span></button>
+      <button class="sidebar-item" data-tab="calendario" onclick="switchTab('calendario')"><i class="ti ti-calendar-month"></i><span>Calendário</span></button>
+      <button class="sidebar-item" data-tab="pacientes" onclick="switchTab('pacientes')"><i class="ti ti-users"></i><span>Pacientes</span></button>
+      <button class="sidebar-item" data-tab="prontuarios" onclick="switchTab('prontuarios')"><i class="ti ti-file-text"></i><span>Prontuários</span></button>
+      <button class="sidebar-item" data-tab="profissionais" onclick="switchTab('profissionais')"><i class="ti ti-briefcase"></i><span>Profissionais</span></button>
+      <button class="sidebar-item" data-tab="odontograma" onclick="switchTab('odontograma')"><i class="ti ti-tooth"></i><span>Odontograma</span></button>
+      <button class="sidebar-item" data-tab="configuracoes" onclick="switchTab('configuracoes')"><i class="ti ti-settings"></i><span>Configurações</span></button>
+    </nav>
+    <div class="sidebar-bottom">
+      <button class="btn-logout" onclick="doLogout()"><i class="ti ti-logout"></i><span>Sair</span></button>
+    </div>
+  </div>
+
+  <!-- Header -->
+  <div class="header">
+<svg width="42" height="42" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="rwbg2" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#1a1a2e"/>
+      <stop offset="100%" stop-color="#16213e"/>
+    </linearGradient>
+    <linearGradient id="rwtooth2" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#d4e8ff"/>
+    </linearGradient>
+  </defs>
+  <rect width="200" height="200" rx="28" fill="url(#rwbg2)"/>
+  <rect width="200" height="5" rx="4" fill="#4f9cf9"/>
+  <path d="M100 48 C82 48 70 58 70 73 C70 84 74 90 74 100 C74 116 80 133 88 133 C93 133 96 126 100 118 C104 126 107 133 112 133 C120 133 126 116 126 100 C126 90 130 84 130 73 C130 58 118 48 100 48 Z" fill="url(#rwtooth2)"/>
+  <path d="M85 128 C82 140 78 150 76 160" fill="none" stroke="#ffffff" stroke-width="3.5" stroke-linecap="round" opacity="0.7"/>
+  <path d="M94 132 C92 144 91 154 90 164" fill="none" stroke="#ffffff" stroke-width="3.5" stroke-linecap="round" opacity="0.7"/>
+  <path d="M115 128 C118 140 122 150 124 160" fill="none" stroke="#ffffff" stroke-width="3.5" stroke-linecap="round" opacity="0.7"/>
+  <path d="M106 132 C108 144 109 154 110 164" fill="none" stroke="#ffffff" stroke-width="3.5" stroke-linecap="round" opacity="0.7"/>
+  <circle cx="90" cy="68" r="4" fill="#4f9cf9" opacity="0.8"/>
+</svg>
+    <div class="header-text">
+      <h1 id="header-clinica">RWDent</h1>
+      <p>Agendamentos e Prontuários Odontológicos</p>
+    </div>
+  </div>
+
+  <!-- Page Content -->
+  <div class="page-content" id="page-content">
+
+    <!-- HOME -->
+    <div id="tab-home" class="content">
+      <div class="card" style="text-align:center;">
+        <div style="max-width:680px;margin:0 auto;">
+          <div style="display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">
+            <svg width="100" height="100" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <linearGradient id="rwbg3" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#1a1a2e"/><stop offset="100%" stop-color="#16213e"/></linearGradient>
+                <linearGradient id="rwtooth3" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#ffffff"/><stop offset="100%" stop-color="#d4e8ff"/></linearGradient>
+              </defs>
+              <rect width="200" height="200" rx="28" fill="url(#rwbg3)"/>
+              <rect width="200" height="5" rx="4" fill="#4f9cf9"/>
+              <path d="M100 48 C82 48 70 58 70 73 C70 84 74 90 74 100 C74 116 80 133 88 133 C93 133 96 126 100 118 C104 126 107 133 112 133 C120 133 126 116 126 100 C126 90 130 84 130 73 C130 58 118 48 100 48 Z" fill="url(#rwtooth3)"/>
+              <path d="M85 128 C82 140 78 150 76 160" fill="none" stroke="#ffffff" stroke-width="3.5" stroke-linecap="round" opacity="0.7"/>
+              <path d="M94 132 C92 144 91 154 90 164" fill="none" stroke="#ffffff" stroke-width="3.5" stroke-linecap="round" opacity="0.7"/>
+              <path d="M115 128 C118 140 122 150 124 160" fill="none" stroke="#ffffff" stroke-width="3.5" stroke-linecap="round" opacity="0.7"/>
+              <path d="M106 132 C108 144 109 154 110 164" fill="none" stroke="#ffffff" stroke-width="3.5" stroke-linecap="round" opacity="0.7"/>
+              <circle cx="90" cy="68" r="4" fill="#4f9cf9" opacity="0.8"/>
+            </svg>
+          </div>
+          <h2 style="font-size:20px;margin-bottom:10px;">Bem-vindo ao Sistema</h2>
+          <p style="color:var(--rose-text);line-height:1.7;margin-bottom:20px;">Gerencie sua clínica com praticidade e eficiência.</p>
+          <div id="home-stats" style="display:flex;flex-wrap:wrap;justify-content:center;gap:12px;margin-bottom:20px;"></div>
+          <div style="display:flex;flex-wrap:wrap;justify-content:center;gap:10px;">
+            <button class="btn-primary" onclick="switchTab('agendar')"><i class="ti ti-calendar-plus"></i> Novo Agendamento</button>
+            <button class="btn-secondary" onclick="switchTab('lista')"><i class="ti ti-list-check"></i> Ver Agenda</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- AGENDAR -->
+    <div id="tab-agendar" class="content" style="display:none;">
+      <div class="card">
+        <h2><i class="ti ti-calendar-plus"></i> Novo Agendamento</h2>
+        <div class="form-grid">
+          <div class="form-group full"><label>Paciente</label><select id="schedule-patient" onchange="onSchedulePatientChange()"></select></div>
+          <div class="form-group"><label>Telefone</label><input type="tel" id="schedule-phone" placeholder="(00) 00000-0000" /></div>
+          <div class="form-group"><label>Profissional</label><select id="profissional"></select></div>
+          <div class="form-group"><label>Data</label><input type="date" id="data" /></div>
+          <div class="form-group"><label>Horário</label><input type="time" id="horario" step="1800" /></div>
+          <div class="form-group full"><label>Procedimento</label><input type="text" id="procedimento" placeholder="Ex: Limpeza, Canal, Extração..." /></div>
+          <div class="form-group full"><label>Observações</label><textarea id="obs" placeholder="Observações adicionais..."></textarea></div>
+        </div>
+        <div style="display:flex;justify-content:flex-end;margin-top:16px;">
+          <button class="btn-primary" onclick="agendarConsulta()"><i class="ti ti-check"></i> Confirmar Agendamento</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- LISTA -->
+    <div id="tab-lista" class="content" style="display:none;">
+      <div class="card">
+        <div class="section-header">
+          <h2><i class="ti ti-list-check"></i> Agendamentos</h2>
+        </div>
+        <div class="filter-row">
+          <input type="date" id="filtro-data" onchange="renderLista()" />
+          <select id="filtro-prof" onchange="renderLista()"><option value="">Todos os profissionais</option></select>
+        </div>
+        <div class="agendamentos-list" id="lista-agendamentos">
+          <div class="empty"><i class="ti ti-calendar-off" style="font-size:32px;display:block;margin-bottom:10px;opacity:.35"></i>Nenhum agendamento.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CALENDÁRIO -->
+    <div id="tab-calendario" class="content content-cal" style="display:none;">
+      <div class="card cal-card" id="cal-card">
+        <div class="cal-toolbar">
+          <div class="cal-nav">
+            <button class="cal-btn" onclick="calNavigate(-1)"><i class="ti ti-chevron-left"></i></button>
+            <button class="cal-btn cal-today" onclick="calToday()">Hoje</button>
+            <button class="cal-btn" onclick="calNavigate(1)"><i class="ti ti-chevron-right"></i></button>
+            <span class="cal-range" id="cal-range"></span>
+          </div>
+          <div class="cal-tools">
+            <div class="cal-views">
+              <button class="cal-view-btn" data-view="mes" onclick="calSetView('mes')">Mês</button>
+              <button class="cal-view-btn active" data-view="semana" onclick="calSetView('semana')">Semana</button>
+              <button class="cal-view-btn" data-view="dia" onclick="calSetView('dia')">Dia</button>
+            </div>
+            <select id="cal-prof" class="cal-select" onchange="renderCalendario()"></select>
+            <button class="cal-btn" onclick="calNewQuick()"><i class="ti ti-plus"></i> Agendar</button>
+            <button class="cal-btn cal-full" onclick="calFullscreen()"><i class="ti ti-maximize"></i></button>
+          </div>
+        </div>
+        <div id="cal-body" class="cal-body"></div>
+        <div id="cal-modal-bg" class="cal-modal-bg" onclick="calCloseEvent(event)"></div>
+        <div id="cal-new-bg" class="cal-modal-bg" onclick="calCloseNew(event)"></div>
+      </div>
+    </div>
+
+    <!-- PACIENTES -->
+    <div id="tab-pacientes" class="content" style="display:none;">
+      <div class="card">
+        <div class="section-header">
+          <h2><i class="ti ti-users"></i> Pacientes</h2>
+          <button class="btn-secondary" onclick="togglePatientForm()"><i class="ti ti-plus"></i> Novo paciente</button>
+        </div>
+        <div id="form-paciente" style="display:none;margin-bottom:16px;">
+          <hr style="border-color:var(--rose-light);margin-bottom:16px;"/>
+          <div class="form-grid">
+            <div class="form-group"><label>Nome completo</label><input type="text" id="pt-nome" placeholder="Nome do paciente" /></div>
+            <div class="form-group"><label>Data de nascimento</label><input type="date" id="pt-nascimento" /></div>
+            <div class="form-group"><label>Telefone</label><input type="tel" id="pt-telefone" placeholder="(00) 00000-0000" /></div>
+            <div class="form-group"><label>E-mail</label><input type="email" id="pt-email" placeholder="email@exemplo.com" /></div>
+            <div class="form-group"><label>Plano / Convênio</label><input type="text" id="pt-plano" placeholder="Particular, OdontoPrev..." /></div>
+            <div class="form-group"><label>CPF</label><input type="text" id="pt-cpf" placeholder="000.000.000-00" /></div>
+            <div class="form-group full"><label>Observações</label><textarea id="pt-notas" placeholder="Histórico, alergias, etc."></textarea></div>
+          </div>
+          <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:14px;">
+            <button class="btn-secondary" onclick="cancelPatientEdit()">Cancelar</button>
+            <button class="btn-primary" id="save-patient-btn" onclick="adicionarPaciente()"><i class="ti ti-check"></i> Salvar paciente</button>
+          </div>
+        </div>
+        <input type="text" id="busca-paciente" placeholder="🔍  Buscar paciente..." style="margin-bottom:14px;" oninput="renderPatients()" />
+        <div class="patient-list" id="lista-pacientes"></div>
+      </div>
+      <div id="painel-paciente" style="display:none;"></div>
+    </div>
+
+    <!-- PRONTUÁRIOS -->
+    <div id="tab-prontuarios" class="content" style="display:none;">
+      <div class="card">
+        <div class="section-header">
+          <h2><i class="ti ti-file-text"></i> Prontuários</h2>
+          <button class="btn-secondary" onclick="openProntuarioTabForm()"><i class="ti ti-plus"></i> Novo prontuário</button>
+        </div>
+        <div class="filter-row">
+          <select id="prontuario-paciente-select" onchange="selectProntuarioPatient(this.value)"><option value="">Selecione o paciente</option></select>
+        </div>
+        <div id="prontuario-tab-form"></div>
+        <div id="prontuario-tab-list"></div>
+      </div>
+    </div>
+
+    <!-- PROFISSIONAIS -->
+    <div id="tab-profissionais" class="content" style="display:none;">
+      <div class="card">
+        <div class="section-header">
+          <h2><i class="ti ti-briefcase"></i> Profissionais</h2>
+          <button class="btn-secondary" onclick="toggleFormProf()"><i class="ti ti-plus"></i> Adicionar</button>
+        </div>
+        <div id="form-prof" style="display:none;margin-bottom:16px;">
+          <hr style="border-color:var(--rose-light);margin-bottom:16px;"/>
+          <div class="form-grid">
+            <div class="form-group"><label>Nome</label><input type="text" id="p-nome" placeholder="Nome do profissional" /></div>
+            <div class="form-group"><label>Especialidade</label><input type="text" id="p-esp" placeholder="Ortodontia, Clínico Geral..." /></div>
+            <div class="form-group"><label>CRO</label><input type="text" id="p-cro" placeholder="CRO-MA 12345" /></div>
+            <div class="form-group"><label>Cor</label><input type="color" id="p-cor" value="#d4735a" style="height:44px;padding:4px;" /></div>
+          </div>
+          <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:14px;">
+            <button class="btn-secondary" onclick="toggleFormProf()">Cancelar</button>
+            <button class="btn-primary" onclick="adicionarProfissional()"><i class="ti ti-check"></i> Salvar profissional</button>
+          </div>
+        </div>
+        <div id="lista-profissionais"></div>
+      </div>
+    </div>
+
+
+    <!-- ODONTOGRAMA -->
+    <div id="tab-odontograma" class="content" style="display:none;">
+
+      <!-- SELETOR DE PACIENTE -->
+      <div class="card">
+        <h2><i class="ti ti-tooth"></i> Odontograma</h2>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Paciente</label>
+            <select id="odonto-pac-sel" onchange="onOdontoPacChange(this.value)">
+              <option value="">Selecione o paciente</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Data do atendimento</label>
+            <input type="date" id="odonto-atend-data"/>
+          </div>
+        </div>
+      </div>
+
+      <div id="odonto-main" style="display:none;">
+
+        <!-- DIAGRAMA DOS DENTES -->
+        <div class="card" style="padding:16px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px;">
+            <h2 style="margin:0;"><i class="ti ti-layout-grid"></i> Diagrama Dental (FDI)</h2>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;" id="odonto-legenda"></div>
+          </div>
+
+          <!-- ARCADA SUPERIOR -->
+          <div style="text-align:center;font-size:11px;font-weight:700;color:var(--rose-text);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">Superior</div>
+          <div class="odonto-arcada" id="arc-sup"></div>
+
+          <div style="display:flex;align-items:center;gap:8px;margin:8px 0;">
+            <div style="flex:1;height:1px;background:var(--rose-light);"></div>
+            <span style="font-size:10px;color:var(--rose-text);font-weight:700;">DIREITO ←→ ESQUERDO</span>
+            <div style="flex:1;height:1px;background:var(--rose-light);"></div>
+          </div>
+
+          <!-- ARCADA INFERIOR -->
+          <div class="odonto-arcada" id="arc-inf"></div>
+          <div style="text-align:center;font-size:11px;font-weight:700;color:var(--rose-text);text-transform:uppercase;letter-spacing:.5px;margin-top:6px;">Inferior</div>
+        </div>
+
+        <!-- PAINEL DO DENTE SELECIONADO -->
+        <div class="card" id="odonto-dente-panel" style="display:none;border:2px solid var(--rose);">
+          <h2><i class="ti ti-tooth"></i> Dente <span id="odonto-d-num"></span> — <span id="odonto-d-nome" style="font-weight:400;text-transform:none;"></span></h2>
+          <div class="form-grid" style="margin-top:12px;">
+            <div class="form-group full">
+              <label>Condição do dente</label>
+              <select id="odonto-d-cond">
+                <option value="higido">Hígido (saudável)</option>
+                <option value="carie">Cárie</option>
+                <option value="restaurado">Restaurado</option>
+                <option value="extraido">Extraído / Ausente</option>
+                <option value="canal">Tratamento de Canal</option>
+                <option value="coroa">Coroa / Prótese</option>
+                <option value="implante">Implante</option>
+                <option value="fratura">Fratura</option>
+                <option value="selante">Selante</option>
+                <option value="outro">Outro</option>
+              </select>
+            </div>
+            <div class="form-group full">
+              <label>Procedimento realizado neste dente</label>
+              <input type="text" id="odonto-d-proc" placeholder="Ex: Restauração MOD resina, Extração simples, Faceta..."/>
+            </div>
+            <div class="form-group full">
+              <label>Observações</label>
+              <textarea id="odonto-d-obs" rows="2" placeholder="Detalhes, materiais, intercorrências..."></textarea>
+            </div>
+            <div class="form-group">
+              <label>Profissional</label>
+              <select id="odonto-d-prof"></select>
+            </div>
+          </div>
+          <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:14px;">
+            <button class="btn-secondary" onclick="odontoCancelarDente()">Cancelar</button>
+            <button class="btn-primary" onclick="odontoSalvarDente()"><i class="ti ti-check"></i> Salvar dente</button>
+          </div>
+        </div>
+
+        <!-- REGISTRO GERAL DO ATENDIMENTO -->
+        <div class="card">
+          <div class="section-header">
+            <h2><i class="ti ti-notes"></i> Registro do Atendimento</h2>
+            <button class="btn-secondary" onclick="odontoToggleForm()"><i class="ti ti-plus"></i> Novo registro</button>
+          </div>
+          <div id="odonto-form-atend" style="display:none;margin-bottom:16px;">
+            <hr style="border-color:var(--rose-light);margin-bottom:14px;"/>
+            <div class="form-grid">
+              <div class="form-group full">
+                <label>Procedimentos realizados hoje</label>
+                <textarea id="odonto-atend-procs" rows="3" placeholder="Ex: Profilaxia completa, restauração dente 36 classe I, aplicação de flúor..."></textarea>
+              </div>
+              <div class="form-group full">
+                <label>Observações gerais</label>
+                <textarea id="odonto-atend-obs" rows="2" placeholder="Queixas do paciente, intercorrências, próxima consulta..."></textarea>
+              </div>
+              <div class="form-group">
+                <label>Profissional</label>
+                <select id="odonto-atend-prof"></select>
+              </div>
+            </div>
+            <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:12px;">
+              <button class="btn-secondary" onclick="odontoToggleForm()">Cancelar</button>
+              <button class="btn-primary" onclick="odontoSalvarAtendimento()"><i class="ti ti-check"></i> Salvar atendimento</button>
+            </div>
+          </div>
+          <div id="odonto-historico-list"></div>
+        </div>
+
+      </div><!-- fim odonto-main -->
+    </div>
+
+    <!-- CONFIGURAÇÕES -->
+    <div id="tab-configuracoes" class="content" style="display:none;">
+      <div class="card">
+        <div class="section-header">
+          <h2><i class="ti ti-settings"></i> Configurações da Clínica</h2>
+        </div>
+        <div id="config-content">
+          <div class="form-grid">
+            <div class="form-group"><label>Nome da clínica</label><input type="text" id="cfg-nome-cli" /></div>
+            <div class="form-group"><label>Responsável</label><input type="text" id="cfg-nome-resp" /></div>
+            <div class="form-group"><label>E-mail</label><input type="email" id="cfg-email" disabled style="opacity:.6;" /></div>
+            <div class="form-group"><label>Telefone / WhatsApp</label><input type="tel" id="cfg-telefone" /></div>
+          </div>
+          <div style="display:flex;justify-content:flex-end;margin-top:16px;">
+            <button class="btn-primary" onclick="salvarConfiguracoes()"><i class="ti ti-check"></i> Salvar alterações</button>
+          </div>
+          <hr style="border-color:var(--rose-light);margin:24px 0;"/>
+          <h2 style="font-size:13px;font-weight:700;color:var(--rose-dark);margin-bottom:14px;display:flex;align-items:center;gap:8px;text-transform:uppercase;letter-spacing:.5px;"><i class="ti ti-lock"></i> Alterar senha</h2>
+          <div class="form-grid">
+            <div class="form-group"><label>Nova senha</label><input type="password" id="cfg-pass" placeholder="Mínimo 6 caracteres" /></div>
+            <div class="form-group"><label>Confirmar nova senha</label><input type="password" id="cfg-pass2" placeholder="Repita a senha" /></div>
+          </div>
+          <div style="display:flex;justify-content:flex-end;margin-top:14px;">
+            <button class="btn-secondary" onclick="alterarSenha()"><i class="ti ti-key"></i> Alterar senha</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- end page-content -->
+
+  <!-- Mobile bottom nav -->
+  <nav class="mobile-bottom-nav">
+    <div class="mobile-nav-items">
+      <button class="mobile-nav-item active" data-tab="home" onclick="switchTab('home')"><i class="ti ti-home"></i>Início</button>
+      <button class="mobile-nav-item" data-tab="agendar" onclick="switchTab('agendar')"><i class="ti ti-calendar-plus"></i>Agendar</button>
+      <button class="mobile-nav-item" data-tab="calendario" onclick="switchTab('calendario')"><i class="ti ti-calendar-month"></i>Calendário</button>
+      <button class="mobile-nav-item" data-tab="lista" onclick="switchTab('lista')"><i class="ti ti-list-check"></i>Agenda</button>
+      <button class="mobile-nav-item" data-tab="pacientes" onclick="switchTab('pacientes')"><i class="ti ti-users"></i>Pacientes</button>
+      <button class="mobile-nav-item" data-tab="prontuarios" onclick="switchTab('prontuarios')"><i class="ti ti-file-text"></i>Prontuários</button>
+      <button class="mobile-nav-item" data-tab="odontograma" onclick="switchTab('odontograma')"><i class="ti ti-tooth"></i>Odontograma</button>
+      <button class="mobile-nav-item" data-tab="profissionais" onclick="switchTab('profissionais')"><i class="ti ti-briefcase"></i>Profissionais</button>
+    </div>
+  </nav>
+</div><!-- end app -->
+
+<!-- Loading -->
+<div class="loading-overlay" id="loading" style="display:none;">
+  <div class="spinner"></div>
+  <div style="color:var(--rose-text);font-size:14px;">Carregando...</div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script>
+// ══════════════════════════════════════════════════════
+// SUPABASE CLIENT
+// ══════════════════════════════════════════════════════
+const _sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  auth: {
+    storage: window.localStorage,
+    storageKey: 'rwdent-auth',
+    flowType: 'implicit',
+    detectSessionInUrl: true,
+    persistSession: true,
+    autoRefreshToken: true
+  }
+});
+
+// ══════════════════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════════════════
+let agendamentos = [];
+let profissionais = [];
+let pacientes = [];
+let selectedPatientId = null;
+let selectedProntuarioPatientId = null;
+let editingPatientId = null;
+let editingProntuarioId = null;
+let sidebarOpen = false;
+let currentUser = null;
+let clinicaId = null;       // ID da clínica do usuário logado (multi-tenant)
+let clinicaData = null;     // Dados completos da clínica
+
+// Calendário state
+const CAL_START_HOUR = 7, CAL_END_HOUR = 19;
+const CAL_START_MIN = CAL_START_HOUR * 60, CAL_END_MIN = CAL_END_HOUR * 60;
+const CAL_SLOT_PX = 48;
+let calView = 'semana';
+let calRef = new Date();
+const DAYS_PT = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+const MONTHS_PT = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+
+// ══════════════════════════════════════════════════════
+// UI HELPERS
+// ══════════════════════════════════════════════════════
+function showLoading(v){ document.getElementById('loading').style.display = v ? 'flex' : 'none'; }
+function showToast(msg, type='success'){
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = `toast show ${type}`;
+  setTimeout(()=>{ t.className='toast'; }, 3800);
+}
+function escapeHtml(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function hoje(){ return new Date().toISOString().slice(0,10); }
+function formatDate(v){ if(!v)return''; const [y,m,d]=v.split('-'); return`${d}/${m}/${y}`; }
+function initials(text){ return String(text||'').split(' ').filter(Boolean).slice(0,2).map(w=>w[0].toUpperCase()).join(''); }
+function hashColor(text){
+  let h=0; for(let i=0;i<text.length;i++) h=text.charCodeAt(i)+((h<<5)-h);
+  const c=(h&0x00FFFFFF).toString(16).toUpperCase();
+  return'00000'.substring(0,6-c.length)+c;
+}
+
+// ══════════════════════════════════════════════════════
+// AUTH
+// ══════════════════════════════════════════════════════
+async function doLogin(){
+  const email = document.getElementById('login-email').value.trim();
+  const pass  = document.getElementById('login-pass').value;
+  const errEl = document.getElementById('login-err');
+  const btn   = document.getElementById('btn-login');
+  errEl.className='login-err'; errEl.textContent='';
+  if(!email||!pass){ errEl.textContent='Preencha e-mail e senha.'; errEl.className='login-err show'; return; }
+  btn.disabled=true; document.getElementById('btn-login-text').textContent='Entrando...';
+  const { data, error } = await _sb.auth.signInWithPassword({ email, password: pass });
+  btn.disabled=false; document.getElementById('btn-login-text').textContent='Entrar';
+  if(error){ errEl.textContent=error.message==='Invalid login credentials'?'E-mail ou senha inválidos.':error.message; errEl.className='login-err show'; return; }
+  currentUser = data.user;
+  // Multi-tenant: verifica aprovação e carrega clinicaId
+  const ok = await checkClinicaApproval();
+  if(!ok) return;
+  await loadAll();
+  document.getElementById('login-screen').style.display='none';
+  document.getElementById('app').style.display='block';
+}
+
+async function checkClinicaApproval(){
+  const errEl = document.getElementById('login-err');
+  const { data: cli } = await _sb
+    .from('clinicas')
+    .select('*')
+    .eq('user_id', currentUser.id)
+    .single();
+  if(!cli){
+    errEl.textContent='Clínica não encontrada. Faça seu cadastro na página inicial.';
+    errEl.className='login-err show';
+    await _sb.auth.signOut(); currentUser=null; return false;
+  }
+  if(cli.status !== 'aprovado'){
+    errEl.textContent='Seu cadastro ainda está aguardando aprovação pelo administrador.';
+    errEl.className='login-err show';
+    await _sb.auth.signOut(); currentUser=null; return false;
+  }
+  clinicaId   = cli.id;
+  clinicaData = cli;
+  // Atualiza nome da clínica na interface
+  const el = document.getElementById('header-clinica');
+  if(el) el.textContent = cli.nome_cli || 'Minha Clínica';
+  return true;
+}
+
+// Enter key on login
+document.addEventListener('keydown', e=>{ if(e.key==='Enter'&&document.getElementById('login-screen').style.display!=='none') doLogin(); });
+
+async function doLogout(){
+  await _sb.auth.signOut();
+  currentUser=null; agendamentos=[]; profissionais=[]; pacientes=[];
+  document.getElementById('app').style.display='none';
+  document.getElementById('login-screen').style.display='flex';
+  document.getElementById('login-pass').value='';
+}
+
+// Check existing session on load
+(async()=>{
+  try {
+    const { data:{ session } } = await _sb.auth.getSession();
+    if(session){
+      currentUser=session.user;
+      const ok = await checkClinicaApproval();
+      if(ok){
+        await loadAll();
+        document.getElementById('login-screen').style.display='none';
+        document.getElementById('app').style.display='block';
+        return;
+      }
+    }
+  } catch(e){
+    console.warn('Erro sessão:', e.message);
+  }
+  // Sem sessão — mostra login
+  document.getElementById('login-screen').style.display='flex';
+})();
+
+// ══════════════════════════════════════════════════════
+// LOAD DATA FROM SUPABASE
+// ══════════════════════════════════════════════════════
+async function loadAll(){
+  showLoading(true);
+  try {
+    const [{ data: ag }, { data: pr }, { data: pa }] = await Promise.all([
+      _sb.from('agendamentos').select('*').eq('clinica_id', clinicaId).order('data').order('horario'),
+      _sb.from('profissionais').select('*').eq('clinica_id', clinicaId).order('id'),
+      _sb.from('pacientes').select('*, prontuarios(*)').eq('clinica_id', clinicaId)
+    ]);
+    agendamentos = ag || [];
+    // Ensure default professional exists
+    if(!pr || pr.length===0){
+      const nomeProf = clinicaData?.nome_resp || 'Profissional Principal';
+      const { data: novoPr } = await _sb.from('profissionais').insert([
+        { nome: nomeProf, especialidade:'Dentista Principal', cro:'', cor:'#d4735a', principal:true, clinica_id: clinicaId }
+      ]).select();
+      profissionais = novoPr || [];
+    } else {
+      profissionais = pr;
+    }
+    pacientes = (pa||[]).map(p=>({ ...p, prontuarios: p.prontuarios||[] }));
+    initApp();
+  } catch(e){
+    showToast('Erro ao carregar dados: '+e.message,'error');
+  }
+  showLoading(false);
+}
+
+function initApp(){
+  document.getElementById('data').value = hoje();
+  renderSelectProf();
+  renderProfissionais();
+  renderPatients();
+  renderScheduleOptions();
+  renderHomeStats();
+  calSetView('semana', false);
+}
+
+// ══════════════════════════════════════════════════════
+// NAVIGATION
+// ══════════════════════════════════════════════════════
+function toggleSidebar(){
+  sidebarOpen=!sidebarOpen;
+  document.getElementById('sidebar').classList.toggle('open',sidebarOpen);
+}
+
+function switchTab(tab){
+  ['home','agendar','lista','calendario','pacientes','prontuarios','profissionais','configuracoes','odontograma'].forEach(t=>{
+    const el=document.getElementById('tab-'+t);
+    if(el) el.style.display = t===tab?'':'none';
+  });
+  document.querySelectorAll('.sidebar-item,.mobile-nav-item').forEach(b=>{
+    b.classList.toggle('active', b.dataset.tab===tab);
+  });
+  if(tab==='agendar') renderScheduleOptions();
+  if(tab==='lista') renderLista();
+  if(tab==='calendario') renderCalendario();
+  if(tab==='pacientes') renderPatients();
+  if(tab==='prontuarios') renderProntuarioTab();
+  if(tab==='profissionais') renderProfissionais();
+  if(tab==='home') renderHomeStats();
+  if(tab==='configuracoes') renderConfiguracoes();
+  if(tab==='odontograma') renderOdontogramaTab();
+  window.scrollTo(0,0);
+}
+
+// ══════════════════════════════════════════════════════
+// HOME STATS
+// ══════════════════════════════════════════════════════
+function renderHomeStats(){
+  const hoje_str = hoje();
+  const hoje_count = agendamentos.filter(a=>a.data===hoje_str).length;
+  const semana_end = new Date(); semana_end.setDate(semana_end.getDate()+7);
+  const semana_count = agendamentos.filter(a=>a.data>=hoje_str && a.data<=semana_end.toISOString().slice(0,10)).length;
+  document.getElementById('home-stats').innerHTML = `
+    <div style="background:var(--rose-lighter);border-radius:14px;padding:16px 22px;text-align:center;min-width:120px;">
+      <div style="font-size:28px;font-weight:800;color:var(--rose);">${hoje_count}</div>
+      <div style="font-size:12px;color:var(--rose-text);margin-top:4px;">Consultas hoje</div>
+    </div>
+    <div style="background:var(--rose-lighter);border-radius:14px;padding:16px 22px;text-align:center;min-width:120px;">
+      <div style="font-size:28px;font-weight:800;color:var(--rose);">${semana_count}</div>
+      <div style="font-size:12px;color:var(--rose-text);margin-top:4px;">Próximos 7 dias</div>
+    </div>
+    <div style="background:var(--rose-lighter);border-radius:14px;padding:16px 22px;text-align:center;min-width:120px;">
+      <div style="font-size:28px;font-weight:800;color:var(--rose);">${pacientes.length}</div>
+      <div style="font-size:12px;color:var(--rose-text);margin-top:4px;">Pacientes</div>
+    </div>
+  `;
+}
+
+// ══════════════════════════════════════════════════════
+// AGENDAMENTOS
+// ══════════════════════════════════════════════════════
+function renderScheduleOptions(){
+  const sel = document.getElementById('schedule-patient');
+  if(!sel) return;
+  const cur = sel.value;
+  sel.innerHTML='<option value="">Selecione o paciente</option>'+pacientes.map(p=>`<option value="${p.id}">${escapeHtml(p.nome)}</option>`).join('');
+  sel.value=cur; onSchedulePatientChange();
+}
+
+function onSchedulePatientChange(){
+  const sel=document.getElementById('schedule-patient');
+  const ph=document.getElementById('schedule-phone');
+  if(!sel||!ph) return;
+  const p=pacientes.find(p=>p.id==sel.value);
+  ph.value=p&&p.telefone?p.telefone:'';
+}
+
+function renderSelectProf(){
+  const sel=document.getElementById('profissional');
+  const fil=document.getElementById('filtro-prof');
+  const calSel=document.getElementById('cal-prof');
+  if(!sel) return;
+  const cur=sel.value;
+  const opts=profissionais.map(p=>`<option value="${p.id}">${escapeHtml(p.nome)} — ${escapeHtml(p.especialidade)}</option>`).join('');
+  sel.innerHTML=opts; if(cur) sel.value=cur;
+  if(fil) fil.innerHTML='<option value="">Todos os profissionais</option>'+profissionais.map(p=>`<option value="${p.id}">${escapeHtml(p.nome)}</option>`).join('');
+  if(calSel) calSel.innerHTML='<option value="">Todos</option>'+profissionais.map(p=>`<option value="${p.id}">${escapeHtml(p.nome)}</option>`).join('');
+}
+
+async function agendarConsulta(){
+  const patientId = document.getElementById('schedule-patient').value;
+  const paciente = pacientes.find(p=>p.id==patientId);
+  const telefone = document.getElementById('schedule-phone').value.trim();
+  const profId = parseInt(document.getElementById('profissional').value);
+  const data = document.getElementById('data').value;
+  const horario = document.getElementById('horario').value;
+  const procedimento = document.getElementById('procedimento').value.trim();
+  const obs = document.getElementById('obs').value.trim();
+  if(!paciente){ showToast('Selecione um paciente.','warn'); return; }
+  if(!profId){ showToast('Selecione um profissional.','warn'); return; }
+  if(!data){ showToast('Escolha a data.','warn'); return; }
+  if(!horario){ showToast('Escolha o horário.','warn'); return; }
+  const conflito = agendamentos.find(a=>a.prof_id===profId&&a.data===data&&a.horario===horario);
+  if(conflito){ showToast('Conflito de horário para o profissional.','error'); return; }
+  const prof = profissionais.find(p=>p.id===profId);
+  if(!prof){ showToast('Profissional inválido.','warn'); return; }
+  showLoading(true);
+  const { data: novo, error } = await _sb.from('agendamentos').insert([{
+    paciente_id: paciente.id, nome: paciente.nome,
+    telefone: telefone||paciente.telefone||'',
+    prof_id: profId, prof_nome: prof.nome, prof_cor: prof.cor,
+    data, horario, procedimento, obs,
+    clinica_id: clinicaId
+  }]).select().single();
+  showLoading(false);
+  if(error){ showToast('Erro ao salvar: '+error.message,'error'); return; }
+  agendamentos.push(novo);
+  agendamentos.sort((a,b)=>(a.data+a.horario).localeCompare(b.data+b.horario));
+  ['schedule-phone','horario','procedimento','obs'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+  document.getElementById('data').value=hoje();
+  showToast('Agendamento salvo!');
+  renderLista(); renderHomeStats();
+  switchTab('lista');
+}
+
+function renderLista(){
+  const container=document.getElementById('lista-agendamentos');
+  const dataFiltro=document.getElementById('filtro-data').value;
+  const profFiltro=document.getElementById('filtro-prof').value;
+  let lista=agendamentos.filter(a=>{
+    if(dataFiltro&&a.data!==dataFiltro) return false;
+    if(profFiltro&&a.prof_id!==parseInt(profFiltro)) return false;
+    return true;
+  });
+  if(!lista.length){ container.innerHTML='<div class="empty"><i class="ti ti-calendar-off" style="font-size:32px;display:block;margin-bottom:10px;opacity:.35"></i>Nenhum agendamento encontrado.</div>'; return; }
+  container.innerHTML=lista.map(a=>`
+    <div class="appt-item">
+      <div class="appt-time">${a.horario||'--:--'}<small>${formatDate(a.data)}</small></div>
+      <div class="appt-info">
+        <div class="name">${escapeHtml(a.nome)}</div>
+        <div class="detail">${escapeHtml(a.procedimento||'Consulta')} · ${escapeHtml(a.prof_nome)} · ${escapeHtml(a.telefone||'Sem telefone')}</div>
+      </div>
+      <span class="appt-badge badge-main">${escapeHtml((a.prof_nome||'').split(' ')[0])}</span>
+      <button class="btn-danger" onclick="removerAgendamento(${a.id})"><i class="ti ti-trash"></i></button>
+    </div>
+  `).join('');
+}
+
+async function removerAgendamento(id){
+  if(!confirm('Remover este agendamento?')) return;
+  showLoading(true);
+  const { error } = await _sb.from('agendamentos').delete().eq('id',id);
+  showLoading(false);
+  if(error){ showToast('Erro ao remover.','error'); return; }
+  agendamentos=agendamentos.filter(a=>a.id!==id);
+  renderLista(); renderHomeStats(); renderCalendario();
+  showToast('Agendamento removido.');
+}
+
+// ══════════════════════════════════════════════════════
+// PROFISSIONAIS
+// ══════════════════════════════════════════════════════
+function toggleFormProf(){ const el=document.getElementById('form-prof'); el.style.display=el.style.display==='none'?'':'none'; }
+
+function renderProfissionais(){
+  const c=document.getElementById('lista-profissionais');
+  if(!c) return;
+  c.innerHTML=profissionais.map(p=>`
+    <div class="prof-card">
+      <div class="patient-avatar" style="background:${p.cor}">${initials(p.nome)}</div>
+      <div class="patient-info">
+        <div class="name">${escapeHtml(p.nome)}${p.principal?' <span class="badge-principal">Principal</span>':''}</div>
+        <div class="meta">${escapeHtml(p.especialidade)}${p.cro?' · '+escapeHtml(p.cro):''}</div>
+      </div>
+      ${p.principal?'':`<button class="btn-danger" onclick="removerProfissional(${p.id})"><i class="ti ti-trash"></i></button>`}
+    </div>
+  `).join('');
+  renderSelectProf();
+}
+
+async function adicionarProfissional(){
+  const nome=document.getElementById('p-nome').value.trim();
+  const esp=document.getElementById('p-esp').value.trim();
+  const cro=document.getElementById('p-cro').value.trim();
+  const cor=document.getElementById('p-cor').value;
+  if(!nome||!esp){ showToast('Preencha nome e especialidade.','warn'); return; }
+  showLoading(true);
+  const { data:novo, error } = await _sb.from('profissionais').insert([{ nome, especialidade:esp, cro, cor, principal:false, clinica_id: clinicaId }]).select().single();
+  showLoading(false);
+  if(error){ showToast('Erro: '+error.message,'error'); return; }
+  profissionais.push(novo);
+  ['p-nome','p-esp','p-cro'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('p-cor').value='#d4735a';
+  toggleFormProf(); renderProfissionais();
+  showToast('Profissional adicionado.');
+}
+
+async function removerProfissional(id){
+  if(agendamentos.some(a=>a.prof_id===id)){ showToast('Profissional possui agendamentos e não pode ser removido.','error'); return; }
+  if(!confirm('Remover este profissional?')) return;
+  showLoading(true);
+  const { error } = await _sb.from('profissionais').delete().eq('id',id);
+  showLoading(false);
+  if(error){ showToast('Erro: '+error.message,'error'); return; }
+  profissionais=profissionais.filter(p=>p.id!==id);
+  renderProfissionais(); showToast('Profissional removido.');
+}
+
+// ══════════════════════════════════════════════════════
+// PACIENTES
+// ══════════════════════════════════════════════════════
+function togglePatientForm(){
+  const el=document.getElementById('form-paciente');
+  el.style.display=el.style.display==='none'?'':'none';
+  if(el.style.display===''){
+    document.getElementById('save-patient-btn').onclick=adicionarPaciente;
+    document.getElementById('save-patient-btn').innerHTML='<i class="ti ti-check"></i> Salvar paciente';
+    editingPatientId=null;
+  }
+}
+
+function cancelPatientEdit(){ togglePatientForm(); resetPatientForm(); }
+
+function readPatientForm(){
+  return {
+    nome:document.getElementById('pt-nome').value.trim(),
+    nascimento:document.getElementById('pt-nascimento').value,
+    telefone:document.getElementById('pt-telefone').value.trim(),
+    email:document.getElementById('pt-email').value.trim(),
+    plano:document.getElementById('pt-plano').value.trim(),
+    cpf:document.getElementById('pt-cpf').value.trim(),
+    notas:document.getElementById('pt-notas').value.trim()
+  };
+}
+
+function resetPatientForm(){
+  ['pt-nome','pt-nascimento','pt-telefone','pt-email','pt-plano','pt-cpf','pt-notas'].forEach(id=>document.getElementById(id).value='');
+}
+
+async function adicionarPaciente(){
+  const dados=readPatientForm();
+  if(!dados.nome){ showToast('Preencha o nome do paciente.','warn'); return; }
+  showLoading(true);
+  const { data:novo, error } = await _sb.from('pacientes').insert([{...dados, clinica_id: clinicaId}]).select().single();
+  showLoading(false);
+  if(error){ showToast('Erro: '+error.message,'error'); return; }
+  novo.prontuarios=[]; pacientes.push(novo);
+  resetPatientForm(); togglePatientForm();
+  renderPatients(); renderScheduleOptions(); renderHomeStats();
+  showToast('Paciente adicionado.');
+}
+
+function renderPatients(){
+  const c=document.getElementById('lista-pacientes');
+  const busca=(document.getElementById('busca-paciente')?.value||'').toLowerCase();
+  const filtrados=pacientes.filter(p=>p.nome.toLowerCase().includes(busca)||(p.cpf||'').includes(busca)||(p.telefone||'').includes(busca));
+  if(!filtrados.length){ c.innerHTML='<div class="empty"><i class="ti ti-user" style="font-size:32px;display:block;margin-bottom:10px;opacity:.35"></i>Nenhum paciente encontrado.</div>'; return; }
+  c.innerHTML=filtrados.map(p=>`
+    <div class="patient-card" onclick="selectPatient(${p.id})">
+      <div class="patient-avatar" style="background:#${hashColor(p.nome)}">${initials(p.nome)}</div>
+      <div class="patient-info">
+        <div class="name">${escapeHtml(p.nome)}</div>
+        <div class="meta">${escapeHtml(p.plano||'Paciente odontológico')} · ${escapeHtml(p.telefone||'Sem telefone')}</div>
+      </div>
+      <button class="btn-secondary" onclick="event.stopPropagation();selectPatient(${p.id})">Abrir</button>
+    </div>
+  `).join('');
+}
+
+function selectPatient(id){ selectedPatientId=id; renderPatientDetail(); }
+
+function renderPatientDetail(){
+  const panel=document.getElementById('painel-paciente');
+  const p=pacientes.find(pt=>pt.id===selectedPatientId);
+  if(!p){ panel.style.display='none'; return; }
+  panel.style.display='';
+  panel.innerHTML=`
+    <div class="card">
+      <div class="section-header">
+        <div>
+          <h2><i class="ti ti-file-description"></i> ${escapeHtml(p.nome)}</h2>
+          <p style="color:var(--rose-text);margin-top:6px;font-size:13px;">${escapeHtml(p.plano||'Sem plano')} · ${p.nascimento?'Nasc. '+formatDate(p.nascimento):''}</p>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn-secondary" onclick="editPatient(${p.id})"><i class="ti ti-pencil"></i> Editar</button>
+          <button class="btn-danger" onclick="removerPaciente(${p.id})"><i class="ti ti-trash"></i></button>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:18px;font-size:13px;">
+        <div><strong>CPF:</strong> ${escapeHtml(p.cpf||'-')}</div>
+        <div><strong>Tel:</strong> ${escapeHtml(p.telefone||'-')}</div>
+        <div><strong>E-mail:</strong> ${escapeHtml(p.email||'-')}</div>
+        <div><strong>Obs:</strong> ${escapeHtml(p.notas||'-')}</div>
+      </div>
+    </div>
+  `;
+}
+
+function editPatient(id){
+  const p=pacientes.find(pt=>pt.id===id);
+  if(!p) return;
+  const formEl=document.getElementById('form-paciente');
+  if(formEl.style.display==='none') togglePatientForm();
+  editingPatientId=id;
+  ['nome','nascimento','telefone','email','plano','cpf','notas'].forEach(k=>{
+    const el=document.getElementById('pt-'+k); if(el) el.value=p[k]||'';
+  });
+  const btn=document.getElementById('save-patient-btn');
+  btn.innerHTML='<i class="ti ti-check"></i> Atualizar paciente';
+  btn.onclick=()=>savePatientEdit(id);
+  window.scrollTo(0,0);
+}
+
+async function savePatientEdit(id){
+  const dados=readPatientForm();
+  if(!dados.nome){ showToast('Preencha o nome.','warn'); return; }
+  showLoading(true);
+  const { error } = await _sb.from('pacientes').update(dados).eq('id',id);
+  showLoading(false);
+  if(error){ showToast('Erro: '+error.message,'error'); return; }
+  const p=pacientes.find(pt=>pt.id===id);
+  if(p) Object.assign(p,dados);
+  resetPatientForm(); togglePatientForm();
+  renderPatients(); renderPatientDetail();
+  showToast('Paciente atualizado.');
+}
+
+async function removerPaciente(id){
+  if(!confirm('Remover paciente e todos seus dados?')) return;
+  showLoading(true);
+  await _sb.from('prontuarios').delete().eq('paciente_id',id);
+  await _sb.from('agendamentos').delete().eq('paciente_id',id);
+  const { error } = await _sb.from('pacientes').delete().eq('id',id);
+  showLoading(false);
+  if(error){ showToast('Erro: '+error.message,'error'); return; }
+  pacientes=pacientes.filter(p=>p.id!==id);
+  agendamentos=agendamentos.filter(a=>a.paciente_id!==id);
+  selectedPatientId=null;
+  renderPatients(); renderHomeStats();
+  document.getElementById('painel-paciente').style.display='none';
+  showToast('Paciente removido.');
+}
+
+// ══════════════════════════════════════════════════════
+// PRONTUÁRIOS
+// ══════════════════════════════════════════════════════
+function selectProntuarioPatient(patientId){
+  selectedProntuarioPatientId=patientId?parseInt(patientId):null;
+  document.getElementById('prontuario-tab-form').innerHTML='';
+  renderProntuarioTab();
+}
+
+function renderProntuarioTab(){
+  const sel=document.getElementById('prontuario-paciente-select');
+  if(!sel) return;
+  sel.innerHTML='<option value="">Selecione o paciente</option>'+pacientes.map(p=>`<option value="${p.id}"${p.id===selectedProntuarioPatientId?' selected':''}>${escapeHtml(p.nome)}</option>`).join('');
+  renderProntuarioList();
+}
+
+function openProntuarioTabForm(record=null){
+  const form=document.getElementById('prontuario-tab-form');
+  const patient=pacientes.find(pt=>pt.id===selectedProntuarioPatientId);
+  editingProntuarioId=record?record.id:null;
+  const v=(field,fallback='')=>record?escapeHtml(record[field]||''):(patient?escapeHtml(patient[field]||''):fallback);
+  form.innerHTML=`
+    <div style="border:1px solid var(--rose-light);border-radius:14px;padding:16px;background:#fff7f5;margin-bottom:16px;">
+      <div class="section-header" style="margin-bottom:14px;">
+        <strong>${record?'Editar prontuário':'Novo prontuário'}</strong>
+        <button class="btn-secondary" onclick="document.getElementById('prontuario-tab-form').innerHTML='';editingProntuarioId=null;">Fechar</button>
+      </div>
+      <div class="form-grid">
+        <div class="form-group"><label>Nome do paciente</label><input type="text" id="tr-paciente" value="${v('nome')}" /></div>
+        <div class="form-group"><label>CPF</label><input type="text" id="tr-cpf" value="${v('cpf')}" placeholder="000.000.000-00" /></div>
+        <div class="form-group"><label>Telefone</label><input type="tel" id="tr-telefone" value="${v('telefone')}" /></div>
+        <div class="form-group"><label>E-mail</label><input type="email" id="tr-email" value="${v('email')}" /></div>
+        <div class="form-group full"><label>Plano / Convênio</label><input type="text" id="tr-plano" value="${v('plano')}" /></div>
+        <div class="form-group full"><label>Título do prontuário</label><input type="text" id="tr-titulo" value="${record?escapeHtml(record.titulo||''):''}" placeholder="Avaliação inicial / Limpeza..." /></div>
+        <div class="form-group"><label>Data</label><input type="date" id="tr-data" value="${record?record.data:hoje()}" /></div>
+        <div class="form-group"><label>Status</label>
+          <select id="tr-status">
+            <option${record&&record.status==='Aberto'?' selected':''}>Aberto</option>
+            <option${record&&record.status==='Em andamento'?' selected':''}>Em andamento</option>
+            <option${record&&record.status==='Concluído'?' selected':''}>Concluído</option>
+          </select>
+        </div>
+        <div class="form-group"><label>Profissional</label>
+          <select id="tr-profissional"><option value="">Selecione</option>${profissionais.map(p=>`<option value="${p.id}"${record&&record.profissional_id==p.id?' selected':''}>${escapeHtml(p.nome)}</option>`).join('')}</select>
+        </div>
+        <div class="form-group full"><label>Procedimento</label><input type="text" id="tr-procedimento" value="${record?escapeHtml(record.procedimento||''):''}" /></div>
+        <div class="form-group full"><label>Anamnese / Histórico médico</label><textarea id="tr-historia" rows="3">${record?escapeHtml(record.historia_clinica||''):''}</textarea></div>
+        <div class="form-group"><label>Alergias</label><textarea id="tr-alergias" rows="2">${record?escapeHtml(record.alergias||''):''}</textarea></div>
+        <div class="form-group"><label>Medicamentos em uso</label><textarea id="tr-medicamentos" rows="2">${record?escapeHtml(record.medicamentos||''):''}</textarea></div>
+        <div class="form-group"><label>Cirurgias / Internações</label><textarea id="tr-cirurgias" rows="2">${record?escapeHtml(record.cirurgias||''):''}</textarea></div>
+        <div class="form-group"><label>Doenças sistêmicas</label><textarea id="tr-doencas" rows="2">${record?escapeHtml(record.doencas||''):''}</textarea></div>
+        <div class="form-group full"><label>Hábitos</label><textarea id="tr-habitos" rows="2">${record?escapeHtml(record.habitos||''):''}</textarea></div>
+        <div class="form-group full"><label>Odontograma</label><textarea id="tr-odontograma" rows="3">${record?escapeHtml(record.odontograma||''):''}</textarea></div>
+        <div class="form-group full"><label>Exame extra-oral</label><textarea id="tr-extraoral" rows="2">${record?escapeHtml(record.exame_extra_oral||''):''}</textarea></div>
+        <div class="form-group full"><label>Exame intra-oral</label><textarea id="tr-intraoral" rows="2">${record?escapeHtml(record.exame_intra_oral||''):''}</textarea></div>
+        <div class="form-group"><label>Periodonto</label><textarea id="tr-periodonto" rows="2">${record?escapeHtml(record.exame_periodontal||''):''}</textarea></div>
+        <div class="form-group"><label>ATM</label><textarea id="tr-atm" rows="2">${record?escapeHtml(record.exame_atm||''):''}</textarea></div>
+        <div class="form-group full"><label>Plano de tratamento</label><textarea id="tr-plano-trat" rows="2">${record?escapeHtml(record.plano_tratamento||''):''}</textarea></div>
+        <div class="form-group full"><label>Diagnóstico</label><textarea id="tr-diagnostico" rows="2">${record?escapeHtml(record.diagnostico||''):''}</textarea></div>
+        <div class="form-group full"><label>Orientações</label><textarea id="tr-orientacoes" rows="2">${record?escapeHtml(record.orientacoes||''):''}</textarea></div>
+        <div class="form-group full"><label>Observações</label><textarea id="tr-observacoes" rows="2">${record?escapeHtml(record.observacoes||''):''}</textarea></div>
+      </div>
+      <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:14px;">
+        <button class="btn-secondary" onclick="document.getElementById('prontuario-tab-form').innerHTML='';editingProntuarioId=null;">Cancelar</button>
+        <button class="btn-primary" onclick="salvarProntuarioTab()"><i class="ti ti-check"></i> Salvar</button>
+      </div>
+    </div>
+  `;
+}
+
+async function salvarProntuarioTab(){
+  if(!selectedProntuarioPatientId){ showToast('Escolha um paciente antes de salvar.','warn'); return; }
+  const g=id=>document.getElementById(id)?.value?.trim()||'';
+  const titulo=g('tr-titulo'), data_val=g('tr-data'), nome_pac=g('tr-paciente');
+  if(!titulo||!data_val||!nome_pac){ showToast('Preencha nome do paciente, título e data.','warn'); return; }
+  const payload={
+    paciente_id: selectedProntuarioPatientId,
+    nome_paciente: nome_pac, cpf:g('tr-cpf'), telefone:g('tr-telefone'),
+    email:g('tr-email'), plano:g('tr-plano'), titulo, data:data_val,
+    status:g('tr-status'), profissional_id:document.getElementById('tr-profissional').value||null,
+    procedimento:g('tr-procedimento'), historia_clinica:g('tr-historia'),
+    alergias:g('tr-alergias'), medicamentos:g('tr-medicamentos'),
+    cirurgias:g('tr-cirurgias'), doencas:g('tr-doencas'), habitos:g('tr-habitos'),
+    odontograma:g('tr-odontograma'), exame_extra_oral:g('tr-extraoral'),
+    exame_intra_oral:g('tr-intraoral'), exame_periodontal:g('tr-periodonto'),
+    exame_atm:g('tr-atm'), plano_tratamento:g('tr-plano-trat'),
+    diagnostico:g('tr-diagnostico'), orientacoes:g('tr-orientacoes'),
+    observacoes:g('tr-observacoes')
+  };
+  showLoading(true);
+  let error, novo;
+  if(editingProntuarioId){
+    ({ error } = await _sb.from('prontuarios').update(payload).eq('id',editingProntuarioId));
+  } else {
+    ({ data:novo, error } = await _sb.from('prontuarios').insert([{...payload, clinica_id: clinicaId}]).select().single());
+  }
+  showLoading(false);
+  if(error){ showToast('Erro: '+error.message,'error'); return; }
+  const patient=pacientes.find(pt=>pt.id===selectedProntuarioPatientId);
+  if(patient){
+    if(!patient.prontuarios) patient.prontuarios=[];
+    if(editingProntuarioId){
+      const r=patient.prontuarios.find(r=>r.id===editingProntuarioId);
+      if(r) Object.assign(r,payload);
+      showToast('Prontuário atualizado.');
+    } else {
+      patient.prontuarios.unshift(novo);
+      showToast('Prontuário adicionado.');
+    }
+  }
+  document.getElementById('prontuario-tab-form').innerHTML='';
+  editingProntuarioId=null;
+  renderProntuarioTab();
+}
+
+function renderProntuarioList(){
+  const c=document.getElementById('prontuario-tab-list');
+  const patient=pacientes.find(pt=>pt.id===selectedProntuarioPatientId);
+  if(!patient){ c.innerHTML='<div class="empty">Selecione um paciente para ver os prontuários.</div>'; return; }
+  if(!patient.prontuarios?.length){ c.innerHTML='<div class="empty"><i class="ti ti-file-off" style="font-size:32px;display:block;margin-bottom:10px;opacity:.35"></i>Nenhum prontuário cadastrado.</div>'; return; }
+  c.innerHTML=patient.prontuarios.map(r=>`
+    <div class="record-card">
+      <div class="record-header">
+        <div><strong>${escapeHtml(r.titulo)}</strong><div style="color:var(--rose-text);margin-top:5px;font-size:12px;">${formatDate(r.data)} · ${escapeHtml(r.status||'')}</div></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn-secondary" onclick="editProntuarioFromTab(${patient.id},${r.id})"><i class="ti ti-pencil"></i> Editar</button>
+          <button class="btn-secondary" onclick="downloadRecordPDF(${patient.id},${r.id})"><i class="ti ti-file-text"></i> PDF</button>
+          <button class="btn-danger" onclick="removerProntuario(${patient.id},${r.id})"><i class="ti ti-trash"></i></button>
+        </div>
+      </div>
+      <div class="record-content" style="font-size:13px;">
+        <div><strong>Paciente:</strong> ${escapeHtml(r.nome_paciente||patient.nome)}</div>
+        <div><strong>Procedimento:</strong> ${escapeHtml(r.procedimento||'-')}</div>
+        <div><strong>Anamnese:</strong> ${escapeHtml(r.historia_clinica||'-')}</div>
+        <div><strong>Diagnóstico:</strong> ${escapeHtml(r.diagnostico||'-')}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function editProntuarioFromTab(patientId, recordId){
+  selectedProntuarioPatientId=patientId;
+  const patient=pacientes.find(pt=>pt.id===patientId);
+  const record=patient?.prontuarios.find(r=>r.id===recordId);
+  if(!patient||!record) return;
+  document.getElementById('prontuario-paciente-select').value=patientId;
+  openProntuarioTabForm(record);
+  window.scrollTo(0,0);
+}
+
+async function removerProntuario(patientId, recordId){
+  if(!confirm('Remover este prontuário?')) return;
+  showLoading(true);
+  const { error } = await _sb.from('prontuarios').delete().eq('id',recordId);
+  showLoading(false);
+  if(error){ showToast('Erro: '+error.message,'error'); return; }
+  const patient=pacientes.find(pt=>pt.id===patientId);
+  if(patient) patient.prontuarios=patient.prontuarios.filter(r=>r.id!==recordId);
+  renderProntuarioList();
+  showToast('Prontuário removido.');
+}
+
+function downloadRecordPDF(patientId, recordId){
+  const patient=pacientes.find(pt=>pt.id===patientId);
+  const record=patient?.prontuarios.find(r=>r.id===recordId);
+  if(!patient||!record){ showToast('Prontuário não encontrado.','error'); return; }
+  const { jsPDF: PDF } = window.jspdf||{};
+  if(!PDF){ showToast('Biblioteca PDF não carregada.','error'); return; }
+  const doc=new PDF();
+  const w=doc.internal.pageSize.getWidth();
+  let y=18;
+  const line=()=>{ doc.setDrawColor(212,115,90); doc.line(14,y,w-14,y); y+=6; };
+  const txt=(text,size=11,bold=false,color=[58,32,32])=>{
+    doc.setFontSize(size); doc.setFont('helvetica',bold?'bold':'normal');
+    doc.setTextColor(...color);
+    const lines=doc.splitTextToSize(String(text||'-'),w-28);
+    doc.text(lines,14,y); y+=lines.length*5+2;
+  };
+  const field=(label,value)=>{ if(!value||value==='-')return; txt(label+': ',10,true,[160,80,64]); txt(value,10); y+=1; };
+  txt('PRONTUÁRIO ODONTOLÓGICO',15,true,[122,48,32]);
+  txt((clinicaData?.nome_cli||'Clínica Odontológica'),10,false,[160,80,64]);
+  y+=4; line();
+  txt('DADOS DO PACIENTE',11,true,[122,48,32]); y+=2;
+  field('Nome',record.nome_paciente||patient.nome);
+  field('CPF',record.cpf||patient.cpf);
+  field('Telefone',record.telefone||patient.telefone);
+  field('E-mail',record.email||patient.email);
+  field('Plano/Convênio',record.plano||patient.plano);
+  y+=2; line();
+  txt('CONSULTA',11,true,[122,48,32]); y+=2;
+  field('Título',record.titulo); field('Data',formatDate(record.data)); field('Status',record.status);
+  const prof=profissionais.find(p=>p.id==record.profissional_id);
+  field('Profissional',prof?.nome);
+  field('Procedimento',record.procedimento);
+  y+=2; line();
+  txt('ANAMNESE',11,true,[122,48,32]); y+=2;
+  field('Histórico médico',record.historia_clinica);
+  field('Alergias',record.alergias);
+  field('Medicamentos',record.medicamentos);
+  field('Cirurgias/Internações',record.cirurgias);
+  field('Doenças sistêmicas',record.doencas);
+  field('Hábitos',record.habitos);
+  y+=2; line();
+  txt('EXAME CLÍNICO',11,true,[122,48,32]); y+=2;
+  field('Extra-oral',record.exame_extra_oral);
+  field('Intra-oral',record.exame_intra_oral);
+  field('Periodonto',record.exame_periodontal);
+  field('ATM',record.exame_atm);
+  field('Odontograma',record.odontograma);
+  y+=2; line();
+  txt('TRATAMENTO',11,true,[122,48,32]); y+=2;
+  field('Diagnóstico',record.diagnostico);
+  field('Plano de tratamento',record.plano_tratamento);
+  field('Orientações',record.orientacoes);
+  field('Observações',record.observacoes);
+  doc.save(`Prontuario_${(record.nome_paciente||patient.nome).replace(/\s+/g,'_')}_${record.data}.pdf`);
+}
+
+// ══════════════════════════════════════════════════════
+// CALENDÁRIO
+// ══════════════════════════════════════════════════════
+function calISO(d){ return d.toISOString().slice(0,10); }
+function calWeekStart(d){ const c=new Date(d); c.setDate(c.getDate()-c.getDay()); return c; }
+function calWeekEnd(d){ const c=new Date(d); c.setDate(c.getDate()+(6-c.getDay())); return c; }
+
+function calSetView(v, render=true){ calView=v; document.querySelectorAll('.cal-view-btn').forEach(b=>b.classList.toggle('active',b.dataset.view===v)); if(render) renderCalendario(); }
+function calToday(){ calRef=new Date(); renderCalendario(); }
+function calNavigate(dir){
+  const d=new Date(calRef);
+  if(calView==='semana') d.setDate(d.getDate()+dir*7);
+  else if(calView==='mes'){ d.setMonth(d.getMonth()+dir); }
+  else d.setDate(d.getDate()+dir);
+  calRef=d; renderCalendario();
+}
+function calFullscreen(){
+  const el=document.getElementById('cal-card');
+  if(!document.fullscreenElement) el.requestFullscreen?.();
+  else document.exitFullscreen?.();
+}
+
+function renderCalendario(){
+  const profFiltro=document.getElementById('cal-prof')?.value;
+  const filtered=profFiltro?agendamentos.filter(a=>a.prof_id===parseInt(profFiltro)):agendamentos;
+  const body=document.getElementById('cal-body');
+  if(!body) return;
+  const rangeEl=document.getElementById('cal-range');
+  const today=hoje();
+
+  if(calView==='semana'||calView==='dia'){
+    const days=calView==='dia'?[new Date(calRef)]:Array.from({length:7},(_,i)=>{ const d=calWeekStart(calRef); d.setDate(d.getDate()+i); return d; });
+    const cols=days.length+1;
+    if(rangeEl) rangeEl.textContent=calView==='dia'?days[0].toLocaleDateString('pt-BR',{weekday:'long',day:'numeric',month:'long',year:'numeric'}):
+      `${days[0].getDate()} ${MONTHS_PT[days[0].getMonth()].slice(0,3)} – ${days[6].getDate()} ${MONTHS_PT[days[6].getMonth()].slice(0,3)} ${days[0].getFullYear()}`;
+    const totalH=(CAL_END_HOUR-CAL_START_HOUR)*2;
+    let html=`<div class="cal-grid${calView==='dia'?' dia':''}" style="grid-template-columns:52px ${days.map(()=>'1fr').join(' ')};">
+      <div class="cal-grid-head">
+        <div class="cal-corner"></div>
+        ${days.map(d=>`<div class="cal-day-head${calISO(d)===today?' is-today':''}">
+          <div class="dow">${DAYS_PT[d.getDay()]}</div>
+          <div class="dnum">${d.getDate()}</div>
+        </div>`).join('')}
+      </div>
+      <div class="cal-timecol">
+        ${Array.from({length:totalH},(_,i)=>{
+          const h=CAL_START_HOUR+Math.floor(i/2), m=i%2===0?'00':'30';
+          return`<div class="cal-time-label">${i%2===0?`<span>${String(h).padStart(2,'0')}:00</span>`:''}</div>`;
+        }).join('')}
+      </div>
+      ${days.map(d=>{
+        const iso=calISO(d), height=totalH*CAL_SLOT_PX;
+        const dayAppts=filtered.filter(a=>a.data===iso);
+        const events=dayAppts.map(a=>{
+          const [hh,mm]=((a.horario||'00:00')+':00').split(':').map(Number);
+          const startMin=hh*60+mm, topPct=(startMin-CAL_START_MIN)/((CAL_END_MIN-CAL_START_MIN))*height;
+          return`<div class="cal-event" style="background:${a.prof_cor||'#d4735a'};top:${topPct}px;height:44px;" onclick="calOpenEvent(event,${a.id})">
+            <div class="ev-time">${a.horario}</div>
+            <div class="ev-name">${escapeHtml(a.nome)}</div>
+            <div class="ev-meta">${escapeHtml(a.procedimento||'Consulta')}</div>
+          </div>`;
+        }).join('');
+        return`<div class="cal-daycol${iso===today?' is-today':''}" style="height:${height}px;" onclick="calDayColClick(event,'${iso}')">${events}</div>`;
+      }).join('')}
+    </div>`;
+    body.innerHTML=html;
+  } else {
+    // Mês
+    const year=calRef.getFullYear(), month=calRef.getMonth();
+    if(rangeEl) rangeEl.textContent=`${MONTHS_PT[month]} ${year}`;
+    const firstDay=new Date(year,month,1).getDay();
+    const daysInMonth=new Date(year,month+1,0).getDate();
+    const prevDays=new Date(year,month,0).getDate();
+    let cells=[];
+    for(let i=firstDay-1;i>=0;i--) cells.push({day:prevDays-i,cur:false,iso:calISO(new Date(year,month-1,prevDays-i))});
+    for(let d=1;d<=daysInMonth;d++) cells.push({day:d,cur:true,iso:calISO(new Date(year,month,d))});
+    while(cells.length%7!==0) cells.push({day:cells.length-daysInMonth-firstDay+1,cur:false,iso:''});
+    let html=`<div class="cal-month">
+      ${DAYS_PT.map(d=>`<div class="cal-month-dow">${d}</div>`).join('')}
+      ${cells.map(cell=>{
+        const dayAppts=filtered.filter(a=>a.data===cell.iso);
+        const pills=dayAppts.slice(0,3).map(a=>`<div class="cal-pill" style="background:${a.prof_cor||'#d4735a'}" onclick="event.stopPropagation();calOpenEvent(event,${a.id})">${escapeHtml(a.nome.split(' ')[0])}</div>`).join('');
+        const more=dayAppts.length>3?`<div class="cal-more">+${dayAppts.length-3} mais</div>`:'';
+        return`<div class="cal-cell${!cell.cur?' out':''}${cell.iso===today?' is-today':''}" onclick="calDayClick('${cell.iso}')">
+          <div class="cell-num">${cell.day}</div>${pills}${more}
+        </div>`;
+      }).join('')}
+    </div>`;
+    body.innerHTML=html;
+  }
+}
+
+function calDayClick(iso){ if(!iso) return; calRef=new Date(iso); calSetView('dia'); }
+
+function calDayColClick(e, iso){
+  if(e.target.classList.contains('cal-event')) return;
+  const rect=e.currentTarget.getBoundingClientRect();
+  const y=e.clientY-rect.top;
+  const totalH=(CAL_END_HOUR-CAL_START_HOUR)*2;
+  const totalPx=totalH*CAL_SLOT_PX;
+  let min=CAL_START_MIN+Math.floor(y/totalPx*(CAL_END_MIN-CAL_START_MIN)/30)*30;
+  min=Math.max(CAL_START_MIN,Math.min(min,CAL_END_MIN-30));
+  const hh=String(Math.floor(min/60)).padStart(2,'0');
+  const mm=String(min%60).padStart(2,'0');
+  calOpenNewAppt(iso,`${hh}:${mm}`);
+}
+
+function calOpenEvent(e, id){
+  e.stopPropagation();
+  const a=agendamentos.find(x=>x.id===id);
+  if(!a) return;
+  const prof=profissionais.find(p=>p.id===a.prof_id);
+  const bg=document.getElementById('cal-modal-bg');
+  bg.innerHTML=`<div class="cal-modal" onclick="event.stopPropagation()">
+    <div class="cal-modal-head" style="background:${a.prof_cor||'var(--rose)'};">
+      <div class="mh-time"><i class="ti ti-clock"></i> ${a.horario} · ${formatDate(a.data)}</div>
+      <div class="mh-name">${escapeHtml(a.nome)}</div>
+    </div>
+    <div class="cal-modal-body">
+      <div class="row"><i class="ti ti-stethoscope"></i><span>${escapeHtml(a.procedimento||'Consulta')}</span></div>
+      <div class="row"><i class="ti ti-user-check"></i><span>${escapeHtml(a.prof_nome)}</span></div>
+      <div class="row"><i class="ti ti-phone"></i><span>${escapeHtml(a.telefone||'Sem telefone')}</span></div>
+      ${a.obs?`<div class="row"><i class="ti ti-notes"></i><span>${escapeHtml(a.obs)}</span></div>`:''}
+    </div>
+    <div class="cal-modal-foot">
+      <button class="btn-danger" onclick="calRemoveFromModal(${a.id})"><i class="ti ti-trash"></i> Remover</button>
+      <button class="btn-secondary" onclick="document.getElementById('cal-modal-bg').classList.remove('show')">Fechar</button>
+    </div>
+  </div>`;
+  bg.classList.add('show');
+}
+
+function calCloseEvent(e){ if(e.target.id==='cal-modal-bg') document.getElementById('cal-modal-bg').classList.remove('show'); }
+
+async function calRemoveFromModal(id){
+  if(!confirm('Remover este agendamento?')) return;
+  showLoading(true);
+  const { error } = await _sb.from('agendamentos').delete().eq('id',id);
+  showLoading(false);
+  if(error){ showToast('Erro: '+error.message,'error'); return; }
+  agendamentos=agendamentos.filter(x=>x.id!==id);
+  document.getElementById('cal-modal-bg').classList.remove('show');
+  renderCalendario(); renderLista(); renderHomeStats();
+  showToast('Agendamento removido.');
+}
+
+function calNewQuick(){
+  const base=calView==='dia'?calRef:new Date();
+  calOpenNewAppt(calISO(base),'');
+}
+
+function calOpenNewAppt(iso, horario){
+  if(!pacientes.length){ showToast('Cadastre um paciente antes de agendar.','warn'); return; }
+  if(!profissionais.length){ showToast('Cadastre um profissional antes de agendar.','warn'); return; }
+  const bg=document.getElementById('cal-new-bg');
+  const patOpts='<option value="">Selecione o paciente</option>'+pacientes.map(p=>`<option value="${p.id}">${escapeHtml(p.nome)}</option>`).join('');
+  const profOpts=profissionais.map(p=>`<option value="${p.id}">${escapeHtml(p.nome)} — ${escapeHtml(p.especialidade)}</option>`).join('');
+  bg.innerHTML=`<div class="cal-modal cal-modal-form" onclick="event.stopPropagation()">
+    <div class="cal-modal-head" style="background:var(--rose);">
+      <div class="mh-time"><i class="ti ti-calendar-plus"></i> Novo agendamento</div>
+      <div class="mh-name">${formatDate(iso)}${horario?' · '+horario:''}</div>
+    </div>
+    <div class="cal-modal-body">
+      <div class="form-group"><label>Paciente</label><select id="cn-patient" onchange="cnPatientChange()">${patOpts}</select></div>
+      <div class="form-group"><label>Telefone</label><input type="tel" id="cn-phone" /></div>
+      <div class="form-group"><label>Profissional</label><select id="cn-prof">${profOpts}</select></div>
+      <div class="cal-form-row">
+        <div class="form-group"><label>Data</label><input type="date" id="cn-data" value="${iso}" /></div>
+        <div class="form-group"><label>Horário</label><input type="time" id="cn-horario" step="1800" value="${horario}" /></div>
+      </div>
+      <div class="form-group"><label>Procedimento</label><input type="text" id="cn-proc" placeholder="Limpeza, Canal..." /></div>
+      <div class="form-group"><label>Observações</label><textarea id="cn-obs" rows="2"></textarea></div>
+    </div>
+    <div class="cal-modal-foot">
+      <button class="btn-secondary" onclick="calCloseNew()">Cancelar</button>
+      <button class="btn-primary" onclick="calSaveNewAppt()"><i class="ti ti-check"></i> Salvar</button>
+    </div>
+  </div>`;
+  bg.classList.add('show');
+}
+
+function cnPatientChange(){
+  const sel=document.getElementById('cn-patient');
+  const ph=document.getElementById('cn-phone');
+  if(!sel||!ph) return;
+  const p=pacientes.find(x=>x.id==sel.value);
+  ph.value=p&&p.telefone?p.telefone:'';
+}
+
+function calCloseNew(e){
+  if(e&&e.target&&e.target.id!=='cal-new-bg') return;
+  document.getElementById('cal-new-bg').classList.remove('show');
+}
+
+
+// ══════════════════════════════════════════════════════
+// ODONTOGRAMA
+// ══════════════════════════════════════════════════════
+const FDI_SUP = [18,17,16,15,14,13,12,11,21,22,23,24,25,26,27,28];
+const FDI_INF = [48,47,46,45,44,43,42,41,31,32,33,34,35,36,37,38];
+
+const DENTE_NOME = {
+  11:'Inc. Central',12:'Inc. Lateral',13:'Canino',14:'Pré-molar 1',15:'Pré-molar 2',16:'Molar 1',17:'Molar 2',18:'Siso',
+  21:'Inc. Central',22:'Inc. Lateral',23:'Canino',24:'Pré-molar 1',25:'Pré-molar 2',26:'Molar 1',27:'Molar 2',28:'Siso',
+  31:'Inc. Central',32:'Inc. Lateral',33:'Canino',34:'Pré-molar 1',35:'Pré-molar 2',36:'Molar 1',37:'Molar 2',38:'Siso',
+  41:'Inc. Central',42:'Inc. Lateral',43:'Canino',44:'Pré-molar 1',45:'Pré-molar 2',46:'Molar 1',47:'Molar 2',48:'Siso'
+};
+const COND_PT = {higido:'Hígido',carie:'Cárie',restaurado:'Restaurado',extraido:'Extraído',canal:'Canal',coroa:'Coroa',implante:'Implante',fratura:'Fratura',selante:'Selante',outro:'Outro'};
+const COND_COR = {higido:'#fff',carie:'#ffcdd2',restaurado:'#c8e6c9',extraido:'#eee',canal:'#fff9c4',coroa:'#bbdefb',implante:'#e1bee7',fratura:'#ffccbc',selante:'#b2ebf2',outro:'#f5f5f5'};
+
+let odontoPatId = null;
+let odontoSelDente = null;
+let odontoDentes = {};    // { num: { condicao, procedimento, obs } }
+let odontoAtends = [];    // atendimentos salvos
+
+function renderOdontogramaTab(){
+  const sel = document.getElementById('odonto-pac-sel');
+  if(!sel) return;
+  sel.innerHTML = '<option value="">Selecione o paciente</option>' +
+    pacientes.map(p=>`<option value="${p.id}"${p.id===odontoPatId?' selected':''}>${escapeHtml(p.nome)}</option>`).join('');
+  document.getElementById('odonto-atend-data').value = hoje();
+  if(odontoPatId){ renderOdontogramaMain(); }
+}
+
+async function onOdontoPacChange(id){
+  odontoPatId = id ? parseInt(id) : null;
+  odontoSelDente = null;
+  document.getElementById('odonto-dente-panel').style.display = 'none';
+  if(!odontoPatId){ document.getElementById('odonto-main').style.display='none'; return; }
+  showLoading(true);
+  // Carrega dentes e atendimentos
+  const [{ data: dents }, { data: atends }] = await Promise.all([
+    _sb.from('procedimentos_dentes').select('*').eq('clinica_id',clinicaId).eq('paciente_id',odontoPatId),
+    _sb.from('atendimentos_odonto').select('*').eq('clinica_id',clinicaId).eq('paciente_id',odontoPatId).order('data',{ascending:false})
+  ]);
+  showLoading(false);
+  // Monta mapa de dentes (último estado de cada dente)
+  odontoDentes = {};
+  (dents||[]).forEach(d=>{ odontoDentes[d.dente] = d; });
+  odontoAtends = atends || [];
+  document.getElementById('odonto-main').style.display = '';
+  renderOdontogramaMain();
+}
+
+function renderOdontogramaMain(){
+  renderArcada('arc-sup', FDI_SUP);
+  renderArcada('arc-inf', FDI_INF);
+  renderLegenda();
+  renderHistoricoAtends();
+  // Preenche selects de profissional
+  const opts = '<option value="">Selecione</option>' + profissionais.map(p=>`<option value="${p.id}">${escapeHtml(p.nome)}</option>`).join('');
+  ['odonto-d-prof','odonto-atend-prof'].forEach(id=>{ const el=document.getElementById(id); if(el) el.innerHTML=opts; });
+}
+
+function renderArcada(containerId, dentes){
+  const c = document.getElementById(containerId);
+  if(!c) return;
+  c.innerHTML = dentes.map(num => {
+    const d = odontoDentes[num] || {};
+    const cond = d.condicao || 'higido';
+    const sel = odontoSelDente===num ? ' selected' : '';
+    const title = d.procedimento ? `${num}: ${d.procedimento}` : `Dente ${num}`;
+    return `<div class="odonto-dente-wrap${sel}" onclick="odontoClicarDente(${num})" title="${escapeHtml(title)}">
+      <div class="odonto-dente-num">${num}</div>
+      <div class="odonto-dente-box ${cond}">
+        ${cond==='extraido'?'<span style="font-size:11px;color:#999;">✕</span>':
+          cond==='higido'?'':
+          `<span style="font-size:9px;font-weight:700;color:#555;">${COND_PT[cond]?.charAt(0)||'?'}</span>`}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderLegenda(){
+  const c = document.getElementById('odonto-legenda');
+  if(!c) return;
+  const itens = [
+    ['higido','#fff','var(--rose-light)','Hígido'],
+    ['carie','#ffcdd2','#e57373','Cárie'],
+    ['restaurado','#c8e6c9','#66bb6a','Restaurado'],
+    ['extraido','#eee','#bdbdbd','Extraído'],
+    ['canal','#fff9c4','#fdd835','Canal'],
+    ['coroa','#bbdefb','#42a5f5','Coroa'],
+    ['implante','#e1bee7','#ab47bc','Implante'],
+  ];
+  c.innerHTML = itens.map(([,bg,brd,label])=>
+    `<div class="odonto-leg"><div class="odonto-leg-dot" style="background:${bg};border-color:${brd};"></div>${label}</div>`
+  ).join('');
+}
+
+function odontoClicarDente(num){
+  odontoSelDente = num;
+  renderArcada('arc-sup', FDI_SUP);
+  renderArcada('arc-inf', FDI_INF);
+  const panel = document.getElementById('odonto-dente-panel');
+  panel.style.display = '';
+  document.getElementById('odonto-d-num').textContent = num;
+  document.getElementById('odonto-d-nome').textContent = DENTE_NOME[num] || '';
+  // Preenche com dados existentes
+  const d = odontoDentes[num] || {};
+  document.getElementById('odonto-d-cond').value = d.condicao || 'higido';
+  document.getElementById('odonto-d-proc').value = d.procedimento || '';
+  document.getElementById('odonto-d-obs').value  = d.obs || '';
+  panel.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+
+function odontoCancelarDente(){
+  odontoSelDente = null;
+  document.getElementById('odonto-dente-panel').style.display = 'none';
+  renderArcada('arc-sup', FDI_SUP);
+  renderArcada('arc-inf', FDI_INF);
+}
+
+async function odontoSalvarDente(){
+  if(!odontoSelDente || !odontoPatId){ showToast('Selecione um dente.','warn'); return; }
+  const condicao     = document.getElementById('odonto-d-cond').value;
+  const procedimento = document.getElementById('odonto-d-proc').value.trim();
+  const obs          = document.getElementById('odonto-d-obs').value.trim();
+  const profId       = document.getElementById('odonto-d-prof').value || null;
+  const prof         = profissionais.find(p=>p.id==profId);
+  const data         = document.getElementById('odonto-atend-data').value || hoje();
+  showLoading(true);
+  // Upsert: atualiza se já existe, cria se não existe
+  const existing = odontoDentes[odontoSelDente];
+  let error;
+  if(existing?.id){
+    ({ error } = await _sb.from('procedimentos_dentes').update({
+      condicao, procedimento, obs, data,
+      profissional_id: profId, profissional_nome: prof?.nome||''
+    }).eq('id', existing.id));
+  } else {
+    const { data: novo, error: e } = await _sb.from('procedimentos_dentes').insert([{
+      clinica_id: clinicaId, paciente_id: odontoPatId,
+      dente: odontoSelDente, condicao, procedimento, obs, data,
+      profissional_id: profId, profissional_nome: prof?.nome||''
+    }]).select().single();
+    error = e;
+    if(!error) odontoDentes[odontoSelDente] = novo;
+  }
+  showLoading(false);
+  if(error){ showToast('Erro: '+error.message,'error'); return; }
+  if(existing) odontoDentes[odontoSelDente] = {...existing, condicao, procedimento, obs};
+  odontoCancelarDente();
+  showToast('Dente salvo!');
+}
+
+function odontoToggleForm(){
+  const f = document.getElementById('odonto-form-atend');
+  f.style.display = f.style.display==='none' ? '' : 'none';
+}
+
+async function odontoSalvarAtendimento(){
+  if(!odontoPatId){ showToast('Selecione um paciente.','warn'); return; }
+  const data     = document.getElementById('odonto-atend-data').value;
+  const procs    = document.getElementById('odonto-atend-procs').value.trim();
+  const obs      = document.getElementById('odonto-atend-obs').value.trim();
+  const profId   = document.getElementById('odonto-atend-prof').value || null;
+  const prof     = profissionais.find(p=>p.id==profId);
+  if(!data){ showToast('Informe a data.','warn'); return; }
+  if(!procs){ showToast('Descreva os procedimentos realizados.','warn'); return; }
+  // Coleta dentes que têm procedimentos
+  const dentesAtend = Object.entries(odontoDentes)
+    .filter(([,d])=>d.procedimento)
+    .map(([num,d])=>({ dente:parseInt(num), procedimento:d.procedimento, condicao:d.condicao }));
+  showLoading(true);
+  const { data: novo, error } = await _sb.from('atendimentos_odonto').insert([{
+    clinica_id: clinicaId, paciente_id: odontoPatId,
+    data, procedimentos: procs, obs,
+    profissional_id: profId, profissional_nome: prof?.nome||'',
+    dentes_tratados: JSON.stringify(dentesAtend)
+  }]).select().single();
+  showLoading(false);
+  if(error){ showToast('Erro: '+error.message,'error'); return; }
+  odontoAtends.unshift(novo);
+  document.getElementById('odonto-atend-procs').value = '';
+  document.getElementById('odonto-atend-obs').value = '';
+  odontoToggleForm();
+  renderHistoricoAtends();
+  showToast('Atendimento salvo!');
+}
+
+function renderHistoricoAtends(){
+  const c = document.getElementById('odonto-historico-list');
+  if(!c) return;
+  if(!odontoAtends.length){
+    c.innerHTML = '<div class="empty"><i class="ti ti-clipboard-off" style="font-size:32px;display:block;margin-bottom:10px;opacity:.35"></i>Nenhum atendimento registrado.</div>';
+    return;
+  }
+  c.innerHTML = odontoAtends.map(a => {
+    let dentes = [];
+    try { dentes = JSON.parse(a.dentes_tratados||'[]'); } catch(e){}
+    return `<div class="atend-card">
+      <div class="atend-card-head">
+        <span class="atend-card-date"><i class="ti ti-calendar"></i> ${formatDate(a.data)}</span>
+        <span style="font-size:12px;color:var(--rose-text);">${escapeHtml(a.profissional_nome||'')}</span>
+        <button class="btn-danger" onclick="odontoRemoverAtend(${a.id})"><i class="ti ti-trash"></i></button>
+      </div>
+      <div class="atend-card-body">
+        <strong>Procedimentos:</strong> ${escapeHtml(a.procedimentos)}
+        ${a.obs?`<br><strong>Obs:</strong> ${escapeHtml(a.obs)}`:''}
+      </div>
+      ${dentes.length?`<div class="atend-dentes">${dentes.map(d=>`<span class="atend-dente-badge">Dente ${d.dente}: ${escapeHtml(d.procedimento)}</span>`).join('')}</div>`:''}
+    </div>`;
+  }).join('');
+}
+
+async function odontoRemoverAtend(id){
+  if(!confirm('Remover este atendimento?')) return;
+  showLoading(true);
+  const { error } = await _sb.from('atendimentos_odonto').delete().eq('id',id);
+  showLoading(false);
+  if(error){ showToast('Erro: '+error.message,'error'); return; }
+  odontoAtends = odontoAtends.filter(a=>a.id!==id);
+  renderHistoricoAtends();
+  showToast('Atendimento removido.');
+}
+
+// ══════════════════════════════════════════════════════
+// CONFIGURAÇÕES DA CLÍNICA
+// ══════════════════════════════════════════════════════
+function renderConfiguracoes(){
+  if(!clinicaData) return;
+  document.getElementById('cfg-nome-cli').value  = clinicaData.nome_cli  || '';
+  document.getElementById('cfg-nome-resp').value = clinicaData.nome_resp || '';
+  document.getElementById('cfg-email').value     = clinicaData.email     || '';
+  document.getElementById('cfg-telefone').value  = clinicaData.telefone  || '';
+}
+
+async function salvarConfiguracoes(){
+  const nome_cli  = document.getElementById('cfg-nome-cli').value.trim();
+  const nome_resp = document.getElementById('cfg-nome-resp').value.trim();
+  const telefone  = document.getElementById('cfg-telefone').value.trim();
+  if(!nome_cli){ showToast('Preencha o nome da clínica.','warn'); return; }
+  showLoading(true);
+  const { error } = await _sb.from('clinicas').update({ nome_cli, nome_resp, telefone }).eq('id', clinicaId);
+  showLoading(false);
+  if(error){ showToast('Erro: '+error.message,'error'); return; }
+  clinicaData.nome_cli  = nome_cli;
+  clinicaData.nome_resp = nome_resp;
+  clinicaData.telefone  = telefone;
+  const el = document.getElementById('header-clinica');
+  if(el) el.textContent = nome_cli;
+  showToast('Configurações salvas!');
+}
+
+async function alterarSenha(){
+  const pass  = document.getElementById('cfg-pass').value;
+  const pass2 = document.getElementById('cfg-pass2').value;
+  if(!pass){ showToast('Digite a nova senha.','warn'); return; }
+  if(pass.length < 6){ showToast('A senha deve ter pelo menos 6 caracteres.','warn'); return; }
+  if(pass !== pass2){ showToast('As senhas não coincidem.','warn'); return; }
+  showLoading(true);
+  const { error } = await _sb.auth.updateUser({ password: pass });
+  showLoading(false);
+  if(error){ showToast('Erro: '+error.message,'error'); return; }
+  document.getElementById('cfg-pass').value  = '';
+  document.getElementById('cfg-pass2').value = '';
+  showToast('Senha alterada com sucesso!');
+}
+
+async function calSaveNewAppt(){
+  const patientId=document.getElementById('cn-patient').value;
+  const paciente=pacientes.find(p=>p.id==patientId);
+  const telefone=document.getElementById('cn-phone').value.trim();
+  const profId=parseInt(document.getElementById('cn-prof').value);
+  const data=document.getElementById('cn-data').value;
+  const horario=document.getElementById('cn-horario').value;
+  const procedimento=document.getElementById('cn-proc').value.trim();
+  const obs=document.getElementById('cn-obs').value.trim();
+  if(!paciente){ showToast('Selecione um paciente.','warn'); return; }
+  if(!profId){ showToast('Selecione um profissional.','warn'); return; }
+  if(!data){ showToast('Escolha a data.','warn'); return; }
+  if(!horario){ showToast('Escolha o horário.','warn'); return; }
+  const conflito=agendamentos.find(a=>a.prof_id===profId&&a.data===data&&a.horario===horario);
+  if(conflito){ showToast('Conflito de horário.','error'); return; }
+  const prof=profissionais.find(p=>p.id===profId);
+  if(!prof){ showToast('Profissional inválido.','warn'); return; }
+  showLoading(true);
+  const { data:novo, error } = await _sb.from('agendamentos').insert([{
+    paciente_id: paciente.id, nome: paciente.nome,
+    telefone: telefone||paciente.telefone||'',
+    prof_id: profId, prof_nome: prof.nome, prof_cor: prof.cor,
+    data, horario, procedimento, obs,
+    clinica_id: clinicaId
+  }]).select().single();
+  showLoading(false);
+  if(error){ showToast('Erro: '+error.message,'error'); return; }
+  agendamentos.push(novo);
+  agendamentos.sort((a,b)=>(a.data+a.horario).localeCompare(b.data+b.horario));
+  document.getElementById('cal-new-bg').classList.remove('show');
+  renderCalendario(); renderLista(); renderHomeStats();
+  showToast('Agendamento salvo!');
+}
+</script>
+</body>
+</html>

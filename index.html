@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no"/>
+<title>RWDent — Gestão Odontológica</title>
+<!-- build:202606120507 -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css"/>
+<script>
+  const SUPABASE_URL      = 'https://xdncwmxjdqiwykbcaddd.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhkbmN3bXhqZHFpd3lrYmNhZGRkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEyMjMwNDMsImV4cCI6MjA5Njc5OTA0M30.9qBm7G2xg-DifQu5NPrcNIw6YG0dbVkZ725I4WhG6yM';
+</script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+:root{
+  --rose:#d4735a;--rose-light:#f0cfc4;--rose-lighter:#fdf0eb;
+  --rose-mid:#e0a090;--rose-dark:#7a3020;--rose-text:#a05040;
+}
+body{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#fdf6f3 0%,#f5ddd5 100%);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;}
+.container{width:100%;max-width:460px;}
+.hero{text-align:center;margin-bottom:28px;}
+.hero-icon{width:72px;height:72px;display:inline-flex;align-items:center;justify-content:center;margin-bottom:14px;}
+.hero-icon i{font-size:36px;color:#fff;}
+.hero h1{font-size:22px;font-weight:800;color:var(--rose-dark);}
+.hero p{font-size:13px;color:var(--rose-text);margin-top:5px;}
+.card{background:#fff;border-radius:24px;padding:36px 32px;box-shadow:0 20px 60px rgba(212,115,90,.16);}
+.tabs{display:flex;background:var(--rose-lighter);border-radius:14px;padding:4px;gap:4px;margin-bottom:28px;}
+.tab-btn{flex:1;border:none;background:none;padding:10px;border-radius:11px;font-size:13px;font-weight:700;color:var(--rose-text);cursor:pointer;transition:all .2s;}
+.tab-btn.active{background:#fff;color:var(--rose-dark);box-shadow:0 2px 8px rgba(212,115,90,.18);}
+.form-group{margin-bottom:16px;}
+.form-group label{display:block;font-size:11px;font-weight:700;color:var(--rose-text);text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px;}
+.form-group input{width:100%;border:1.5px solid var(--rose-light);border-radius:12px;padding:13px 15px;font-size:14px;color:#3a2020;background:var(--rose-lighter);outline:none;transition:border .2s,box-shadow .2s;font-family:inherit;}
+.form-group input:focus{border-color:var(--rose);background:#fff;box-shadow:0 0 0 3px rgba(212,115,90,.14);}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.btn-primary{width:100%;background:var(--rose);color:#fff;border:none;border-radius:12px;padding:14px;font-size:15px;font-weight:700;cursor:pointer;transition:background .2s,transform .15s;margin-top:4px;display:flex;align-items:center;justify-content:center;gap:8px;font-family:inherit;}
+.btn-primary:hover{background:var(--rose-dark);}
+.btn-primary:active{transform:scale(.98);}
+.btn-primary:disabled{background:var(--rose-mid);cursor:not-allowed;}
+.alert{border-radius:10px;padding:10px 14px;font-size:13px;margin-top:14px;display:none;}
+.alert.show{display:block;}
+.alert.error{background:#ffebee;color:#b33;border:1px solid #ffaaaa;}
+.alert.success{background:#edf7ee;color:#2e6b32;border:1px solid #a5d6a7;}
+.alert.warn{background:#fff8e1;color:#b36000;border:1px solid #ffcc80;}
+.pending-box{text-align:center;padding:20px 0;}
+.pending-icon{font-size:52px;color:var(--rose);margin-bottom:14px;}
+.pending-box h2{font-size:18px;font-weight:800;color:var(--rose-dark);margin-bottom:8px;}
+.pending-box p{font-size:13px;color:var(--rose-text);line-height:1.6;}
+.btn-secondary{background:var(--rose-lighter);color:var(--rose-dark);border:1px solid var(--rose-light);border-radius:12px;padding:11px 18px;font-size:13px;font-weight:700;cursor:pointer;margin-top:18px;width:100%;font-family:inherit;}
+/* spinner de carregamento inicial */
+.init-loading{text-align:center;padding:20px 0;color:var(--rose-text);font-size:13px;}
+.spinner{width:32px;height:32px;border:3px solid var(--rose-light);border-top-color:var(--rose);border-radius:50%;animation:spin .7s linear infinite;margin:0 auto 10px;}
+@keyframes spin{to{transform:rotate(360deg);}}
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="hero">
+    <div class="hero-icon" style="background:none;box-shadow:none;"><svg width="64" height="64" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="rwbg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#1a1a2e"/>
+      <stop offset="100%" stop-color="#16213e"/>
+    </linearGradient>
+    <linearGradient id="rwtooth" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#d4e8ff"/>
+    </linearGradient>
+  </defs>
+  <rect width="200" height="200" rx="28" fill="url(#rwbg)"/>
+  <rect width="200" height="5" rx="4" fill="#4f9cf9"/>
+  <path d="M100 48 C82 48 70 58 70 73 C70 84 74 90 74 100 C74 116 80 133 88 133 C93 133 96 126 100 118 C104 126 107 133 112 133 C120 133 126 116 126 100 C126 90 130 84 130 73 C130 58 118 48 100 48 Z" fill="url(#rwtooth)"/>
+  <path d="M85 128 C82 140 78 150 76 160" fill="none" stroke="#ffffff" stroke-width="3.5" stroke-linecap="round" opacity="0.7"/>
+  <path d="M94 132 C92 144 91 154 90 164" fill="none" stroke="#ffffff" stroke-width="3.5" stroke-linecap="round" opacity="0.7"/>
+  <path d="M115 128 C118 140 122 150 124 160" fill="none" stroke="#ffffff" stroke-width="3.5" stroke-linecap="round" opacity="0.7"/>
+  <path d="M106 132 C108 144 109 154 110 164" fill="none" stroke="#ffffff" stroke-width="3.5" stroke-linecap="round" opacity="0.7"/>
+  <circle cx="90" cy="68" r="4" fill="#4f9cf9" opacity="0.8"/>
+</svg></div>
+    <h1>RW<span style="color:#4f9cf9;">Dent</span></h1>
+    <p>Gestão Odontológica Inteligente</p>
+  </div>
+
+  <div class="card" id="main-card">
+    <!-- Spinner enquanto verifica sessão -->
+    <div id="panel-loading" class="init-loading">
+      <div class="spinner"></div>
+      Carregando...
+    </div>
+
+    <!-- TABS (escondidas até terminar o loading) -->
+    <div class="tabs" id="tabs" style="display:none;">
+      <button class="tab-btn active" onclick="switchMode('login')">Entrar</button>
+      <button class="tab-btn" onclick="switchMode('cadastro')">Criar conta</button>
+    </div>
+
+    <!-- LOGIN -->
+    <div id="panel-login" style="display:none;">
+      <div class="form-group">
+        <label>E-mail</label>
+        <input type="email" id="login-email" placeholder="clinica@email.com" autocomplete="username"/>
+      </div>
+      <div class="form-group">
+        <label>Senha</label>
+        <input type="password" id="login-pass" placeholder="••••••••" autocomplete="current-password"/>
+      </div>
+      <button class="btn-primary" id="btn-login" onclick="doLogin()">
+        <i class="ti ti-login"></i><span id="btn-login-text">Entrar</span>
+      </button>
+      <div class="alert error" id="login-err"></div>
+    </div>
+
+    <!-- CADASTRO -->
+    <div id="panel-cadastro" style="display:none;">
+      <div class="form-row">
+        <div class="form-group">
+          <label>Nome do responsável</label>
+          <input type="text" id="cad-nome" placeholder="Dr. João Silva"/>
+        </div>
+        <div class="form-group">
+          <label>Nome da clínica</label>
+          <input type="text" id="cad-clinica" placeholder="Clínica Sorriso"/>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>E-mail profissional</label>
+        <input type="email" id="cad-email" placeholder="dr.joao@clinica.com"/>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Senha</label>
+          <input type="password" id="cad-pass" placeholder="Mínimo 6 caracteres"/>
+        </div>
+        <div class="form-group">
+          <label>Confirmar senha</label>
+          <input type="password" id="cad-pass2" placeholder="Repita a senha"/>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Telefone / WhatsApp</label>
+        <input type="tel" id="cad-telefone" placeholder="(00) 00000-0000"/>
+      </div>
+      <button class="btn-primary" id="btn-cad" onclick="doCadastro()">
+        <i class="ti ti-send"></i><span id="btn-cad-text">Solicitar cadastro</span>
+      </button>
+      <div class="alert" id="cad-msg"></div>
+    </div>
+
+    <!-- AGUARDANDO APROVAÇÃO -->
+    <div id="panel-pending" style="display:none;">
+      <div class="pending-box">
+        <div class="pending-icon"><i class="ti ti-clock-hour-4"></i></div>
+        <h2>Cadastro em análise</h2>
+        <p>Seu pedido foi enviado com sucesso!<br>Em breve você receberá a confirmação de acesso.</p>
+        <button class="btn-secondary" onclick="doLogout()"><i class="ti ti-logout"></i> Sair</button>
+      </div>
+    </div>
+
+    <!-- ERRO DE CONFIGURAÇÃO -->
+    <div id="panel-error" style="display:none;">
+      <div class="pending-box">
+        <div class="pending-icon" style="color:#b33;"><i class="ti ti-alert-triangle"></i></div>
+        <h2 style="color:#b33;">Banco não configurado</h2>
+        <p id="error-detail" style="color:#b33;"></p>
+        <p style="margin-top:10px;">Execute o SQL do <strong>SETUP_SUPABASE.md</strong> no Supabase e recarregue a página.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// Inicializa Supabase com tratamento de erro
+let _sb;
+try {
+  _sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      auth: {
+        storage: window.localStorage,
+        storageKey: 'rwdent-auth',
+        flowType: 'implicit',
+        detectSessionInUrl: true,
+        persistSession: true,
+        autoRefreshToken: true
+      }
+    });
+} catch(e) {
+  showPanel('error');
+  document.getElementById('error-detail').textContent = 'Erro ao conectar: ' + e.message;
+}
+
+function showPanel(name) {
+  // Esconde tudo
+  ['loading','login','cadastro','pending','error'].forEach(p => {
+    const el = document.getElementById('panel-' + p);
+    if(el) el.style.display = 'none';
+  });
+  document.getElementById('tabs').style.display = 'none';
+
+  // Mostra o painel pedido + tabs quando necessário
+  const target = document.getElementById('panel-' + name);
+  if(target) target.style.display = '';
+
+  if(name === 'login' || name === 'cadastro') {
+    document.getElementById('tabs').style.display = '';
+    // Marca aba correta
+    document.querySelectorAll('.tab-btn').forEach((b, i) => {
+      b.classList.toggle('active', (i===0 && name==='login') || (i===1 && name==='cadastro'));
+    });
+  }
+}
+
+function switchMode(mode) {
+  showPanel(mode);
+}
+
+// ── Verifica sessão ao carregar — NÃO bloqueia os botões ──
+(async () => {
+  if(!_sb) return;
+  try {
+    const { data:{ session } } = await _sb.auth.getSession();
+    if(session) {
+      await checkAndRedirect(session.user);
+    } else {
+      showPanel('login');
+    }
+  } catch(e) {
+    console.warn('Erro na verificação de sessão:', e.message);
+    showPanel('login');
+  }
+})();
+
+async function checkAndRedirect(user) {
+  try {
+    const { data: perfil, error } = await _sb
+      .from('clinicas')
+      .select('status')
+      .eq('user_id', user.id)
+      .single();
+
+    if(error || !perfil) {
+      // Tabela não existe ainda ou sem perfil — mostra login normalmente
+      showPanel('login');
+      return;
+    }
+
+    if(perfil.status === 'aprovado') {
+      window.location.replace('app.html');
+    } else {
+      showPanel('pending');
+    }
+  } catch(e) {
+    console.warn('Erro ao verificar perfil:', e.message);
+    showPanel('login');
+  }
+}
+
+async function doLogin() {
+  const email = document.getElementById('login-email').value.trim();
+  const pass  = document.getElementById('login-pass').value;
+  const errEl = document.getElementById('login-err');
+  const btn   = document.getElementById('btn-login');
+
+  errEl.className = 'alert error'; errEl.textContent = '';
+  if(!email || !pass) {
+    errEl.textContent = 'Preencha e-mail e senha.';
+    errEl.classList.add('show');
+    return;
+  }
+
+  btn.disabled = true;
+  document.getElementById('btn-login-text').textContent = 'Entrando...';
+
+  try {
+    const { data, error } = await _sb.auth.signInWithPassword({ email, password: pass });
+    if(error) {
+      errEl.textContent = error.message === 'Invalid login credentials'
+        ? 'E-mail ou senha inválidos.'
+        : error.message;
+      errEl.classList.add('show');
+      return;
+    }
+    await checkAndRedirect(data.user);
+  } catch(e) {
+    errEl.textContent = 'Erro de conexão: ' + e.message;
+    errEl.classList.add('show');
+  } finally {
+    btn.disabled = false;
+    document.getElementById('btn-login-text').textContent = 'Entrar';
+  }
+}
+
+async function doCadastro() {
+  const nome     = document.getElementById('cad-nome').value.trim();
+  const clinica  = document.getElementById('cad-clinica').value.trim();
+  const email    = document.getElementById('cad-email').value.trim();
+  const pass     = document.getElementById('cad-pass').value;
+  const pass2    = document.getElementById('cad-pass2').value;
+  const telefone = document.getElementById('cad-telefone').value.trim();
+  const msgEl    = document.getElementById('cad-msg');
+  const btn      = document.getElementById('btn-cad');
+
+  const show = (txt, type = 'error') => {
+    msgEl.textContent = txt;
+    msgEl.className = `alert ${type} show`;
+  };
+
+  msgEl.className = 'alert'; // limpa
+
+  if(!nome || !clinica || !email || !pass) { show('Preencha todos os campos obrigatórios.'); return; }
+  if(pass.length < 6)  { show('A senha deve ter no mínimo 6 caracteres.'); return; }
+  if(pass !== pass2)   { show('As senhas não coincidem.'); return; }
+
+  btn.disabled = true;
+  document.getElementById('btn-cad-text').textContent = 'Enviando...';
+
+  try {
+    // 1. Cria conta no Supabase Auth
+    const { data: signUpData, error: signUpError } = await _sb.auth.signUp({ email, password: pass });
+
+    if(signUpError) {
+      show(signUpError.message === 'User already registered'
+        ? 'Este e-mail já está cadastrado.'
+        : signUpError.message);
+      return;
+    }
+
+    // 2. Faz login imediato para ter sessão ativa (necessário para o RLS)
+    const { data: loginData, error: loginError } = await _sb.auth.signInWithPassword({ email, password: pass });
+
+    if(loginError || !loginData.user) {
+      show('Conta criada! Mas não conseguimos fazer login automático. Tente entrar manualmente.');
+      showPanel('login');
+      return;
+    }
+
+    // 3. Agora com sessão ativa, salva perfil da clínica como pendente
+    const { error: err2 } = await _sb.from('clinicas').insert([{
+      user_id  : loginData.user.id,
+      nome_resp: nome,
+      nome_cli : clinica,
+      email,
+      telefone,
+      status   : 'pendente'
+    }]);
+
+    if(err2) {
+      if(err2.message.includes('relation') || err2.message.includes('does not exist')) {
+        show('Tabela "clinicas" não encontrada. Execute o SQL do SETUP_SUPABASE.md no Supabase primeiro.');
+      } else {
+        show('Erro ao salvar perfil: ' + err2.message);
+      }
+      return;
+    }
+
+    // 4. Sucesso — mostra tela de aguardando
+    showPanel('pending');
+
+  } catch(e) {
+    show('Erro inesperado: ' + e.message);
+  } finally {
+    btn.disabled = false;
+    document.getElementById('btn-cad-text').textContent = 'Solicitar cadastro';
+  }
+}
+
+async function doLogout() {
+  await _sb.auth.signOut();
+  showPanel('login');
+}
+
+document.addEventListener('keydown', e => {
+  if(e.key === 'Enter') {
+    const loginVisible = document.getElementById('panel-login').style.display !== 'none';
+    if(loginVisible) doLogin();
+  }
+});
+</script>
+</body>
+</html>

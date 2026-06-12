@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Admin — RWDent</title>
+<!-- build:202606120507 -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css"/>
+
+<!-- ══════════════════════════════════════════════════════
+     SUPABASE CONFIG  ←  coloque suas credenciais aqui
+     ══════════════════════════════════════════════════════ -->
+<script>
+  const SUPABASE_URL      = 'https://xdncwmxjdqiwykbcaddd._sb.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhkbmN3bXhqZHFpd3lrYmNhZGRkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEyMjMwNDMsImV4cCI6MjA5Njc5OTA0M30.9qBm7G2xg-DifQu5NPrcNIw6YG0dbVkZ725I4WhG6yM';
+  // E-mails autorizados como admin (pode ser apenas o seu)
+  const ADMIN_EMAILS = ['admin@rwdent.com'];
+</script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+:root{--rose:#d4735a;--rose-light:#f0cfc4;--rose-lighter:#fdf0eb;--rose-dark:#7a3020;--rose-text:#a05040;}
+body{font-family:'Segoe UI',Arial,sans-serif;background:#f5f0ee;min-height:100vh;color:#3a2020;}
+
+/* ── LOGIN ── */
+#login-screen{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px;background:linear-gradient(135deg,#fdf6f3,#f5ddd5);}
+.login-card{background:#fff;border-radius:20px;padding:36px 32px;width:100%;max-width:400px;box-shadow:0 20px 60px rgba(212,115,90,.18);}
+.login-card h2{font-size:20px;font-weight:800;color:var(--rose-dark);margin-bottom:4px;}
+.login-card p{font-size:13px;color:var(--rose-text);margin-bottom:24px;}
+.login-card label{font-size:11px;font-weight:700;color:var(--rose-text);text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:5px;}
+.login-card input{width:100%;border:1.5px solid var(--rose-light);border-radius:10px;padding:12px 14px;font-size:14px;background:var(--rose-lighter);outline:none;margin-bottom:14px;color:#3a2020;font-family:inherit;}
+.login-card input:focus{border-color:var(--rose);background:#fff;box-shadow:0 0 0 3px rgba(212,115,90,.13);}
+.btn-login{width:100%;background:var(--rose);color:#fff;border:none;border-radius:10px;padding:13px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;}
+.btn-login:hover{background:var(--rose-dark);}
+.err-msg{background:#ffebee;color:#b33;border:1px solid #ffaaaa;border-radius:8px;padding:9px 12px;font-size:13px;margin-top:10px;display:none;}
+.err-msg.show{display:block;}
+
+/* ── APP ── */
+#app{display:none;}
+.topbar{background:#fff;border-bottom:1.5px solid var(--rose-light);padding:0 24px;height:60px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;}
+.topbar-brand{display:flex;align-items:center;gap:10px;font-size:16px;font-weight:800;color:var(--rose-dark);}
+.topbar-brand i{font-size:22px;color:var(--rose);}
+.btn-logout{background:none;border:1px solid var(--rose-light);border-radius:8px;padding:7px 14px;font-size:13px;color:var(--rose-text);cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:6px;}
+.btn-logout:hover{background:var(--rose-lighter);}
+
+.main{padding:28px 24px;max-width:980px;margin:0 auto;}
+.page-title{font-size:20px;font-weight:800;color:var(--rose-dark);margin-bottom:6px;}
+.page-sub{font-size:13px;color:var(--rose-text);margin-bottom:24px;}
+
+/* ── STATS ── */
+.stats{display:flex;gap:14px;margin-bottom:28px;flex-wrap:wrap;}
+.stat-card{background:#fff;border-radius:14px;padding:16px 22px;flex:1;min-width:130px;border:1px solid var(--rose-light);box-shadow:0 2px 12px rgba(212,115,90,.07);}
+.stat-card .num{font-size:28px;font-weight:800;color:var(--rose);}
+.stat-card .lbl{font-size:12px;color:var(--rose-text);margin-top:3px;}
+
+/* ── FILTER TABS ── */
+.filter-tabs{display:flex;gap:6px;margin-bottom:18px;flex-wrap:wrap;}
+.ftab{background:#fff;border:1.5px solid var(--rose-light);border-radius:10px;padding:8px 16px;font-size:12px;font-weight:700;color:var(--rose-text);cursor:pointer;font-family:inherit;transition:all .18s;}
+.ftab.active,.ftab:hover{background:var(--rose);color:#fff;border-color:var(--rose);}
+
+/* ── TABLE ── */
+.table-wrap{background:#fff;border-radius:16px;border:1px solid var(--rose-light);overflow:hidden;box-shadow:0 2px 16px rgba(212,115,90,.07);}
+table{width:100%;border-collapse:collapse;}
+thead tr{background:var(--rose-lighter);}
+th{padding:12px 16px;text-align:left;font-size:11px;font-weight:700;color:var(--rose-text);text-transform:uppercase;letter-spacing:.4px;}
+td{padding:13px 16px;font-size:13px;border-top:1px solid var(--rose-light);color:#3a2020;vertical-align:middle;}
+tr:hover td{background:#fdf8f6;}
+.badge{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:700;}
+.badge-pendente{background:#fff8e1;color:#b36000;border:1px solid #ffcc80;}
+.badge-aprovado{background:#edf7ee;color:#2e6b32;border:1px solid #a5d6a7;}
+.badge-rejeitado{background:#ffebee;color:#b33;border:1px solid #ffaaaa;}
+.actions{display:flex;gap:6px;}
+.btn-approve{background:#edf7ee;color:#2e6b32;border:1px solid #a5d6a7;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:5px;transition:background .18s;}
+.btn-approve:hover{background:#c8e6c9;}
+.btn-reject{background:#ffebee;color:#b33;border:1px solid #ffaaaa;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:5px;transition:background .18s;}
+.btn-reject:hover{background:#ffcdd2;}
+.btn-delete{background:#f5f5f5;color:#666;border:1px solid #ddd;border-radius:8px;padding:6px 10px;font-size:12px;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:5px;transition:background .18s;}
+.btn-delete:hover{background:#eee;}
+.empty{text-align:center;padding:48px 20px;color:var(--rose-text);font-size:14px;}
+.empty i{font-size:36px;display:block;margin-bottom:10px;opacity:.35;}
+
+/* ── TOAST ── */
+.toast{position:fixed;top:14px;right:14px;z-index:9999;padding:12px 16px;border-radius:12px;font-size:13px;font-weight:600;max-width:280px;opacity:0;pointer-events:none;transition:opacity .3s,transform .3s;transform:translateY(-10px);}
+.toast.show{opacity:1;transform:translateY(0);}
+.toast.success{background:#edf7ee;color:#2e6b32;border:1px solid #a5d6a7;}
+.toast.error{background:#ffebee;color:#b33;border:1px solid #ffaaaa;}
+
+@media(max-width:640px){
+  th:nth-child(3),td:nth-child(3),th:nth-child(5),td:nth-child(5){display:none;}
+  .main{padding:18px 14px;}
+  .stats{gap:10px;}
+}
+</style>
+</head>
+<body>
+<div class="toast" id="toast"></div>
+
+<!-- LOGIN -->
+<div id="login-screen">
+  <div class="login-card">
+    <h2>RWDent — Admin</h2>
+    <p>Acesso restrito ao administrador</p>
+    <label>E-mail</label>
+    <input type="email" id="a-email" placeholder="admin@email.com"/>
+    <label>Senha</label>
+    <input type="password" id="a-pass" placeholder="••••••••"/>
+    <button class="btn-login" onclick="adminLogin()">Entrar</button>
+    <div class="err-msg" id="a-err"></div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <div class="topbar">
+    <div class="topbar-brand"><i class="ti ti-tooth"></i>Admin — RWDent</div>
+    <button class="btn-logout" onclick="adminLogout()"><i class="ti ti-logout"></i>Sair</button>
+  </div>
+  <div class="main">
+    <div class="page-title">Cadastros de Clínicas</div>
+    <div class="page-sub">Gerencie os pedidos de acesso dos dentistas</div>
+
+    <div class="stats" id="stats"></div>
+
+    <div class="filter-tabs">
+      <button class="ftab active" onclick="filterBy('todos',this)">Todos</button>
+      <button class="ftab" onclick="filterBy('pendente',this)">Pendentes</button>
+      <button class="ftab" onclick="filterBy('aprovado',this)">Aprovados</button>
+      <button class="ftab" onclick="filterBy('rejeitado',this)">Rejeitados</button>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Clínica / Responsável</th>
+            <th>E-mail</th>
+            <th>Telefone</th>
+            <th>Status</th>
+            <th>Cadastro</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+const _sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      auth: {
+        storage: window.localStorage,
+        storageKey: 'rwdent-auth',
+        flowType: 'implicit',
+        detectSessionInUrl: true,
+        persistSession: true,
+        autoRefreshToken: true
+      }
+    });
+let clinicas = [];
+let filtroAtual = 'todos';
+
+(async()=>{
+  const { data:{ session } } = await _sb.auth.getSession();
+  if(session && ADMIN_EMAILS.includes(session.user.email)){
+    showApp();
+  }
+})();
+
+async function adminLogin(){
+  const email = document.getElementById('a-email').value.trim();
+  const pass  = document.getElementById('a-pass').value;
+  const errEl = document.getElementById('a-err');
+  errEl.className='err-msg'; errEl.textContent='';
+
+  if(!email||!pass){ errEl.textContent='Preencha os campos.'; errEl.className='err-msg show'; return; }
+  if(!ADMIN_EMAILS.includes(email)){ errEl.textContent='Acesso não autorizado.'; errEl.className='err-msg show'; return; }
+
+  const { data, error } = await _sb.auth.signInWithPassword({ email, password: pass });
+  if(error || !ADMIN_EMAILS.includes(data?.user?.email)){
+    errEl.textContent='Credenciais inválidas ou sem permissão.';
+    errEl.className='err-msg show';
+    return;
+  }
+  showApp();
+}
+
+async function adminLogout(){
+  await _sb.auth.signOut();
+  document.getElementById('app').style.display='none';
+  document.getElementById('login-screen').style.display='flex';
+}
+
+async function showApp(){
+  document.getElementById('login-screen').style.display='none';
+  document.getElementById('app').style.display='';
+  await loadClinicas();
+}
+
+async function loadClinicas(){
+  const { data, error } = await _sb
+    .from('clinicas')
+    .select('*')
+    .order('created_at', { ascending: false });
+  if(error){ showToast('Erro ao carregar: '+error.message,'error'); return; }
+  clinicas = data || [];
+  renderStats();
+  renderTable();
+}
+
+function renderStats(){
+  const total     = clinicas.length;
+  const pendentes = clinicas.filter(c=>c.status==='pendente').length;
+  const aprovados = clinicas.filter(c=>c.status==='aprovado').length;
+  const rejeitados= clinicas.filter(c=>c.status==='rejeitado').length;
+  document.getElementById('stats').innerHTML = `
+    <div class="stat-card"><div class="num">${total}</div><div class="lbl">Total de cadastros</div></div>
+    <div class="stat-card"><div class="num" style="color:#b36000;">${pendentes}</div><div class="lbl">Aguardando aprovação</div></div>
+    <div class="stat-card"><div class="num" style="color:#2e6b32;">${aprovados}</div><div class="lbl">Clínicas ativas</div></div>
+    <div class="stat-card"><div class="num" style="color:#b33;">${rejeitados}</div><div class="lbl">Rejeitados</div></div>
+  `;
+}
+
+function filterBy(status, btn){
+  filtroAtual = status;
+  document.querySelectorAll('.ftab').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderTable();
+}
+
+function renderTable(){
+  const lista = filtroAtual==='todos' ? clinicas : clinicas.filter(c=>c.status===filtroAtual);
+  const tbody = document.getElementById('tbody');
+  if(!lista.length){
+    tbody.innerHTML=`<tr><td colspan="6"><div class="empty"><i class="ti ti-clipboard-off"></i>Nenhum cadastro encontrado.</div></td></tr>`;
+    return;
+  }
+  tbody.innerHTML = lista.map(c=>{
+    const badgeCls = c.status==='aprovado'?'badge-aprovado':c.status==='rejeitado'?'badge-rejeitado':'badge-pendente';
+    const statusLabel = c.status==='aprovado'?'✓ Aprovado':c.status==='rejeitado'?'✗ Rejeitado':'⏳ Pendente';
+    const data = c.created_at ? new Date(c.created_at).toLocaleDateString('pt-BR') : '-';
+    const acoesAprova  = c.status!=='aprovado'  ? `<button class="btn-approve" onclick="aprovar('${c.id}')"><i class="ti ti-check"></i>Aprovar</button>`:'';
+    const acoesRejeita = c.status!=='rejeitado' ? `<button class="btn-reject" onclick="rejeitar('${c.id}')"><i class="ti ti-x"></i>Rejeitar</button>`:'';
+    return `<tr>
+      <td><strong>${esc(c.nome_cli)}</strong><br/><span style="color:var(--rose-text);font-size:12px;">${esc(c.nome_resp)}</span></td>
+      <td>${esc(c.email)}</td>
+      <td>${esc(c.telefone||'-')}</td>
+      <td><span class="badge ${badgeCls}">${statusLabel}</span></td>
+      <td>${data}</td>
+      <td><div class="actions">${acoesAprova}${acoesRejeita}<button class="btn-delete" onclick="excluir('${c.id}')"><i class="ti ti-trash"></i></button></div></td>
+    </tr>`;
+  }).join('');
+}
+
+async function aprovar(id){
+  const { error } = await _sb.from('clinicas').update({ status:'aprovado' }).eq('id',id);
+  if(error){ showToast('Erro: '+error.message,'error'); return; }
+  const c = clinicas.find(x=>x.id===id);
+  if(c) c.status='aprovado';
+  renderStats(); renderTable();
+  showToast('Clínica aprovada! O dentista já pode acessar o sistema.');
+}
+
+async function rejeitar(id){
+  if(!confirm('Rejeitar este cadastro?')) return;
+  const { error } = await _sb.from('clinicas').update({ status:'rejeitado' }).eq('id',id);
+  if(error){ showToast('Erro: '+error.message,'error'); return; }
+  const c = clinicas.find(x=>x.id===id);
+  if(c) c.status='rejeitado';
+  renderStats(); renderTable();
+  showToast('Cadastro rejeitado.');
+}
+
+async function excluir(id){
+  if(!confirm('Excluir permanentemente este cadastro?')) return;
+  const { error } = await _sb.from('clinicas').delete().eq('id',id);
+  if(error){ showToast('Erro: '+error.message,'error'); return; }
+  clinicas = clinicas.filter(x=>x.id!==id);
+  renderStats(); renderTable();
+  showToast('Cadastro excluído.');
+}
+
+function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function showToast(msg, type='success'){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.className=`toast show ${type}`;
+  setTimeout(()=>{ t.className='toast'; },3800);
+}
+
+document.addEventListener('keydown',e=>{ if(e.key==='Enter'&&document.getElementById('login-screen').style.display!=='none') adminLogin(); });
+</script>
+</body>
+</html>
