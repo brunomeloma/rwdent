@@ -1625,6 +1625,7 @@ function renderPatientDetail(abaAtiva){
       <!-- ABAS DO PACIENTE -->
       <div class="pac-tabs">
         <button class="pac-tab ${abaAtiva==='info'?'active':''}" onclick="renderPatientDetail('info')"><i class="ti ti-info-circle"></i> Dados</button>
+        <button class="pac-tab ${abaAtiva==='historico'?'active':''}" onclick="renderPatientDetail('historico')"><i class="ti ti-history"></i> Histórico</button>
         <button class="pac-tab ${abaAtiva==='odonto'?'active':''}" onclick="renderPatientDetail('odonto')"><i class="ti ti-tooth"></i> Odontograma</button>
         <button class="pac-tab ${abaAtiva==='plano'?'active':''}" onclick="renderPatientDetail('plano')"><i class="ti ti-clipboard-list"></i> Plano</button>
         <button class="pac-tab ${abaAtiva==='orcamentos'?'active':''}" onclick="renderPatientDetail('orcamentos')"><i class="ti ti-receipt"></i> Orçamentos</button>
@@ -1639,6 +1640,69 @@ function renderPatientDetail(abaAtiva){
           <div><strong>E-mail:</strong> ${escapeHtml(p.email||'-')}</div>
           <div><strong>Plano:</strong> ${escapeHtml(p.plano||'-')}</div>
           ${p.notas?`<div style="grid-column:span 2"><strong>Obs:</strong> ${escapeHtml(p.notas)}</div>`:''}
+        </div>
+      </div>
+
+      <!-- ABA: HISTÓRICO -->
+      <div id="pac-aba-historico" style="display:${abaAtiva==='historico'?'':'none'};">
+        <div style="margin-top:14px;">
+          <p style="font-size:13px;color:var(--rose-text);margin-bottom:14px;">
+            <i class="ti ti-info-circle"></i> Adicione procedimentos anteriores do paciente. Ideal para registrar histórico de pacientes antigos.
+          </p>
+
+          <!-- Formulário de histórico rápido -->
+          <div style="border:1.5px solid var(--rose-light);border-radius:12px;padding:14px;margin-bottom:14px;background:#fdfaf9;">
+            <div style="font-size:13px;font-weight:700;color:var(--rose-dark);margin-bottom:12px;"><i class="ti ti-plus"></i> Adicionar procedimento ao histórico</div>
+            <div class="form-grid">
+              <div class="form-group">
+                <label>Data do procedimento</label>
+                <input type="date" id="hist-data" value="${hoje()}"/>
+              </div>
+              <div class="form-group">
+                <label>Profissional</label>
+                <select id="hist-prof">
+                  <option value="">Selecione</option>
+                  ${profissionais.map(pr=>`<option value="${pr.id}">${escapeHtml(pr.nome)}</option>`).join('')}
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Dentes tratados (separados por vírgula)</label>
+                <input type="text" id="hist-dentes" placeholder="Ex: 36, 37, 46"/>
+              </div>
+              <div class="form-group">
+                <label>Condição dos dentes</label>
+                <select id="hist-cond">
+                  <option value="restaurado">Restaurado</option>
+                  <option value="canal">Canal</option>
+                  <option value="coroa">Coroa/Prótese</option>
+                  <option value="extraido">Extraído</option>
+                  <option value="implante">Implante</option>
+                  <option value="carie">Cárie</option>
+                  <option value="selante">Selante</option>
+                  <option value="higido">Hígido</option>
+                  <option value="outro">Outro</option>
+                </select>
+              </div>
+              <div class="form-group full">
+                <label>Procedimento realizado</label>
+                <input type="text" id="hist-proc" placeholder="Ex: Restauração em resina, Canal, Limpeza..." list="hist-proc-list"/>
+                <datalist id="hist-proc-list">
+                  ${procs.slice(0,20).map(p=>`<option value="${escapeHtml(p.nome)}">`).join('')}
+                </datalist>
+              </div>
+              <div class="form-group full">
+                <label>Observações</label>
+                <textarea id="hist-obs" rows="2" placeholder="Detalhes adicionais..."></textarea>
+              </div>
+            </div>
+            <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:10px;">
+              <button class="btn-secondary" onclick="histLimpar()"><i class="ti ti-eraser"></i> Limpar</button>
+              <button class="btn-primary" onclick="histSalvar(${p.id})"><i class="ti ti-check"></i> Salvar no histórico</button>
+            </div>
+          </div>
+
+          <!-- Lista do histórico -->
+          <div id="pac-hist-lista"></div>
         </div>
       </div>
 
@@ -1849,6 +1913,7 @@ function renderPatientDetail(abaAtiva){
   // Carrega dados das abas
   if(abaAtiva==='odonto') pacCarregarOdonto(p.id);
   if(abaAtiva==='procs') pacCarregarProcs(p.id);
+  if(abaAtiva==='historico') histCarregar(p.id);
   if(abaAtiva==='orcamentos') pacRenderOrcamentos(p.id);
   if(abaAtiva==='plano'){ pacCarregarPlano(p.id); setTimeout(()=>renderPlanoSimulador(p.id),50); }
 }
@@ -4927,6 +4992,94 @@ async function pacFinalizarVendaLista(vendaId, pacId){
   // Abre aba de realizados para assinar
   renderPatientDetail('procs');
   setTimeout(()=>{ showToast('Adicione o procedimento realizado e colete as assinaturas.','warn'); },800);
+}
+
+
+// ══════════════════════════════════════════════════════
+// HISTÓRICO DO PACIENTE
+// ══════════════════════════════════════════════════════
+async function histCarregar(pacId){
+  // Carrega atendimentos existentes
+  await pacCarregarProcs(pacId);
+  histRenderLista(pacId);
+}
+
+function histLimpar(){
+  ['hist-data','hist-dentes','hist-proc','hist-obs'].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.value='';
+  });
+  document.getElementById('hist-data').value = hoje();
+  const cond=document.getElementById('hist-cond'); if(cond) cond.value='restaurado';
+}
+
+async function histSalvar(pacId){
+  const data    = document.getElementById('hist-data')?.value || hoje();
+  const dentesRaw = document.getElementById('hist-dentes')?.value.trim() || '';
+  const cond    = document.getElementById('hist-cond')?.value || 'restaurado';
+  const proc    = document.getElementById('hist-proc')?.value.trim() || '';
+  const obs     = document.getElementById('hist-obs')?.value.trim() || '';
+  const profId  = document.getElementById('hist-prof')?.value || null;
+  const prof    = profissionais.find(p=>p.id==profId);
+
+  if(!proc){ showToast('Informe o procedimento realizado.','warn'); return; }
+
+  showLoading(true);
+
+  // Salva cada dente no odontograma
+  const dentes = dentesRaw ? dentesRaw.split(',').map(d=>parseInt(d.trim())).filter(n=>!isNaN(n)) : [];
+  for(const dente of dentes){
+    const { data:ex } = await _sb.from('procedimentos_dentes').select('id').eq('clinica_id',clinicaId).eq('paciente_id',pacId).eq('dente',dente).single();
+    if(ex){
+      await _sb.from('procedimentos_dentes').update({condicao:cond,procedimento:proc,obs,data}).eq('id',ex.id);
+    } else {
+      await _sb.from('procedimentos_dentes').insert([{clinica_id:clinicaId,paciente_id:pacId,dente,condicao:cond,procedimento:proc,obs,data}]);
+    }
+  }
+
+  // Salva como atendimento
+  const dentesArr = dentes.map(d=>({dente:d,procedimento:proc,condicao:cond}));
+  const { error } = await _sb.from('atendimentos_odonto').insert([{
+    clinica_id:clinicaId, paciente_id:pacId,
+    data, procedimentos:proc, obs,
+    profissional_id:profId||null,
+    profissional_nome:prof?.nome||'',
+    dentes_tratados:JSON.stringify(dentesArr)
+  }]);
+
+  showLoading(false);
+  if(error){ showToast('Erro: '+error.message,'error'); return; }
+
+  // Atualiza lista
+  await pacCarregarProcs(pacId);
+  histLimpar();
+  histRenderLista(pacId);
+  showToast('Histórico salvo!');
+}
+
+function histRenderLista(pacId){
+  const c = document.getElementById('pac-hist-lista'); if(!c) return;
+  if(!pacProcsList.length){
+    c.innerHTML='<div style="text-align:center;color:var(--rose-text);font-size:13px;padding:20px;"><i class="ti ti-history" style="font-size:28px;display:block;margin-bottom:8px;opacity:.3;"></i>Nenhum histórico registrado ainda.</div>';
+    return;
+  }
+  c.innerHTML = `<div style="font-size:12px;font-weight:700;color:var(--rose-dark);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;">Histórico registrado (${pacProcsList.length} atendimento${pacProcsList.length>1?'s':''})</div>` +
+    pacProcsList.map(a=>{
+      let dentes=[];
+      try{ dentes=JSON.parse(a.dentes_tratados||'[]'); }catch(e){}
+      return `<div style="border:1px solid var(--rose-light);border-radius:10px;padding:12px;margin-bottom:8px;background:#fff;display:flex;gap:10px;align-items:flex-start;">
+        <div style="background:var(--rose-lighter);border-radius:8px;padding:6px 10px;text-align:center;min-width:60px;flex-shrink:0;">
+          <div style="font-size:10px;color:var(--rose-text);">${formatDate(a.data).split('/').slice(0,2).join('/')}</div>
+          <div style="font-size:12px;font-weight:700;color:var(--rose-dark);">${formatDate(a.data).split('/')[2]}</div>
+        </div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:13px;font-weight:600;color:#3a2020;">${escapeHtml(a.procedimentos)}</div>
+          ${a.profissional_nome?`<div style="font-size:11px;color:var(--rose-text);margin-top:2px;">👤 ${escapeHtml(a.profissional_nome)}</div>`:''}
+          ${dentes.length?`<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:6px;">${dentes.map(d=>`<span style="background:var(--rose-lighter);color:var(--rose-dark);border-radius:6px;padding:2px 7px;font-size:11px;font-weight:700;">🦷${d.dente}</span>`).join('')}</div>`:''}
+          ${a.obs?`<div style="font-size:12px;color:var(--rose-text);margin-top:4px;">${escapeHtml(a.obs)}</div>`:''}
+        </div>
+        <button class="btn-danger" style="padding:4px 8px;flex-shrink:0;" onclick="pacRemoverProc(${a.id});setTimeout(()=>histRenderLista(${pacId}),300)"><i class="ti ti-trash"></i></button>
+      </div>`;
+    }).join('');
 }
 
 // ══════════════════════════════════════════════════════
