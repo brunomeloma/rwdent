@@ -488,6 +488,8 @@ button{font-family:inherit;}
       <button class="sidebar-item" data-tab="estoque_fin" onclick="switchTab('estoque_fin')"><i class="ti ti-package"></i><span>Estoque</span></button>
       <button class="sidebar-item" data-tab="vendas_fin" onclick="switchTab('vendas_fin')"><i class="ti ti-receipt"></i><span>Vendas</span></button>
       <div class="sidebar-divider"></div>
+      <div class="sidebar-divider"></div>
+      <button class="sidebar-item" data-tab="resgate" onclick="switchTab('resgate')"><i class="ti ti-heart-handshake"></i><span>Resgate</span></button>
       <button class="sidebar-item" data-tab="configuracoes" onclick="switchTab('configuracoes')"><i class="ti ti-settings"></i><span>Configurações</span></button>
     </nav>
     <div class="sidebar-bottom">
@@ -962,6 +964,56 @@ button{font-family:inherit;}
       </div>
     </div>
 
+
+    <!-- ══════════════════════════════════════════════════
+         RESGATE DE PACIENTES
+    ══════════════════════════════════════════════════ -->
+    <div id="tab-resgate" class="content" style="display:none;">
+      <div class="card">
+        <div class="section-header">
+          <h2><i class="ti ti-heart-handshake"></i> Resgate de Pacientes</h2>
+        </div>
+        <p style="font-size:13px;color:var(--rose-text);margin-bottom:16px;">Pacientes que não retornam há algum tempo. Clique no WhatsApp para enviar uma mensagem personalizada.</p>
+        <!-- Filtros -->
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px;" id="resgate-filtros">
+          <button class="btn-primary" data-meses="1" onclick="filtrarResgate(1)">1 Mês</button>
+          <button class="btn-secondary" data-meses="2" onclick="filtrarResgate(2)">2 Meses</button>
+          <button class="btn-secondary" data-meses="3" onclick="filtrarResgate(3)">3 Meses</button>
+          <button class="btn-secondary" data-meses="4" onclick="filtrarResgate(4)">4 Meses</button>
+          <button class="btn-secondary" data-meses="5" onclick="filtrarResgate(5)">5+ Meses</button>
+        </div>
+        <!-- Métricas -->
+        <div id="resgate-metrics" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:16px;"></div>
+        <!-- Tabela -->
+        <div style="overflow-x:auto;">
+          <table style="width:100%;border-collapse:collapse;font-size:13px;">
+            <thead>
+              <tr style="background:var(--rose-lighter);">
+                <th style="padding:10px;text-align:left;">Paciente</th>
+                <th style="padding:10px;text-align:left;">Último procedimento</th>
+                <th style="padding:10px;text-align:center;">Última visita</th>
+                <th style="padding:10px;text-align:center;">Ausência</th>
+                <th style="padding:10px;text-align:center;">Ação</th>
+              </tr>
+            </thead>
+            <tbody id="resgate-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+      <!-- Modal preview mensagem -->
+      <div id="resgate-modal-bg" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;align-items:center;justify-content:center;padding:16px;" onclick="if(event.target===this)fecharResgateModal()">
+        <div style="background:#fff;border-radius:18px;padding:24px;max-width:480px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.3);">
+          <h2 style="font-size:15px;font-weight:700;color:var(--rose-dark);margin-bottom:4px;"><i class="ti ti-brand-whatsapp" style="color:#25d366;"></i> Mensagem para <span id="resgate-modal-nome"></span></h2>
+          <p style="font-size:12px;color:var(--rose-text);margin-bottom:12px;">Revise e edite o texto antes de enviar:</p>
+          <textarea id="resgate-modal-msg" style="width:100%;height:160px;border:1.5px solid var(--rose-light);border-radius:10px;padding:12px;font-size:13px;font-family:inherit;resize:vertical;background:var(--rose-lighter);"></textarea>
+          <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px;">
+            <button class="btn-secondary" onclick="fecharResgateModal()">Cancelar</button>
+            <button class="btn-primary" style="background:#25d366;border-color:#25d366;" onclick="enviarResgateWpp()"><i class="ti ti-brand-whatsapp"></i> Enviar via WhatsApp</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- CONFIGURAÇÕES -->
     <div id="tab-configuracoes" class="content" style="display:none;">
       <div class="card">
@@ -1274,7 +1326,7 @@ function toggleSidebar(){
 }
 
 function switchTab(tab){
-  ['home','agendar','lista','calendario','pacientes','prontuarios','profissionais','configuracoes','financeiro','procedimentos_fin','materiais_fin','estoque_fin','vendas_fin'].forEach(t=>{
+  ['home','agendar','lista','calendario','pacientes','prontuarios','profissionais','configuracoes','financeiro','procedimentos_fin','materiais_fin','estoque_fin','vendas_fin','resgate'].forEach(t=>{
     const el=document.getElementById('tab-'+t);
     if(el) el.style.display = t===tab?'':'none';
   });
@@ -1289,6 +1341,7 @@ function switchTab(tab){
   if(tab==='profissionais') renderProfissionais();
   if(tab==='home') renderHomeStats();
   if(tab==='configuracoes') renderConfiguracoes();
+  if(tab==='resgate') renderResgate();
   if(tab==='financeiro'||tab==='procedimentos_fin'||tab==='materiais_fin'||tab==='estoque_fin'||tab==='vendas_fin'){
     if(!_financeiroCarregado){
       showLoading(true);
@@ -4865,6 +4918,191 @@ async function pacFinalizarVendaLista(vendaId, pacId){
   renderPatientDetail('procs');
   setTimeout(()=>{ showToast('Adicione o procedimento realizado e colete as assinaturas.','warn'); },800);
 }
+
+// ══════════════════════════════════════════════════════
+// RESGATE DE PACIENTES
+// ══════════════════════════════════════════════════════
+let resgateFiltrMeses = 1;
+let resgateModalTel = '';
+
+function renderResgate(){ filtrarResgate(resgateFiltrMeses); }
+
+async function filtrarResgate(meses){
+  resgateFiltrMeses = meses;
+  // Atualiza botões de filtro
+  document.querySelectorAll('#resgate-filtros button').forEach(b=>{
+    const m = parseInt(b.dataset.meses);
+    b.className = m===meses ? 'btn-primary' : 'btn-secondary';
+  });
+
+  // Busca últimos atendimentos de cada paciente
+  const hoje = new Date();
+  const limite = new Date(hoje);
+  limite.setMonth(limite.getMonth() - meses);
+  const limiteISO = limite.toISOString().slice(0,10);
+
+  // Para cada paciente, pega o último atendimento
+  const pacResgate = [];
+  for(const pac of pacientes){
+    // Busca atendimentos do paciente
+    const { data: atends } = await _sb.from('atendimentos_odonto')
+      .select('data,procedimentos')
+      .eq('clinica_id', clinicaId)
+      .eq('paciente_id', pac.id)
+      .order('data', {ascending:false})
+      .limit(1);
+
+    // Também verifica agendamentos
+    const agsPac = agendamentos.filter(a=>a.paciente_id===pac.id);
+    let ultimaData = null, ultimoProc = 'Não informado';
+
+    if(atends && atends.length){
+      ultimaData = atends[0].data;
+      ultimoProc = atends[0].procedimentos || 'Não informado';
+    } else if(agsPac.length){
+      const ag = agsPac.sort((a,b)=>b.data.localeCompare(a.data))[0];
+      ultimaData = ag.data;
+      ultimoProc = ag.procedimento || 'Consulta';
+    }
+
+    if(!ultimaData) continue; // Nunca veio — não inclui
+
+    const dias = Math.floor((hoje - new Date(ultimaData)) / (1000*60*60*24));
+    const mesesAusencia = dias/30;
+
+    // Filtra: ausente há pelo menos X meses
+    if(meses === 5){
+      if(mesesAusencia < 5) continue;
+    } else {
+      const min = (meses-1)*30, max = meses*30;
+      if(dias < min || dias >= max) continue;
+    }
+
+    pacResgate.push({ pac, ultimaData, ultimoProc, dias, mesesAusencia });
+  }
+
+  // Métricas
+  const metrEl = document.getElementById('resgate-metrics');
+  if(metrEl) metrEl.innerHTML = [
+    {lbl:'Pacientes encontrados', val:pacResgate.length, cor:'var(--rose-dark)'},
+    {lbl:'Com telefone', val:pacResgate.filter(r=>r.pac.telefone).length, cor:'#2e7d32'},
+  ].map(s=>`<div style="background:var(--rose-lighter);border:1px solid var(--rose-light);border-radius:12px;padding:12px 16px;">
+    <div style="font-size:11px;color:var(--rose-text);">${s.lbl}</div>
+    <div style="font-size:22px;font-weight:800;color:${s.cor};">${s.val}</div>
+  </div>`).join('');
+
+  const tb = document.getElementById('resgate-tbody');
+  if(!tb) return;
+
+  if(!pacResgate.length){
+    tb.innerHTML=`<tr><td colspan="5" style="text-align:center;color:var(--rose-text);padding:24px;">
+      Nenhum paciente ausente há ${meses === 5 ? '5+' : meses} mese(s).
+    </td></tr>`;
+    return;
+  }
+
+  tb.innerHTML = pacResgate.map(r=>{
+    const {pac, ultimaData, ultimoProc, dias, mesesAusencia} = r;
+    const dataFmt = formatDate(ultimaData);
+    const mesesStr = mesesAusencia < 1 ? `${dias} dias` : `${Math.round(mesesAusencia)} meses`;
+    const cor = mesesAusencia >= 5 ? '#dc2626' : mesesAusencia >= 3 ? '#856404' : '#2e7d32';
+    const procCurto = ultimoProc.length > 35 ? ultimoProc.slice(0,35)+'...' : ultimoProc;
+    const temTel = !!pac.telefone;
+    return `<tr style="border-bottom:1px solid var(--rose-light);">
+      <td style="padding:10px;font-weight:600;">${escapeHtml(pac.nome)}</td>
+      <td style="padding:10px;color:var(--rose-text);font-size:12px;">${escapeHtml(procCurto)}</td>
+      <td style="padding:10px;text-align:center;font-size:12px;">${dataFmt}</td>
+      <td style="padding:10px;text-align:center;">
+        <span style="background:${cor}20;color:${cor};border-radius:20px;padding:3px 10px;font-size:12px;font-weight:700;">${mesesStr}</span>
+      </td>
+      <td style="padding:10px;text-align:center;">
+        ${temTel
+          ? `<button onclick="abrirResgateModal('${escapeHtml(pac.nome)}','${escapeHtml(pac.telefone||'')}','${escapeHtml(ultimoProc)}',${Math.round(mesesAusencia)})"
+              style="background:#25d366;border:none;border-radius:50%;width:38px;height:38px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(37,211,102,.4);" title="Enviar WhatsApp">
+              <i class="ti ti-brand-whatsapp" style="color:#fff;font-size:18px;"></i>
+            </button>`
+          : `<span style="font-size:11px;color:var(--rose-text);">Sem tel.</span>`
+        }
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function classificarTratamento(proc){
+  const p = (proc||'').toLowerCase();
+  if(p.includes('aparelho')||p.includes('manuten')||p.includes('orto')||p.includes('braquete')||p.includes('fio')) return 'ortodontia';
+  if(p.includes('limpeza')||p.includes('profilaxia')||p.includes('raspagem')) return 'limpeza';
+  if(p.includes('canal')||p.includes('endo')) return 'endodontia';
+  if(p.includes('implante')) return 'implante';
+  if(p.includes('clareamento')) return 'clareamento';
+  if(p.includes('extração')||p.includes('exodontia')||p.includes('siso')) return 'cirurgia';
+  if(p.includes('restaur')||p.includes('resina')) return 'restauracao';
+  return 'geral';
+}
+
+function gerarMensagemResgate(nome, proc, meses){
+  const tipo = classificarTratamento(proc);
+  const clinica = clinicaData?.nome_cli || 'nossa clínica';
+  const msgs = {
+    ortodontia: {
+      1: `Olá, ${nome}! 😊 Passando para lembrar que já faz 1 mês desde sua última manutenção do aparelho na ${clinica}. Atrasar as manutenções pode comprometer o resultado do seu tratamento ortodôntico! Que tal agendarmos? 📅`,
+      2: `Olá, ${nome}! 😊 Já faz 2 meses desde sua última visita na ${clinica} para manutenção do aparelho. Isso pode afetar o progresso do seu tratamento! Vamos remarcar? 📅🦷`,
+      3: `Olá, ${nome}! Oi sumido(a)! 😄 Já fazem 3 meses sem sua manutenção ortodôntica na ${clinica}. Seu aparelho precisa de atenção! Vamos agendar urgente? 📅`,
+      5: `Olá, ${nome}! 😊 Sentimos muito a sua falta na ${clinica}! Já faz mais de ${meses} meses desde sua última manutenção. Seu tratamento ortodôntico pode ter sido comprometido. Que tal uma avaliação? 🦷✨`,
+    },
+    limpeza: {
+      1: `Olá, ${nome}! 😊 Passando para lembrar que já faz 1 mês desde sua última visita à ${clinica}. Está sentindo algum desconforto? Estamos à disposição! 🦷`,
+      2: `Olá, ${nome}! 😊 Já faz 2 meses desde sua última limpeza na ${clinica}. Manter a saúde bucal em dia previne muitos problemas! Que tal agendarmos sua próxima profilaxia? 🦷✨`,
+      3: `Olá, ${nome}! Já está na hora da sua revisão semestral! 😄 Faz 3 meses desde sua última limpeza na ${clinica}. Agende agora e mantenha seu sorriso saudável! 🦷`,
+      5: `Olá, ${nome}! 😊 Sentimos sua falta na ${clinica}! Já faz mais de ${meses} meses sem uma limpeza profissional. Que tal voltarmos a cuidar do seu sorriso? Temos horários disponíveis! 📅`,
+    },
+    clareamento: {
+      1: `Olá, ${nome}! 😊 Passando para saber como está o resultado do seu clareamento na ${clinica}! Tem alguma dúvida? Estamos à disposição! 🦷✨`,
+      3: `Olá, ${nome}! 😊 Faz 3 meses desde seu clareamento na ${clinica}. Que tal uma avaliação para ver como está e, se quiser, renovar aquele sorriso? ✨🦷`,
+      5: `Olá, ${nome}! 😊 Já faz ${meses} meses desde seu clareamento na ${clinica}. Que tal renovar aquele sorriso? Temos condições especiais para retorno! ✨`,
+    },
+    cirurgia: {
+      1: `Olá, ${nome}! 😊 Passando para saber como está a recuperação após seu procedimento na ${clinica}. Está tudo bem? Qualquer dúvida, estamos à disposição! 🦷`,
+      3: `Olá, ${nome}! Faz 3 meses desde seu procedimento na ${clinica}. Que tal uma revisão para garantir que está tudo bem? 😊🦷`,
+      5: `Olá, ${nome}! 😊 Sentimos sua falta na ${clinica}! Já faz ${meses} meses desde seu último procedimento. Que tal agendar uma revisão? 🦷`,
+    },
+    geral: {
+      1: `Olá, ${nome}! 😊 Sentimos sua falta na ${clinica}! Já faz 1 mês desde sua última visita. Tem alguma dúvida ou desconforto? Estamos à disposição! 🦷`,
+      2: `Olá, ${nome}! 😊 Já faz 2 meses desde sua visita à ${clinica}. Que tal agendar uma revisãozinha? Cuidar do sorriso em dia faz toda diferença! 🦷✨`,
+      3: `Olá, ${nome}! 😊 Já faz 3 meses desde sua última visita à ${clinica}. Já está na hora de uma revisão! Agende agora e cuide do seu sorriso. 🦷`,
+      5: `Olá, ${nome}! 😊 Sentimos muito a sua falta na ${clinica}! Já faz mais de ${meses} meses desde sua última visita. Aproveite: estamos com horários disponíveis essa semana! Que tal retomarmos? 🦷✨`,
+    },
+  };
+
+  const tipoMsgs = msgs[tipo] || msgs.geral;
+  // Encontra a mensagem mais adequada ao tempo
+  if(meses <= 1) return tipoMsgs[1] || msgs.geral[1];
+  if(meses <= 2) return tipoMsgs[2] || tipoMsgs[1] || msgs.geral[2];
+  if(meses <= 4) return tipoMsgs[3] || tipoMsgs[2] || msgs.geral[3];
+  return tipoMsgs[5] || msgs.geral[5];
+}
+
+function abrirResgateModal(nome, tel, proc, meses){
+  resgateModalTel = tel;
+  document.getElementById('resgate-modal-nome').textContent = nome;
+  document.getElementById('resgate-modal-msg').value = gerarMensagemResgate(nome, proc, meses);
+  const bg = document.getElementById('resgate-modal-bg');
+  if(bg) bg.style.display = 'flex';
+}
+
+function fecharResgateModal(){
+  const bg = document.getElementById('resgate-modal-bg');
+  if(bg) bg.style.display = 'none';
+}
+
+function enviarResgateWpp(){
+  const tel = resgateModalTel.replace(/\D/g,'');
+  const num = tel.startsWith('55') ? tel : '55'+tel;
+  const msg = document.getElementById('resgate-modal-msg')?.value || '';
+  window.open(`https://wa.me/${num}?text=${encodeURIComponent(msg)}`, '_blank');
+  fecharResgateModal();
+}
+
 
 // ══════════════════════════════════════════════════════
 // CONFIGURAÇÕES DA CLÍNICA
