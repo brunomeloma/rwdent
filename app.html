@@ -4422,19 +4422,32 @@ function pacOdontoToggleOrc(){
   const showing = panel.style.display !== 'none';
   panel.style.display = showing ? 'none' : '';
   if(icon) icon.className = showing ? 'ti ti-chevron-down' : 'ti ti-chevron-up';
-  if(!showing) pacOdontoInitOrc();
+  if(!showing){ pacOdontoInitOrc(); pacOdontoPopularSelect(); }
 }
 
 function pacOdontoInitOrc(){
-  // Popula select de procedimentos
+  pacOdontoPopularSelect();
+  pacOdontoRenderOrcLista();
+}
+
+function pacOdontoPopularSelect(){
   const sel = document.getElementById('pac-odonto-orc-proc');
   if(!sel) return;
-  sel.innerHTML = '<option value="">Selecione procedimento</option>' +
-    procs.map(p=>`<option value="${p.id}" data-preco="${p.precoFinal||0}" data-nome="${escapeHtml(p.nome)}">${escapeHtml(p.nome)} — R$ ${(p.precoFinal||0).toFixed(2).replace('.',',')}</option>`).join('');
-  // Botão com nome do paciente
-  const btn = document.getElementById('pac-odonto-orc-btn-pac');
-  if(btn) btn.innerHTML = '<i class="ti ti-device-floppy"></i> Salvar orçamento';
-  pacOdontoRenderOrcLista();
+  // Garante que procs está carregado
+  if(!procs.length){
+    sel.innerHTML = '<option value="">Carregando procedimentos...</option>';
+    loadFinanceiro().then(()=>{ pacOdontoPopularSelect(); });
+    return;
+  }
+  const grupos = [...new Set(procs.map(p=>p.grupo).filter(Boolean))].sort();
+  let optsHtml = '<option value="">Selecione procedimento</option>';
+  grupos.forEach(g=>{
+    const gProcs = procs.filter(p=>p.grupo===g);
+    optsHtml += `<optgroup label="${g}">` +
+      gProcs.map(p=>`<option value="${p.id}" data-preco="${p.precoFinal||0}" data-nome="${escapeHtml(p.nome)}">${escapeHtml(p.nome)} — R$ ${(p.precoFinal||0).toFixed(2).replace('.',',')}</option>`).join('') +
+      '</optgroup>';
+  });
+  sel.innerHTML = optsHtml;
 }
 
 function pacOdontoAddOrc(){
