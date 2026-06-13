@@ -1715,6 +1715,11 @@ function renderPatientDetail(abaAtiva){
                 <label>Valor total</label>
                 <input type="text" id="pac-plan-valor-total" placeholder="0,00" disabled style="opacity:.7;font-weight:700;color:var(--rose-dark);"/>
               </div>
+              <div class="form-group full" id="pac-plan-manut-aviso" style="display:none;">
+                <div style="background:#e8f4fd;border:1px solid #b3d9f5;border-radius:8px;padding:8px 12px;font-size:12px;color:#1565c0;">
+                  <i class="ti ti-info-circle"></i> <strong>Manutenção</strong> é cobrada por procedimento, não por dente. O valor não será multiplicado pelo número de dentes selecionados.
+                </div>
+              </div>
               <div class="form-group full">
                 <label>Descrição</label>
                 <input type="text" id="pac-plan-desc" placeholder="Ex: Restauração em resina composta face oclusal"/>
@@ -3666,6 +3671,12 @@ function renderPlanoSimulador(pacId){
           <option value="__combo__">🎁 Combos</option>
           ${grupos.map(g=>`<option value="${g}">${g}</option>`).join('')}
         </select>
+        <select id="sim-ordem-pac" onchange="renderSimSelectPac()" style="padding:6px 8px;border:1px solid var(--rose-light);border-radius:8px;font-size:12px;">
+          <option value="custom">Padrão</option>
+          <option value="az">A→Z</option>
+          <option value="preco_asc">Preço ↑</option>
+          <option value="preco_desc">Preço ↓</option>
+        </select>
       </div>
       <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
         <select id="sim-select-pac" style="flex:1;"></select>
@@ -3771,6 +3782,7 @@ function renderSimSelectPac(){
   const sel = document.getElementById('sim-select-pac'); if(!sel) return;
   const q = (document.getElementById('sim-search-pac')||{value:''}).value.toLowerCase();
   const g = (document.getElementById('sim-grupo-pac')||{value:''}).value;
+  const ord = (document.getElementById('sim-ordem-pac')||{value:'custom'}).value;
   let html2 = '';
   // Combos
   if(g===''||g==='__combo__'){
@@ -3780,6 +3792,9 @@ function renderSimSelectPac(){
   // Procedimentos
   if(g!=='__combo__'){
     let list = procs.filter(p=>(!q||p.nome.toLowerCase().includes(q))&&(!g||g==='__combo__'||p.grupo===g));
+    if(ord==='az') list = list.slice().sort((a,b)=>a.nome.localeCompare(b.nome,'pt-BR'));
+    else if(ord==='preco_asc') list = list.slice().sort((a,b)=>(a.precoFinal||0)-(b.precoFinal||0));
+    else if(ord==='preco_desc') list = list.slice().sort((a,b)=>(b.precoFinal||0)-(a.precoFinal||0));
     if(list.length) html2 += (g===''?'<optgroup label="Procedimentos">':'') + list.map(p=>`<option value="proc:${p.id}">${escapeHtml(p.nome)} — ${fmtBRL(p.precoFinal)}</option>`).join('') + (g===''?'</optgroup>':'');
   }
   sel.innerHTML = html2 || '<option value="">Nenhum item encontrado</option>';
@@ -3882,7 +3897,7 @@ async function salvarOrcPac(pacId){
   const venda = {
     id: nextVendaId++, status:'orcamento',
     pacienteId: pacId, pacienteNome: pac?.nome||'',
-    itens: orcamento.map(it=>({procId:it.procId||null,comboId:it.comboId||null,qtd:it.qtd,nome:it.nome,dente:it.dente||'',descDente:it.descDente||''})),
+    itens: orcamento.map(it=>({procId:it.procId||null,comboId:it.comboId||null,qtd:it.qtd,nome:it.nome,precoUnit:it.precoUnit||0,dente:it.dente||'',descDente:it.descDente||''})),
     subtotal: parseFloat(subtotal.toFixed(2)),
     desconto, total,
     descCfg: {...descCfg},
@@ -3911,7 +3926,7 @@ async function finalizarVendaPac(pacId){
   const venda = {
     id: nextVendaId++, status:'finalizada',
     pacienteId: pacId, pacienteNome: pac?.nome||'',
-    itens: orcamento.map(it=>({procId:it.procId||null,comboId:it.comboId||null,qtd:it.qtd,nome:it.nome,dente:it.dente||'',descDente:it.descDente||''})),
+    itens: orcamento.map(it=>({procId:it.procId||null,comboId:it.comboId||null,qtd:it.qtd,nome:it.nome,precoUnit:it.precoUnit||0,dente:it.dente||'',descDente:it.descDente||''})),
     subtotal: parseFloat(subtotal.toFixed(2)),
     desconto, total, consumo: aplicado,
     data: new Date().toISOString(),
@@ -4327,15 +4342,30 @@ function pacPlanSyncValor(){
     const el = document.getElementById('pac-plan-valor');
     if(el) el.value = parseFloat(preco).toFixed(2).replace('.',',');
   }
+  // Aviso visual se for manutenção
+  const nomeProc = sel?.value || '';
+  const avisoEl = document.getElementById('pac-plan-manut-aviso');
+  if(avisoEl){
+    avisoEl.style.display = isManutenção(nomeProc) ? '' : 'none';
+  }
   pacPlanSyncValorTotal();
+}
+
+function isManutenção(nomeProc){
+  if(!nomeProc) return false;
+  const n = nomeProc.toLowerCase();
+  return n.includes('manuten') || n.includes('manutenção') || n.includes('manutencao');
 }
 
 function pacPlanSyncValorTotal(){
   const valEl = document.getElementById('pac-plan-valor');
   const totEl = document.getElementById('pac-plan-valor-total');
+  const procEl = document.getElementById('pac-plan-proc');
   if(!valEl || !totEl) return;
   const valUnit = parseFloat((valEl.value||'0').replace(',','.')) || 0;
-  const qtdDentes = pacPlanDentesSel.length || 1;
+  const nomeProc = procEl?.value || '';
+  // Manutenção: não multiplica por dente, é valor fixo
+  const qtdDentes = isManutenção(nomeProc) ? 1 : (pacPlanDentesSel.length || 1);
   const total = valUnit * qtdDentes;
   totEl.value = 'R$ ' + total.toFixed(2).replace('.',',');
 }
@@ -4374,18 +4404,22 @@ async function pacSalvarPlano(pacId){
   if(!proc){ showToast('Selecione o procedimento.','warn'); return; }
   const dentes = dentesVal.split(',').filter(Boolean);
   const qtd = dentes.length;
-  const valorTotal = (parseFloat(valorUnit) * qtd).toFixed(2).replace('.',',');
+  // Manutenção: valor fixo, não multiplica por dente
+  const ehManut = isManutenção(proc);
+  const valorTotal = ehManut
+    ? parseFloat(valorUnit).toFixed(2).replace('.',',')
+    : (parseFloat(valorUnit) * qtd).toFixed(2).replace('.',',');
   showLoading(true);
   let error;
   if(pacPlanoEditId){
     ({ error } = await _sb.from('plano_tratamento').update({
       dente: dentesVal, face, procedimento:proc,
       valor: valorTotal, valor_unit: valorUnit,
-      quantidade_dentes: qtd, descricao:desc
+      quantidade_dentes: ehManut ? 1 : qtd, descricao:desc
     }).eq('id',pacPlanoEditId));
     if(!error){
       pacPlanoList = pacPlanoList.map(i=> i.id===pacPlanoEditId
-        ? {...i,dente:dentesVal,face,procedimento:proc,valor:valorTotal,valor_unit:valorUnit,quantidade_dentes:qtd,descricao:desc}
+        ? {...i,dente:dentesVal,face,procedimento:proc,valor:valorTotal,valor_unit:valorUnit,quantidade_dentes:ehManut?1:qtd,descricao:desc}
         : i);
     }
   } else {
@@ -4393,7 +4427,7 @@ async function pacSalvarPlano(pacId){
       clinica_id:clinicaId, paciente_id:pacId,
       dente:dentesVal, face, procedimento:proc,
       valor:valorTotal, valor_unit:valorUnit,
-      quantidade_dentes:qtd, descricao:desc, status:'pendente'
+      quantidade_dentes:ehManut?1:qtd, descricao:desc, status:'pendente'
     }]).select().single();
     error = e;
     if(!error) pacPlanoList.unshift(novo);
@@ -4741,27 +4775,60 @@ function pacRenderOrcamentos(pacId){
   const c = document.getElementById('pac-orc-lista'); if(!c) return;
   const pacVendas = vendas.filter(v=>v.pacienteId===pacId).slice().reverse();
   if(!pacVendas.length){
-    c.innerHTML='<div style="text-align:center;color:var(--rose-text);font-size:13px;padding:20px;">Nenhum orçamento registrado ainda.</div>';
+    c.innerHTML='<div style="text-align:center;color:var(--rose-text);font-size:13px;padding:20px;"><i class="ti ti-receipt-off" style="font-size:32px;display:block;margin-bottom:10px;opacity:.35"></i>Nenhum orçamento registrado ainda.</div>';
     return;
   }
-  const STATUS = {orcamento:{lbl:'Orçamento',cls:'orcamento'},finalizada:{lbl:'Finalizada',cls:'finalizada'},cancelada:{lbl:'Cancelada',cls:'cancelada'}};
+  const STATUS = {orcamento:{lbl:'Orçamento',cls:'orcamento',icon:'ti-clock'},finalizada:{lbl:'Finalizada',cls:'finalizada',icon:'ti-circle-check'},cancelada:{lbl:'Cancelada',cls:'cancelada',icon:'ti-circle-x'}};
   c.innerHTML = pacVendas.map(v=>{
     const si = STATUS[v.status]||STATUS.orcamento;
-    const dt = new Date(v.data).toLocaleDateString('pt-BR');
-    const itens = (v.itens||[]).map(i=>escapeHtml(i.nome||'')).join(', ');
-    return `<div style="border:1px solid var(--rose-light);border-radius:12px;padding:13px;margin-bottom:8px;background:#fff;">
-      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;margin-bottom:8px;">
-        <span style="font-size:12px;color:var(--rose-text);">${dt}</span>
-        <span class="fin-badge ${si.cls}">${si.lbl}</span>
-      </div>
-      <div style="font-size:13px;color:#3a2020;margin-bottom:8px;">${itens||'—'}</div>
-      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
-        <strong style="font-size:15px;color:var(--rose-dark);">${fmtBRL(v.total||v.subtotal||0)}</strong>
-        <div style="display:flex;gap:6px;">
-          ${v.status==='orcamento'?`<button class="btn-primary" style="font-size:12px;padding:6px 12px;" onclick="pacFinalizarVendaLista(${v.id},${pacId})"><i class="ti ti-circle-check"></i> Finalizar</button>`:''}
-          ${v.status==='finalizada'?`<button class="btn-secondary" style="font-size:12px;padding:6px 10px;" onclick="cancelarVenda(${v.id});setTimeout(()=>pacRenderOrcamentos(${pacId}),300)"><i class="ti ti-arrow-back-up"></i> Cancelar</button>`:''}
-          <button class="btn-danger" style="font-size:12px;padding:6px 8px;" onclick="excluirVenda(${v.id});setTimeout(()=>pacRenderOrcamentos(${pacId}),300)"><i class="ti ti-trash"></i></button>
+    const dt = new Date(v.data).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric'});
+    const itens = v.itens||[];
+    const subtotal = v.subtotal||v.total||0;
+    const desconto = v.desconto||0;
+    const total = v.total||subtotal;
+    // Itens detalhados
+    const itensHtml = itens.map(i=>`
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;padding:7px 0;border-bottom:1px solid var(--rose-light);gap:8px;">
+        <div style="flex:1;">
+          <div style="font-size:13px;font-weight:600;color:#3a2020;">${escapeHtml(i.nome||'')}</div>
+          ${i.dente?`<div style="font-size:11px;color:var(--rose-text);margin-top:2px;">🦷 Dente ${i.dente}${i.descDente?' — '+escapeHtml(i.descDente):''}</div>`:''}
         </div>
+        <div style="text-align:right;flex-shrink:0;">
+          ${(i.qtd||1)>1?`<div style="font-size:11px;color:var(--rose-text);">${i.qtd}×</div>`:''}
+          <div style="font-size:13px;font-weight:700;color:var(--rose-dark);">${fmtBRL((i.precoUnit||0)*(i.qtd||1))}</div>
+        </div>
+      </div>`).join('');
+    const descontoHtml = desconto>0?`
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;font-size:13px;color:#2e7d32;">
+        <span>🎁 Desconto</span>
+        <span>− ${fmtBRL(desconto)}</span>
+      </div>`:''
+    ;
+    return `<div style="border:1.5px solid var(--rose-light);border-radius:16px;margin-bottom:12px;background:#fff;overflow:hidden;">
+      <!-- Cabeçalho -->
+      <div style="background:var(--rose-lighter);padding:12px 16px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+        <div>
+          <div style="font-size:14px;font-weight:800;color:var(--rose-dark);">📋 Orçamento</div>
+          <div style="font-size:12px;color:var(--rose-text);margin-top:2px;">${dt}</div>
+        </div>
+        <span class="fin-badge ${si.cls}" style="font-size:12px;padding:5px 12px;"><i class="ti ${si.icon}"></i> ${si.lbl}</span>
+      </div>
+      <!-- Itens -->
+      <div style="padding:12px 16px;">
+        ${itens.length?itensHtml:'<div style="color:var(--rose-text);font-size:12px;padding:8px 0;">Nenhum item</div>'}
+        ${descontoHtml}
+        <!-- Total -->
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0 4px;border-top:2px solid var(--rose-light);margin-top:6px;">
+          <span style="font-size:14px;font-weight:700;color:var(--rose-dark);">Total</span>
+          <span style="font-size:20px;font-weight:900;color:var(--rose);">${fmtBRL(total)}</span>
+        </div>
+        ${desconto>0?`<div style="font-size:11px;color:var(--rose-text);text-align:right;">De ${fmtBRL(subtotal)} com ${fmtBRL(desconto)} de desconto</div>`:''}
+      </div>
+      <!-- Ações -->
+      <div style="padding:10px 16px;border-top:1px solid var(--rose-light);background:#fafafa;display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;">
+        ${v.status==='orcamento'?`<button class="btn-primary" style="font-size:12px;" onclick="pacFinalizarVendaLista(${v.id},${pacId})"><i class="ti ti-circle-check"></i> Finalizar venda</button>`:''}
+        ${v.status==='finalizada'?`<button class="btn-secondary" style="font-size:12px;" onclick="cancelarVenda(${v.id});setTimeout(()=>pacRenderOrcamentos(${pacId}),300)"><i class="ti ti-arrow-back-up"></i> Cancelar</button>`:''}
+        <button class="btn-danger" style="font-size:12px;" onclick="excluirVenda(${v.id});setTimeout(()=>pacRenderOrcamentos(${pacId}),300)"><i class="ti ti-trash"></i></button>
       </div>
     </div>`;
   }).join('');
