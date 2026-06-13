@@ -2911,8 +2911,17 @@ async function loadFinanceiro(){
 
   recalcularInsumos(true);
 
-  // Salva só se precisou preencher com padrões
-  if(precisaSalvar) await saveFinanceiro();
+  // Salva só se precisou preencher com padrões — mas NUNCA sobrescreve estoque que veio do banco
+  if(precisaSalvar){
+    // Se banco já tinha estoque, não sobrescreve
+    const estoqueVeioDoB = data && data.estoque && data.estoque !== '{}' && Object.keys(safe(data.estoque,{})).length > 0;
+    if(estoqueVeioDoB){
+      // Salva sem tocar no estoque — re-lê do banco primeiro
+      const { data: fresh } = await _sb.from('financeiro_config').select('estoque').eq('clinica_id',clinicaId).single();
+      if(fresh) estoque = safe(fresh.estoque, estoque);
+    }
+    await saveFinanceiro();
+  }
 
   _financeiroCarregado = true;
 }
