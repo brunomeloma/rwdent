@@ -891,6 +891,12 @@ button{font-family:inherit;}
             <option value="warn">Atenção</option>
             <option value="ok">OK</option>
           </select>
+          <select id="est-ordem" onchange="filterEstoque()">
+            <option value="az">A→Z</option>
+            <option value="za">Z→A</option>
+            <option value="cat">Categoria</option>
+            <option value="critico">Críticos primeiro</option>
+          </select>
         </div>
         <div style="overflow-x:auto;">
           <table style="width:100%;border-collapse:collapse;font-size:13px;">
@@ -1404,6 +1410,7 @@ function renderLista(){
         <div class="detail">${escapeHtml(a.procedimento||'Consulta')} · ${escapeHtml(a.prof_nome)} · ${escapeHtml(a.telefone||'Sem telefone')}</div>
       </div>
       <span class="appt-badge badge-main">${escapeHtml((a.prof_nome||'').split(' ')[0])}</span>
+      ${a.telefone ? `<button class="btn-secondary" style="padding:6px 10px;background:#25d366;color:#fff;border-color:#25d366;" onclick="enviarConfirmacaoWpp('${escapeHtml(a.telefone)}','${escapeHtml(a.nome)}','${a.data}','${a.horario}','${escapeHtml(a.procedimento||'Consulta')}')" title="Confirmar via WhatsApp"><i class="ti ti-brand-whatsapp"></i></button>` : ''}
       <button class="btn-danger" onclick="removerAgendamento(${a.id})"><i class="ti ti-trash"></i></button>
     </div>
   `).join('');
@@ -2153,6 +2160,7 @@ function calOpenEvent(e, id){
     </div>
     <div class="cal-modal-foot">
       <button class="btn-danger" onclick="calRemoveFromModal(${a.id})"><i class="ti ti-trash"></i> Remover</button>
+      ${a.telefone ? `<button class="btn-secondary" style="background:#25d366;color:#fff;border-color:#25d366;" onclick="enviarConfirmacaoWpp('${a.telefone}','${a.nome}','${a.data}','${a.horario}','${a.procedimento||'Consulta'}')"><i class="ti ti-brand-whatsapp"></i> Confirmar</button>` : ''}
       <button class="btn-secondary" onclick="document.getElementById('cal-modal-bg').classList.remove('show')">Fechar</button>
     </div>
   </div>`;
@@ -3310,7 +3318,15 @@ function filterEstoque(){ renderEstoque(); }
 function renderEstoque(){
   const q   = (document.getElementById('est-search')||{value:''}).value.toLowerCase();
   const sf  = (document.getElementById('est-status-filter')||{value:''}).value;
+  const ordemEst = (document.getElementById('est-ordem')||{value:'az'}).value;
   let list  = mats.filter(m=>(!q||m.nome.toLowerCase().includes(q))&&(!sf||getEstStatus(m.id)===sf));
+  if(ordemEst==='az') list=[...list].sort((a,b)=>a.nome.localeCompare(b.nome,'pt-BR'));
+  else if(ordemEst==='za') list=[...list].sort((a,b)=>b.nome.localeCompare(a.nome,'pt-BR'));
+  else if(ordemEst==='cat') list=[...list].sort((a,b)=>(a.cat||'').localeCompare(b.cat||'','pt-BR')||a.nome.localeCompare(b.nome,'pt-BR'));
+  else if(ordemEst==='critico'){
+    const ord={danger:0,warn:1,ok:2,'':3};
+    list=[...list].sort((a,b)=>(ord[getEstStatus(a.id)]||3)-(ord[getEstStatus(b.id)]||3)||a.nome.localeCompare(b.nome,'pt-BR'));
+  } else list=[...list].sort((a,b)=>a.nome.localeCompare(b.nome,'pt-BR'));
   const ok  = mats.filter(m=>getEstStatus(m.id)==='ok').length;
   const warn= mats.filter(m=>getEstStatus(m.id)==='warn').length;
   const dan = mats.filter(m=>getEstStatus(m.id)==='danger').length;
@@ -4454,7 +4470,9 @@ function pacOdontoRenderOrcLista(){
     return `<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--rose-light);font-size:12px;flex-wrap:wrap;">
       <span style="flex:1;">${escapeHtml(it.nome)}</span>
       ${it.dentes ? `<span style="background:var(--rose-lighter);color:var(--rose-dark);border-radius:6px;padding:2px 6px;font-size:11px;">🦷 ${it.dentes.split(',').join(', ')}</span>` : ''}
-      <strong style="color:var(--rose-dark);">R$ ${it.total.toFixed(2).replace('.',',')}</strong>
+      <input type="number" min="0" step="0.01" value="${it.total.toFixed(2)}"
+        onchange="pacOdontoOrcList[${i}].total=parseFloat(this.value)||0;pacOdontoOrcList[${i}].precoUnit=parseFloat(this.value)||0;pacOdontoRenderOrcLista();"
+        style="width:80px;padding:3px 6px;border:1px solid var(--rose-light);border-radius:6px;font-size:12px;text-align:right;font-weight:700;color:var(--rose-dark);"/>
       <button class="btn-danger" style="padding:2px 6px;" onclick="pacOdontoOrcList.splice(${i},1);pacOdontoRenderOrcLista();"><i class="ti ti-x"></i></button>
     </div>`;
   }).join('');
@@ -4485,6 +4503,23 @@ async function pacOdontoSalvarOrc(){
   pacOdontoOrcList = [];
   pacOdontoRenderOrcLista();
   showToast('Orçamento salvo! Veja em Financeiro → Vendas.');
+}
+
+
+// ── WhatsApp Confirmação ──
+function enviarConfirmacaoWpp(tel, nome, data, horario, procedimento){
+  // Formata telefone (remove tudo que não é número)
+  const num = tel.replace(/\D/g,'');
+  const numBR = num.startsWith('55') ? num : '55' + num;
+  // Formata data
+  const [y,m,d] = data.split('-');
+  const dataFmt = `${d}/${m}/${y}`;
+  // Nome da clínica
+  const clinica = clinicaData?.nome_cli || 'nossa clínica';
+  // Mensagem
+  const msg = `Olá, ${nome}! 😊\n\nPassando para confirmar sua consulta na *${clinica}*:\n\n📅 *Data:* ${dataFmt}\n⏰ *Horário:* ${horario}\n🦷 *Procedimento:* ${procedimento}\n\nPor favor, confirme sua presença respondendo *SIM* para confirmar ou *NÃO* para cancelar.\n\nAguardamos você! 🙏`;
+  const url = `https://wa.me/${numBR}?text=${encodeURIComponent(msg)}`;
+  window.open(url, '_blank');
 }
 
 // ══════════════════════════════════════════════════════
