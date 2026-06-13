@@ -1272,11 +1272,25 @@ function switchTab(tab){
   if(tab==='profissionais') renderProfissionais();
   if(tab==='home') renderHomeStats();
   if(tab==='configuracoes') renderConfiguracoes();
-  if(tab==='financeiro') renderFinanceiroDash();
-  if(tab==='procedimentos_fin') renderProcs();
-  if(tab==='materiais_fin') renderMats();
-  if(tab==='estoque_fin') renderEstoque();
-  if(tab==='vendas_fin') renderVendas();
+  if(tab==='financeiro'||tab==='procedimentos_fin'||tab==='materiais_fin'||tab==='estoque_fin'||tab==='vendas_fin'){
+    if(!procs.length){
+      showLoading(true);
+      loadFinanceiro().then(()=>{
+        showLoading(false);
+        if(tab==='financeiro') renderFinanceiroDash();
+        if(tab==='procedimentos_fin') renderProcs();
+        if(tab==='materiais_fin') renderMats();
+        if(tab==='estoque_fin') renderEstoque();
+        if(tab==='vendas_fin') renderVendas();
+      });
+      return;
+    }
+    if(tab==='financeiro') renderFinanceiroDash();
+    if(tab==='procedimentos_fin') renderProcs();
+    if(tab==='materiais_fin') renderMats();
+    if(tab==='estoque_fin') renderEstoque();
+    if(tab==='vendas_fin') renderVendas();
+  }
   window.scrollTo(0,0);
 }
 
