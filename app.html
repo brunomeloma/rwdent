@@ -5106,7 +5106,15 @@ function histRenderLista(pacId){
         <div style="flex:1;min-width:0;">
           <div style="font-size:13px;font-weight:600;color:#3a2020;">${escapeHtml(a.procedimentos)}</div>
           ${a.profissional_nome?`<div style="font-size:11px;color:var(--rose-text);margin-top:2px;">👤 ${escapeHtml(a.profissional_nome)}</div>`:''}
-          ${dentes.length?`<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:6px;">${dentes.map(d=>`<span style="background:var(--rose-lighter);color:var(--rose-dark);border-radius:6px;padding:2px 7px;font-size:11px;font-weight:700;">🦷${d.dente}</span>`).join('')}</div>`:''}
+          ${(()=>{
+            if(!dentes.length) return '';
+            const condLabel = {restaurado:'🔵 Rest.',carie:'🔴 Cárie',canal:'🟡 Canal',coroa:'🔷 Coroa',extraido:'⬜ Ext.',implante:'🟣 Impl.',selante:'🩵 Sel.',fratura:'🟠 Frat.',outro:'⚪ Outro',higido:'⬜ Híg.'};
+            return '<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:6px;">'+dentes.map(d=>{
+              const conds=(d.condicao||'').split(',').filter(Boolean);
+              const condStr=conds.map(c=>condLabel[c]||c).join(' ');
+              return '<span style="background:var(--rose-lighter);color:var(--rose-dark);border-radius:6px;padding:2px 7px;font-size:11px;font-weight:700;">🦷'+d.dente+(condStr?' · '+condStr:'')+'</span>';
+            }).join('')+ '</div>';
+          })()}
           ${a.obs?`<div style="font-size:12px;color:var(--rose-text);margin-top:4px;">${escapeHtml(a.obs)}</div>`:''}
         </div>
         <button class="btn-danger" style="padding:4px 8px;flex-shrink:0;" onclick="pacRemoverProc(${a.id});setTimeout(()=>histRenderLista(${pacId}),300)"><i class="ti ti-trash"></i></button>
