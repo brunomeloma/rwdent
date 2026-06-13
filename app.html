@@ -2934,8 +2934,15 @@ async function saveFinanceiro(){
   };
   // Upsert
   const { data: existing } = await _sb.from('financeiro_config').select('id').eq('clinica_id',clinicaId).single();
-  if(existing){ await _sb.from('financeiro_config').update(payload).eq('clinica_id',clinicaId); }
-  else         { await _sb.from('financeiro_config').insert([payload]); }
+  let saveError;
+  if(existing){
+    const { error } = await _sb.from('financeiro_config').update(payload).eq('clinica_id',clinicaId);
+    saveError = error;
+  } else {
+    const { error } = await _sb.from('financeiro_config').insert([payload]);
+    saveError = error;
+  }
+  if(saveError){ console.error('saveFinanceiro ERRO:', saveError.message); showToast('Erro ao salvar: '+saveError.message,'error'); }
 }
 
 // ── Helpers de cálculo ──
