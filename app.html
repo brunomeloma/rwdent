@@ -2865,9 +2865,14 @@ async function loadFinanceiro(){
   const { data } = await _sb.from('financeiro_config')
     .select('*').eq('clinica_id', clinicaId).single();
 
+  let precisaSalvar = false;
+
   if(data){
-    procs       = safe(data.procs,       []);
-    mats        = safe(data.mats,        []);
+    // Carrega EXATAMENTE o que está no banco — não sobrescreve com padrões
+    const _procs = safe(data.procs, []);
+    const _mats  = safe(data.mats,  []);
+    procs       = _procs.length ? _procs : [];
+    mats        = _mats.length  ? _mats  : [];
     estoque     = safe(data.estoque,     {});
     procInsumos = safe(data.proc_insumos,{});
     vendas      = safe(data.vendas,      []);
@@ -2877,8 +2882,7 @@ async function loadFinanceiro(){
     descCfg     = safe(data.desc_cfg,    descCfg);
   }
 
-  // Sempre garante os padrões se vazio
-  let precisaSalvar = false;
+  // Só preenche com padrão se realmente não tem nada salvo
   if(!procs.length){
     procs = DEFAULT_PROCS_FIN.map((p,i)=>({...p,id:p.id||i+1}));
     precisaSalvar = true;
@@ -2891,8 +2895,7 @@ async function loadFinanceiro(){
     combos = DEFAULT_COMBOS_FIN.map(c=>({...c}));
     precisaSalvar = true;
   }
-  // Insumos: mescla padrões com o que foi salvo
-  const totalSalvos = Object.keys(procInsumos).length;
+  // Insumos: só adiciona padrão para procedimentos que não têm nada salvo
   Object.entries(DEFAULT_PROC_INSUMOS_DATA).forEach(([k,v])=>{
     if(!procInsumos[k] || !procInsumos[k].length){
       procInsumos[k] = JSON.parse(JSON.stringify(v));
