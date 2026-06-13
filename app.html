@@ -2350,6 +2350,13 @@ function renderLegenda(){
 }
 
 function odontoClicarDente(num){
+  if(odontoSelDente === num){
+    odontoSelDente = null;
+    document.getElementById('odonto-dente-panel').style.display = 'none';
+    renderArcada('arc-sup', FDI_SUP);
+    renderArcada('arc-inf', FDI_INF);
+    return;
+  }
   odontoSelDente = num;
   renderArcada('arc-sup', FDI_SUP);
   renderArcada('arc-inf', FDI_INF);
@@ -2698,6 +2705,14 @@ function pacRenderLegenda(){
 }
 
 function pacClicarDente(num){
+  // Se clicar no dente já selecionado, deseleciona
+  if(pacDenteSel === num){
+    pacDenteSel = null;
+    const panel = document.getElementById('pac-dente-panel');
+    if(panel) panel.style.display = 'none';
+    pacRenderArcadas();
+    return;
+  }
   pacDenteSel = num;
   pacRenderArcadas();
   const panel = document.getElementById('pac-dente-panel');
