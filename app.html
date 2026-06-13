@@ -1076,7 +1076,7 @@ button{font-family:inherit;}
       <button class="mobile-nav-item" data-tab="calendario" onclick="switchTab('calendario')"><i class="ti ti-calendar-month"></i>Calendário</button>
       <button class="mobile-nav-item" data-tab="pacientes" onclick="switchTab('pacientes')"><i class="ti ti-users"></i>Pacientes</button>
       <button class="mobile-nav-item" data-tab="prontuarios" onclick="switchTab('prontuarios')"><i class="ti ti-file-text"></i>Prontuários</button>
-      <button class="mobile-nav-item" data-tab="profissionais" onclick="switchTab('profissionais')"><i class="ti ti-briefcase"></i>Profissionais</button>
+      <button class="mobile-nav-item" data-tab="resgate" onclick="switchTab('resgate')"><i class="ti ti-heart-handshake"></i>Resgate</button>
       <button class="mobile-nav-item" onclick="doLogout()" style="color:#b33;"><i class="ti ti-logout"></i>Sair</button>
     </div>
   </nav>
@@ -4802,33 +4802,43 @@ function renderSignArea(pacId, atendId, nomeAtend, profNome, profCro, sigExist){
 
 // Salva orçamento rápido do odontograma e vai para Plano
 async function odontogramaSalvarEIrParaPlano(pacId){
-  // Se há itens no orçamento rápido, transfere para o simulador do plano
+  const pid = pacId || selectedPatientId;
+  if(!pid){ showToast('Selecione um paciente.','warn'); return; }
+
+  // Transfere itens do orçamento rápido para o orcamento global
   if(pacOdontoOrcList.length > 0){
-    // Transfere itens para o orcamento global
     orcamento = pacOdontoOrcList.map(it=>({
       tipo: 'proc',
       procId: it.procId,
       qtd: it.qtd||1,
       nome: it.nome,
-      precoUnit: it.precoUnit,
+      precoUnit: it.precoUnit||0,
       custo: custoProc(procs.find(p=>p.id===it.procId)||{}),
       dente: it.dentes||'',
       descDente: ''
     }));
-    showToast('Orçamento transferido para o Plano!');
+    showToast('Procedimentos transferidos para o Plano!');
   } else {
-    showToast('Odontograma salvo! Indo para o Plano...','warn');
+    showToast('Indo para o Plano de Tratamento...','warn');
   }
-  // Redireciona para aba Plano
+
+  // Força seleção do paciente correto
+  selectedPatientId = pid;
+
+  // Vai para aba plano
   renderPatientDetail('plano');
-  // Aguarda render e atualiza simulador
+
+  // Força reconstrução do simulador limpando o dataset
   setTimeout(()=>{
-    renderPlanoSimulador(pacId);
+    const c = document.getElementById('pac-sim-container');
+    if(c) c.dataset.pacId = ''; // Força rebuild
+    renderPlanoSimulador(pid);
     renderOrcPac();
-    // Scroll para o simulador
-    const sim = document.getElementById('pac-sim-container');
-    if(sim) sim.scrollIntoView({behavior:'smooth',block:'start'});
-  }, 150);
+    setTimeout(()=>{
+      const sim = document.getElementById('pac-sim-container');
+      if(sim) sim.scrollIntoView({behavior:'smooth',block:'start'});
+    }, 200);
+  }, 200);
 }
 
 // Ao salvar orçamento no Plano, vai para aba Orçamentos
