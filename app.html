@@ -971,6 +971,11 @@ button{font-family:inherit;}
             <div class="form-group"><label>Taxa Crédito 4x (%)</label><input type="number" id="cfg-taxa-cred4" step="0.01" min="0" max="20" placeholder="7.15"/></div>
             <div class="form-group"><label>Taxa Crédito 5x (%)</label><input type="number" id="cfg-taxa-cred5" step="0.01" min="0" max="20" placeholder="8.19"/></div>
             <div class="form-group"><label>Taxa Crédito 6x (%)</label><input type="number" id="cfg-taxa-cred6" step="0.01" min="0" max="20" placeholder="9.24"/></div>
+            <div class="form-group"><label>Taxa Crédito 7x (%)</label><input type="number" id="cfg-taxa-cred7" step="0.01" min="0" max="20" placeholder="10.30"/></div>
+            <div class="form-group"><label>Taxa Crédito 8x (%)</label><input type="number" id="cfg-taxa-cred8" step="0.01" min="0" max="20" placeholder="11.36"/></div>
+            <div class="form-group"><label>Taxa Crédito 9x (%)</label><input type="number" id="cfg-taxa-cred9" step="0.01" min="0" max="20" placeholder="12.44"/></div>
+            <div class="form-group"><label>Taxa Crédito 10x (%)</label><input type="number" id="cfg-taxa-cred10" step="0.01" min="0" max="20" placeholder="13.52"/></div>
+            <div class="form-group"><label>Taxa Crédito 11x (%)</label><input type="number" id="cfg-taxa-cred11" step="0.01" min="0" max="20" placeholder="14.61"/></div>
             <div class="form-group"><label>Taxa Crédito 12x (%)</label><input type="number" id="cfg-taxa-cred12" step="0.01" min="0" max="20" placeholder="15.71"/></div>
           </div>
           <div style="display:flex;justify-content:flex-end;margin-top:14px;">
@@ -2950,16 +2955,8 @@ function renderFinanceiroDash(){
   const fat = fin.reduce((a,v)=>a+(Number(v.total)||0),0);
   const criticos = mats.filter(m=>getEstStatus(m.id)==='danger').length;
 
-  // Botão de reset/carregar padrões
-  const btnReset = procs.length === 0 ? `
-    <div style="background:#fff8e1;border:1px solid #ffcc80;border-radius:12px;padding:16px;margin-bottom:16px;text-align:center;">
-      <div style="font-size:13px;color:#856404;margin-bottom:10px;"><i class="ti ti-info-circle"></i> Nenhum procedimento cadastrado ainda.</div>
-      <button class="btn-primary" onclick="carregarPadroes()" style="margin:0 auto;">
-        <i class="ti ti-download"></i> Carregar 50 procedimentos padrão
-      </button>
-    </div>` : '';
-  const metricsEl = document.getElementById('fin-metrics');
-  if(metricsEl) metricsEl.insertAdjacentHTML('beforebegin', btnReset);
+  // Auto-carrega se vazio (não precisa mais de botão)
+  if(procs.length === 0){ carregarPadroes(false); return; }
 
   document.getElementById('fin-metrics').innerHTML = [
     {lbl:'Faturamento',val:fmtBRL(fat),cor:'var(--rose-dark)'},
@@ -3341,7 +3338,10 @@ let insumosTemp = [];
 function openInsumos(procId){
   const p = procs.find(x=>x.id===procId); if(!p) return;
   insumosEditProcId = procId;
-  insumosTemp = JSON.parse(JSON.stringify(procInsumos[procId]||[]));
+  // Usa padrão se banco não tem insumos para este procedimento
+  const saved = procInsumos[procId];
+  const defaults = DEFAULT_PROC_INSUMOS_DATA[procId] || DEFAULT_PROC_INSUMOS_DATA[String(procId)];
+  insumosTemp = JSON.parse(JSON.stringify(saved && saved.length ? saved : (defaults || [])));
   document.getElementById('mi-proc-nome').textContent = p.nome;
   const sel = document.getElementById('mi-mat-sel');
   if(sel) sel.innerHTML = mats.map(m=>`<option value="${m.id}">${m.nome} (${m.unid||'unid'}) — ${fmtBRL(m.custo||0)}/un.</option>`).join('');
@@ -3605,6 +3605,11 @@ function renderPlanoSimulador(pacId){
             <option value="credito4">Crédito 4x</option>
             <option value="credito5">Crédito 5x</option>
             <option value="credito6">Crédito 6x</option>
+            <option value="credito7">Crédito 7x</option>
+            <option value="credito8">Crédito 8x</option>
+            <option value="credito9">Crédito 9x</option>
+            <option value="credito10">Crédito 10x</option>
+            <option value="credito11">Crédito 11x</option>
             <option value="credito12">Crédito 12x</option>
           </select>
           <span style="font-size:12px;color:var(--rose-text);" id="sim-taxa-info"></span>
@@ -3640,7 +3645,7 @@ function updateFormaPag(){
     liquido = calcValorLiquido(total,'debito',1);
   } else if(val.startsWith('credito')){
     const par = parseInt(val.replace('credito',''))||1;
-    const idx = [1,2,3,4,5,6,12].indexOf(par);
+    const idx = [1,2,3,4,5,6,7,8,9,10,11,12].indexOf(par);
     taxa = idx>=0 ? (taxasCfg.credito||[])[idx]||0 : 0;
     liquido = calcValorLiquido(total,'credito',par);
   }
@@ -3813,18 +3818,20 @@ async function finalizarVendaPac(pacId){
 }
 
 // ── Carregar padrões manualmente ──
-async function carregarPadroes(){
-  if(procs.length > 0 && !confirm('Já existem procedimentos. Substituir pelos padrões?')) return;
+async function carregarPadroes(confirm_ask=true){
+  if(confirm_ask && procs.length > 0 && !confirm('Já existem procedimentos. Substituir pelos padrões?')) return;
   showLoading(true);
   procs   = DEFAULT_PROCS_FIN.map((p,i)=>({...p,id:p.id||i+1}));
   mats    = mats.length ? mats : DEFAULT_MATS_FIN.map((m,i)=>({...m,id:m.id||i+1}));
   combos  = combos.length ? combos : DEFAULT_COMBOS_FIN.map(c=>({...c}));
+  // Carrega insumos padrão
+  Object.entries(DEFAULT_PROC_INSUMOS_DATA).forEach(([k,v])=>{ procInsumos[k]=JSON.parse(JSON.stringify(v)); });
   nextProcId  = 103;
   nextMatId   = mats.length > 50 ? nextMatId : 91;
   nextComboId = 207;
   await saveFinanceiro();
   showLoading(false);
-  showToast('50 procedimentos carregados!');
+  if(confirm_ask) showToast('Procedimentos e insumos carregados!');
   renderFinanceiroDash();
   renderProcs();
 }
@@ -4469,7 +4476,7 @@ function renderConfiguracoes(){
 
 async function salvarTaxas(){
   taxasCfg.debito = parseFloat(document.getElementById('cfg-taxa-debito')?.value)||0;
-  taxasCfg.credito = [1,2,3,4,5,6,12].map(p=>parseFloat(document.getElementById('cfg-taxa-cred'+p)?.value)||0);
+  taxasCfg.credito = [1,2,3,4,5,6,7,8,9,10,11,12].map(p=>parseFloat(document.getElementById('cfg-taxa-cred'+p)?.value)||0);
   showLoading(true);
   await saveFinanceiro();
   showLoading(false);
