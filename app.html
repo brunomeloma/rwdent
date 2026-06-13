@@ -1665,23 +1665,33 @@ function renderPatientDetail(abaAtiva){
                   ${profissionais.map(pr=>`<option value="${pr.id}">${escapeHtml(pr.nome)}</option>`).join('')}
                 </select>
               </div>
-              <div class="form-group">
-                <label>Dentes tratados (separados por vírgula)</label>
-                <input type="text" id="hist-dentes" placeholder="Ex: 36, 37, 46"/>
+              <div class="form-group full">
+                <label>Dentes tratados (clique para selecionar)</label>
+                <div id="hist-odonto-wrap" style="overflow-x:auto;padding:6px 0;">
+                  <div id="hist-dentes-sel" style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px;min-height:24px;"></div>
+                  <div style="font-size:11px;color:var(--rose-text);margin-bottom:4px;">Permanentes superiores:</div>
+                  <div style="display:flex;gap:3px;flex-wrap:nowrap;overflow-x:auto;padding-bottom:4px;">
+                    ${[18,17,16,15,14,13,12,11,21,22,23,24,25,26,27,28].map(d=>`<button type="button" id="hist-d-${d}" onclick="histToggleDente(${d})" style="min-width:28px;height:28px;border:1.5px solid var(--rose-light);border-radius:5px;background:#fff;font-size:10px;cursor:pointer;flex-shrink:0;">${d}</button>`).join('')}
+                  </div>
+                  <div style="font-size:11px;color:var(--rose-text);margin:4px 0 4px;">Permanentes inferiores:</div>
+                  <div style="display:flex;gap:3px;flex-wrap:nowrap;overflow-x:auto;padding-bottom:4px;">
+                    ${[48,47,46,45,44,43,42,41,31,32,33,34,35,36,37,38].map(d=>`<button type="button" id="hist-d-${d}" onclick="histToggleDente(${d})" style="min-width:28px;height:28px;border:1.5px solid var(--rose-light);border-radius:5px;background:#fff;font-size:10px;cursor:pointer;flex-shrink:0;">${d}</button>`).join('')}
+                  </div>
+                  <div style="font-size:11px;color:var(--rose-text);margin:4px 0 4px;">Decíduos:</div>
+                  <div style="display:flex;gap:3px;flex-wrap:nowrap;overflow-x:auto;">
+                    ${[55,54,53,52,51,61,62,63,64,65,85,84,83,82,81,71,72,73,74,75].map(d=>`<button type="button" id="hist-d-${d}" onclick="histToggleDente(${d})" style="min-width:28px;height:28px;border:1.5px solid var(--rose-light);border-radius:5px;background:#fff;font-size:10px;cursor:pointer;flex-shrink:0;">${d}</button>`).join('')}
+                  </div>
+                </div>
+                <input type="hidden" id="hist-dentes"/>
               </div>
-              <div class="form-group">
-                <label>Condição dos dentes</label>
-                <select id="hist-cond">
-                  <option value="restaurado">Restaurado</option>
-                  <option value="canal">Canal</option>
-                  <option value="coroa">Coroa/Prótese</option>
-                  <option value="extraido">Extraído</option>
-                  <option value="implante">Implante</option>
-                  <option value="carie">Cárie</option>
-                  <option value="selante">Selante</option>
-                  <option value="higido">Hígido</option>
-                  <option value="outro">Outro</option>
-                </select>
+              <div class="form-group full">
+                <label>Condições (selecione uma ou mais)</label>
+                <div style="display:flex;flex-wrap:wrap;gap:6px;">
+                  ${[['restaurado','🔵 Restaurado'],['canal','🟡 Canal'],['coroa','🔷 Coroa'],['extraido','⬜ Extraído'],['implante','🟣 Implante'],['carie','🔴 Cárie'],['selante','🩵 Selante'],['higido','⬜ Hígido'],['fratura','🟠 Fratura'],['outro','⚪ Outro']].map(([v,l])=>`
+                    <label style="display:flex;align-items:center;gap:5px;background:var(--rose-lighter);padding:5px 10px;border-radius:8px;cursor:pointer;font-size:12px;">
+                      <input type="checkbox" name="hist-cond-cb" value="${v}" style="accent-color:var(--rose);"/> ${l}
+                    </label>`).join('')}
+                </div>
               </div>
               <div class="form-group full">
                 <label>Procedimento realizado</label>
@@ -4786,6 +4796,11 @@ function signConfirm(){
   const dataUrl = signCanvas.toDataURL('image/png');
   closeSignModal();
   if(signCallback) signCallback(dataUrl);
+  // Força re-render dos realizados para mostrar assinatura imediatamente
+  setTimeout(()=>{
+    const c=document.getElementById('pac-procs-list');
+    if(c) pacCarregarProcs(selectedPatientId).then(()=>renderProcsList(selectedPatientId));
+  }, 300);
 }
 
 // Armazena assinaturas por atendimento (em memória + salva no prontuário)
@@ -5004,52 +5019,71 @@ async function histCarregar(pacId){
   histRenderLista(pacId);
 }
 
+let histDentesSel = [];
+
+function histToggleDente(num){
+  const idx = histDentesSel.indexOf(num);
+  if(idx>=0) histDentesSel.splice(idx,1);
+  else histDentesSel.push(num);
+  // Atualiza visual dos botões
+  histDentesSel.forEach(d=>{
+    const btn=document.getElementById('hist-d-'+d);
+    if(btn){ btn.style.background='var(--rose)'; btn.style.color='#fff'; btn.style.borderColor='var(--rose)'; }
+  });
+  // Desmarca os que saíram
+  [18,17,16,15,14,13,12,11,21,22,23,24,25,26,27,28,
+   48,47,46,45,44,43,42,41,31,32,33,34,35,36,37,38,
+   55,54,53,52,51,61,62,63,64,65,85,84,83,82,81,71,72,73,74,75].forEach(d=>{
+    if(!histDentesSel.includes(d)){
+      const btn=document.getElementById('hist-d-'+d);
+      if(btn){ btn.style.background='#fff'; btn.style.color=''; btn.style.borderColor='var(--rose-light)'; }
+    }
+  });
+  // Atualiza badges
+  const sel=document.getElementById('hist-dentes-sel');
+  if(sel) sel.innerHTML=histDentesSel.map(d=>`<span style="background:var(--rose);color:#fff;border-radius:6px;padding:2px 8px;font-size:11px;font-weight:700;">🦷${d}</span>`).join('');
+  // Atualiza input hidden
+  const inp=document.getElementById('hist-dentes');
+  if(inp) inp.value=histDentesSel.join(',');
+}
+
 function histLimpar(){
+  histDentesSel=[];
+  histToggleDente(-1); // reseta visuais
   ['hist-data','hist-dentes','hist-proc','hist-obs'].forEach(id=>{
     const el=document.getElementById(id); if(el) el.value='';
   });
-  document.getElementById('hist-data').value = hoje();
-  const cond=document.getElementById('hist-cond'); if(cond) cond.value='restaurado';
+  const dd=document.getElementById('hist-data'); if(dd) dd.value=hoje();
+  document.querySelectorAll('input[name="hist-cond-cb"]').forEach(cb=>cb.checked=false);
+  const sel=document.getElementById('hist-dentes-sel'); if(sel) sel.innerHTML='';
 }
 
 async function histSalvar(pacId){
-  const data    = document.getElementById('hist-data')?.value || hoje();
+  const data   = document.getElementById('hist-data')?.value || hoje();
   const dentesRaw = document.getElementById('hist-dentes')?.value.trim() || '';
-  const cond    = document.getElementById('hist-cond')?.value || 'restaurado';
-  const proc    = document.getElementById('hist-proc')?.value.trim() || '';
-  const obs     = document.getElementById('hist-obs')?.value.trim() || '';
-  const profId  = document.getElementById('hist-prof')?.value || null;
-  const prof    = profissionais.find(p=>p.id==profId);
-
+  const conds  = [...document.querySelectorAll('input[name="hist-cond-cb"]:checked')].map(c=>c.value);
+  const cond   = conds.length ? conds[0] : 'restaurado';
+  const condsStr = conds.join(',') || 'restaurado';
+  const proc   = document.getElementById('hist-proc')?.value.trim() || '';
+  const obs    = document.getElementById('hist-obs')?.value.trim() || '';
+  const profId = document.getElementById('hist-prof')?.value || null;
+  const prof   = profissionais.find(p=>p.id==profId);
   if(!proc){ showToast('Informe o procedimento realizado.','warn'); return; }
-
   showLoading(true);
-
-  // Salva cada dente no odontograma
   const dentes = dentesRaw ? dentesRaw.split(',').map(d=>parseInt(d.trim())).filter(n=>!isNaN(n)) : [];
   for(const dente of dentes){
-    const { data:ex } = await _sb.from('procedimentos_dentes').select('id').eq('clinica_id',clinicaId).eq('paciente_id',pacId).eq('dente',dente).single();
-    if(ex){
-      await _sb.from('procedimentos_dentes').update({condicao:cond,procedimento:proc,obs,data}).eq('id',ex.id);
-    } else {
-      await _sb.from('procedimentos_dentes').insert([{clinica_id:clinicaId,paciente_id:pacId,dente,condicao:cond,procedimento:proc,obs,data}]);
-    }
+    const {data:ex}=await _sb.from('procedimentos_dentes').select('id').eq('clinica_id',clinicaId).eq('paciente_id',pacId).eq('dente',dente).single();
+    if(ex){ await _sb.from('procedimentos_dentes').update({condicao:cond,procedimento:proc,obs,data}).eq('id',ex.id); }
+    else   { await _sb.from('procedimentos_dentes').insert([{clinica_id:clinicaId,paciente_id:pacId,dente,condicao:cond,procedimento:proc,obs,data}]); }
   }
-
-  // Salva como atendimento
-  const dentesArr = dentes.map(d=>({dente:d,procedimento:proc,condicao:cond}));
-  const { error } = await _sb.from('atendimentos_odonto').insert([{
-    clinica_id:clinicaId, paciente_id:pacId,
-    data, procedimentos:proc, obs,
-    profissional_id:profId||null,
-    profissional_nome:prof?.nome||'',
+  const dentesArr=dentes.map(d=>({dente:d,procedimento:proc,condicao:condsStr}));
+  const {error}=await _sb.from('atendimentos_odonto').insert([{
+    clinica_id:clinicaId,paciente_id:pacId,data,procedimentos:proc,obs,
+    profissional_id:profId||null,profissional_nome:prof?.nome||'',
     dentes_tratados:JSON.stringify(dentesArr)
   }]);
-
   showLoading(false);
   if(error){ showToast('Erro: '+error.message,'error'); return; }
-
-  // Atualiza lista
   await pacCarregarProcs(pacId);
   histLimpar();
   histRenderLista(pacId);
@@ -5180,10 +5214,13 @@ async function filtrarResgate(meses){
       </td>
       <td style="padding:10px;text-align:center;">
         ${temTel
-          ? `<button onclick="abrirResgateModal('${escapeHtml(pac.nome)}','${escapeHtml(pac.telefone||'')}','${escapeHtml(ultimoProc)}',${Math.round(mesesAusencia)})"
-              style="background:#25d366;border:none;border-radius:50%;width:38px;height:38px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(37,211,102,.4);" title="Enviar WhatsApp">
-              <i class="ti ti-brand-whatsapp" style="color:#fff;font-size:18px;"></i>
-            </button>`
+          ? `<div style="display:flex;flex-direction:column;align-items:center;gap:3px;">
+              <button onclick="abrirResgateModal('${escapeHtml(pac.nome)}','${escapeHtml(pac.telefone||'')}','${escapeHtml(ultimoProc)}',${Math.round(mesesAusencia)})"
+                style="background:#25d366;border:none;border-radius:50%;width:38px;height:38px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(37,211,102,.4);" title="Enviar WhatsApp">
+                <i class="ti ti-brand-whatsapp" style="color:#fff;font-size:18px;"></i>
+              </button>
+              \${getResgateContador('${escapeHtml(pac.nome)}')>0?`<span style="font-size:10px;color:#856404;font-weight:700;">\${getResgateContador('${escapeHtml(pac.nome)}')}x</span>`:''}
+            </div>`
           : `<span style="font-size:11px;color:var(--rose-text);">Sem tel.</span>`
         }
       </td>
@@ -5258,12 +5295,30 @@ function fecharResgateModal(){
   if(bg) bg.style.display = 'none';
 }
 
+// Contador de mensagens por paciente (salvo no localStorage)
+function getResgateContador(pacNome){
+  try{
+    const d=JSON.parse(localStorage.getItem('rwdent_resgate_msgs')||'{}');
+    return d[pacNome]||0;
+  }catch(e){return 0;}
+}
+function incResgateContador(pacNome){
+  try{
+    const d=JSON.parse(localStorage.getItem('rwdent_resgate_msgs')||'{}');
+    d[pacNome]=(d[pacNome]||0)+1;
+    localStorage.setItem('rwdent_resgate_msgs',JSON.stringify(d));
+  }catch(e){}
+}
+
 function enviarResgateWpp(){
   const tel = resgateModalTel.replace(/\D/g,'');
   const num = tel.startsWith('55') ? tel : '55'+tel;
   const msg = document.getElementById('resgate-modal-msg')?.value || '';
+  const nome = document.getElementById('resgate-modal-nome')?.textContent||'';
+  incResgateContador(nome);
   window.open(`https://wa.me/${num}?text=${encodeURIComponent(msg)}`, '_blank');
-  fecharResgateModal();
+  // NÃO fecha o modal — só mostra confirmação
+  showToast('WhatsApp aberto! Mensagem '+(getResgateContador(nome))+' enviada para '+nome);
 }
 
 
