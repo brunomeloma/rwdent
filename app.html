@@ -27,7 +27,7 @@
 :root{
   --rose:#d4735a;--rose-light:#f0cfc4;--rose-lighter:#fdf0eb;
   --rose-mid:#e0a090;--rose-dark:#7a3020;--rose-text:#a05040;
-  --sidebar-w:72px;--header-h:64px;
+  --sidebar-w:68px;--header-h:64px;
 }
 body{font-family:'Segoe UI',Arial,sans-serif;background:#fdf6f3;color:#3a2020;min-height:100vh;overscroll-behavior:none;}
 
@@ -61,36 +61,98 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#fdf6f3;color:#3a2020;mi
   position:fixed;left:0;top:0;bottom:0;width:var(--sidebar-w);
   background:#fff;box-shadow:2px 0 18px rgba(0,0,0,.08);
   display:flex;flex-direction:column;align-items:center;
-  padding:12px 8px;transition:width .25s ease;z-index:200;
+  padding:12px 6px 12px;transition:width .25s cubic-bezier(.4,0,.2,1);z-index:200;
+  overflow:hidden;
 }
-.sidebar.open{width:220px;}
+.sidebar.open{width:230px;}
+/* Hover expande no desktop */
+@media(min-width:769px){
+  .sidebar:not(.pinned):hover{width:230px;}
+  .sidebar:not(.pinned):hover .sidebar-item span,
+  .sidebar:not(.pinned):hover .btn-logout span,
+  .sidebar:not(.pinned):hover .sidebar-label,
+  .sidebar:not(.pinned):hover .sidebar-divider,
+  .sidebar:not(.pinned):hover .sidebar-avatar-name{ display:flex!important; }
+}
+/* Avatar no topo */
+.sidebar-avatar{
+  width:44px;height:44px;border-radius:50%;
+  background:linear-gradient(135deg,var(--rose),var(--rose-dark));
+  color:#fff;font-size:16px;font-weight:800;
+  display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;margin-bottom:4px;cursor:default;
+  box-shadow:0 4px 12px rgba(212,115,90,.35);
+}
+.sidebar-avatar-name{
+  display:none;font-size:12px;font-weight:700;color:var(--rose-dark);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  max-width:180px;margin-bottom:10px;text-align:center;
+}
+.sidebar.open .sidebar-avatar-name{display:flex;}
+/* Pin button */
+.sidebar-pin{
+  width:28px;height:28px;border-radius:8px;border:1.5px solid var(--rose-light);
+  background:none;color:var(--rose-text);cursor:pointer;
+  display:none;align-items:center;justify-content:center;
+  position:absolute;top:12px;right:8px;transition:all .2s;
+}
+.sidebar.open .sidebar-pin{display:flex;}
+.sidebar.pinned .sidebar-pin{background:var(--rose-lighter);color:var(--rose-dark);border-color:var(--rose);}
+.sidebar-pin i{font-size:14px;}
+/* Toggle no topo (ícone hamburger) */
 .sidebar-toggle{
-  width:46px;height:46px;border-radius:14px;border:none;
+  width:44px;height:44px;border-radius:14px;border:none;
   background:rgba(212,115,90,.08);color:var(--rose-dark);
-  cursor:pointer;display:grid;place-items:center;margin-bottom:14px;flex-shrink:0;
+  cursor:pointer;display:grid;place-items:center;margin-bottom:10px;flex-shrink:0;
+  transition:background .2s;
 }
-.sidebar-menu{width:100%;display:flex;flex-direction:column;gap:6px;overflow:hidden;}
+.sidebar-toggle:hover{background:var(--rose-lighter);}
+/* Menu com scroll */
+.sidebar-menu{
+  width:100%;display:flex;flex-direction:column;gap:3px;
+  overflow-y:auto;overflow-x:hidden;flex:1;
+  scrollbar-width:none;
+}
+.sidebar-menu::-webkit-scrollbar{display:none;}
+.sidebar-label{
+  display:none;font-size:9px;font-weight:800;color:var(--rose-text);
+  text-transform:uppercase;letter-spacing:.6px;
+  padding:8px 14px 2px;opacity:.6;white-space:nowrap;
+}
+.sidebar-divider{display:none;height:1px;background:var(--rose-light);margin:5px 10px;}
+.sidebar.open .sidebar-label{display:block;}
+.sidebar.open .sidebar-divider{display:block;}
 .sidebar-item{
   width:100%;border:none;background:none;color:var(--rose-text);
-  padding:11px 10px;border-radius:12px;cursor:pointer;
-  display:flex;align-items:center;gap:12px;font-size:14px;
+  padding:10px 10px;border-radius:12px;cursor:pointer;
+  display:flex;align-items:center;gap:11px;font-size:13px;font-weight:500;
   justify-content:flex-start;transition:background .2s,color .2s;white-space:nowrap;
+  font-family:inherit;
 }
 .sidebar-item span{display:none;overflow:hidden;}
 .sidebar.open .sidebar-item span{display:inline;}
-.sidebar-item.active,.sidebar-item:hover{background:var(--rose-lighter);color:var(--rose-dark);}
-.sidebar-item i{font-size:18px;flex-shrink:0;}
-.sidebar-bottom{margin-top:auto;width:100%;}
+.sidebar-item.active{background:var(--rose-lighter);color:var(--rose-dark);font-weight:700;}
+.sidebar-item:hover{background:var(--rose-lighter);color:var(--rose-dark);}
+.sidebar-item i{font-size:18px;flex-shrink:0;min-width:20px;text-align:center;}
+/* Bottom: logout com avatar */
+.sidebar-bottom{width:100%;padding-top:8px;border-top:1px solid var(--rose-light);flex-shrink:0;}
 .btn-logout{
   width:100%;border:none;background:none;color:var(--rose-text);
-  padding:11px 10px;border-radius:12px;cursor:pointer;
-  display:flex;align-items:center;gap:12px;font-size:13px;
-  transition:background .2s,color .2s;white-space:nowrap;
+  padding:10px 10px;border-radius:12px;cursor:pointer;
+  display:flex;align-items:center;gap:11px;font-size:13px;
+  transition:background .2s,color .2s;white-space:nowrap;font-family:inherit;
 }
 .btn-logout:hover{background:#ffebee;color:#b33;}
-.btn-logout i{font-size:18px;flex-shrink:0;}
+.btn-logout i{font-size:18px;flex-shrink:0;min-width:20px;text-align:center;}
 .btn-logout span{display:none;}
 .sidebar.open .btn-logout span{display:inline;}
+.logout-avatar{
+  width:28px;height:28px;border-radius:50%;
+  background:linear-gradient(135deg,var(--rose),var(--rose-dark));
+  color:#fff;font-size:11px;font-weight:800;
+  display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;
+}
 
 /* ── HEADER ── */
 .header{
@@ -360,27 +422,13 @@ button{font-family:inherit;}
 <!-- ══════════════ LOGIN ══════════════ -->
 <div id="login-screen">
   <div class="login-card">
-    <div class="login-logo"><svg width="64" height="64" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
-  <defs>
-    <linearGradient id="rwbg" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#1a1a2e"/>
-      <stop offset="100%" stop-color="#16213e"/>
-    </linearGradient>
-    <linearGradient id="rwtooth" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#ffffff"/>
-      <stop offset="100%" stop-color="#d4e8ff"/>
-    </linearGradient>
-  </defs>
-  <rect width="200" height="200" rx="28" fill="url(#rwbg)"/>
-  <rect width="200" height="5" rx="4" fill="#4f9cf9"/>
-  <path d="M100 48 C82 48 70 58 70 73 C70 84 74 90 74 100 C74 116 80 133 88 133 C93 133 96 126 100 118 C104 126 107 133 112 133 C120 133 126 116 126 100 C126 90 130 84 130 73 C130 58 118 48 100 48 Z" fill="url(#rwtooth)"/>
-  <path d="M85 128 C82 140 78 150 76 160" fill="none" stroke="#ffffff" stroke-width="3.5" stroke-linecap="round" opacity="0.7"/>
-  <path d="M94 132 C92 144 91 154 90 164" fill="none" stroke="#ffffff" stroke-width="3.5" stroke-linecap="round" opacity="0.7"/>
-  <path d="M115 128 C118 140 122 150 124 160" fill="none" stroke="#ffffff" stroke-width="3.5" stroke-linecap="round" opacity="0.7"/>
-  <path d="M106 132 C108 144 109 154 110 164" fill="none" stroke="#ffffff" stroke-width="3.5" stroke-linecap="round" opacity="0.7"/>
-  <circle cx="90" cy="68" r="4" fill="#4f9cf9" opacity="0.8"/>
+    <div class="login-logo"><svg width="80" height="80" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+  <rect width="100" height="100" rx="22" fill="#d4735a"/>
+  <text x="50" y="62" text-anchor="middle" font-family="Arial Black,sans-serif" font-size="52" font-weight="900" fill="#fff">R</text>
+  <circle cx="72" cy="28" r="12" fill="#fff" opacity="0.2"/>
+  <circle cx="72" cy="28" r="6" fill="#fff" opacity="0.4"/>
 </svg></div>
-    <div class="login-title" id="login-title">RW<span style="color:#4f9cf9;">Dent</span></div>
+    <div class="login-title" id="login-title">RW<span style="color:var(--rose);">Dent</span></div>
     <div class="login-sub" id="login-sub">Gestão Odontológica Inteligente</div>
     <div style="font-size:12px;text-align:center;margin-bottom:14px;"><a href="index.html" style="color:var(--rose-text);text-decoration:none;">← Página inicial</a></div>
     <label for="login-email">E-mail</label>
@@ -398,52 +446,49 @@ button{font-family:inherit;}
 <div id="app">
   <!-- Sidebar desktop -->
   <div class="sidebar" id="sidebar">
-    <button class="sidebar-toggle" onclick="toggleSidebar()" aria-label="Menu">
-      <i class="ti ti-dots"></i>
+    <!-- Pin button -->
+    <button class="sidebar-pin" id="sidebar-pin" onclick="togglePin()" title="Fixar menu">
+      <i class="ti ti-pin" id="pin-icon"></i>
     </button>
+    <!-- Avatar + nome da clínica -->
+    <div class="sidebar-avatar" id="sidebar-avatar-initials">RW</div>
+    <div class="sidebar-avatar-name" id="sidebar-avatar-name">Minha Clínica</div>
     <nav class="sidebar-menu">
+      <div class="sidebar-label">Clínica</div>
       <button class="sidebar-item active" data-tab="home" onclick="switchTab('home')"><i class="ti ti-home"></i><span>Início</span></button>
       <button class="sidebar-item" data-tab="agendar" onclick="switchTab('agendar')"><i class="ti ti-calendar-plus"></i><span>Agendar</span></button>
       <button class="sidebar-item" data-tab="lista" onclick="switchTab('lista')"><i class="ti ti-list-check"></i><span>Agenda</span></button>
       <button class="sidebar-item" data-tab="calendario" onclick="switchTab('calendario')"><i class="ti ti-calendar-month"></i><span>Calendário</span></button>
+      <div class="sidebar-divider"></div>
+      <div class="sidebar-label">Pacientes</div>
       <button class="sidebar-item" data-tab="pacientes" onclick="switchTab('pacientes')"><i class="ti ti-users"></i><span>Pacientes</span></button>
       <button class="sidebar-item" data-tab="prontuarios" onclick="switchTab('prontuarios')"><i class="ti ti-file-text"></i><span>Prontuários</span></button>
       <button class="sidebar-item" data-tab="profissionais" onclick="switchTab('profissionais')"><i class="ti ti-briefcase"></i><span>Profissionais</span></button>
-      <div style="font-size:9px;font-weight:700;color:var(--rose-text);text-transform:uppercase;letter-spacing:.5px;padding:10px 16px 4px;opacity:.7;">Financeiro</div>
+      <div class="sidebar-divider"></div>
+      <div class="sidebar-label">Financeiro</div>
       <button class="sidebar-item" data-tab="financeiro" onclick="switchTab('financeiro')"><i class="ti ti-chart-bar"></i><span>Painel</span></button>
       <button class="sidebar-item" data-tab="procedimentos_fin" onclick="switchTab('procedimentos_fin')"><i class="ti ti-list-check"></i><span>Procedimentos</span></button>
       <button class="sidebar-item" data-tab="materiais_fin" onclick="switchTab('materiais_fin')"><i class="ti ti-box"></i><span>Materiais</span></button>
       <button class="sidebar-item" data-tab="estoque_fin" onclick="switchTab('estoque_fin')"><i class="ti ti-package"></i><span>Estoque</span></button>
       <button class="sidebar-item" data-tab="vendas_fin" onclick="switchTab('vendas_fin')"><i class="ti ti-receipt"></i><span>Vendas</span></button>
-      <div style="height:1px;background:var(--rose-light);margin:8px 12px;"></div>
-            <button class="sidebar-item" data-tab="configuracoes" onclick="switchTab('configuracoes')"><i class="ti ti-settings"></i><span>Configurações</span></button>
+      <div class="sidebar-divider"></div>
+      <button class="sidebar-item" data-tab="configuracoes" onclick="switchTab('configuracoes')"><i class="ti ti-settings"></i><span>Configurações</span></button>
     </nav>
     <div class="sidebar-bottom">
-      <button class="btn-logout" onclick="doLogout()"><i class="ti ti-logout"></i><span>Sair</span></button>
+      <button class="btn-logout" onclick="doLogout()">
+        <div class="logout-avatar" id="logout-avatar">RW</div>
+        <span id="logout-name">Sair</span>
+      </button>
     </div>
   </div>
 
   <!-- Header -->
   <div class="header">
-<svg width="42" height="42" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
-  <defs>
-    <linearGradient id="rwbg2" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#1a1a2e"/>
-      <stop offset="100%" stop-color="#16213e"/>
-    </linearGradient>
-    <linearGradient id="rwtooth2" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#ffffff"/>
-      <stop offset="100%" stop-color="#d4e8ff"/>
-    </linearGradient>
-  </defs>
-  <rect width="200" height="200" rx="28" fill="url(#rwbg2)"/>
-  <rect width="200" height="5" rx="4" fill="#4f9cf9"/>
-  <path d="M100 48 C82 48 70 58 70 73 C70 84 74 90 74 100 C74 116 80 133 88 133 C93 133 96 126 100 118 C104 126 107 133 112 133 C120 133 126 116 126 100 C126 90 130 84 130 73 C130 58 118 48 100 48 Z" fill="url(#rwtooth2)"/>
-  <path d="M85 128 C82 140 78 150 76 160" fill="none" stroke="#ffffff" stroke-width="3.5" stroke-linecap="round" opacity="0.7"/>
-  <path d="M94 132 C92 144 91 154 90 164" fill="none" stroke="#ffffff" stroke-width="3.5" stroke-linecap="round" opacity="0.7"/>
-  <path d="M115 128 C118 140 122 150 124 160" fill="none" stroke="#ffffff" stroke-width="3.5" stroke-linecap="round" opacity="0.7"/>
-  <path d="M106 132 C108 144 109 154 110 164" fill="none" stroke="#ffffff" stroke-width="3.5" stroke-linecap="round" opacity="0.7"/>
-  <circle cx="90" cy="68" r="4" fill="#4f9cf9" opacity="0.8"/>
+<svg width="36" height="36" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+  <rect width="100" height="100" rx="22" fill="var(--rose)"/>
+  <text x="50" y="58" text-anchor="middle" font-family="Arial Black,sans-serif" font-size="42" font-weight="900" fill="#fff">R</text>
+  <circle cx="72" cy="28" r="12" fill="#fff" opacity="0.25"/>
+  <circle cx="72" cy="28" r="6" fill="#fff" opacity="0.5"/>
 </svg>
     <div class="header-text">
       <h1 id="header-clinica">RWDent</h1>
@@ -459,19 +504,11 @@ button{font-family:inherit;}
       <div class="card" style="text-align:center;">
         <div style="max-width:680px;margin:0 auto;">
           <div style="display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">
-            <svg width="100" height="100" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
-              <defs>
-                <linearGradient id="rwbg3" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#1a1a2e"/><stop offset="100%" stop-color="#16213e"/></linearGradient>
-                <linearGradient id="rwtooth3" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#ffffff"/><stop offset="100%" stop-color="#d4e8ff"/></linearGradient>
-              </defs>
-              <rect width="200" height="200" rx="28" fill="url(#rwbg3)"/>
-              <rect width="200" height="5" rx="4" fill="#4f9cf9"/>
-              <path d="M100 48 C82 48 70 58 70 73 C70 84 74 90 74 100 C74 116 80 133 88 133 C93 133 96 126 100 118 C104 126 107 133 112 133 C120 133 126 116 126 100 C126 90 130 84 130 73 C130 58 118 48 100 48 Z" fill="url(#rwtooth3)"/>
-              <path d="M85 128 C82 140 78 150 76 160" fill="none" stroke="#ffffff" stroke-width="3.5" stroke-linecap="round" opacity="0.7"/>
-              <path d="M94 132 C92 144 91 154 90 164" fill="none" stroke="#ffffff" stroke-width="3.5" stroke-linecap="round" opacity="0.7"/>
-              <path d="M115 128 C118 140 122 150 124 160" fill="none" stroke="#ffffff" stroke-width="3.5" stroke-linecap="round" opacity="0.7"/>
-              <path d="M106 132 C108 144 109 154 110 164" fill="none" stroke="#ffffff" stroke-width="3.5" stroke-linecap="round" opacity="0.7"/>
-              <circle cx="90" cy="68" r="4" fill="#4f9cf9" opacity="0.8"/>
+            <svg width="100" height="100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+              <rect width="100" height="100" rx="22" fill="#d4735a"/>
+              <text x="50" y="62" text-anchor="middle" font-family="Arial Black,sans-serif" font-size="52" font-weight="900" fill="#fff">R</text>
+              <circle cx="72" cy="28" r="12" fill="#fff" opacity="0.2"/>
+              <circle cx="72" cy="28" r="6" fill="#fff" opacity="0.4"/>
             </svg>
           </div>
           <h2 style="font-size:20px;margin-bottom:10px;">Bem-vindo ao Sistema</h2>
@@ -1061,6 +1098,7 @@ async function checkClinicaApproval(){
   // Atualiza nome da clínica na interface
   const el = document.getElementById('header-clinica');
   if(el) el.textContent = cli.nome_cli || 'Minha Clínica';
+  setTimeout(updateSidebarAvatar, 100);
   return true;
 }
 
@@ -3843,14 +3881,7 @@ const DEFAULT_MATS_FIN = [
 ];
 
 // 6 combos promocionais padrão
-const DEFAULT_COMBOS_FIN = [
-  {id:201,nome:"Day Clareamento",desc:"Profilaxia + Clareamento de Consultório",itens:[{procId:2,qtd:1},{procId:10,qtd:1}],preco:399.00},
-  {id:202,nome:"Clareamento Duplo",desc:"Clareamento consultório + caseiro",itens:[{procId:10,qtd:1},{procId:9,qtd:1}],preco:429.00},
-  {id:203,nome:"Sorriso Renovado",desc:"Consulta + profilaxia + clareamento caseiro",itens:[{procId:1,qtd:1},{procId:9,qtd:1}],preco:319.00},
-  {id:204,nome:"Saúde em Dia",desc:"Consulta + profilaxia + aplicação de flúor",itens:[{procId:1,qtd:1},{procId:3,qtd:1}],preco:199.00},
-  {id:205,nome:"Sorriso Renovado Premium",desc:"Profilaxia + clareamento + recontornos",itens:[{procId:2,qtd:1},{procId:10,qtd:1},{procId:12,qtd:1}],preco:549.00},
-  {id:206,nome:"Harmonia do Sorriso",desc:"Clareamento + 4 facetas + recontornos",itens:[{procId:10,qtd:1},{procId:8,qtd:4},{procId:12,qtd:1}],preco:1790.00},
-];
+const DEFAULT_COMBOS_FIN = []; // Cada clínica cria seus próprios combos
 
 
 // ══════════════════════════════════════════════════════
@@ -3878,6 +3909,7 @@ async function salvarConfiguracoes(){
   clinicaData.telefone  = telefone;
   const el = document.getElementById('header-clinica');
   if(el) el.textContent = nome_cli;
+  updateSidebarAvatar();
   showToast('Configurações salvas!');
 }
 
