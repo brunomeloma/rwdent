@@ -3412,6 +3412,7 @@ async function saveInsumos(){
   showToast('Insumos salvos!');
 }
 function recalcularInsumos(silent){
+  // Só recalcula insumos e horaClin — NÃO sobrescreve precoFinal (pode ter sido editado manualmente)
   let atualizados=0;
   procs.forEach(p=>{
     const ins=procInsumos[p.id]||[];
@@ -3420,7 +3421,9 @@ function recalcularInsumos(silent){
       if(novo!==p.insumos){p.insumos=novo;atualizados++;}
     }
     p.horaClin=parseFloat(((p.tempo/60)*calcHora()).toFixed(2));
-    p.precoFinal=calcPrecoFinal(p);
+    // Só recalcula precoFinal se chamado manualmente (silent=false)
+    // No carregamento (silent=true), preserva o preço salvo
+    if(!silent) p.precoFinal=calcPrecoFinal(p);
   });
   if(!silent) showToast(atualizados>0?`${atualizados} procedimento(s) atualizados.`:'Custos já atualizados.');
 }
