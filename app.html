@@ -2843,67 +2843,57 @@ let estSelected    = new Set();
 // ── Carregar dados financeiros do Supabase ──
 async function loadFinanceiro(){
   if(!clinicaId) return;
+
+  const safe = (str, def) => { try{ const v=JSON.parse(str); return v; }catch(e){ return def; } };
+
   const { data } = await _sb.from('financeiro_config')
     .select('*').eq('clinica_id', clinicaId).single();
+
   if(data){
-    try{ procs       = JSON.parse(data.procs       || '[]'); }catch(e){ procs=[]; }
-    try{ mats        = JSON.parse(data.mats        || '[]'); }catch(e){ mats=[]; }
-    try{ estoque     = JSON.parse(data.estoque     || '{}'); }catch(e){ estoque={}; }
-    try{ const _pi = JSON.parse(data.proc_insumos|| '{}');
-      // Se banco tem insumos, usa; senão usa os padrões
-      if(Object.keys(_pi).length > 0){ procInsumos = _pi; }
-      else { procInsumos = {}; Object.entries(DEFAULT_PROC_INSUMOS_DATA).forEach(([k,v])=>{ procInsumos[k]=v; }); }
-    }catch(e){ procInsumos={}; Object.entries(DEFAULT_PROC_INSUMOS_DATA).forEach(([k,v])=>{ procInsumos[k]=v; }); }
-    try{ vendas      = JSON.parse(data.vendas      || '[]'); }catch(e){ vendas=[]; }
-    try{ cfg         = JSON.parse(data.cfg         || '{}'); }catch(e){}
-    try{ taxasCfg    = JSON.parse(data.taxas_cfg   || '{}'); }catch(e){}
-    try{ combos      = JSON.parse(data.combos      || '[]'); }catch(e){ combos=[]; }
-    try{ descCfg     = JSON.parse(data.desc_cfg    || '{}'); }catch(e){}
-    // Se veio vazio do banco, carrega os padrões
-    if(!procs.length){
-      procs  = DEFAULT_PROCS_FIN.map((p,i)=>({...p,id:p.id||i+1}));
-      nextProcId = 103;
-      // Carrega insumos padrão
-      if(!Object.keys(procInsumos).length){
-        Object.entries(DEFAULT_PROC_INSUMOS_DATA).forEach(([procId, items])=>{
-          procInsumos[procId] = items;
-        });
-      }
-    }
-    if(!mats.length){
-      mats   = DEFAULT_MATS_FIN.map((m,i)=>({...m,id:m.id||i+1}));
-      nextMatId = 91;
-    }
-    if(!combos.length){
-      combos = DEFAULT_COMBOS_FIN.map(c=>({...c}));
-      nextComboId = 207;
-    }
-    // Salva se veio vazio (garante que próxima vez já tem dados)
-    if(!data.procs || data.procs==='[]') await saveFinanceiro();
-    // Reconstrói nextIds
-    nextProcId  = procs.length  ? Math.max(...procs.map(p=>p.id||0))   + 1 : 103;
-    nextMatId   = mats.length   ? Math.max(...mats.map(m=>m.id||0))    + 1 : 91;
-    nextVendaId = vendas.length ? Math.max(...vendas.map(v=>v.id||0))  + 1 : 1;
-    nextComboId = combos.length ? Math.max(...combos.map(c=>c.id||200))+ 1 : 207;
-  } else {
-    // Primeira vez — sem registro no banco
-    procs   = DEFAULT_PROCS_FIN.map((p,i)=>({...p,id:p.id||i+1}));
-    mats    = DEFAULT_MATS_FIN.map((m,i)=>({...m,id:m.id||i+1}));
-    combos  = DEFAULT_COMBOS_FIN.map(c=>({...c}));
-    // Carrega insumos pré-configurados
-    procInsumos = {};
-    Object.entries(DEFAULT_PROC_INSUMOS_DATA).forEach(([procId, items])=>{
-      procInsumos[procId] = items;
-    });
-    nextProcId  = 103;
-    nextMatId   = 91;
-    nextComboId = 207;
-    await saveFinanceiro();
+    procs       = safe(data.procs,       []);
+    mats        = safe(data.mats,        []);
+    estoque     = safe(data.estoque,     {});
+    procInsumos = safe(data.proc_insumos,{});
+    vendas      = safe(data.vendas,      []);
+    combos      = safe(data.combos,      []);
+    cfg         = safe(data.cfg,         cfg);
+    taxasCfg    = safe(data.taxas_cfg,   taxasCfg);
+    descCfg     = safe(data.desc_cfg,    descCfg);
   }
+
+  // Sempre garante os padrões se vazio
+  let precisaSalvar = false;
+  if(!procs.length){
+    procs = DEFAULT_PROCS_FIN.map((p,i)=>({...p,id:p.id||i+1}));
+    precisaSalvar = true;
+  }
+  if(!mats.length){
+    mats = DEFAULT_MATS_FIN.map((m,i)=>({...m,id:m.id||i+1}));
+    precisaSalvar = true;
+  }
+  if(!combos.length){
+    combos = DEFAULT_COMBOS_FIN.map(c=>({...c}));
+    precisaSalvar = true;
+  }
+  // Insumos: mescla padrões com o que foi salvo
+  const totalSalvos = Object.keys(procInsumos).length;
+  Object.entries(DEFAULT_PROC_INSUMOS_DATA).forEach(([k,v])=>{
+    if(!procInsumos[k] || !procInsumos[k].length){
+      procInsumos[k] = JSON.parse(JSON.stringify(v));
+      precisaSalvar = true;
+    }
+  });
+
+  // Reconstrói nextIds
+  nextProcId  = procs.length  ? Math.max(...procs.map(p=>p.id||0))   + 1 : 103;
+  nextMatId   = mats.length   ? Math.max(...mats.map(m=>m.id||0))    + 1 : 91;
+  nextVendaId = vendas.length ? Math.max(...vendas.map(v=>v.id||0))  + 1 : 1;
+  nextComboId = combos.length ? Math.max(...combos.map(c=>c.id||200))+ 1 : 207;
+
   recalcularInsumos(true);
-  if(Object.keys(procInsumos).length === 0){
-    Object.entries(DEFAULT_PROC_INSUMOS_DATA).forEach(([k,v])=>{ procInsumos[k]=v; });
-  }
+
+  // Salva só se precisou preencher com padrões
+  if(precisaSalvar) await saveFinanceiro();
 }
 
 async function saveFinanceiro(){
