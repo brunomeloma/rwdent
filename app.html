@@ -1177,6 +1177,51 @@ function initApp(){
 // ══════════════════════════════════════════════════════
 // NAVIGATION
 // ══════════════════════════════════════════════════════
+
+let sidebarPinned = (typeof localStorage !== 'undefined' && localStorage.getItem('sidebarPinned')==='true');
+
+function toggleSidebarPin(){
+  const s = document.getElementById('sidebar');
+  if(!s) return;
+  sidebarPinned = !sidebarPinned;
+  if(typeof localStorage !== 'undefined') localStorage.setItem('sidebarPinned', sidebarPinned);
+  s.classList.toggle('pinned', sidebarPinned);
+  s.classList.toggle('open', sidebarPinned);
+  sidebarOpen = sidebarPinned;
+  const icon = document.getElementById('pin-icon');
+  if(icon) icon.className = sidebarPinned ? 'ti ti-pin-filled' : 'ti ti-pin';
+}
+
+function togglePin(){ toggleSidebarPin(); }
+
+function updateSidebarAvatar(){
+  const nome = (clinicaData && clinicaData.nome_cli) ? clinicaData.nome_cli : 'RW';
+  const parts = nome.split(' ').filter(Boolean);
+  const ini = (parts.length >= 2 ? parts[0][0]+parts[1][0] : parts[0].slice(0,2)).toUpperCase();
+  const avEl = document.getElementById('sidebar-avatar-initials');
+  const nameEl = document.getElementById('sidebar-avatar-name');
+  const logoutAv = document.getElementById('logout-avatar');
+  const logoutName = document.getElementById('logout-name');
+  if(avEl) avEl.textContent = ini;
+  if(nameEl) nameEl.textContent = nome;
+  if(logoutAv) logoutAv.textContent = ini;
+  if(logoutName) logoutName.textContent = 'Sair — ' + nome;
+}
+
+// Aplica pin salvo ao carregar
+(function initSidebarState(){
+  try {
+    const s = document.getElementById('sidebar');
+    if(!s) return;
+    if(sidebarPinned){
+      s.classList.add('open','pinned');
+      sidebarOpen = true;
+      const icon = document.getElementById('pin-icon');
+      if(icon) icon.className = 'ti ti-pin-filled';
+    }
+  } catch(e){}
+})();
+
 function toggleSidebar(){
   sidebarOpen=!sidebarOpen;
   document.getElementById('sidebar').classList.toggle('open',sidebarOpen);
