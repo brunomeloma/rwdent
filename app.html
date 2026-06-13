@@ -3405,7 +3405,7 @@ function renderVendas(){
   tb.innerHTML = list.map(v=>{
     const si = STATUS_VENDA[v.status]||STATUS_VENDA.orcamento;
     const data = new Date(v.data).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'2-digit'})+' '+new Date(v.data).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
-    const itensRes = (v.itens||[]).map(i=>(i.qtd>1?i.qtd+'× ':'')+escapeHtml(i.nome||'')).join(', ');
+    const itensRes = (v.itens||[]).map(i=>(i.qtd>1?i.qtd+'× ':'')+escapeHtml(i.nome||'')+(i.dente?` (Dente ${i.dente})`:'')+(i.descDente?` — ${escapeHtml(i.descDente)}`:'')).join(', ');
     let acoes = `<button class="btn-secondary" style="padding:4px 8px;font-size:11px;" onclick="toggleVendaMat(${v.id})" title="Ver materiais"><i class="ti ti-box"></i></button>`;
     if(v.status==='orcamento') acoes += `<button class="btn-secondary" style="padding:4px 8px;font-size:11px;color:#2e7d32;" onclick="finalizarVendaSalva(${v.id})" title="Finalizar venda"><i class="ti ti-circle-check"></i></button>`;
     if(v.status==='finalizada') acoes += `<button class="btn-secondary" style="padding:4px 8px;font-size:11px;color:#856404;" onclick="cancelarVenda(${v.id})" title="Cancelar venda"><i class="ti ti-arrow-back-up"></i></button>`;
@@ -3574,11 +3574,11 @@ function addOrcPac(){
   if(raw.startsWith('combo:')){
     const cid = Number(raw.split(':')[1]);
     const c = combos.find(x=>x.id===cid); if(!c) return;
-    orcamento.push({tipo:'combo',comboId:cid,qtd,nome:'🎁 '+c.nome,precoUnit:c.preco,custo:combosCusto(c)});
+    orcamento.push({tipo:'combo',comboId:cid,qtd,nome:'🎁 '+c.nome,precoUnit:c.preco,custo:combosCusto(c),dente:'',descDente:''});
   } else {
     const procId = Number(raw.startsWith('proc:')?raw.split(':')[1]:raw);
     const p = procs.find(x=>x.id===procId); if(!p) return;
-    orcamento.push({tipo:'proc',procId,qtd,nome:p.nome,precoUnit:p.precoFinal,custo:custoProc(p)});
+    orcamento.push({tipo:'proc',procId,qtd,nome:p.nome,precoUnit:p.precoFinal,custo:custoProc(p),dente:'',descDente:''});
   }
   renderOrcPac();
 }
@@ -3595,11 +3595,22 @@ function renderOrcPac(){
     return;
   }
   c.innerHTML = orcamento.map((it,i)=>`
-    <div class="sim-orcamento-item">
-      <span style="flex:1;font-size:13px;">${escapeHtml(it.nome)}</span>
-      <input type="number" min="1" value="${it.qtd}" onchange="orcamento[${i}].qtd=Math.max(1,Number(this.value));renderOrcPac();" style="width:46px;padding:4px;border:1px solid var(--rose-light);border-radius:6px;text-align:center;font-size:12px;"/>
-      <strong style="color:var(--rose-dark);min-width:80px;text-align:right;">${fmtBRL(it.precoUnit*it.qtd)}</strong>
-      <button class="btn-danger" style="padding:3px 7px;" onclick="orcamento.splice(${i},1);renderOrcPac();"><i class="ti ti-x"></i></button>
+    <div style="border:1px solid var(--rose-light);border-radius:10px;padding:10px;margin-bottom:8px;background:#fff;">
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px;">
+        <span style="flex:1;font-size:13px;font-weight:600;">${escapeHtml(it.nome)}</span>
+        <input type="number" min="1" value="${it.qtd}" onchange="orcamento[${i}].qtd=Math.max(1,Number(this.value));renderOrcPac();" style="width:46px;padding:4px;border:1px solid var(--rose-light);border-radius:6px;text-align:center;font-size:12px;" title="Quantidade"/>
+        <strong style="color:var(--rose-dark);min-width:72px;text-align:right;">${fmtBRL(it.precoUnit*it.qtd)}</strong>
+        <button class="btn-danger" style="padding:3px 7px;" onclick="orcamento.splice(${i},1);renderOrcPac();"><i class="ti ti-x"></i></button>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <div style="flex:0 0 auto;">
+          <select onchange="orcamento[${i}].dente=this.value" style="padding:4px 8px;border:1px solid var(--rose-light);border-radius:8px;font-size:12px;background:var(--rose-lighter);color:var(--rose-dark);">
+            <option value="">Dente</option>
+            ${[18,17,16,15,14,13,12,11,21,22,23,24,25,26,27,28,48,47,46,45,44,43,42,41,31,32,33,34,35,36,37,38,55,54,53,52,51,61,62,63,64,65,85,84,83,82,81,71,72,73,74,75].map(d=>`<option value="${d}"${it.dente==d?' selected':''}>${d}</option>`).join('')}
+          </select>
+        </div>
+        <input type="text" value="${escapeHtml(it.descDente||'')}" placeholder="O que foi feito neste dente..." onchange="orcamento[${i}].descDente=this.value" style="flex:1;min-width:140px;padding:4px 8px;border:1px solid var(--rose-light);border-radius:8px;font-size:12px;background:var(--rose-lighter);"/>
+      </div>
     </div>
   `).join('');
 
@@ -3652,7 +3663,7 @@ async function salvarOrcPac(pacId){
   const venda = {
     id: nextVendaId++, status:'orcamento',
     pacienteId: pacId, pacienteNome: pac?.nome||'',
-    itens: orcamento.map(it=>({procId:it.procId||null,comboId:it.comboId||null,qtd:it.qtd,nome:it.nome})),
+    itens: orcamento.map(it=>({procId:it.procId||null,comboId:it.comboId||null,qtd:it.qtd,nome:it.nome,dente:it.dente||'',descDente:it.descDente||''})),
     subtotal: parseFloat(subtotal.toFixed(2)),
     desconto, total,
     descCfg: {...descCfg},
@@ -3679,7 +3690,7 @@ async function finalizarVendaPac(pacId){
   const venda = {
     id: nextVendaId++, status:'finalizada',
     pacienteId: pacId, pacienteNome: pac?.nome||'',
-    itens: orcamento.map(it=>({procId:it.procId||null,comboId:it.comboId||null,qtd:it.qtd,nome:it.nome})),
+    itens: orcamento.map(it=>({procId:it.procId||null,comboId:it.comboId||null,qtd:it.qtd,nome:it.nome,dente:it.dente||'',descDente:it.descDente||''})),
     subtotal: parseFloat(subtotal.toFixed(2)),
     desconto, total, consumo: aplicado,
     data: new Date().toISOString(),
