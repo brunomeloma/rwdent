@@ -27,7 +27,7 @@
 :root{
   --rose:#d4735a;--rose-light:#f0cfc4;--rose-lighter:#fdf0eb;
   --rose-mid:#e0a090;--rose-dark:#7a3020;--rose-text:#a05040;
-  --sidebar-w:72px;--header-h:64px;
+  --sidebar-w:68px;--header-h:64px;
 }
 body{font-family:'Segoe UI',Arial,sans-serif;background:#fdf6f3;color:#3a2020;min-height:100vh;overscroll-behavior:none;}
 
@@ -61,36 +61,102 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#fdf6f3;color:#3a2020;mi
   position:fixed;left:0;top:0;bottom:0;width:var(--sidebar-w);
   background:#fff;box-shadow:2px 0 18px rgba(0,0,0,.08);
   display:flex;flex-direction:column;align-items:center;
-  padding:12px 8px;transition:width .25s ease;z-index:200;
+  padding:12px 6px 12px;transition:width .25s cubic-bezier(.4,0,.2,1);z-index:200;
+  overflow:hidden;
 }
-.sidebar.open{width:220px;}
+.sidebar.open{width:230px;}
+/* Hover expande no desktop */
+@media(min-width:769px){
+  .sidebar:not(.pinned):hover{width:230px;}
+  .sidebar:not(.pinned):hover .sidebar-item span,
+  .sidebar:not(.pinned):hover .btn-logout span,
+  .sidebar:not(.pinned):hover .sidebar-label,
+  .sidebar:not(.pinned):hover .sidebar-divider,
+  .sidebar:not(.pinned):hover .sidebar-avatar-name{ display:flex!important; }
+}
+/* Avatar no topo */
+.sidebar-avatar{
+  width:44px;height:44px;border-radius:50%;
+  background:linear-gradient(135deg,var(--rose),var(--rose-dark));
+  color:#fff;font-size:16px;font-weight:800;
+  display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;margin-bottom:4px;cursor:default;
+  box-shadow:0 4px 12px rgba(212,115,90,.35);
+}
+.sidebar-avatar-name{
+  display:none;font-size:12px;font-weight:700;color:var(--rose-dark);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  max-width:180px;margin-bottom:10px;text-align:center;
+}
+.sidebar.open .sidebar-avatar-name{display:flex;}
+/* Pin button */
+.sidebar-pin{
+  width:28px;height:28px;border-radius:8px;border:1.5px solid var(--rose-light);
+  background:none;color:var(--rose-text);cursor:pointer;
+  display:none;align-items:center;justify-content:center;
+  position:absolute;top:12px;right:8px;transition:all .2s;
+}
+.sidebar.open .sidebar-pin{display:flex;}
+.sidebar.pinned .sidebar-pin{background:var(--rose-lighter);color:var(--rose-dark);border-color:var(--rose);}
+.sidebar-pin i{font-size:14px;}
+/* Toggle no topo (ícone hamburger) */
 .sidebar-toggle{
-  width:46px;height:46px;border-radius:14px;border:none;
+  width:44px;height:44px;border-radius:14px;border:none;
   background:rgba(212,115,90,.08);color:var(--rose-dark);
-  cursor:pointer;display:grid;place-items:center;margin-bottom:14px;flex-shrink:0;
+  cursor:pointer;display:grid;place-items:center;margin-bottom:10px;flex-shrink:0;
+  transition:background .2s;
 }
-.sidebar-menu{width:100%;display:flex;flex-direction:column;gap:6px;overflow:hidden;}
+.sidebar-toggle:hover{background:var(--rose-lighter);}
+/* Menu com scroll */
+.sidebar-menu{
+  width:100%;display:flex;flex-direction:column;gap:3px;
+  overflow-y:auto;overflow-x:hidden;flex:1;
+  scrollbar-width:thin;
+  scrollbar-color:var(--rose-light) transparent;
+}
+.sidebar-menu::-webkit-scrollbar{width:4px;}
+.sidebar-menu::-webkit-scrollbar-track{background:transparent;}
+.sidebar-menu::-webkit-scrollbar-thumb{background:var(--rose-light);border-radius:4px;}
+.sidebar-menu::-webkit-scrollbar-thumb:hover{background:var(--rose-mid);}
+.sidebar-label{
+  display:none;font-size:9px;font-weight:800;color:var(--rose-text);
+  text-transform:uppercase;letter-spacing:.6px;
+  padding:8px 14px 2px;opacity:.6;white-space:nowrap;
+}
+.sidebar-divider{display:none;height:1px;background:var(--rose-light);margin:5px 10px;}
+.sidebar.open .sidebar-label{display:block;}
+.sidebar.open .sidebar-divider{display:block;}
 .sidebar-item{
   width:100%;border:none;background:none;color:var(--rose-text);
-  padding:11px 10px;border-radius:12px;cursor:pointer;
-  display:flex;align-items:center;gap:12px;font-size:14px;
+  padding:10px 10px;border-radius:12px;cursor:pointer;
+  display:flex;align-items:center;gap:11px;font-size:13px;font-weight:500;
   justify-content:flex-start;transition:background .2s,color .2s;white-space:nowrap;
+  font-family:inherit;
 }
 .sidebar-item span{display:none;overflow:hidden;}
 .sidebar.open .sidebar-item span{display:inline;}
-.sidebar-item.active,.sidebar-item:hover{background:var(--rose-lighter);color:var(--rose-dark);}
-.sidebar-item i{font-size:18px;flex-shrink:0;}
-.sidebar-bottom{margin-top:auto;width:100%;}
+.sidebar-item.active{background:var(--rose-lighter);color:var(--rose-dark);font-weight:700;}
+.sidebar-item:hover{background:var(--rose-lighter);color:var(--rose-dark);}
+.sidebar-item i{font-size:18px;flex-shrink:0;min-width:20px;text-align:center;}
+/* Bottom: logout com avatar */
+.sidebar-bottom{width:100%;padding-top:8px;border-top:1px solid var(--rose-light);flex-shrink:0;}
 .btn-logout{
   width:100%;border:none;background:none;color:var(--rose-text);
-  padding:11px 10px;border-radius:12px;cursor:pointer;
-  display:flex;align-items:center;gap:12px;font-size:13px;
-  transition:background .2s,color .2s;white-space:nowrap;
+  padding:10px 10px;border-radius:12px;cursor:pointer;
+  display:flex;align-items:center;gap:11px;font-size:13px;
+  transition:background .2s,color .2s;white-space:nowrap;font-family:inherit;
 }
 .btn-logout:hover{background:#ffebee;color:#b33;}
-.btn-logout i{font-size:18px;flex-shrink:0;}
+.btn-logout i{font-size:18px;flex-shrink:0;min-width:20px;text-align:center;}
 .btn-logout span{display:none;}
 .sidebar.open .btn-logout span{display:inline;}
+.logout-avatar{
+  width:28px;height:28px;border-radius:50%;
+  background:linear-gradient(135deg,var(--rose),var(--rose-dark));
+  color:#fff;font-size:11px;font-weight:800;
+  display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;
+}
 
 /* ── HEADER ── */
 .header{
@@ -360,27 +426,13 @@ button{font-family:inherit;}
 <!-- ══════════════ LOGIN ══════════════ -->
 <div id="login-screen">
   <div class="login-card">
-    <div class="login-logo"><svg width="64" height="64" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
-  <defs>
-    <linearGradient id="rwbg" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#1a1a2e"/>
-      <stop offset="100%" stop-color="#16213e"/>
-    </linearGradient>
-    <linearGradient id="rwtooth" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#ffffff"/>
-      <stop offset="100%" stop-color="#d4e8ff"/>
-    </linearGradient>
-  </defs>
-  <rect width="200" height="200" rx="28" fill="url(#rwbg)"/>
-  <rect width="200" height="5" rx="4" fill="#4f9cf9"/>
-  <path d="M100 48 C82 48 70 58 70 73 C70 84 74 90 74 100 C74 116 80 133 88 133 C93 133 96 126 100 118 C104 126 107 133 112 133 C120 133 126 116 126 100 C126 90 130 84 130 73 C130 58 118 48 100 48 Z" fill="url(#rwtooth)"/>
-  <path d="M85 128 C82 140 78 150 76 160" fill="none" stroke="#ffffff" stroke-width="3.5" stroke-linecap="round" opacity="0.7"/>
-  <path d="M94 132 C92 144 91 154 90 164" fill="none" stroke="#ffffff" stroke-width="3.5" stroke-linecap="round" opacity="0.7"/>
-  <path d="M115 128 C118 140 122 150 124 160" fill="none" stroke="#ffffff" stroke-width="3.5" stroke-linecap="round" opacity="0.7"/>
-  <path d="M106 132 C108 144 109 154 110 164" fill="none" stroke="#ffffff" stroke-width="3.5" stroke-linecap="round" opacity="0.7"/>
-  <circle cx="90" cy="68" r="4" fill="#4f9cf9" opacity="0.8"/>
+    <div class="login-logo"><svg width="80" height="80" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+  <rect width="100" height="100" rx="22" fill="#d4735a"/>
+  <text x="50" y="62" text-anchor="middle" font-family="Arial Black,sans-serif" font-size="52" font-weight="900" fill="#fff">R</text>
+  <circle cx="72" cy="28" r="12" fill="#fff" opacity="0.2"/>
+  <circle cx="72" cy="28" r="6" fill="#fff" opacity="0.4"/>
 </svg></div>
-    <div class="login-title" id="login-title">RW<span style="color:#4f9cf9;">Dent</span></div>
+    <div class="login-title" id="login-title">RW<span style="color:var(--rose);">Dent</span></div>
     <div class="login-sub" id="login-sub">Gestão Odontológica Inteligente</div>
     <div style="font-size:12px;text-align:center;margin-bottom:14px;"><a href="index.html" style="color:var(--rose-text);text-decoration:none;">← Página inicial</a></div>
     <label for="login-email">E-mail</label>
@@ -398,52 +450,49 @@ button{font-family:inherit;}
 <div id="app">
   <!-- Sidebar desktop -->
   <div class="sidebar" id="sidebar">
-    <button class="sidebar-toggle" onclick="toggleSidebar()" aria-label="Menu">
-      <i class="ti ti-dots"></i>
+    <!-- Pin button -->
+    <button class="sidebar-pin" id="sidebar-pin" onclick="togglePin()" title="Fixar menu">
+      <i class="ti ti-pin" id="pin-icon"></i>
     </button>
+    <!-- Avatar + nome da clínica -->
+    <div class="sidebar-avatar" id="sidebar-avatar-initials">RW</div>
+    <div class="sidebar-avatar-name" id="sidebar-avatar-name">Minha Clínica</div>
     <nav class="sidebar-menu">
+      <div class="sidebar-label">Clínica</div>
       <button class="sidebar-item active" data-tab="home" onclick="switchTab('home')"><i class="ti ti-home"></i><span>Início</span></button>
       <button class="sidebar-item" data-tab="agendar" onclick="switchTab('agendar')"><i class="ti ti-calendar-plus"></i><span>Agendar</span></button>
       <button class="sidebar-item" data-tab="lista" onclick="switchTab('lista')"><i class="ti ti-list-check"></i><span>Agenda</span></button>
       <button class="sidebar-item" data-tab="calendario" onclick="switchTab('calendario')"><i class="ti ti-calendar-month"></i><span>Calendário</span></button>
+      <div class="sidebar-divider"></div>
+      <div class="sidebar-label">Pacientes</div>
       <button class="sidebar-item" data-tab="pacientes" onclick="switchTab('pacientes')"><i class="ti ti-users"></i><span>Pacientes</span></button>
       <button class="sidebar-item" data-tab="prontuarios" onclick="switchTab('prontuarios')"><i class="ti ti-file-text"></i><span>Prontuários</span></button>
       <button class="sidebar-item" data-tab="profissionais" onclick="switchTab('profissionais')"><i class="ti ti-briefcase"></i><span>Profissionais</span></button>
-      <div style="font-size:9px;font-weight:700;color:var(--rose-text);text-transform:uppercase;letter-spacing:.5px;padding:10px 16px 4px;opacity:.7;">Financeiro</div>
+      <div class="sidebar-divider"></div>
+      <div class="sidebar-label">Financeiro</div>
       <button class="sidebar-item" data-tab="financeiro" onclick="switchTab('financeiro')"><i class="ti ti-chart-bar"></i><span>Painel</span></button>
       <button class="sidebar-item" data-tab="procedimentos_fin" onclick="switchTab('procedimentos_fin')"><i class="ti ti-list-check"></i><span>Procedimentos</span></button>
       <button class="sidebar-item" data-tab="materiais_fin" onclick="switchTab('materiais_fin')"><i class="ti ti-box"></i><span>Materiais</span></button>
       <button class="sidebar-item" data-tab="estoque_fin" onclick="switchTab('estoque_fin')"><i class="ti ti-package"></i><span>Estoque</span></button>
       <button class="sidebar-item" data-tab="vendas_fin" onclick="switchTab('vendas_fin')"><i class="ti ti-receipt"></i><span>Vendas</span></button>
-      <div style="height:1px;background:var(--rose-light);margin:8px 12px;"></div>
-            <button class="sidebar-item" data-tab="configuracoes" onclick="switchTab('configuracoes')"><i class="ti ti-settings"></i><span>Configurações</span></button>
+      <div class="sidebar-divider"></div>
+      <button class="sidebar-item" data-tab="configuracoes" onclick="switchTab('configuracoes')"><i class="ti ti-settings"></i><span>Configurações</span></button>
     </nav>
     <div class="sidebar-bottom">
-      <button class="btn-logout" onclick="doLogout()"><i class="ti ti-logout"></i><span>Sair</span></button>
+      <button class="btn-logout" onclick="doLogout()">
+        <div class="logout-avatar" id="logout-avatar">RW</div>
+        <span id="logout-name">Sair</span>
+      </button>
     </div>
   </div>
 
   <!-- Header -->
   <div class="header">
-<svg width="42" height="42" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
-  <defs>
-    <linearGradient id="rwbg2" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#1a1a2e"/>
-      <stop offset="100%" stop-color="#16213e"/>
-    </linearGradient>
-    <linearGradient id="rwtooth2" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#ffffff"/>
-      <stop offset="100%" stop-color="#d4e8ff"/>
-    </linearGradient>
-  </defs>
-  <rect width="200" height="200" rx="28" fill="url(#rwbg2)"/>
-  <rect width="200" height="5" rx="4" fill="#4f9cf9"/>
-  <path d="M100 48 C82 48 70 58 70 73 C70 84 74 90 74 100 C74 116 80 133 88 133 C93 133 96 126 100 118 C104 126 107 133 112 133 C120 133 126 116 126 100 C126 90 130 84 130 73 C130 58 118 48 100 48 Z" fill="url(#rwtooth2)"/>
-  <path d="M85 128 C82 140 78 150 76 160" fill="none" stroke="#ffffff" stroke-width="3.5" stroke-linecap="round" opacity="0.7"/>
-  <path d="M94 132 C92 144 91 154 90 164" fill="none" stroke="#ffffff" stroke-width="3.5" stroke-linecap="round" opacity="0.7"/>
-  <path d="M115 128 C118 140 122 150 124 160" fill="none" stroke="#ffffff" stroke-width="3.5" stroke-linecap="round" opacity="0.7"/>
-  <path d="M106 132 C108 144 109 154 110 164" fill="none" stroke="#ffffff" stroke-width="3.5" stroke-linecap="round" opacity="0.7"/>
-  <circle cx="90" cy="68" r="4" fill="#4f9cf9" opacity="0.8"/>
+<svg width="36" height="36" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+  <rect width="100" height="100" rx="22" fill="var(--rose)"/>
+  <text x="50" y="58" text-anchor="middle" font-family="Arial Black,sans-serif" font-size="42" font-weight="900" fill="#fff">R</text>
+  <circle cx="72" cy="28" r="12" fill="#fff" opacity="0.25"/>
+  <circle cx="72" cy="28" r="6" fill="#fff" opacity="0.5"/>
 </svg>
     <div class="header-text">
       <h1 id="header-clinica">RWDent</h1>
@@ -459,19 +508,11 @@ button{font-family:inherit;}
       <div class="card" style="text-align:center;">
         <div style="max-width:680px;margin:0 auto;">
           <div style="display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">
-            <svg width="100" height="100" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
-              <defs>
-                <linearGradient id="rwbg3" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#1a1a2e"/><stop offset="100%" stop-color="#16213e"/></linearGradient>
-                <linearGradient id="rwtooth3" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#ffffff"/><stop offset="100%" stop-color="#d4e8ff"/></linearGradient>
-              </defs>
-              <rect width="200" height="200" rx="28" fill="url(#rwbg3)"/>
-              <rect width="200" height="5" rx="4" fill="#4f9cf9"/>
-              <path d="M100 48 C82 48 70 58 70 73 C70 84 74 90 74 100 C74 116 80 133 88 133 C93 133 96 126 100 118 C104 126 107 133 112 133 C120 133 126 116 126 100 C126 90 130 84 130 73 C130 58 118 48 100 48 Z" fill="url(#rwtooth3)"/>
-              <path d="M85 128 C82 140 78 150 76 160" fill="none" stroke="#ffffff" stroke-width="3.5" stroke-linecap="round" opacity="0.7"/>
-              <path d="M94 132 C92 144 91 154 90 164" fill="none" stroke="#ffffff" stroke-width="3.5" stroke-linecap="round" opacity="0.7"/>
-              <path d="M115 128 C118 140 122 150 124 160" fill="none" stroke="#ffffff" stroke-width="3.5" stroke-linecap="round" opacity="0.7"/>
-              <path d="M106 132 C108 144 109 154 110 164" fill="none" stroke="#ffffff" stroke-width="3.5" stroke-linecap="round" opacity="0.7"/>
-              <circle cx="90" cy="68" r="4" fill="#4f9cf9" opacity="0.8"/>
+            <svg width="100" height="100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+              <rect width="100" height="100" rx="22" fill="#d4735a"/>
+              <text x="50" y="62" text-anchor="middle" font-family="Arial Black,sans-serif" font-size="52" font-weight="900" fill="#fff">R</text>
+              <circle cx="72" cy="28" r="12" fill="#fff" opacity="0.2"/>
+              <circle cx="72" cy="28" r="6" fill="#fff" opacity="0.4"/>
             </svg>
           </div>
           <h2 style="font-size:20px;margin-bottom:10px;">Bem-vindo ao Sistema</h2>
@@ -850,6 +891,12 @@ button{font-family:inherit;}
             <option value="warn">Atenção</option>
             <option value="ok">OK</option>
           </select>
+          <select id="est-ordem" onchange="filterEstoque()">
+            <option value="az">A→Z</option>
+            <option value="za">Z→A</option>
+            <option value="cat">Categoria</option>
+            <option value="critico">Críticos primeiro</option>
+          </select>
         </div>
         <div style="overflow-x:auto;">
           <table style="width:100%;border-collapse:collapse;font-size:13px;">
@@ -919,6 +966,28 @@ button{font-family:inherit;}
           <div style="display:flex;justify-content:flex-end;margin-top:16px;">
             <button class="btn-primary" onclick="salvarConfiguracoes()"><i class="ti ti-check"></i> Salvar alterações</button>
           </div>
+          <hr style="border-color:var(--rose-light);margin:24px 0;"/>
+          <h2 style="font-size:13px;font-weight:700;color:var(--rose-dark);margin-bottom:14px;display:flex;align-items:center;gap:8px;text-transform:uppercase;letter-spacing:.5px;"><i class="ti ti-credit-card"></i> Taxas da Maquininha</h2>
+          <p style="font-size:12px;color:var(--rose-text);margin-bottom:14px;">Configure as taxas para mostrar o valor líquido nos orçamentos e vendas.</p>
+          <div class="form-grid">
+            <div class="form-group"><label>Taxa Débito (%)</label><input type="number" id="cfg-taxa-debito" step="0.01" min="0" max="20" placeholder="1.5"/></div>
+            <div class="form-group"><label>Taxa Crédito 1x (%)</label><input type="number" id="cfg-taxa-cred1" step="0.01" min="0" max="20" placeholder="2.49"/></div>
+            <div class="form-group"><label>Taxa Crédito 2x (%)</label><input type="number" id="cfg-taxa-cred2" step="0.01" min="0" max="20" placeholder="5.10"/></div>
+            <div class="form-group"><label>Taxa Crédito 3x (%)</label><input type="number" id="cfg-taxa-cred3" step="0.01" min="0" max="20" placeholder="6.12"/></div>
+            <div class="form-group"><label>Taxa Crédito 4x (%)</label><input type="number" id="cfg-taxa-cred4" step="0.01" min="0" max="20" placeholder="7.15"/></div>
+            <div class="form-group"><label>Taxa Crédito 5x (%)</label><input type="number" id="cfg-taxa-cred5" step="0.01" min="0" max="20" placeholder="8.19"/></div>
+            <div class="form-group"><label>Taxa Crédito 6x (%)</label><input type="number" id="cfg-taxa-cred6" step="0.01" min="0" max="20" placeholder="9.24"/></div>
+            <div class="form-group"><label>Taxa Crédito 7x (%)</label><input type="number" id="cfg-taxa-cred7" step="0.01" min="0" max="20" placeholder="10.30"/></div>
+            <div class="form-group"><label>Taxa Crédito 8x (%)</label><input type="number" id="cfg-taxa-cred8" step="0.01" min="0" max="20" placeholder="11.36"/></div>
+            <div class="form-group"><label>Taxa Crédito 9x (%)</label><input type="number" id="cfg-taxa-cred9" step="0.01" min="0" max="20" placeholder="12.44"/></div>
+            <div class="form-group"><label>Taxa Crédito 10x (%)</label><input type="number" id="cfg-taxa-cred10" step="0.01" min="0" max="20" placeholder="13.52"/></div>
+            <div class="form-group"><label>Taxa Crédito 11x (%)</label><input type="number" id="cfg-taxa-cred11" step="0.01" min="0" max="20" placeholder="14.61"/></div>
+            <div class="form-group"><label>Taxa Crédito 12x (%)</label><input type="number" id="cfg-taxa-cred12" step="0.01" min="0" max="20" placeholder="15.71"/></div>
+          </div>
+          <div style="display:flex;justify-content:flex-end;margin-top:14px;">
+            <button class="btn-primary" onclick="salvarTaxas()"><i class="ti ti-check"></i> Salvar taxas</button>
+          </div>
+
           <hr style="border-color:var(--rose-light);margin:24px 0;"/>
           <h2 style="font-size:13px;font-weight:700;color:var(--rose-dark);margin-bottom:14px;display:flex;align-items:center;gap:8px;text-transform:uppercase;letter-spacing:.5px;"><i class="ti ti-lock"></i> Alterar senha</h2>
           <div class="form-grid">
@@ -1061,6 +1130,7 @@ async function checkClinicaApproval(){
   // Atualiza nome da clínica na interface
   const el = document.getElementById('header-clinica');
   if(el) el.textContent = cli.nome_cli || 'Minha Clínica';
+  setTimeout(updateSidebarAvatar, 100);
   return true;
 }
 
@@ -1068,8 +1138,12 @@ async function checkClinicaApproval(){
 document.addEventListener('keydown', e=>{ if(e.key==='Enter'&&document.getElementById('login-screen').style.display!=='none') doLogin(); });
 
 async function doLogout(){
+  // Salva dados financeiros antes de sair
+  try { await saveFinanceiro(); } catch(e){}
   await _sb.auth.signOut();
   currentUser=null; agendamentos=[]; profissionais=[]; pacientes=[];
+  procs=[]; mats=[]; estoque={}; procInsumos={}; vendas=[]; combos=[];
+  _financeiroCarregado = false;
   document.getElementById('app').style.display='none';
   document.getElementById('login-screen').style.display='flex';
   document.getElementById('login-pass').value='';
@@ -1139,6 +1213,51 @@ function initApp(){
 // ══════════════════════════════════════════════════════
 // NAVIGATION
 // ══════════════════════════════════════════════════════
+
+let sidebarPinned = (typeof localStorage !== 'undefined' && localStorage.getItem('sidebarPinned')==='true');
+
+function toggleSidebarPin(){
+  const s = document.getElementById('sidebar');
+  if(!s) return;
+  sidebarPinned = !sidebarPinned;
+  if(typeof localStorage !== 'undefined') localStorage.setItem('sidebarPinned', sidebarPinned);
+  s.classList.toggle('pinned', sidebarPinned);
+  s.classList.toggle('open', sidebarPinned);
+  sidebarOpen = sidebarPinned;
+  const icon = document.getElementById('pin-icon');
+  if(icon) icon.className = sidebarPinned ? 'ti ti-pin-filled' : 'ti ti-pin';
+}
+
+function togglePin(){ toggleSidebarPin(); }
+
+function updateSidebarAvatar(){
+  const nome = (clinicaData && clinicaData.nome_cli) ? clinicaData.nome_cli : 'RW';
+  const parts = nome.split(' ').filter(Boolean);
+  const ini = (parts.length >= 2 ? parts[0][0]+parts[1][0] : parts[0].slice(0,2)).toUpperCase();
+  const avEl = document.getElementById('sidebar-avatar-initials');
+  const nameEl = document.getElementById('sidebar-avatar-name');
+  const logoutAv = document.getElementById('logout-avatar');
+  const logoutName = document.getElementById('logout-name');
+  if(avEl) avEl.textContent = ini;
+  if(nameEl) nameEl.textContent = nome;
+  if(logoutAv) logoutAv.textContent = ini;
+  if(logoutName) logoutName.textContent = 'Sair — ' + nome;
+}
+
+// Aplica pin salvo ao carregar
+(function initSidebarState(){
+  try {
+    const s = document.getElementById('sidebar');
+    if(!s) return;
+    if(sidebarPinned){
+      s.classList.add('open','pinned');
+      sidebarOpen = true;
+      const icon = document.getElementById('pin-icon');
+      if(icon) icon.className = 'ti ti-pin-filled';
+    }
+  } catch(e){}
+})();
+
 function toggleSidebar(){
   sidebarOpen=!sidebarOpen;
   document.getElementById('sidebar').classList.toggle('open',sidebarOpen);
@@ -1160,11 +1279,25 @@ function switchTab(tab){
   if(tab==='profissionais') renderProfissionais();
   if(tab==='home') renderHomeStats();
   if(tab==='configuracoes') renderConfiguracoes();
-  if(tab==='financeiro') renderFinanceiroDash();
-  if(tab==='procedimentos_fin') renderProcs();
-  if(tab==='materiais_fin') renderMats();
-  if(tab==='estoque_fin') renderEstoque();
-  if(tab==='vendas_fin') renderVendas();
+  if(tab==='financeiro'||tab==='procedimentos_fin'||tab==='materiais_fin'||tab==='estoque_fin'||tab==='vendas_fin'){
+    if(!_financeiroCarregado){
+      showLoading(true);
+      loadFinanceiro().then(()=>{
+        showLoading(false);
+        if(tab==='financeiro') renderFinanceiroDash();
+        if(tab==='procedimentos_fin') renderProcs();
+        if(tab==='materiais_fin') renderMats();
+        if(tab==='estoque_fin') renderEstoque();
+        if(tab==='vendas_fin') renderVendas();
+      });
+      return;
+    }
+    if(tab==='financeiro') renderFinanceiroDash();
+    if(tab==='procedimentos_fin') renderProcs();
+    if(tab==='materiais_fin') renderMats();
+    if(tab==='estoque_fin') renderEstoque();
+    if(tab==='vendas_fin') renderVendas();
+  }
   window.scrollTo(0,0);
 }
 
@@ -1277,6 +1410,7 @@ function renderLista(){
         <div class="detail">${escapeHtml(a.procedimento||'Consulta')} · ${escapeHtml(a.prof_nome)} · ${escapeHtml(a.telefone||'Sem telefone')}</div>
       </div>
       <span class="appt-badge badge-main">${escapeHtml((a.prof_nome||'').split(' ')[0])}</span>
+      ${a.telefone ? `<button class="btn-secondary" style="padding:6px 10px;background:#25d366;color:#fff;border-color:#25d366;" onclick="enviarConfirmacaoWpp('${escapeHtml(a.telefone)}','${escapeHtml(a.nome)}','${a.data}','${a.horario}','${escapeHtml(a.procedimento||'Consulta')}')" title="Confirmar via WhatsApp"><i class="ti ti-brand-whatsapp"></i></button>` : ''}
       <button class="btn-danger" onclick="removerAgendamento(${a.id})"><i class="ti ti-trash"></i></button>
     </div>
   `).join('');
@@ -1499,6 +1633,32 @@ function renderPatientDetail(abaAtiva){
           </div>
           <!-- histórico por dente -->
           <div id="pac-dentes-historico" style="margin-top:12px;"></div>
+
+          <!-- ORÇAMENTO DIRETO NO ODONTOGRAMA -->
+          <div style="margin-top:16px;border-top:1px solid var(--rose-light);padding-top:16px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+              <span style="font-size:13px;font-weight:700;color:var(--rose-dark);"><i class="ti ti-calculator"></i> Orçamento rápido</span>
+              <button class="btn-secondary" style="font-size:11px;" onclick="pacOdontoToggleOrc()"><i class="ti ti-chevron-down" id="pac-odonto-orc-icon"></i> Montar orçamento</button>
+            </div>
+            <div id="pac-odonto-orc-panel" style="display:none;">
+              <div style="font-size:12px;color:var(--rose-text);margin-bottom:8px;">Clique nos dentes acima para marcá-los, depois adicione ao orçamento:</div>
+              <div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;">
+                <select id="pac-odonto-orc-proc" style="flex:1;min-width:160px;font-size:13px;">
+                  <option value="">Selecione procedimento</option>
+                </select>
+                <button class="btn-primary" style="font-size:12px;" onclick="pacOdontoAddOrc()"><i class="ti ti-plus"></i> Adicionar</button>
+              </div>
+              <div id="pac-odonto-orc-lista" style="margin-bottom:10px;"></div>
+              <div style="background:var(--rose-lighter);border-radius:8px;padding:8px 12px;display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                <span style="font-size:13px;font-weight:700;">Total</span>
+                <span style="font-size:14px;font-weight:800;color:var(--rose-dark);" id="pac-odonto-orc-total">R$ 0,00</span>
+              </div>
+              <div style="display:flex;gap:8px;">
+                <button class="btn-secondary" style="flex:1;justify-content:center;font-size:12px;" onclick="pacOdontoSalvarOrc()" id="pac-odonto-orc-btn-pac"></button>
+                <button class="btn-danger" style="font-size:12px;" onclick="pacOdontoLimparOrc()"><i class="ti ti-eraser"></i></button>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -1514,12 +1674,14 @@ function renderPatientDetail(abaAtiva){
           <!-- form novo item -->
           <div id="pac-plan-form" style="display:none;border:1.5px solid var(--rose-light);border-radius:12px;padding:14px;margin-bottom:14px;">
             <div class="form-grid">
-              <div class="form-group">
-                <label>Dente</label>
-                <select id="pac-plan-dente">
-                  <option value="">Selecione</option>
-                  ${[18,17,16,15,14,13,12,11,21,22,23,24,25,26,27,28,48,47,46,45,44,43,42,41,31,32,33,34,35,36,37,38].map(d=>`<option value="${d}">${d}</option>`).join('')}
+              <div class="form-group full">
+                <label>Dentes (selecione um ou mais)</label>
+                <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px;" id="pac-plan-dentes-sel"></div>
+                <select id="pac-plan-dente-add" onchange="pacPlanAddDente(this.value)" style="max-width:180px;">
+                  <option value="">+ Adicionar dente</option>
+                  ${[18,17,16,15,14,13,12,11,21,22,23,24,25,26,27,28,48,47,46,45,44,43,42,41,31,32,33,34,35,36,37,38,55,54,53,52,51,61,62,63,64,65,85,84,83,82,81,71,72,73,74,75].map(d=>`<option value="${d}">${d}</option>`).join('')}
                 </select>
+                <input type="hidden" id="pac-plan-dente" value=""/>
               </div>
               <div class="form-group">
                 <label>Face</label>
@@ -1530,14 +1692,18 @@ function renderPatientDetail(abaAtiva){
               </div>
               <div class="form-group">
                 <label>Procedimento *</label>
-                <select id="pac-plan-proc">
+                <select id="pac-plan-proc" onchange="pacPlanSyncValor()">
                   <option value="">Selecione</option>
-                  ${['Exodontia','Restauração','Tratamento de Canal','Prótese','Implante','Limpeza / Profilaxia','Clareamento','Extração de Siso','Aparelho Ortodôntico','Outro'].map(p=>`<option>${p}</option>`).join('')}
+                  ${procs.length ? procs.map(p=>`<option value="${p.nome}" data-preco="${p.precoFinal||0}">${p.nome}</option>`).join('') : ['Exodontia','Restauração','Tratamento de Canal','Prótese','Implante','Limpeza / Profilaxia','Clareamento','Extração de Siso','Aparelho Ortodôntico','Outro'].map(p=>`<option>${p}</option>`).join('')}
                 </select>
               </div>
               <div class="form-group">
-                <label>Valor (R$)</label>
-                <input type="text" id="pac-plan-valor" placeholder="0,00"/>
+                <label>Valor por dente (R$)</label>
+                <input type="text" id="pac-plan-valor" placeholder="0,00" oninput="pacPlanSyncFromValor()"/>
+              </div>
+              <div class="form-group">
+                <label>Valor total</label>
+                <input type="text" id="pac-plan-valor-total" placeholder="0,00" disabled style="opacity:.7;font-weight:700;color:var(--rose-dark);"/>
               </div>
               <div class="form-group full">
                 <label>Descrição</label>
@@ -1994,6 +2160,7 @@ function calOpenEvent(e, id){
     </div>
     <div class="cal-modal-foot">
       <button class="btn-danger" onclick="calRemoveFromModal(${a.id})"><i class="ti ti-trash"></i> Remover</button>
+      ${a.telefone ? `<button class="btn-secondary" style="background:#25d366;color:#fff;border-color:#25d366;" onclick="enviarConfirmacaoWpp('${a.telefone}','${a.nome}','${a.data}','${a.horario}','${a.procedimento||'Consulta'}')"><i class="ti ti-brand-whatsapp"></i> Confirmar</button>` : ''}
       <button class="btn-secondary" onclick="document.getElementById('cal-modal-bg').classList.remove('show')">Fechar</button>
     </div>
   </div>`;
@@ -2471,6 +2638,7 @@ async function pacCarregarOdonto(pacId){
   pacDentesMap = {};
   (data||[]).forEach(d => { pacDentesMap[d.dente] = d; });
   pacDenteSel = null;
+  pacOdontoOrcList = [];
   pacRenderArcadas();
   pacRenderLegenda();
   pacRenderDentesHistorico();
@@ -2684,6 +2852,7 @@ let descCfg     = { val:0, tipo:'pct', maxPar:6 };
 
 // IDs locais
 let nextProcId  = 1;
+let _financeiroCarregado = false;  // evita duplo carregamento
 let nextMatId   = 1;
 let nextVendaId = 1;
 let nextComboId = 201;
@@ -2698,49 +2867,72 @@ let estSelected    = new Set();
 // ── Carregar dados financeiros do Supabase ──
 async function loadFinanceiro(){
   if(!clinicaId) return;
+
+  const safe = (str, def) => { try{ const v=JSON.parse(str); return v; }catch(e){ return def; } };
+
   const { data } = await _sb.from('financeiro_config')
     .select('*').eq('clinica_id', clinicaId).single();
+
+  let precisaSalvar = false;
+
   if(data){
-    try{ procs       = JSON.parse(data.procs       || '[]'); }catch(e){ procs=[]; }
-    try{ mats        = JSON.parse(data.mats        || '[]'); }catch(e){ mats=[]; }
-    try{ estoque     = JSON.parse(data.estoque     || '{}'); }catch(e){ estoque={}; }
-    try{ procInsumos = JSON.parse(data.proc_insumos|| '{}'); }catch(e){ procInsumos={}; }
-    try{ vendas      = JSON.parse(data.vendas      || '[]'); }catch(e){ vendas=[]; }
-    try{ cfg         = JSON.parse(data.cfg         || '{}'); }catch(e){}
-    try{ taxasCfg    = JSON.parse(data.taxas_cfg   || '{}'); }catch(e){}
-    try{ combos      = JSON.parse(data.combos      || '[]'); }catch(e){ combos=[]; }
-    try{ descCfg     = JSON.parse(data.desc_cfg    || '{}'); }catch(e){}
-    // Se veio vazio do banco, carrega os padrões
-    if(!procs.length){
-      procs  = DEFAULT_PROCS_FIN.map((p,i)=>({...p,id:p.id||i+1}));
-      nextProcId = 103;
-    }
-    if(!mats.length){
-      mats   = DEFAULT_MATS_FIN.map((m,i)=>({...m,id:m.id||i+1}));
-      nextMatId = 91;
-    }
-    if(!combos.length){
-      combos = DEFAULT_COMBOS_FIN.map(c=>({...c}));
-      nextComboId = 207;
-    }
-    // Salva se veio vazio (garante que próxima vez já tem dados)
-    if(!data.procs || data.procs==='[]') await saveFinanceiro();
-    // Reconstrói nextIds
-    nextProcId  = procs.length  ? Math.max(...procs.map(p=>p.id||0))   + 1 : 103;
-    nextMatId   = mats.length   ? Math.max(...mats.map(m=>m.id||0))    + 1 : 91;
-    nextVendaId = vendas.length ? Math.max(...vendas.map(v=>v.id||0))  + 1 : 1;
-    nextComboId = combos.length ? Math.max(...combos.map(c=>c.id||200))+ 1 : 207;
-  } else {
-    // Primeira vez — sem registro no banco
-    procs   = DEFAULT_PROCS_FIN.map((p,i)=>({...p,id:p.id||i+1}));
-    mats    = DEFAULT_MATS_FIN.map((m,i)=>({...m,id:m.id||i+1}));
-    combos  = DEFAULT_COMBOS_FIN.map(c=>({...c}));
-    nextProcId  = 103;
-    nextMatId   = 91;
-    nextComboId = 207;
-    await saveFinanceiro();
+    // Carrega EXATAMENTE o que está no banco — não sobrescreve com padrões
+    const _procs = safe(data.procs, []);
+    const _mats  = safe(data.mats,  []);
+    procs       = _procs.length ? _procs : [];
+    mats        = _mats.length  ? _mats  : [];
+    estoque     = safe(data.estoque,     {});
+    procInsumos = safe(data.proc_insumos,{});
+    vendas      = safe(data.vendas,      []);
+    combos      = safe(data.combos,      []);
+    cfg         = safe(data.cfg,         cfg);
+    taxasCfg    = safe(data.taxas_cfg,   taxasCfg);
+    descCfg     = safe(data.desc_cfg,    descCfg);
   }
+
+  // Só preenche com padrão se realmente não tem nada salvo
+  if(!procs.length){
+    procs = DEFAULT_PROCS_FIN.map((p,i)=>({...p,id:p.id||i+1}));
+    precisaSalvar = true;
+  }
+  if(!mats.length){
+    mats = DEFAULT_MATS_FIN.map((m,i)=>({...m,id:m.id||i+1}));
+    precisaSalvar = true;
+  }
+  if(!combos.length){
+    combos = DEFAULT_COMBOS_FIN.map(c=>({...c}));
+    precisaSalvar = true;
+  }
+  // Insumos: só adiciona padrão para procedimentos que não têm nada salvo
+  Object.entries(DEFAULT_PROC_INSUMOS_DATA).forEach(([k,v])=>{
+    if(!procInsumos[k] || !procInsumos[k].length){
+      procInsumos[k] = JSON.parse(JSON.stringify(v));
+      precisaSalvar = true;
+    }
+  });
+
+  // Reconstrói nextIds
+  nextProcId  = procs.length  ? Math.max(...procs.map(p=>p.id||0))   + 1 : 103;
+  nextMatId   = mats.length   ? Math.max(...mats.map(m=>m.id||0))    + 1 : 91;
+  nextVendaId = vendas.length ? Math.max(...vendas.map(v=>v.id||0))  + 1 : 1;
+  nextComboId = combos.length ? Math.max(...combos.map(c=>c.id||200))+ 1 : 207;
+
   recalcularInsumos(true);
+
+  // Salva padrões sem sobrescrever estoque
+  if(precisaSalvar){
+    // Guarda estoque atual antes de salvar
+    const _estoqueBackup = JSON.parse(JSON.stringify(estoque));
+    await saveFinanceiro();
+    // Restaura estoque do banco após save
+    const { data: _fresh } = await _sb.from('financeiro_config').select('estoque').eq('clinica_id',clinicaId).single();
+    if(_fresh && _fresh.estoque && _fresh.estoque !== '{}'){
+      const _est = JSON.parse(_fresh.estoque||'{}');
+      if(Object.keys(_est).length > 0) estoque = _est;
+    }
+  }
+
+  _financeiroCarregado = true;
 }
 
 async function saveFinanceiro(){
@@ -2760,8 +2952,15 @@ async function saveFinanceiro(){
   };
   // Upsert
   const { data: existing } = await _sb.from('financeiro_config').select('id').eq('clinica_id',clinicaId).single();
-  if(existing){ await _sb.from('financeiro_config').update(payload).eq('clinica_id',clinicaId); }
-  else         { await _sb.from('financeiro_config').insert([payload]); }
+  let saveError;
+  if(existing){
+    const { error } = await _sb.from('financeiro_config').update(payload).eq('clinica_id',clinicaId);
+    saveError = error;
+  } else {
+    const { error } = await _sb.from('financeiro_config').insert([payload]);
+    saveError = error;
+  }
+  if(saveError){ console.error('saveFinanceiro ERRO:', saveError.message); showToast('Erro ao salvar: '+saveError.message,'error'); }
 }
 
 // ── Helpers de cálculo ──
@@ -2792,16 +2991,8 @@ function renderFinanceiroDash(){
   const fat = fin.reduce((a,v)=>a+(Number(v.total)||0),0);
   const criticos = mats.filter(m=>getEstStatus(m.id)==='danger').length;
 
-  // Botão de reset/carregar padrões
-  const btnReset = procs.length === 0 ? `
-    <div style="background:#fff8e1;border:1px solid #ffcc80;border-radius:12px;padding:16px;margin-bottom:16px;text-align:center;">
-      <div style="font-size:13px;color:#856404;margin-bottom:10px;"><i class="ti ti-info-circle"></i> Nenhum procedimento cadastrado ainda.</div>
-      <button class="btn-primary" onclick="carregarPadroes()" style="margin:0 auto;">
-        <i class="ti ti-download"></i> Carregar 50 procedimentos padrão
-      </button>
-    </div>` : '';
-  const metricsEl = document.getElementById('fin-metrics');
-  if(metricsEl) metricsEl.insertAdjacentHTML('beforebegin', btnReset);
+  // Auto-carrega se vazio (não precisa mais de botão)
+  if(procs.length === 0){ carregarPadroes(false); return; }
 
   document.getElementById('fin-metrics').innerHTML = [
     {lbl:'Faturamento',val:fmtBRL(fat),cor:'var(--rose-dark)'},
@@ -3127,7 +3318,15 @@ function filterEstoque(){ renderEstoque(); }
 function renderEstoque(){
   const q   = (document.getElementById('est-search')||{value:''}).value.toLowerCase();
   const sf  = (document.getElementById('est-status-filter')||{value:''}).value;
+  const ordemEst = (document.getElementById('est-ordem')||{value:'az'}).value;
   let list  = mats.filter(m=>(!q||m.nome.toLowerCase().includes(q))&&(!sf||getEstStatus(m.id)===sf));
+  if(ordemEst==='az') list=[...list].sort((a,b)=>a.nome.localeCompare(b.nome,'pt-BR'));
+  else if(ordemEst==='za') list=[...list].sort((a,b)=>b.nome.localeCompare(a.nome,'pt-BR'));
+  else if(ordemEst==='cat') list=[...list].sort((a,b)=>(a.cat||'').localeCompare(b.cat||'','pt-BR')||a.nome.localeCompare(b.nome,'pt-BR'));
+  else if(ordemEst==='critico'){
+    const ord={danger:0,warn:1,ok:2,'':3};
+    list=[...list].sort((a,b)=>(ord[getEstStatus(a.id)]||3)-(ord[getEstStatus(b.id)]||3)||a.nome.localeCompare(b.nome,'pt-BR'));
+  } else list=[...list].sort((a,b)=>a.nome.localeCompare(b.nome,'pt-BR'));
   const ok  = mats.filter(m=>getEstStatus(m.id)==='ok').length;
   const warn= mats.filter(m=>getEstStatus(m.id)==='warn').length;
   const dan = mats.filter(m=>getEstStatus(m.id)==='danger').length;
@@ -3170,10 +3369,10 @@ function renderEstoque(){
     </tr>`;
   }).join('');
 }
-async function updateEstField(id, field, val){
+function updateEstField(id, field, val){
   if(!estoque[id]) estoque[id]={atual:0,min:0,compra:0};
   estoque[id][field] = parseFloat(val)||0;
-  await saveFinanceiro();
+  // Não salva a cada digitação — salva no logout
   renderEstoque();
 }
 
@@ -3183,7 +3382,10 @@ let insumosTemp = [];
 function openInsumos(procId){
   const p = procs.find(x=>x.id===procId); if(!p) return;
   insumosEditProcId = procId;
-  insumosTemp = JSON.parse(JSON.stringify(procInsumos[procId]||[]));
+  // Usa padrão se banco não tem insumos para este procedimento
+  const saved = procInsumos[procId];
+  const defaults = DEFAULT_PROC_INSUMOS_DATA[procId] || DEFAULT_PROC_INSUMOS_DATA[String(procId)];
+  insumosTemp = JSON.parse(JSON.stringify(saved && saved.length ? saved : (defaults || [])));
   document.getElementById('mi-proc-nome').textContent = p.nome;
   const sel = document.getElementById('mi-mat-sel');
   if(sel) sel.innerHTML = mats.map(m=>`<option value="${m.id}">${m.nome} (${m.unid||'unid'}) — ${fmtBRL(m.custo||0)}/un.</option>`).join('');
@@ -3224,23 +3426,7 @@ function updateInsumoQtd(idx,val){ insumosTemp[idx].qtd=parseFloat(val)||0; rend
 function removeInsumo(idx){ insumosTemp.splice(idx,1); renderInsumosList(); }
 async function saveInsumos(){
   if(insumosEditProcId===null) return;
-  // Ajuste de estoque: diferença entre antes e agora
-  const old = procInsumos[insumosEditProcId]||[];
-  insumosTemp.forEach(item=>{
-    const prev=old.find(x=>x.matId===item.matId);
-    const diff=item.qtd-(prev?prev.qtd:0);
-    if(diff!==0){
-      if(!estoque[item.matId]) estoque[item.matId]={atual:0,min:0,compra:0};
-      estoque[item.matId].atual=Math.max(0,parseFloat(((estoque[item.matId].atual||0)-diff).toFixed(4)));
-    }
-  });
-  old.forEach(item=>{
-    const still=insumosTemp.find(x=>x.matId===item.matId);
-    if(!still){
-      if(!estoque[item.matId]) estoque[item.matId]={atual:0,min:0,compra:0};
-      estoque[item.matId].atual=parseFloat(((estoque[item.matId].atual||0)+item.qtd).toFixed(4));
-    }
-  });
+  // Só salva a lista de insumos — estoque é descontado apenas ao finalizar venda
   procInsumos[insumosEditProcId]=JSON.parse(JSON.stringify(insumosTemp));
   // Recalcula custo do procedimento
   const totalIns=insumosTemp.reduce((acc,item)=>{const m=mats.find(x=>x.id===item.matId);return acc+(m?m.custo*item.qtd:0);},0);
@@ -3252,6 +3438,7 @@ async function saveInsumos(){
   showToast('Insumos salvos!');
 }
 function recalcularInsumos(silent){
+  // Só recalcula insumos e horaClin — NÃO sobrescreve precoFinal (pode ter sido editado manualmente)
   let atualizados=0;
   procs.forEach(p=>{
     const ins=procInsumos[p.id]||[];
@@ -3260,7 +3447,9 @@ function recalcularInsumos(silent){
       if(novo!==p.insumos){p.insumos=novo;atualizados++;}
     }
     p.horaClin=parseFloat(((p.tempo/60)*calcHora()).toFixed(2));
-    p.precoFinal=calcPrecoFinal(p);
+    // Só recalcula precoFinal se chamado manualmente (silent=false)
+    // No carregamento (silent=true), preserva o preço salvo
+    if(!silent) p.precoFinal=calcPrecoFinal(p);
   });
   if(!silent) showToast(atualizados>0?`${atualizados} procedimento(s) atualizados.`:'Custos já atualizados.');
 }
@@ -3322,7 +3511,7 @@ function renderVendas(){
   tb.innerHTML = list.map(v=>{
     const si = STATUS_VENDA[v.status]||STATUS_VENDA.orcamento;
     const data = new Date(v.data).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'2-digit'})+' '+new Date(v.data).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
-    const itensRes = (v.itens||[]).map(i=>(i.qtd>1?i.qtd+'× ':'')+escapeHtml(i.nome||'')).join(', ');
+    const itensRes = (v.itens||[]).map(i=>(i.qtd>1?i.qtd+'× ':'')+escapeHtml(i.nome||'')+(i.dente?` (Dente ${i.dente})`:'')+(i.descDente?` — ${escapeHtml(i.descDente)}`:'')).join(', ');
     let acoes = `<button class="btn-secondary" style="padding:4px 8px;font-size:11px;" onclick="toggleVendaMat(${v.id})" title="Ver materiais"><i class="ti ti-box"></i></button>`;
     if(v.status==='orcamento') acoes += `<button class="btn-secondary" style="padding:4px 8px;font-size:11px;color:#2e7d32;" onclick="finalizarVendaSalva(${v.id})" title="Finalizar venda"><i class="ti ti-circle-check"></i></button>`;
     if(v.status==='finalizada') acoes += `<button class="btn-secondary" style="padding:4px 8px;font-size:11px;color:#856404;" onclick="cancelarVenda(${v.id})" title="Cancelar venda"><i class="ti ti-arrow-back-up"></i></button>`;
@@ -3404,12 +3593,14 @@ function pacAbrirSimulador(pacId, pacNome){
 
 function renderPlanoSimulador(pacId){
   const c = document.getElementById('pac-sim-container'); if(!c) return;
-  const grupos = [...new Set(procs.map(p=>p.grupo).filter(Boolean))].sort();
-  c.innerHTML = `
+  // Só reconstrói o HTML se ainda não foi criado para este paciente
+  if(!document.getElementById('sim-select-pac') || c.dataset.pacId !== String(pacId)){
+    c.dataset.pacId = pacId;
+    const grupos = [...new Set(procs.map(p=>p.grupo).filter(Boolean))].sort();
+    c.innerHTML = `
     <div style="border:1.5px solid var(--rose-light);border-radius:12px;padding:14px;margin-bottom:14px;">
       <h2 style="font-size:13px;font-weight:700;color:var(--rose-dark);margin-bottom:12px;"><i class="ti ti-calculator"></i> Simulador de Orçamento</h2>
 
-      <!-- Busca e filtro -->
       <div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;">
         <input type="text" id="sim-search-pac" placeholder="Pesquisar..." oninput="renderSimSelectPac()" style="flex:1;min-width:120px;"/>
         <select id="sim-grupo-pac" onchange="renderSimSelectPac()">
@@ -3424,10 +3615,8 @@ function renderPlanoSimulador(pacId){
         <button class="btn-primary" onclick="addOrcPac()"><i class="ti ti-plus"></i></button>
       </div>
 
-      <!-- Lista de itens -->
       <div id="sim-orc-list-pac" style="margin-bottom:12px;"></div>
 
-      <!-- Desconto -->
       <div style="background:var(--rose-lighter);border-radius:8px;padding:10px 12px;margin-bottom:10px;">
         <div style="font-size:11px;font-weight:700;color:var(--rose-text);text-transform:uppercase;margin-bottom:8px;">Desconto</div>
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
@@ -3440,7 +3629,6 @@ function renderPlanoSimulador(pacId){
         </div>
       </div>
 
-      <!-- Total + Lucro (só dentista vê) -->
       <div style="background:var(--rose-lighter);border-radius:8px;padding:10px 14px;margin-bottom:10px;">
         <div style="display:flex;justify-content:space-between;align-items:center;font-size:14px;font-weight:700;color:var(--rose-dark);">
           <span>Total</span>
@@ -3450,7 +3638,30 @@ function renderPlanoSimulador(pacId){
         <div id="sim-orc-lucro-pac" style="font-size:11px;color:var(--rose-text);margin-top:6px;border-top:1px solid var(--rose-light);padding-top:6px;"></div>
       </div>
 
-      <!-- Ações -->
+      <div style="background:var(--rose-lighter);border-radius:8px;padding:10px 12px;margin-bottom:10px;">
+        <div style="font-size:11px;font-weight:700;color:var(--rose-text);text-transform:uppercase;margin-bottom:8px;">Forma de pagamento</div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+          <select id="sim-forma-pag" onchange="updateFormaPag()" style="flex:1;padding:6px 8px;border:1px solid var(--rose-light);border-radius:8px;font-size:13px;">
+            <option value="">Dinheiro / Pix</option>
+            <option value="debito">Débito</option>
+            <option value="credito1">Crédito 1x</option>
+            <option value="credito2">Crédito 2x</option>
+            <option value="credito3">Crédito 3x</option>
+            <option value="credito4">Crédito 4x</option>
+            <option value="credito5">Crédito 5x</option>
+            <option value="credito6">Crédito 6x</option>
+            <option value="credito7">Crédito 7x</option>
+            <option value="credito8">Crédito 8x</option>
+            <option value="credito9">Crédito 9x</option>
+            <option value="credito10">Crédito 10x</option>
+            <option value="credito11">Crédito 11x</option>
+            <option value="credito12">Crédito 12x</option>
+          </select>
+          <span style="font-size:12px;color:var(--rose-text);" id="sim-taxa-info"></span>
+        </div>
+        <div id="sim-liquido-info" style="font-size:12px;color:#2e7d32;margin-top:6px;display:none;"></div>
+      </div>
+
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
         <button class="btn-secondary" onclick="salvarOrcPac(${pacId})" style="justify-content:center;"><i class="ti ti-device-floppy"></i> Salvar orçamento</button>
         <button class="btn-primary" onclick="finalizarVendaPac(${pacId})" style="justify-content:center;"><i class="ti ti-circle-check"></i> Finalizar venda</button>
@@ -3458,7 +3669,9 @@ function renderPlanoSimulador(pacId){
       <button class="btn-secondary" onclick="orcamento=[];renderOrcPac();" style="width:100%;margin-top:8px;justify-content:center;"><i class="ti ti-eraser"></i> Limpar</button>
     </div>
   `;
-  renderSimSelectPac();
+    renderSimSelectPac();
+  }
+  // Sempre atualiza a lista de itens sem recriar o HTML
   renderOrcPac();
 }
 
@@ -3466,6 +3679,34 @@ function updateDescPac(){
   descCfg.val  = Number(document.getElementById('sim-desc-val-pac')?.value)||0;
   descCfg.tipo = document.getElementById('sim-desc-tipo-pac')?.value||'pct';
   renderOrcPac();
+  updateFormaPag();
+}
+
+function updateFormaPag(){
+  const sel = document.getElementById('sim-forma-pag');
+  const val = sel?.value || '';
+  const { total } = calcTotalOrc();
+  let taxa = 0, liquido = total, infoTxt = '', liquidoTxt = '';
+  if(val === 'debito'){
+    taxa = taxasCfg.debito || 0;
+    liquido = calcValorLiquido(total,'debito',1);
+  } else if(val.startsWith('credito')){
+    const par = parseInt(val.replace('credito',''))||1;
+    const idx = [1,2,3,4,5,6,7,8,9,10,11,12].indexOf(par);
+    taxa = idx>=0 ? (taxasCfg.credito||[])[idx]||0 : 0;
+    liquido = calcValorLiquido(total,'credito',par);
+  }
+  const tiEl = document.getElementById('sim-taxa-info');
+  const lqEl = document.getElementById('sim-liquido-info');
+  if(tiEl) tiEl.textContent = taxa > 0 ? `Taxa: ${taxa}%` : '';
+  if(lqEl){
+    if(taxa > 0 && total > 0){
+      lqEl.style.display = '';
+      lqEl.textContent = `Você recebe: ${fmtBRL(liquido)} (desconta ${fmtBRL(total-liquido)} de taxa)`;
+    } else {
+      lqEl.style.display = 'none';
+    }
+  }
 }
 function renderSimSelectPac(){
   const sel = document.getElementById('sim-select-pac'); if(!sel) return;
@@ -3491,11 +3732,11 @@ function addOrcPac(){
   if(raw.startsWith('combo:')){
     const cid = Number(raw.split(':')[1]);
     const c = combos.find(x=>x.id===cid); if(!c) return;
-    orcamento.push({tipo:'combo',comboId:cid,qtd,nome:'🎁 '+c.nome,precoUnit:c.preco,custo:combosCusto(c)});
+    orcamento.push({tipo:'combo',comboId:cid,qtd,nome:'🎁 '+c.nome,precoUnit:c.preco,custo:combosCusto(c),dente:'',descDente:''});
   } else {
     const procId = Number(raw.startsWith('proc:')?raw.split(':')[1]:raw);
     const p = procs.find(x=>x.id===procId); if(!p) return;
-    orcamento.push({tipo:'proc',procId,qtd,nome:p.nome,precoUnit:p.precoFinal,custo:custoProc(p)});
+    orcamento.push({tipo:'proc',procId,qtd,nome:p.nome,precoUnit:p.precoFinal,custo:custoProc(p),dente:'',descDente:''});
   }
   renderOrcPac();
 }
@@ -3512,11 +3753,22 @@ function renderOrcPac(){
     return;
   }
   c.innerHTML = orcamento.map((it,i)=>`
-    <div class="sim-orcamento-item">
-      <span style="flex:1;font-size:13px;">${escapeHtml(it.nome)}</span>
-      <input type="number" min="1" value="${it.qtd}" onchange="orcamento[${i}].qtd=Math.max(1,Number(this.value));renderOrcPac();" style="width:46px;padding:4px;border:1px solid var(--rose-light);border-radius:6px;text-align:center;font-size:12px;"/>
-      <strong style="color:var(--rose-dark);min-width:80px;text-align:right;">${fmtBRL(it.precoUnit*it.qtd)}</strong>
-      <button class="btn-danger" style="padding:3px 7px;" onclick="orcamento.splice(${i},1);renderOrcPac();"><i class="ti ti-x"></i></button>
+    <div style="border:1px solid var(--rose-light);border-radius:10px;padding:10px;margin-bottom:8px;background:#fff;">
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px;">
+        <span style="flex:1;font-size:13px;font-weight:600;">${escapeHtml(it.nome)}</span>
+        <input type="number" min="1" value="${it.qtd}" onchange="orcamento[${i}].qtd=Math.max(1,Number(this.value));renderOrcPac();" style="width:46px;padding:4px;border:1px solid var(--rose-light);border-radius:6px;text-align:center;font-size:12px;" title="Quantidade"/>
+        <strong style="color:var(--rose-dark);min-width:72px;text-align:right;">${fmtBRL(it.precoUnit*it.qtd)}</strong>
+        <button class="btn-danger" style="padding:3px 7px;" onclick="orcamento.splice(${i},1);renderOrcPac();"><i class="ti ti-x"></i></button>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <div style="flex:0 0 auto;">
+          <select onchange="orcamento[${i}].dente=this.value" style="padding:4px 8px;border:1px solid var(--rose-light);border-radius:8px;font-size:12px;background:var(--rose-lighter);color:var(--rose-dark);">
+            <option value="">Dente</option>
+            ${[18,17,16,15,14,13,12,11,21,22,23,24,25,26,27,28,48,47,46,45,44,43,42,41,31,32,33,34,35,36,37,38,55,54,53,52,51,61,62,63,64,65,85,84,83,82,81,71,72,73,74,75].map(d=>`<option value="${d}"${it.dente==d?' selected':''}>${d}</option>`).join('')}
+          </select>
+        </div>
+        <input type="text" value="${escapeHtml(it.descDente||'')}" placeholder="O que foi feito neste dente..." onchange="orcamento[${i}].descDente=this.value" style="flex:1;min-width:140px;padding:4px 8px;border:1px solid var(--rose-light);border-radius:8px;font-size:12px;background:var(--rose-lighter);"/>
+      </div>
     </div>
   `).join('');
 
@@ -3529,6 +3781,8 @@ function renderOrcPac(){
 
   const elTotal = document.getElementById('sim-orc-total-pac');
   if(elTotal) elTotal.textContent = fmtBRL(subtotal);
+  // Sincroniza total com plano de tratamento (atualiza resumo)
+  pacRenderPlanoResumo();
 
   const elDescTotal = document.getElementById('sim-desc-total-pac');
   if(elDescTotal){
@@ -3569,7 +3823,7 @@ async function salvarOrcPac(pacId){
   const venda = {
     id: nextVendaId++, status:'orcamento',
     pacienteId: pacId, pacienteNome: pac?.nome||'',
-    itens: orcamento.map(it=>({procId:it.procId||null,comboId:it.comboId||null,qtd:it.qtd,nome:it.nome})),
+    itens: orcamento.map(it=>({procId:it.procId||null,comboId:it.comboId||null,qtd:it.qtd,nome:it.nome,dente:it.dente||'',descDente:it.descDente||''})),
     subtotal: parseFloat(subtotal.toFixed(2)),
     desconto, total,
     descCfg: {...descCfg},
@@ -3596,7 +3850,7 @@ async function finalizarVendaPac(pacId){
   const venda = {
     id: nextVendaId++, status:'finalizada',
     pacienteId: pacId, pacienteNome: pac?.nome||'',
-    itens: orcamento.map(it=>({procId:it.procId||null,comboId:it.comboId||null,qtd:it.qtd,nome:it.nome})),
+    itens: orcamento.map(it=>({procId:it.procId||null,comboId:it.comboId||null,qtd:it.qtd,nome:it.nome,dente:it.dente||'',descDente:it.descDente||''})),
     subtotal: parseFloat(subtotal.toFixed(2)),
     desconto, total, consumo: aplicado,
     data: new Date().toISOString(),
@@ -3611,18 +3865,20 @@ async function finalizarVendaPac(pacId){
 }
 
 // ── Carregar padrões manualmente ──
-async function carregarPadroes(){
-  if(procs.length > 0 && !confirm('Já existem procedimentos. Substituir pelos padrões?')) return;
+async function carregarPadroes(confirm_ask=true){
+  if(confirm_ask && procs.length > 0 && !confirm('Já existem procedimentos. Substituir pelos padrões?')) return;
   showLoading(true);
   procs   = DEFAULT_PROCS_FIN.map((p,i)=>({...p,id:p.id||i+1}));
   mats    = mats.length ? mats : DEFAULT_MATS_FIN.map((m,i)=>({...m,id:m.id||i+1}));
   combos  = combos.length ? combos : DEFAULT_COMBOS_FIN.map(c=>({...c}));
+  // Carrega insumos padrão
+  Object.entries(DEFAULT_PROC_INSUMOS_DATA).forEach(([k,v])=>{ procInsumos[k]=JSON.parse(JSON.stringify(v)); });
   nextProcId  = 103;
   nextMatId   = mats.length > 50 ? nextMatId : 91;
   nextComboId = 207;
   await saveFinanceiro();
   showLoading(false);
-  showToast('50 procedimentos carregados!');
+  if(confirm_ask) showToast('Procedimentos e insumos carregados!');
   renderFinanceiroDash();
   renderProcs();
 }
@@ -3630,6 +3886,126 @@ async function carregarPadroes(){
 // ── Modais (reutiliza funções existentes do app) ──
 function openModal(id){ const m=document.getElementById(id); if(m) m.classList.add('open'); }
 function closeModal(id){ const m=document.getElementById(id); if(m) m.classList.remove('open'); }
+
+
+// Insumos pré-configurados por procedimento (baseado em literatura odontológica)
+
+const DEFAULT_PROC_INSUMOS_DATA = {
+  // ── PREVENTIVO ──
+  1:  [{matId:25,qtd:1},{matId:67,qtd:1},{matId:68,qtd:5},{matId:38,qtd:3},{matId:8,qtd:1},{matId:34,qtd:2},{matId:35,qtd:1},{matId:16,qtd:10},{matId:20,qtd:1}],
+  2:  [{matId:25,qtd:1},{matId:67,qtd:1},{matId:68,qtd:5},{matId:38,qtd:3},{matId:8,qtd:1},{matId:34,qtd:2},{matId:35,qtd:1},{matId:16,qtd:10}],
+  3:  [{matId:8,qtd:1},{matId:38,qtd:2},{matId:34,qtd:1},{matId:35,qtd:1},{matId:20,qtd:1}],
+  4:  [{matId:39,qtd:1},{matId:1,qtd:0.5},{matId:40,qtd:0.3},{matId:37,qtd:2},{matId:8,qtd:1},{matId:23,qtd:1},{matId:34,qtd:2},{matId:69,qtd:1}],
+  70: [{matId:8,qtd:1},{matId:38,qtd:2},{matId:34,qtd:1},{matId:35,qtd:1}],
+  71: [{matId:25,qtd:1},{matId:67,qtd:1},{matId:29,qtd:2},{matId:38,qtd:2},{matId:8,qtd:1},{matId:34,qtd:1}],
+  72: [{matId:8,qtd:1},{matId:38,qtd:2},{matId:37,qtd:1},{matId:34,qtd:1}],
+  73: [{matId:8,qtd:1},{matId:38,qtd:2},{matId:29,qtd:2},{matId:34,qtd:1},{matId:35,qtd:1}],
+  // ── DENTÍSTICA ──
+  5:  [{matId:1,qtd:0.5},{matId:40,qtd:0.3},{matId:52,qtd:2},{matId:53,qtd:1},{matId:37,qtd:3},{matId:21,qtd:1},{matId:36,qtd:1},{matId:22,qtd:2},{matId:23,qtd:1},{matId:8,qtd:1},{matId:34,qtd:2},{matId:69,qtd:1},{matId:41,qtd:1}],
+  6:  [{matId:1,qtd:0.5},{matId:40,qtd:0.3},{matId:51,qtd:2},{matId:52,qtd:1},{matId:37,qtd:3},{matId:41,qtd:3},{matId:22,qtd:2},{matId:23,qtd:1},{matId:8,qtd:1},{matId:34,qtd:2},{matId:69,qtd:1}],
+  7:  [{matId:13,qtd:1},{matId:3,qtd:0.5},{matId:37,qtd:2},{matId:8,qtd:1},{matId:34,qtd:1},{matId:69,qtd:1}],
+  8:  [{matId:2,qtd:0.2},{matId:15,qtd:0.5},{matId:40,qtd:0.5},{matId:52,qtd:3},{matId:51,qtd:2},{matId:37,qtd:5},{matId:22,qtd:3},{matId:41,qtd:4},{matId:23,qtd:1},{matId:8,qtd:1},{matId:34,qtd:2},{matId:69,qtd:1}],
+  9:  [{matId:65,qtd:1},{matId:9,qtd:0.5},{matId:8,qtd:1},{matId:38,qtd:2},{matId:34,qtd:1},{matId:35,qtd:1}],
+  10: [{matId:64,qtd:1},{matId:9,qtd:1},{matId:8,qtd:1},{matId:38,qtd:2},{matId:34,qtd:1},{matId:35,qtd:1},{matId:20,qtd:1}],
+  11: [{matId:37,qtd:2},{matId:8,qtd:1},{matId:38,qtd:1},{matId:34,qtd:1},{matId:69,qtd:1}],
+  12: [{matId:40,qtd:0.2},{matId:52,qtd:1},{matId:53,qtd:1},{matId:22,qtd:2},{matId:37,qtd:3},{matId:41,qtd:2},{matId:8,qtd:1},{matId:34,qtd:2},{matId:69,qtd:1}],
+  13: [{matId:40,qtd:0.2},{matId:52,qtd:1},{matId:22,qtd:1},{matId:37,qtd:2},{matId:8,qtd:1},{matId:34,qtd:1}],
+  14: [{matId:14,qtd:1},{matId:71,qtd:0.5},{matId:38,qtd:2},{matId:8,qtd:1},{matId:34,qtd:1}],
+  15: [{matId:14,qtd:1},{matId:55,qtd:0.5},{matId:38,qtd:2},{matId:8,qtd:1},{matId:34,qtd:1}],
+  93: [{matId:31,qtd:5},{matId:72,qtd:1},{matId:19,qtd:3},{matId:8,qtd:1},{matId:34,qtd:1},{matId:49,qtd:1}],
+  94: [{matId:57,qtd:1},{matId:87,qtd:0.1},{matId:38,qtd:2},{matId:8,qtd:1},{matId:34,qtd:1}],
+  95: [{matId:1,qtd:0.5},{matId:40,qtd:0.4},{matId:52,qtd:3},{matId:51,qtd:2},{matId:37,qtd:4},{matId:22,qtd:3},{matId:41,qtd:3},{matId:8,qtd:1},{matId:34,qtd:2},{matId:69,qtd:1}],
+  // ── CIRURGIA ──
+  16: [{matId:33,qtd:1},{matId:10,qtd:0.5},{matId:5,qtd:1},{matId:30,qtd:4},{matId:38,qtd:4},{matId:8,qtd:1},{matId:34,qtd:2},{matId:35,qtd:1},{matId:4,qtd:1},{matId:20,qtd:1}],
+  17: [{matId:33,qtd:2},{matId:10,qtd:1},{matId:5,qtd:1},{matId:30,qtd:6},{matId:38,qtd:4},{matId:8,qtd:1},{matId:34,qtd:2},{matId:35,qtd:1},{matId:4,qtd:1},{matId:28,qtd:1},{matId:11,qtd:1},{matId:86,qtd:1}],
+  18: [{matId:33,qtd:2},{matId:10,qtd:1},{matId:6,qtd:1},{matId:30,qtd:8},{matId:38,qtd:6},{matId:8,qtd:1},{matId:34,qtd:2},{matId:35,qtd:1},{matId:4,qtd:1},{matId:27,qtd:1},{matId:11,qtd:1},{matId:86,qtd:1},{matId:26,qtd:1}],
+  19: [{matId:33,qtd:2},{matId:10,qtd:1},{matId:6,qtd:1},{matId:86,qtd:1},{matId:27,qtd:1},{matId:30,qtd:8},{matId:38,qtd:6},{matId:4,qtd:1},{matId:8,qtd:1},{matId:34,qtd:2},{matId:11,qtd:1}],
+  20: [{matId:33,qtd:1},{matId:10,qtd:1},{matId:5,qtd:1},{matId:86,qtd:1},{matId:28,qtd:1},{matId:30,qtd:4},{matId:38,qtd:4},{matId:8,qtd:1},{matId:34,qtd:2}],
+  84: [{matId:33,qtd:1},{matId:10,qtd:1},{matId:5,qtd:1},{matId:86,qtd:1},{matId:27,qtd:1},{matId:30,qtd:4},{matId:38,qtd:4},{matId:4,qtd:1},{matId:8,qtd:1},{matId:34,qtd:2}],
+  85: [{matId:33,qtd:1},{matId:10,qtd:1},{matId:5,qtd:1},{matId:17,qtd:5},{matId:30,qtd:4},{matId:38,qtd:4},{matId:8,qtd:1},{matId:34,qtd:2},{matId:49,qtd:1}],
+  86: [{matId:33,qtd:2},{matId:10,qtd:1},{matId:6,qtd:1},{matId:86,qtd:1},{matId:27,qtd:1},{matId:30,qtd:6},{matId:38,qtd:4},{matId:4,qtd:1},{matId:8,qtd:1},{matId:34,qtd:2},{matId:11,qtd:1}],
+  87: [{matId:33,qtd:2},{matId:10,qtd:1},{matId:6,qtd:1},{matId:86,qtd:1},{matId:27,qtd:1},{matId:30,qtd:6},{matId:38,qtd:4},{matId:4,qtd:1},{matId:8,qtd:1},{matId:34,qtd:2}],
+  // ── ENDODONTIA ──
+  21: [{matId:33,qtd:1},{matId:10,qtd:0.5},{matId:5,qtd:1},{matId:24,qtd:5},{matId:31,qtd:20},{matId:19,qtd:5},{matId:30,qtd:4},{matId:8,qtd:1},{matId:34,qtd:2},{matId:72,qtd:1}],
+  22: [{matId:33,qtd:1},{matId:10,qtd:1},{matId:5,qtd:1},{matId:70,qtd:1},{matId:24,qtd:10},{matId:31,qtd:30},{matId:19,qtd:10},{matId:18,qtd:4},{matId:12,qtd:1},{matId:72,qtd:2},{matId:55,qtd:1},{matId:23,qtd:1},{matId:8,qtd:1},{matId:34,qtd:2}],
+  23: [{matId:33,qtd:1},{matId:10,qtd:1},{matId:5,qtd:1},{matId:70,qtd:1},{matId:24,qtd:10},{matId:31,qtd:25},{matId:19,qtd:8},{matId:18,qtd:3},{matId:12,qtd:1},{matId:72,qtd:1},{matId:23,qtd:1},{matId:8,qtd:1}],
+  24: [{matId:33,qtd:1},{matId:10,qtd:1},{matId:5,qtd:1},{matId:70,qtd:2},{matId:24,qtd:15},{matId:31,qtd:40},{matId:19,qtd:15},{matId:18,qtd:6},{matId:12,qtd:2},{matId:72,qtd:3},{matId:23,qtd:1},{matId:8,qtd:1}],
+  25: [{matId:33,qtd:1},{matId:10,qtd:1},{matId:5,qtd:1},{matId:70,qtd:3},{matId:24,qtd:20},{matId:31,qtd:50},{matId:19,qtd:20},{matId:18,qtd:8},{matId:12,qtd:2},{matId:72,qtd:4},{matId:23,qtd:1},{matId:8,qtd:1}],
+  26: [{matId:33,qtd:1},{matId:10,qtd:1},{matId:5,qtd:1},{matId:70,qtd:2},{matId:24,qtd:15},{matId:31,qtd:40},{matId:19,qtd:15},{matId:18,qtd:6},{matId:12,qtd:2},{matId:72,qtd:3},{matId:23,qtd:1},{matId:8,qtd:1}],
+  59: [{matId:33,qtd:1},{matId:10,qtd:1},{matId:5,qtd:1},{matId:55,qtd:1},{matId:56,qtd:0.1},{matId:19,qtd:3},{matId:24,qtd:5},{matId:31,qtd:10},{matId:8,qtd:1},{matId:34,qtd:2}],
+  60: [{matId:33,qtd:1},{matId:10,qtd:1},{matId:5,qtd:1},{matId:70,qtd:1},{matId:24,qtd:8},{matId:31,qtd:20},{matId:19,qtd:6},{matId:18,qtd:2},{matId:12,qtd:1},{matId:72,qtd:1},{matId:8,qtd:1}],
+  61: [{matId:55,qtd:1},{matId:56,qtd:0.1},{matId:40,qtd:0.2},{matId:37,qtd:2},{matId:8,qtd:1},{matId:34,qtd:1},{matId:69,qtd:1}],
+  62: [{matId:55,qtd:1},{matId:14,qtd:0.5},{matId:37,qtd:2},{matId:8,qtd:1},{matId:34,qtd:1}],
+  63: [{matId:33,qtd:1},{matId:10,qtd:0.5},{matId:5,qtd:1},{matId:55,qtd:1},{matId:19,qtd:4},{matId:24,qtd:6},{matId:31,qtd:15},{matId:18,qtd:2},{matId:12,qtd:1},{matId:8,qtd:1}],
+  64: [{matId:33,qtd:1},{matId:10,qtd:0.5},{matId:5,qtd:1},{matId:72,qtd:1},{matId:55,qtd:1},{matId:19,qtd:3},{matId:8,qtd:1},{matId:34,qtd:1}],
+  65: [{matId:33,qtd:1},{matId:10,qtd:1},{matId:5,qtd:1},{matId:70,qtd:1},{matId:24,qtd:8},{matId:31,qtd:20},{matId:8,qtd:1},{matId:34,qtd:2}],
+  66: [{matId:33,qtd:2},{matId:10,qtd:1},{matId:6,qtd:1},{matId:86,qtd:1},{matId:27,qtd:1},{matId:30,qtd:6},{matId:4,qtd:1},{matId:8,qtd:1},{matId:34,qtd:2},{matId:11,qtd:1}],
+  // ── PERIODONTIA ──
+  27: [{matId:16,qtd:20},{matId:38,qtd:4},{matId:8,qtd:1},{matId:34,qtd:2},{matId:35,qtd:1},{matId:20,qtd:1}],
+  28: [{matId:33,qtd:1},{matId:10,qtd:1},{matId:5,qtd:1},{matId:16,qtd:20},{matId:38,qtd:4},{matId:8,qtd:1},{matId:34,qtd:2}],
+  29: [{matId:33,qtd:1},{matId:10,qtd:1},{matId:5,qtd:1},{matId:86,qtd:1},{matId:27,qtd:1},{matId:30,qtd:6},{matId:38,qtd:4},{matId:4,qtd:1},{matId:8,qtd:1},{matId:34,qtd:2}],
+  30: [{matId:33,qtd:1},{matId:10,qtd:1},{matId:5,qtd:1},{matId:86,qtd:1},{matId:27,qtd:1},{matId:30,qtd:6},{matId:38,qtd:4},{matId:4,qtd:1},{matId:8,qtd:1},{matId:34,qtd:2}],
+  67: [{matId:33,qtd:2},{matId:10,qtd:1},{matId:6,qtd:1},{matId:86,qtd:1},{matId:27,qtd:1},{matId:30,qtd:8},{matId:38,qtd:6},{matId:8,qtd:1},{matId:34,qtd:2},{matId:11,qtd:1}],
+  68: [{matId:33,qtd:2},{matId:10,qtd:1},{matId:6,qtd:1},{matId:86,qtd:1},{matId:27,qtd:1},{matId:30,qtd:8},{matId:38,qtd:6},{matId:8,qtd:1},{matId:34,qtd:2},{matId:11,qtd:1}],
+  69: [{matId:33,qtd:2},{matId:10,qtd:1},{matId:6,qtd:1},{matId:86,qtd:1},{matId:27,qtd:1},{matId:80,qtd:0.5},{matId:81,qtd:1},{matId:30,qtd:8},{matId:38,qtd:6},{matId:8,qtd:1},{matId:34,qtd:2}],
+  // ── PRÓTESE ──
+  31: [{matId:7,qtd:30},{matId:58,qtd:200},{matId:63,qtd:5},{matId:62,qtd:2},{matId:8,qtd:1},{matId:34,qtd:2},{matId:35,qtd:1}],
+  32: [{matId:7,qtd:30},{matId:58,qtd:150},{matId:63,qtd:3},{matId:62,qtd:2},{matId:8,qtd:1},{matId:34,qtd:2}],
+  33: [{matId:63,qtd:5},{matId:14,qtd:2},{matId:62,qtd:1},{matId:8,qtd:1},{matId:34,qtd:1}],
+  34: [{matId:73,qtd:1},{matId:15,qtd:0.5},{matId:66,qtd:2},{matId:38,qtd:3},{matId:8,qtd:1},{matId:34,qtd:2}],
+  74: [{matId:66,qtd:2},{matId:60,qtd:5},{matId:15,qtd:0.5},{matId:73,qtd:1},{matId:8,qtd:1},{matId:34,qtd:2}],
+  75: [{matId:82,qtd:1},{matId:83,qtd:1},{matId:66,qtd:2},{matId:15,qtd:0.5},{matId:8,qtd:1},{matId:34,qtd:2}],
+  76: [{matId:2,qtd:0.3},{matId:15,qtd:0.5},{matId:61,qtd:5},{matId:66,qtd:1},{matId:37,qtd:3},{matId:8,qtd:1},{matId:34,qtd:2}],
+  77: [{matId:2,qtd:0.3},{matId:61,qtd:5},{matId:15,qtd:0.5},{matId:66,qtd:1},{matId:8,qtd:1},{matId:34,qtd:2}],
+  78: [{matId:40,qtd:0.3},{matId:53,qtd:2},{matId:37,qtd:3},{matId:69,qtd:1},{matId:8,qtd:1},{matId:34,qtd:1}],
+  79: [{matId:63,qtd:3},{matId:14,qtd:1},{matId:8,qtd:1},{matId:34,qtd:1}],
+  80: [{matId:63,qtd:2},{matId:8,qtd:1},{matId:34,qtd:1}],
+  // ── IMPLANTODONTIA ──
+  35: [{matId:82,qtd:1},{matId:33,qtd:2},{matId:10,qtd:1},{matId:6,qtd:1},{matId:80,qtd:0.5},{matId:81,qtd:1},{matId:30,qtd:8},{matId:38,qtd:6},{matId:4,qtd:1},{matId:27,qtd:1},{matId:8,qtd:1},{matId:34,qtd:2},{matId:11,qtd:1}],
+  36: [{matId:83,qtd:1},{matId:66,qtd:1},{matId:15,qtd:0.5},{matId:33,qtd:1},{matId:30,qtd:4},{matId:8,qtd:1},{matId:34,qtd:2}],
+  81: [{matId:80,qtd:1},{matId:81,qtd:1},{matId:33,qtd:2},{matId:10,qtd:1},{matId:6,qtd:1},{matId:27,qtd:1},{matId:30,qtd:6},{matId:38,qtd:4},{matId:8,qtd:1},{matId:34,qtd:2}],
+  82: [{matId:80,qtd:1},{matId:81,qtd:1},{matId:33,qtd:2},{matId:10,qtd:1},{matId:6,qtd:1},{matId:27,qtd:1},{matId:30,qtd:6},{matId:8,qtd:1},{matId:34,qtd:2}],
+  83: [{matId:82,qtd:1},{matId:33,qtd:1},{matId:10,qtd:1},{matId:5,qtd:1},{matId:30,qtd:4},{matId:27,qtd:1},{matId:8,qtd:1},{matId:34,qtd:2}],
+  // ── ORTODONTIA ──
+  37: [{matId:43,qtd:1},{matId:48,qtd:0.3},{matId:74,qtd:0.2},{matId:76,qtd:1},{matId:8,qtd:1},{matId:34,qtd:2},{matId:35,qtd:1},{matId:37,qtd:4}],
+  38: [{matId:75,qtd:0.3},{matId:46,qtd:1},{matId:8,qtd:1},{matId:34,qtd:1},{matId:37,qtd:2}],
+  39: [{matId:60,qtd:5},{matId:14,qtd:2},{matId:33,qtd:1},{matId:10,qtd:1},{matId:5,qtd:1},{matId:8,qtd:1}],
+  41: [{matId:7,qtd:30},{matId:58,qtd:100},{matId:8,qtd:1},{matId:34,qtd:1}],
+  42: [{matId:7,qtd:20},{matId:8,qtd:1},{matId:34,qtd:1}],
+  43: [{matId:43,qtd:1},{matId:48,qtd:0.5},{matId:74,qtd:0.3},{matId:76,qtd:1},{matId:8,qtd:1},{matId:34,qtd:2},{matId:35,qtd:1},{matId:37,qtd:5}],
+  44: [{matId:44,qtd:1},{matId:48,qtd:0.5},{matId:74,qtd:0.3},{matId:76,qtd:1},{matId:8,qtd:1},{matId:34,qtd:2},{matId:35,qtd:1},{matId:37,qtd:5}],
+  45: [{matId:77,qtd:1},{matId:75,qtd:0.5},{matId:8,qtd:1},{matId:34,qtd:1}],
+  46: [{matId:48,qtd:0.1},{matId:37,qtd:2},{matId:8,qtd:1},{matId:34,qtd:1}],
+  47: [{matId:38,qtd:4},{matId:30,qtd:2},{matId:8,qtd:1},{matId:34,qtd:1}],
+  48: [{matId:48,qtd:0.2},{matId:37,qtd:3},{matId:78,qtd:0.3},{matId:8,qtd:1},{matId:34,qtd:1}],
+  49: [{matId:63,qtd:3},{matId:8,qtd:1},{matId:34,qtd:1}],
+  50: [{matId:8,qtd:1},{matId:29,qtd:1},{matId:38,qtd:2},{matId:34,qtd:1}],
+  51: [{matId:45,qtd:1},{matId:48,qtd:0.5},{matId:74,qtd:0.3},{matId:76,qtd:1},{matId:8,qtd:1},{matId:34,qtd:2},{matId:37,qtd:5}],
+  // ── ATM ──
+  40: [{matId:90,qtd:0.3},{matId:49,qtd:2},{matId:30,qtd:2},{matId:8,qtd:1},{matId:34,qtd:1}],
+  96: [{matId:60,qtd:5},{matId:14,qtd:2},{matId:33,qtd:1},{matId:10,qtd:1},{matId:5,qtd:1},{matId:8,qtd:1}],
+  97: [{matId:38,qtd:2},{matId:8,qtd:1},{matId:34,qtd:1}],
+  98: [{matId:60,qtd:5},{matId:14,qtd:2},{matId:33,qtd:1},{matId:10,qtd:1},{matId:5,qtd:1},{matId:8,qtd:1}],
+  // ── DIAGNÓSTICO ──
+  52: [{matId:8,qtd:1},{matId:34,qtd:1},{matId:35,qtd:1},{matId:20,qtd:1}],
+  53: [{matId:8,qtd:1},{matId:34,qtd:1}],
+  54: [{matId:8,qtd:1},{matId:34,qtd:1}],
+  55: [{matId:8,qtd:1},{matId:34,qtd:1}],
+  56: [{matId:8,qtd:1},{matId:34,qtd:1}],
+  57: [{matId:7,qtd:30},{matId:8,qtd:1},{matId:34,qtd:1}],
+  58: [{matId:8,qtd:1},{matId:34,qtd:1}],
+  // ── ODONTOPEDIATRIA ──
+  88: [{matId:8,qtd:1},{matId:38,qtd:2},{matId:34,qtd:1},{matId:35,qtd:1},{matId:20,qtd:1}],
+  89: [{matId:40,qtd:0.2},{matId:85,qtd:1},{matId:37,qtd:2},{matId:38,qtd:2},{matId:8,qtd:1},{matId:34,qtd:1},{matId:69,qtd:1}],
+  90: [{matId:33,qtd:1},{matId:10,qtd:0.5},{matId:5,qtd:1},{matId:30,qtd:3},{matId:38,qtd:3},{matId:8,qtd:1},{matId:34,qtd:1}],
+  91: [{matId:84,qtd:1},{matId:73,qtd:0.5},{matId:33,qtd:1},{matId:10,qtd:0.5},{matId:5,qtd:1},{matId:38,qtd:2},{matId:8,qtd:1},{matId:34,qtd:1}],
+  92: [{matId:7,qtd:20},{matId:58,qtd:100},{matId:33,qtd:1},{matId:10,qtd:0.5},{matId:5,qtd:1},{matId:8,qtd:1},{matId:34,qtd:1}],
+  // ── ESTÉTICA FACIAL ──
+  99: [{matId:89,qtd:1},{matId:49,qtd:2},{matId:30,qtd:2},{matId:8,qtd:1},{matId:34,qtd:1},{matId:35,qtd:1}],
+  100:[{matId:90,qtd:0.5},{matId:49,qtd:3},{matId:30,qtd:2},{matId:8,qtd:1},{matId:34,qtd:1},{matId:35,qtd:1}],
+  101:[{matId:33,qtd:2},{matId:10,qtd:1},{matId:6,qtd:1},{matId:86,qtd:1},{matId:27,qtd:1},{matId:30,qtd:6},{matId:8,qtd:1},{matId:34,qtd:2}],
+  102:[{matId:88,qtd:1},{matId:49,qtd:2},{matId:30,qtd:2},{matId:8,qtd:1},{matId:34,qtd:1},{matId:35,qtd:1}],
+};
 
 // Procedimentos padrão completos (51 procedimentos do Pétala)
 const DEFAULT_PROCS_FIN = [
@@ -3843,15 +4219,308 @@ const DEFAULT_MATS_FIN = [
 ];
 
 // 6 combos promocionais padrão
-const DEFAULT_COMBOS_FIN = [
-  {id:201,nome:"Day Clareamento",desc:"Profilaxia + Clareamento de Consultório",itens:[{procId:2,qtd:1},{procId:10,qtd:1}],preco:399.00},
-  {id:202,nome:"Clareamento Duplo",desc:"Clareamento consultório + caseiro",itens:[{procId:10,qtd:1},{procId:9,qtd:1}],preco:429.00},
-  {id:203,nome:"Sorriso Renovado",desc:"Consulta + profilaxia + clareamento caseiro",itens:[{procId:1,qtd:1},{procId:9,qtd:1}],preco:319.00},
-  {id:204,nome:"Saúde em Dia",desc:"Consulta + profilaxia + aplicação de flúor",itens:[{procId:1,qtd:1},{procId:3,qtd:1}],preco:199.00},
-  {id:205,nome:"Sorriso Renovado Premium",desc:"Profilaxia + clareamento + recontornos",itens:[{procId:2,qtd:1},{procId:10,qtd:1},{procId:12,qtd:1}],preco:549.00},
-  {id:206,nome:"Harmonia do Sorriso",desc:"Clareamento + 4 facetas + recontornos",itens:[{procId:10,qtd:1},{procId:8,qtd:4},{procId:12,qtd:1}],preco:1790.00},
-];
+const DEFAULT_COMBOS_FIN = []; // Cada clínica cria seus próprios combos
 
+
+
+// ══════════════════════════════════════════════════════
+// PLANO — MÚLTIPLOS DENTES + SYNC VALOR
+// ══════════════════════════════════════════════════════
+let pacPlanDentesSel = []; // dentes selecionados no form do plano
+
+function pacPlanAddDente(val){
+  if(!val) return;
+  const n = parseInt(val);
+  if(!pacPlanDentesSel.includes(n)) pacPlanDentesSel.push(n);
+  pacPlanRenderDentesSel();
+  document.getElementById('pac-plan-dente-add').value = '';
+  document.getElementById('pac-plan-dente').value = pacPlanDentesSel.join(',');
+  pacPlanSyncValorTotal();
+}
+
+function pacPlanRemDente(n){
+  pacPlanDentesSel = pacPlanDentesSel.filter(d=>d!==n);
+  pacPlanRenderDentesSel();
+  document.getElementById('pac-plan-dente').value = pacPlanDentesSel.join(',');
+  pacPlanSyncValorTotal();
+}
+
+function pacPlanRenderDentesSel(){
+  const c = document.getElementById('pac-plan-dentes-sel'); if(!c) return;
+  c.innerHTML = pacPlanDentesSel.map(n=>`
+    <span style="background:var(--rose-lighter);color:var(--rose-dark);border-radius:20px;padding:3px 10px;font-size:12px;font-weight:700;display:inline-flex;align-items:center;gap:4px;">
+      ${n} <button onclick="pacPlanRemDente(${n})" style="border:none;background:none;color:var(--rose);cursor:pointer;font-size:14px;padding:0;line-height:1;">×</button>
+    </span>`).join('');
+}
+
+function pacPlanSyncValor(){
+  // Quando muda procedimento, preenche valor unitário automaticamente
+  const sel = document.getElementById('pac-plan-proc');
+  const opt = sel?.options[sel.selectedIndex];
+  const preco = opt?.dataset?.preco;
+  if(preco && preco !== '0'){
+    const el = document.getElementById('pac-plan-valor');
+    if(el) el.value = parseFloat(preco).toFixed(2).replace('.',',');
+  }
+  pacPlanSyncValorTotal();
+}
+
+function pacPlanSyncValorTotal(){
+  const valEl = document.getElementById('pac-plan-valor');
+  const totEl = document.getElementById('pac-plan-valor-total');
+  if(!valEl || !totEl) return;
+  const valUnit = parseFloat((valEl.value||'0').replace(',','.')) || 0;
+  const qtdDentes = pacPlanDentesSel.length || 1;
+  const total = valUnit * qtdDentes;
+  totEl.value = 'R$ ' + total.toFixed(2).replace('.',',');
+}
+
+function pacPlanSyncFromValor(){
+  pacPlanSyncValorTotal();
+}
+
+// Sobrescreve pacTogglePlanForm para resetar dentes
+const _origTogglePlanForm = pacTogglePlanForm;
+function pacTogglePlanForm(){
+  const f = document.getElementById('pac-plan-form');
+  if(!f) return;
+  if(f.style.display==='none'){
+    f.style.display='';
+    pacPlanDentesSel = [];
+    pacPlanRenderDentesSel();
+    document.getElementById('pac-plan-dente').value = '';
+    const totEl = document.getElementById('pac-plan-valor-total');
+    if(totEl) totEl.value = '';
+    pacPlanoEditId = null;
+  } else {
+    f.style.display='none';
+    pacPlanoEditId = null;
+  }
+}
+
+// Sobrescreve pacSalvarPlano para usar múltiplos dentes
+async function pacSalvarPlano(pacId){
+  const dentesVal = document.getElementById('pac-plan-dente')?.value || '';
+  const face  = document.getElementById('pac-plan-face')?.value || '–';
+  const proc  = document.getElementById('pac-plan-proc')?.value;
+  const valorUnit = (document.getElementById('pac-plan-valor')?.value || '0').replace(',','.');
+  const desc  = document.getElementById('pac-plan-desc')?.value.trim() || '';
+  if(!dentesVal){ showToast('Selecione pelo menos um dente.','warn'); return; }
+  if(!proc){ showToast('Selecione o procedimento.','warn'); return; }
+  const dentes = dentesVal.split(',').filter(Boolean);
+  const qtd = dentes.length;
+  const valorTotal = (parseFloat(valorUnit) * qtd).toFixed(2).replace('.',',');
+  showLoading(true);
+  let error;
+  if(pacPlanoEditId){
+    ({ error } = await _sb.from('plano_tratamento').update({
+      dente: dentesVal, face, procedimento:proc,
+      valor: valorTotal, valor_unit: valorUnit,
+      quantidade_dentes: qtd, descricao:desc
+    }).eq('id',pacPlanoEditId));
+    if(!error){
+      pacPlanoList = pacPlanoList.map(i=> i.id===pacPlanoEditId
+        ? {...i,dente:dentesVal,face,procedimento:proc,valor:valorTotal,valor_unit:valorUnit,quantidade_dentes:qtd,descricao:desc}
+        : i);
+    }
+  } else {
+    const { data:novo, error:e } = await _sb.from('plano_tratamento').insert([{
+      clinica_id:clinicaId, paciente_id:pacId,
+      dente:dentesVal, face, procedimento:proc,
+      valor:valorTotal, valor_unit:valorUnit,
+      quantidade_dentes:qtd, descricao:desc, status:'pendente'
+    }]).select().single();
+    error = e;
+    if(!error) pacPlanoList.unshift(novo);
+  }
+  showLoading(false);
+  if(error){ showToast('Erro: '+error.message,'error'); return; }
+  pacTogglePlanForm();
+  pacRenderPlanoResumo();
+  pacRenderPlanoLista();
+  showToast('Salvo no plano!');
+}
+
+// Sobrescreve pacEditarPlano para carregar múltiplos dentes
+async function pacEditarPlano(id){
+  const item = pacPlanoList.find(i=>i.id===id);
+  if(!item) return;
+  pacPlanoEditId = id;
+  const f = document.getElementById('pac-plan-form');
+  if(f) f.style.display='';
+  // Carrega dentes
+  pacPlanDentesSel = (item.dente||'').split(',').filter(Boolean).map(Number);
+  pacPlanRenderDentesSel();
+  document.getElementById('pac-plan-dente').value = item.dente||'';
+  const set = (elId, val) => { const el=document.getElementById(elId); if(el) el.value=val||''; };
+  set('pac-plan-face',  item.face);
+  set('pac-plan-proc',  item.procedimento);
+  set('pac-plan-valor', (item.valor_unit||item.valor||'').replace(',','.'));
+  set('pac-plan-desc',  item.descricao);
+  pacPlanSyncValorTotal();
+  f?.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+
+// Atualiza renderPlanoLista para mostrar múltiplos dentes
+function pacRenderPlanoLista(){
+  const c = document.getElementById('pac-plano-lista');
+  if(!c) return;
+  if(!pacPlanoList.length){
+    c.innerHTML='<div style="text-align:center;color:var(--rose-text);font-size:13px;padding:16px;">Nenhum procedimento planejado ainda.</div>';
+    return;
+  }
+  const STATUS_CORES = {
+    pendente : {bg:'#FFF3CD',txt:'#856404',dot:'#FFC107'},
+    aprovado : {bg:'#D1ECF1',txt:'#0C5460',dot:'#17A2B8'},
+    realizado: {bg:'#D4EDDA',txt:'#155724',dot:'#28A745'},
+    cancelado: {bg:'#F8D7DA',txt:'#721C24',dot:'#DC3545'},
+  };
+  c.innerHTML = pacPlanoList.map(item => {
+    const sc = STATUS_CORES[item.status] || STATUS_CORES.pendente;
+    const statusLabel = {pendente:'Pendente',aprovado:'Aprovado',realizado:'Realizado',cancelado:'Cancelado'}[item.status]||item.status;
+    const dentes = (item.dente||'').split(',').filter(Boolean);
+    const dentesHtml = dentes.map(d=>`<span style="background:var(--rose-lighter);color:var(--rose-dark);border-radius:6px;padding:2px 7px;font-size:11px;font-weight:700;">🦷${d}</span>`).join(' ');
+    const btnAprovar  = item.status==='pendente' ? `<button class="btn-secondary" style="font-size:11px;padding:4px 10px;" onclick="pacAlterarStatusPlano(${item.id},'aprovado')">✔ Aprovar</button>` : '';
+    const btnRealizar = (item.status==='aprovado'||item.status==='pendente') ? `<button class="btn-secondary" style="font-size:11px;padding:4px 10px;color:#2e7d32;border-color:#a5d6a7;" onclick="pacAlterarStatusPlano(${item.id},'realizado')">✅ Realizado</button>` : '';
+    return `<div style="border:1px solid var(--rose-light);border-radius:12px;padding:13px;margin-bottom:8px;background:#fff;">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;">
+        <div>
+          <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px;">${dentesHtml}</div>
+          <strong style="font-size:13px;">${escapeHtml(item.procedimento)}</strong>
+          ${item.face&&item.face!=='–'?`<span style="font-size:11px;color:var(--rose-text);margin-left:6px;">(${escapeHtml(item.face)})</span>`:''}
+          ${dentes.length>1?`<span style="font-size:11px;color:var(--rose-text);margin-left:6px;">${dentes.length} dentes</span>`:''}
+        </div>
+        <span style="background:${sc.bg};color:${sc.txt};padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;display:inline-flex;align-items:center;gap:4px;">
+          <span style="width:6px;height:6px;border-radius:50%;background:${sc.dot};display:inline-block;"></span>${statusLabel}
+        </span>
+      </div>
+      ${item.descricao?`<div style="font-size:12px;color:var(--rose-text);margin-top:5px;">${escapeHtml(item.descricao)}</div>`:''}
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;flex-wrap:wrap;gap:6px;">
+        <div>
+          <strong style="font-size:14px;color:#2e7d32;">R$ ${escapeHtml(item.valor||'0,00')}</strong>
+          ${dentes.length>1&&item.valor_unit?`<span style="font-size:11px;color:var(--rose-text);margin-left:6px;">(R$ ${escapeHtml(item.valor_unit)}/dente)</span>`:''}
+        </div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;">
+          ${btnAprovar}${btnRealizar}
+          <button class="btn-secondary" style="font-size:11px;padding:4px 10px;" onclick="pacEditarPlano(${item.id})">✏️ Editar</button>
+          <button class="btn-danger" style="font-size:11px;padding:4px 8px;" onclick="pacRemoverPlano(${item.id})"><i class="ti ti-trash"></i></button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ══════════════════════════════════════════════════════
+// ORÇAMENTO RÁPIDO NO ODONTOGRAMA
+// ══════════════════════════════════════════════════════
+let pacOdontoOrcList = [];
+
+function pacOdontoToggleOrc(){
+  const panel = document.getElementById('pac-odonto-orc-panel');
+  const icon = document.getElementById('pac-odonto-orc-icon');
+  if(!panel) return;
+  const showing = panel.style.display !== 'none';
+  panel.style.display = showing ? 'none' : '';
+  if(icon) icon.className = showing ? 'ti ti-chevron-down' : 'ti ti-chevron-up';
+  if(!showing) pacOdontoInitOrc();
+}
+
+function pacOdontoInitOrc(){
+  // Popula select de procedimentos
+  const sel = document.getElementById('pac-odonto-orc-proc');
+  if(!sel) return;
+  sel.innerHTML = '<option value="">Selecione procedimento</option>' +
+    procs.map(p=>`<option value="${p.id}" data-preco="${p.precoFinal||0}" data-nome="${escapeHtml(p.nome)}">${escapeHtml(p.nome)} — R$ ${(p.precoFinal||0).toFixed(2).replace('.',',')}</option>`).join('');
+  // Botão com nome do paciente
+  const btn = document.getElementById('pac-odonto-orc-btn-pac');
+  if(btn) btn.innerHTML = '<i class="ti ti-device-floppy"></i> Salvar orçamento';
+  pacOdontoRenderOrcLista();
+}
+
+function pacOdontoAddOrc(){
+  const sel = document.getElementById('pac-odonto-orc-proc');
+  const opt = sel?.options[sel.selectedIndex];
+  if(!opt || !opt.value) { showToast('Selecione um procedimento.','warn'); return; }
+  // Usa dentes marcados no odontograma
+  const dentesMarcados = Object.keys(pacDentesMap).map(Number);
+  const dentesStr = dentesMarcados.length ? dentesMarcados.join(',') : '';
+  const preco = parseFloat(opt.dataset.preco)||0;
+  const qtd = dentesMarcados.length || 1;
+  pacOdontoOrcList.push({
+    procId: parseInt(opt.value),
+    nome: opt.dataset.nome || opt.text,
+    precoUnit: preco,
+    qtd,
+    dentes: dentesStr,
+    total: preco * qtd
+  });
+  pacOdontoRenderOrcLista();
+}
+
+function pacOdontoRenderOrcLista(){
+  const c = document.getElementById('pac-odonto-orc-lista'); if(!c) return;
+  if(!pacOdontoOrcList.length){
+    c.innerHTML = '<div style="color:var(--rose-text);font-size:12px;text-align:center;padding:8px;">Nenhum item. Clique nos dentes e adicione procedimentos.</div>';
+    document.getElementById('pac-odonto-orc-total').textContent = 'R$ 0,00';
+    return;
+  }
+  let total = 0;
+  c.innerHTML = pacOdontoOrcList.map((it,i)=>{
+    total += it.total;
+    return `<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--rose-light);font-size:12px;flex-wrap:wrap;">
+      <span style="flex:1;">${escapeHtml(it.nome)}</span>
+      ${it.dentes ? `<span style="background:var(--rose-lighter);color:var(--rose-dark);border-radius:6px;padding:2px 6px;font-size:11px;">🦷 ${it.dentes.split(',').join(', ')}</span>` : ''}
+      <input type="number" min="0" step="0.01" value="${it.total.toFixed(2)}"
+        onchange="pacOdontoOrcList[${i}].total=parseFloat(this.value)||0;pacOdontoOrcList[${i}].precoUnit=parseFloat(this.value)||0;pacOdontoRenderOrcLista();"
+        style="width:80px;padding:3px 6px;border:1px solid var(--rose-light);border-radius:6px;font-size:12px;text-align:right;font-weight:700;color:var(--rose-dark);"/>
+      <button class="btn-danger" style="padding:2px 6px;" onclick="pacOdontoOrcList.splice(${i},1);pacOdontoRenderOrcLista();"><i class="ti ti-x"></i></button>
+    </div>`;
+  }).join('');
+  document.getElementById('pac-odonto-orc-total').textContent = 'R$ ' + total.toFixed(2).replace('.',',');
+}
+
+function pacOdontoLimparOrc(){
+  pacOdontoOrcList = [];
+  pacOdontoRenderOrcLista();
+}
+
+async function pacOdontoSalvarOrc(){
+  if(!pacOdontoOrcList.length){ showToast('Adicione procedimentos ao orçamento.','warn'); return; }
+  const pacId = selectedPatientId;
+  const pac = pacientes.find(p=>p.id===pacId);
+  const total = pacOdontoOrcList.reduce((a,it)=>a+it.total, 0);
+  // Salva como orçamento em vendas
+  const venda = {
+    id: nextVendaId++, status:'orcamento',
+    pacienteId: pacId, pacienteNome: pac?.nome||'',
+    itens: pacOdontoOrcList.map(it=>({procId:it.procId,qtd:it.qtd,nome:it.nome,dente:it.dentes,descDente:''})),
+    subtotal: parseFloat(total.toFixed(2)),
+    desconto: 0, total: parseFloat(total.toFixed(2)),
+    data: new Date().toISOString()
+  };
+  vendas.push(venda);
+  showLoading(true); await saveFinanceiro(); showLoading(false);
+  pacOdontoOrcList = [];
+  pacOdontoRenderOrcLista();
+  showToast('Orçamento salvo! Veja em Financeiro → Vendas.');
+}
+
+
+// ── WhatsApp Confirmação ──
+function enviarConfirmacaoWpp(tel, nome, data, horario, procedimento){
+  // Formata telefone (remove tudo que não é número)
+  const num = tel.replace(/\D/g,'');
+  const numBR = num.startsWith('55') ? num : '55' + num;
+  // Formata data
+  const [y,m,d] = data.split('-');
+  const dataFmt = `${d}/${m}/${y}`;
+  // Nome da clínica
+  const clinica = clinicaData?.nome_cli || 'nossa clínica';
+  // Mensagem
+  const msg = `Olá, ${nome}! 😊\n\nPassando para confirmar sua consulta na *${clinica}*:\n\n📅 *Data:* ${dataFmt}\n⏰ *Horário:* ${horario}\n🦷 *Procedimento:* ${procedimento}\n\nPor favor, confirme sua presença respondendo *SIM* para confirmar ou *NÃO* para cancelar.\n\nAguardamos você! 🙏`;
+  const url = `https://wa.me/${numBR}?text=${encodeURIComponent(msg)}`;
+  window.open(url, '_blank');
+}
 
 // ══════════════════════════════════════════════════════
 // CONFIGURAÇÕES DA CLÍNICA
@@ -3862,6 +4531,33 @@ function renderConfiguracoes(){
   document.getElementById('cfg-nome-resp').value = clinicaData.nome_resp || '';
   document.getElementById('cfg-email').value     = clinicaData.email     || '';
   document.getElementById('cfg-telefone').value  = clinicaData.telefone  || '';
+  // Taxas
+  document.getElementById('cfg-taxa-debito').value = taxasCfg.debito || 1.5;
+  const cr = taxasCfg.credito || [];
+  [1,2,3,4,5,6,12].forEach((p,i)=>{
+    const el = document.getElementById('cfg-taxa-cred'+p);
+    if(el) el.value = cr[i] || '';
+  });
+}
+
+async function salvarTaxas(){
+  taxasCfg.debito = parseFloat(document.getElementById('cfg-taxa-debito')?.value)||0;
+  taxasCfg.credito = [1,2,3,4,5,6,7,8,9,10,11,12].map(p=>parseFloat(document.getElementById('cfg-taxa-cred'+p)?.value)||0);
+  showLoading(true);
+  await saveFinanceiro();
+  showLoading(false);
+  showToast('Taxas salvas!');
+}
+
+function calcValorLiquido(total, forma, parcelas){
+  if(!total) return total;
+  let taxa = 0;
+  if(forma==='debito') taxa = taxasCfg.debito || 0;
+  else if(forma==='credito'){
+    const idx = [1,2,3,4,5,6,12].indexOf(parcelas);
+    taxa = idx>=0 ? (taxasCfg.credito||[])[idx]||0 : 0;
+  }
+  return parseFloat((total * (1 - taxa/100)).toFixed(2));
 }
 
 async function salvarConfiguracoes(){
@@ -3878,6 +4574,7 @@ async function salvarConfiguracoes(){
   clinicaData.telefone  = telefone;
   const el = document.getElementById('header-clinica');
   if(el) el.textContent = nome_cli;
+  updateSidebarAvatar();
   showToast('Configurações salvas!');
 }
 
@@ -4013,12 +4710,12 @@ async function calSaveNewAppt(){
     <div style="background:var(--rose-lighter);border-radius:8px;padding:8px 12px;font-size:12px;color:var(--rose-dark);margin-bottom:8px;display:flex;justify-content:space-between;">
       <span>Total custo insumos:</span><strong id="mi-total-custo">R$ 0,00</strong>
     </div>
-    <div style="background:#fff8e1;border-radius:7px;padding:7px 10px;font-size:11px;color:#856404;margin-bottom:8px;">
-      <i class="ti ti-info-circle"></i> Ao salvar, o estoque será descontado nas quantidades definidas.
+    <div style="background:#edf7ee;border-radius:7px;padding:7px 10px;font-size:11px;color:#2e6b32;margin-bottom:8px;">
+      <i class="ti ti-info-circle"></i> Os insumos são descontados do estoque apenas ao <strong>finalizar a venda</strong>.
     </div>
     <div class="modal-footer">
       <button class="btn-secondary" onclick="closeModal('modal-insumos')">Cancelar</button>
-      <button class="btn-primary" onclick="saveInsumos()"><i class="ti ti-device-floppy"></i> Salvar e descontar estoque</button>
+      <button class="btn-primary" onclick="saveInsumos()"><i class="ti ti-device-floppy"></i> Salvar insumos</button>
     </div>
   </div>
 </div>
