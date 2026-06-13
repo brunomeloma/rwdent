@@ -379,6 +379,16 @@ button{font-family:inherit;}
 .sim-orcamento-item{display:flex;align-items:center;gap:8px;padding:8px 10px;border-bottom:1px solid var(--rose-light);font-size:13px;flex-wrap:wrap;}
 .sim-orcamento-item:last-child{border-bottom:none;}
 
+
+/* ── ASSINATURA DIGITAL ── */
+.sign-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:2000;flex-direction:column;align-items:center;justify-content:center;padding:16px;}
+.sign-overlay.open{display:flex;}
+.sign-box{background:#fff;border-radius:18px;padding:20px;width:100%;max-width:500px;display:flex;flex-direction:column;gap:12px;}
+.sign-title{font-size:15px;font-weight:700;color:var(--rose-dark);}
+.sign-canvas{border:2px solid var(--rose-light);border-radius:10px;background:#fff;cursor:crosshair;touch-action:none;width:100%;}
+.sign-preview{border:1.5px solid var(--rose-light);border-radius:10px;padding:10px;text-align:center;min-height:80px;display:flex;align-items:center;justify-content:center;}
+.sign-preview img{max-height:70px;max-width:100%;}
+
 /* ── MOBILE BOTTOM NAV ── */
 .mobile-bottom-nav{
   display:none;position:fixed;bottom:0;left:0;right:0;
@@ -1008,14 +1018,11 @@ button{font-family:inherit;}
     <div class="mobile-nav-items">
       <button class="mobile-nav-item active" data-tab="home" onclick="switchTab('home')"><i class="ti ti-home"></i>Início</button>
       <button class="mobile-nav-item" data-tab="agendar" onclick="switchTab('agendar')"><i class="ti ti-calendar-plus"></i>Agendar</button>
-      <button class="mobile-nav-item" data-tab="calendario" onclick="switchTab('calendario')"><i class="ti ti-calendar-month"></i>Calendário</button>
       <button class="mobile-nav-item" data-tab="lista" onclick="switchTab('lista')"><i class="ti ti-list-check"></i>Agenda</button>
+      <button class="mobile-nav-item" data-tab="calendario" onclick="switchTab('calendario')"><i class="ti ti-calendar-month"></i>Calendário</button>
       <button class="mobile-nav-item" data-tab="pacientes" onclick="switchTab('pacientes')"><i class="ti ti-users"></i>Pacientes</button>
       <button class="mobile-nav-item" data-tab="prontuarios" onclick="switchTab('prontuarios')"><i class="ti ti-file-text"></i>Prontuários</button>
       <button class="mobile-nav-item" data-tab="profissionais" onclick="switchTab('profissionais')"><i class="ti ti-briefcase"></i>Profissionais</button>
-      <button class="mobile-nav-item" data-tab="financeiro" onclick="switchTab('financeiro')"><i class="ti ti-chart-bar"></i>Financeiro</button>
-      <button class="mobile-nav-item" data-tab="vendas_fin" onclick="switchTab('vendas_fin')"><i class="ti ti-receipt"></i>Vendas</button>
-      <button class="mobile-nav-item" data-tab="estoque_fin" onclick="switchTab('estoque_fin')"><i class="ti ti-package"></i>Estoque</button>
     </div>
   </nav>
 </div><!-- end app -->
@@ -2808,8 +2815,16 @@ function pacRenderProcLista(){
     c.innerHTML = '<div style="text-align:center;color:var(--rose-text);font-size:13px;padding:16px;">Nenhum procedimento registrado ainda.</div>';
     return;
   }
-  c.innerHTML = pacProcsList.map(a=>`
-    <div class="atend-card">
+  c.innerHTML = pacProcsList.map(a=>{
+    const prof = profissionais.find(p=>p.id==a.profissional_id);
+    // Carrega assinaturas salvas
+    let sigExist = {};
+    try{ sigExist = JSON.parse(a.assinaturas||'{}'); }catch(e){}
+    const key = getSignKey(selectedPatientId, a.id);
+    if(!assinaturasAtend[key] && (sigExist.paciente||sigExist.profissional)){
+      assinaturasAtend[key] = sigExist;
+    }
+    return `<div class="atend-card">
       <div class="atend-card-head">
         <span class="atend-card-date"><i class="ti ti-calendar"></i> ${formatDate(a.data)}</span>
         <span style="font-size:12px;color:var(--rose-text);">${escapeHtml(a.profissional_nome||'')}</span>
@@ -2817,8 +2832,9 @@ function pacRenderProcLista(){
       </div>
       <div class="atend-card-body">${escapeHtml(a.procedimentos)}</div>
       ${a.obs?`<div style="font-size:12px;color:var(--rose-text);margin-top:4px;">${escapeHtml(a.obs)}</div>`:''}
-    </div>
-  `).join('');
+      ${renderSignArea(selectedPatientId, a.id, a.procedimentos||'Atendimento', prof?.nome||a.profissional_nome||'', prof?.cro||'', sigExist)}
+    </div>`;
+  }).join('');
 }
 
 async function pacRemoverProc(id){
@@ -4536,6 +4552,137 @@ function enviarConfirmacaoWpp(tel, nome, data, horario, procedimento){
 }
 
 // ══════════════════════════════════════════════════════
+// ASSINATURA DIGITAL
+// ══════════════════════════════════════════════════════
+let signCanvas = null, signCtx = null, signDrawing = false;
+let signCallback = null; // função chamada ao confirmar
+let signLastX = 0, signLastY = 0;
+
+function initSignCanvas(){
+  signCanvas = document.getElementById('sign-canvas');
+  if(!signCanvas) return;
+  signCtx = signCanvas.getContext('2d');
+  signCanvas.width = signCanvas.offsetWidth || 460;
+  signCanvas.height = 180;
+  signCtx.strokeStyle = '#1a1a2e';
+  signCtx.lineWidth = 2.5;
+  signCtx.lineCap = 'round';
+  signCtx.lineJoin = 'round';
+
+  // Mouse
+  signCanvas.addEventListener('mousedown', e=>{ signDrawing=true; const r=signCanvas.getBoundingClientRect(); signLastX=e.clientX-r.left; signLastY=e.clientY-r.top; });
+  signCanvas.addEventListener('mousemove', e=>{ if(!signDrawing) return; const r=signCanvas.getBoundingClientRect(); const x=e.clientX-r.left,y=e.clientY-r.top; signCtx.beginPath(); signCtx.moveTo(signLastX,signLastY); signCtx.lineTo(x,y); signCtx.stroke(); signLastX=x; signLastY=y; });
+  signCanvas.addEventListener('mouseup', ()=>signDrawing=false);
+  signCanvas.addEventListener('mouseleave', ()=>signDrawing=false);
+
+  // Touch
+  signCanvas.addEventListener('touchstart', e=>{ e.preventDefault(); signDrawing=true; const r=signCanvas.getBoundingClientRect(); const t=e.touches[0]; signLastX=t.clientX-r.left; signLastY=t.clientY-r.top; },{passive:false});
+  signCanvas.addEventListener('touchmove', e=>{ e.preventDefault(); if(!signDrawing) return; const r=signCanvas.getBoundingClientRect(); const t=e.touches[0]; const x=t.clientX-r.left,y=t.clientY-r.top; signCtx.beginPath(); signCtx.moveTo(signLastX,signLastY); signCtx.lineTo(x,y); signCtx.stroke(); signLastX=x; signLastY=y; },{passive:false});
+  signCanvas.addEventListener('touchend', ()=>signDrawing=false);
+}
+
+function openSignModal(title, callback){
+  const overlay = document.getElementById('sign-overlay');
+  const titleEl = document.getElementById('sign-title');
+  if(titleEl) titleEl.textContent = '✍️ ' + title;
+  overlay.classList.add('open');
+  signCallback = callback;
+  setTimeout(()=>{ initSignCanvas(); signClear(); }, 100);
+}
+
+function closeSignModal(){
+  document.getElementById('sign-overlay').classList.remove('open');
+  signDrawing = false;
+}
+
+function signClear(){
+  if(signCtx && signCanvas) signCtx.clearRect(0,0,signCanvas.width,signCanvas.height);
+}
+
+function signIsEmpty(){
+  if(!signCanvas || !signCtx) return true;
+  const data = signCtx.getImageData(0,0,signCanvas.width,signCanvas.height).data;
+  for(let i=3;i<data.length;i+=4){ if(data[i]>0) return false; }
+  return true;
+}
+
+function signConfirm(){
+  if(signIsEmpty()){ showToast('Por favor, faça sua assinatura antes de confirmar.','warn'); return; }
+  const dataUrl = signCanvas.toDataURL('image/png');
+  closeSignModal();
+  if(signCallback) signCallback(dataUrl);
+}
+
+// Armazena assinaturas por atendimento (em memória + salva no prontuário)
+const assinaturasAtend = {}; // { atendId: { paciente: dataUrl, profissional: dataUrl } }
+
+function getSignKey(pacId, atendId){ return `${pacId}_${atendId}`; }
+
+function abrirAssinaturaPaciente(pacId, atendId, nomeAtend){
+  const key = getSignKey(pacId, atendId);
+  openSignModal(`Assinatura do Paciente — ${nomeAtend}`, (dataUrl)=>{
+    if(!assinaturasAtend[key]) assinaturasAtend[key] = {};
+    assinaturasAtend[key].paciente = dataUrl;
+    showToast('Assinatura do paciente salva!');
+    renderSignArea(pacId, atendId, nomeAtend);
+    salvarAssinaturas(pacId, atendId);
+  });
+}
+
+function abrirAssinaturaProfissional(pacId, atendId, nomeAtend){
+  const key = getSignKey(pacId, atendId);
+  openSignModal(`Assinatura do Profissional — ${nomeAtend}`, (dataUrl)=>{
+    if(!assinaturasAtend[key]) assinaturasAtend[key] = {};
+    assinaturasAtend[key].profissional = dataUrl;
+    showToast('Assinatura do profissional salva!');
+    renderSignArea(pacId, atendId, nomeAtend);
+    salvarAssinaturas(pacId, atendId);
+  });
+}
+
+async function salvarAssinaturas(pacId, atendId){
+  // Salva como JSON no campo obs do atendimento
+  const key = getSignKey(pacId, atendId);
+  const sigs = assinaturasAtend[key] || {};
+  const sigJson = JSON.stringify(sigs);
+  // Atualiza campo de assinatura no banco
+  await _sb.from('atendimentos_odonto').update({ assinaturas: sigJson }).eq('id', atendId);
+}
+
+function renderSignArea(pacId, atendId, nomeAtend, profNome, profCro, sigExist){
+  const key = getSignKey(pacId, atendId);
+  const sigs = assinaturasAtend[key] || sigExist || {};
+  const pacSig = sigs.paciente;
+  const profSig = sigs.profissional;
+
+  return `<div style="border:1.5px solid var(--rose-light);border-radius:12px;padding:14px;margin-top:10px;background:#fdfaf9;">
+    <div style="font-size:12px;font-weight:700;color:var(--rose-dark);margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px;">✍️ Assinaturas</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+      <div>
+        <div style="font-size:11px;color:var(--rose-text);margin-bottom:6px;">Paciente</div>
+        <div class="sign-preview" style="min-height:60px;">
+          ${pacSig ? `<img src="${pacSig}" style="max-height:55px;"/>` : '<span style="font-size:11px;color:var(--rose-text);">Sem assinatura</span>'}
+        </div>
+        <button class="btn-secondary" style="width:100%;margin-top:6px;font-size:11px;" onclick="abrirAssinaturaPaciente(${pacId},${atendId},'${escapeHtml(nomeAtend)}')">
+          <i class="ti ti-signature"></i> ${pacSig ? 'Reassinar' : 'Assinar'}
+        </button>
+      </div>
+      <div>
+        <div style="font-size:11px;color:var(--rose-text);margin-bottom:6px;">Profissional</div>
+        <div class="sign-preview" style="min-height:60px;">
+          ${profSig ? `<img src="${profSig}" style="max-height:55px;"/>` : '<span style="font-size:11px;color:var(--rose-text);">Sem assinatura</span>'}
+        </div>
+        <button class="btn-secondary" style="width:100%;margin-top:6px;font-size:11px;" onclick="abrirAssinaturaProfissional(${pacId},${atendId},'${escapeHtml(nomeAtend)}')">
+          <i class="ti ti-signature"></i> ${profSig ? 'Reassinar' : 'Assinar'}
+        </button>
+        ${profNome ? `<div style="font-size:10px;color:var(--rose-text);margin-top:4px;text-align:center;">${escapeHtml(profNome)}${profCro?' · '+escapeHtml(profCro):''}</div>` : ''}
+      </div>
+    </div>
+  </div>`;
+}
+
+
+// ══════════════════════════════════════════════════════
 // CONFIGURAÇÕES DA CLÍNICA
 // ══════════════════════════════════════════════════════
 function renderConfiguracoes(){
@@ -4754,6 +4901,21 @@ async function calSaveNewAppt(){
   <option value="unid"/><option value="m"/><option value="cm"/><option value="kit"/>
   <option value="caixa"/><option value="frasco"/><option value="seringa"/><option value="ampola"/>
 </datalist>
+
+
+<!-- ══ MODAL ASSINATURA ══ -->
+<div class="sign-overlay" id="sign-overlay">
+  <div class="sign-box">
+    <div class="sign-title" id="sign-title">✍️ Assinatura</div>
+    <p style="font-size:12px;color:var(--rose-text);">Assine no espaço abaixo usando o dedo ou mouse.</p>
+    <canvas class="sign-canvas" id="sign-canvas" height="180"></canvas>
+    <div style="display:flex;gap:8px;">
+      <button class="btn-secondary" style="flex:1;" onclick="signClear()"><i class="ti ti-eraser"></i> Limpar</button>
+      <button class="btn-secondary" onclick="closeSignModal()">Cancelar</button>
+      <button class="btn-primary" style="flex:1;" onclick="signConfirm()"><i class="ti ti-check"></i> Confirmar</button>
+    </div>
+  </div>
+</div>
 
 </body>
 </html>
