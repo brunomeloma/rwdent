@@ -1137,6 +1137,7 @@ async function doLogout(){
   await _sb.auth.signOut();
   currentUser=null; agendamentos=[]; profissionais=[]; pacientes=[];
   procs=[]; mats=[]; estoque={}; procInsumos={}; vendas=[]; combos=[];
+  _financeiroCarregado = false;
   document.getElementById('app').style.display='none';
   document.getElementById('login-screen').style.display='flex';
   document.getElementById('login-pass').value='';
@@ -1273,7 +1274,7 @@ function switchTab(tab){
   if(tab==='home') renderHomeStats();
   if(tab==='configuracoes') renderConfiguracoes();
   if(tab==='financeiro'||tab==='procedimentos_fin'||tab==='materiais_fin'||tab==='estoque_fin'||tab==='vendas_fin'){
-    if(!procs.length){
+    if(!_financeiroCarregado){
       showLoading(true);
       loadFinanceiro().then(()=>{
         showLoading(false);
@@ -2843,6 +2844,7 @@ let descCfg     = { val:0, tipo:'pct', maxPar:6 };
 
 // IDs locais
 let nextProcId  = 1;
+let _financeiroCarregado = false;  // evita duplo carregamento
 let nextMatId   = 1;
 let nextVendaId = 1;
 let nextComboId = 201;
@@ -2908,6 +2910,8 @@ async function loadFinanceiro(){
 
   // Salva só se precisou preencher com padrões
   if(precisaSalvar) await saveFinanceiro();
+
+  _financeiroCarregado = true;
 }
 
 async function saveFinanceiro(){
