@@ -1110,8 +1110,11 @@ async function checkClinicaApproval(){
 document.addEventListener('keydown', e=>{ if(e.key==='Enter'&&document.getElementById('login-screen').style.display!=='none') doLogin(); });
 
 async function doLogout(){
+  // Salva dados financeiros antes de sair
+  try { await saveFinanceiro(); } catch(e){}
   await _sb.auth.signOut();
   currentUser=null; agendamentos=[]; profissionais=[]; pacientes=[];
+  procs=[]; mats=[]; estoque={}; procInsumos={}; vendas=[]; combos=[];
   document.getElementById('app').style.display='none';
   document.getElementById('login-screen').style.display='flex';
   document.getElementById('login-pass').value='';
@@ -1586,6 +1589,32 @@ function renderPatientDetail(abaAtiva){
           </div>
           <!-- histórico por dente -->
           <div id="pac-dentes-historico" style="margin-top:12px;"></div>
+
+          <!-- ORÇAMENTO DIRETO NO ODONTOGRAMA -->
+          <div style="margin-top:16px;border-top:1px solid var(--rose-light);padding-top:16px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+              <span style="font-size:13px;font-weight:700;color:var(--rose-dark);"><i class="ti ti-calculator"></i> Orçamento rápido</span>
+              <button class="btn-secondary" style="font-size:11px;" onclick="pacOdontoToggleOrc()"><i class="ti ti-chevron-down" id="pac-odonto-orc-icon"></i> Montar orçamento</button>
+            </div>
+            <div id="pac-odonto-orc-panel" style="display:none;">
+              <div style="font-size:12px;color:var(--rose-text);margin-bottom:8px;">Clique nos dentes acima para marcá-los, depois adicione ao orçamento:</div>
+              <div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;">
+                <select id="pac-odonto-orc-proc" style="flex:1;min-width:160px;font-size:13px;">
+                  <option value="">Selecione procedimento</option>
+                </select>
+                <button class="btn-primary" style="font-size:12px;" onclick="pacOdontoAddOrc()"><i class="ti ti-plus"></i> Adicionar</button>
+              </div>
+              <div id="pac-odonto-orc-lista" style="margin-bottom:10px;"></div>
+              <div style="background:var(--rose-lighter);border-radius:8px;padding:8px 12px;display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                <span style="font-size:13px;font-weight:700;">Total</span>
+                <span style="font-size:14px;font-weight:800;color:var(--rose-dark);" id="pac-odonto-orc-total">R$ 0,00</span>
+              </div>
+              <div style="display:flex;gap:8px;">
+                <button class="btn-secondary" style="flex:1;justify-content:center;font-size:12px;" onclick="pacOdontoSalvarOrc()" id="pac-odonto-orc-btn-pac"></button>
+                <button class="btn-danger" style="font-size:12px;" onclick="pacOdontoLimparOrc()"><i class="ti ti-eraser"></i></button>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -1601,12 +1630,14 @@ function renderPatientDetail(abaAtiva){
           <!-- form novo item -->
           <div id="pac-plan-form" style="display:none;border:1.5px solid var(--rose-light);border-radius:12px;padding:14px;margin-bottom:14px;">
             <div class="form-grid">
-              <div class="form-group">
-                <label>Dente</label>
-                <select id="pac-plan-dente">
-                  <option value="">Selecione</option>
-                  ${[18,17,16,15,14,13,12,11,21,22,23,24,25,26,27,28,48,47,46,45,44,43,42,41,31,32,33,34,35,36,37,38].map(d=>`<option value="${d}">${d}</option>`).join('')}
+              <div class="form-group full">
+                <label>Dentes (selecione um ou mais)</label>
+                <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px;" id="pac-plan-dentes-sel"></div>
+                <select id="pac-plan-dente-add" onchange="pacPlanAddDente(this.value)" style="max-width:180px;">
+                  <option value="">+ Adicionar dente</option>
+                  ${[18,17,16,15,14,13,12,11,21,22,23,24,25,26,27,28,48,47,46,45,44,43,42,41,31,32,33,34,35,36,37,38,55,54,53,52,51,61,62,63,64,65,85,84,83,82,81,71,72,73,74,75].map(d=>`<option value="${d}">${d}</option>`).join('')}
                 </select>
+                <input type="hidden" id="pac-plan-dente" value=""/>
               </div>
               <div class="form-group">
                 <label>Face</label>
@@ -1617,14 +1648,18 @@ function renderPatientDetail(abaAtiva){
               </div>
               <div class="form-group">
                 <label>Procedimento *</label>
-                <select id="pac-plan-proc">
+                <select id="pac-plan-proc" onchange="pacPlanSyncValor()">
                   <option value="">Selecione</option>
-                  ${['Exodontia','Restauração','Tratamento de Canal','Prótese','Implante','Limpeza / Profilaxia','Clareamento','Extração de Siso','Aparelho Ortodôntico','Outro'].map(p=>`<option>${p}</option>`).join('')}
+                  ${procs.length ? procs.map(p=>`<option value="${p.nome}" data-preco="${p.precoFinal||0}">${p.nome}</option>`).join('') : ['Exodontia','Restauração','Tratamento de Canal','Prótese','Implante','Limpeza / Profilaxia','Clareamento','Extração de Siso','Aparelho Ortodôntico','Outro'].map(p=>`<option>${p}</option>`).join('')}
                 </select>
               </div>
               <div class="form-group">
-                <label>Valor (R$)</label>
-                <input type="text" id="pac-plan-valor" placeholder="0,00"/>
+                <label>Valor por dente (R$)</label>
+                <input type="text" id="pac-plan-valor" placeholder="0,00" oninput="pacPlanSyncFromValor()"/>
+              </div>
+              <div class="form-group">
+                <label>Valor total</label>
+                <input type="text" id="pac-plan-valor-total" placeholder="0,00" disabled style="opacity:.7;font-weight:700;color:var(--rose-dark);"/>
               </div>
               <div class="form-group full">
                 <label>Descrição</label>
@@ -2558,6 +2593,7 @@ async function pacCarregarOdonto(pacId){
   pacDentesMap = {};
   (data||[]).forEach(d => { pacDentesMap[d.dente] = d; });
   pacDenteSel = null;
+  pacOdontoOrcList = [];
   pacRenderArcadas();
   pacRenderLegenda();
   pacRenderDentesHistorico();
@@ -2801,6 +2837,12 @@ async function loadFinanceiro(){
     if(!procs.length){
       procs  = DEFAULT_PROCS_FIN.map((p,i)=>({...p,id:p.id||i+1}));
       nextProcId = 103;
+      // Carrega insumos padrão
+      if(!Object.keys(procInsumos).length){
+        Object.entries(DEFAULT_PROC_INSUMOS_DATA).forEach(([procId, items])=>{
+          procInsumos[procId] = items;
+        });
+      }
     }
     if(!mats.length){
       mats   = DEFAULT_MATS_FIN.map((m,i)=>({...m,id:m.id||i+1}));
@@ -2822,6 +2864,11 @@ async function loadFinanceiro(){
     procs   = DEFAULT_PROCS_FIN.map((p,i)=>({...p,id:p.id||i+1}));
     mats    = DEFAULT_MATS_FIN.map((m,i)=>({...m,id:m.id||i+1}));
     combos  = DEFAULT_COMBOS_FIN.map(c=>({...c}));
+    // Carrega insumos pré-configurados
+    procInsumos = {};
+    Object.entries(DEFAULT_PROC_INSUMOS_DATA).forEach(([procId, items])=>{
+      procInsumos[procId] = items;
+    });
     nextProcId  = 103;
     nextMatId   = 91;
     nextComboId = 207;
@@ -3257,10 +3304,10 @@ function renderEstoque(){
     </tr>`;
   }).join('');
 }
-async function updateEstField(id, field, val){
+function updateEstField(id, field, val){
   if(!estoque[id]) estoque[id]={atual:0,min:0,compra:0};
   estoque[id][field] = parseFloat(val)||0;
-  await saveFinanceiro();
+  // Não salva a cada digitação — salva no logout
   renderEstoque();
 }
 
@@ -3311,23 +3358,7 @@ function updateInsumoQtd(idx,val){ insumosTemp[idx].qtd=parseFloat(val)||0; rend
 function removeInsumo(idx){ insumosTemp.splice(idx,1); renderInsumosList(); }
 async function saveInsumos(){
   if(insumosEditProcId===null) return;
-  // Ajuste de estoque: diferença entre antes e agora
-  const old = procInsumos[insumosEditProcId]||[];
-  insumosTemp.forEach(item=>{
-    const prev=old.find(x=>x.matId===item.matId);
-    const diff=item.qtd-(prev?prev.qtd:0);
-    if(diff!==0){
-      if(!estoque[item.matId]) estoque[item.matId]={atual:0,min:0,compra:0};
-      estoque[item.matId].atual=Math.max(0,parseFloat(((estoque[item.matId].atual||0)-diff).toFixed(4)));
-    }
-  });
-  old.forEach(item=>{
-    const still=insumosTemp.find(x=>x.matId===item.matId);
-    if(!still){
-      if(!estoque[item.matId]) estoque[item.matId]={atual:0,min:0,compra:0};
-      estoque[item.matId].atual=parseFloat(((estoque[item.matId].atual||0)+item.qtd).toFixed(4));
-    }
-  });
+  // Só salva a lista de insumos — estoque é descontado apenas ao finalizar venda
   procInsumos[insumosEditProcId]=JSON.parse(JSON.stringify(insumosTemp));
   // Recalcula custo do procedimento
   const totalIns=insumosTemp.reduce((acc,item)=>{const m=mats.find(x=>x.id===item.matId);return acc+(m?m.custo*item.qtd:0);},0);
@@ -3627,6 +3658,8 @@ function renderOrcPac(){
 
   const elTotal = document.getElementById('sim-orc-total-pac');
   if(elTotal) elTotal.textContent = fmtBRL(subtotal);
+  // Sincroniza total com plano de tratamento (atualiza resumo)
+  pacRenderPlanoResumo();
 
   const elDescTotal = document.getElementById('sim-desc-total-pac');
   if(elDescTotal){
@@ -3728,6 +3761,126 @@ async function carregarPadroes(){
 // ── Modais (reutiliza funções existentes do app) ──
 function openModal(id){ const m=document.getElementById(id); if(m) m.classList.add('open'); }
 function closeModal(id){ const m=document.getElementById(id); if(m) m.classList.remove('open'); }
+
+
+// Insumos pré-configurados por procedimento (baseado em literatura odontológica)
+
+const DEFAULT_PROC_INSUMOS_DATA = {
+  // ── PREVENTIVO ──
+  1:  [{matId:25,qtd:1},{matId:67,qtd:1},{matId:68,qtd:5},{matId:38,qtd:3},{matId:8,qtd:1},{matId:34,qtd:2},{matId:35,qtd:1},{matId:16,qtd:10},{matId:20,qtd:1}],
+  2:  [{matId:25,qtd:1},{matId:67,qtd:1},{matId:68,qtd:5},{matId:38,qtd:3},{matId:8,qtd:1},{matId:34,qtd:2},{matId:35,qtd:1},{matId:16,qtd:10}],
+  3:  [{matId:8,qtd:1},{matId:38,qtd:2},{matId:34,qtd:1},{matId:35,qtd:1},{matId:20,qtd:1}],
+  4:  [{matId:39,qtd:1},{matId:1,qtd:0.5},{matId:40,qtd:0.3},{matId:37,qtd:2},{matId:8,qtd:1},{matId:23,qtd:1},{matId:34,qtd:2},{matId:69,qtd:1}],
+  70: [{matId:8,qtd:1},{matId:38,qtd:2},{matId:34,qtd:1},{matId:35,qtd:1}],
+  71: [{matId:25,qtd:1},{matId:67,qtd:1},{matId:29,qtd:2},{matId:38,qtd:2},{matId:8,qtd:1},{matId:34,qtd:1}],
+  72: [{matId:8,qtd:1},{matId:38,qtd:2},{matId:37,qtd:1},{matId:34,qtd:1}],
+  73: [{matId:8,qtd:1},{matId:38,qtd:2},{matId:29,qtd:2},{matId:34,qtd:1},{matId:35,qtd:1}],
+  // ── DENTÍSTICA ──
+  5:  [{matId:1,qtd:0.5},{matId:40,qtd:0.3},{matId:52,qtd:2},{matId:53,qtd:1},{matId:37,qtd:3},{matId:21,qtd:1},{matId:36,qtd:1},{matId:22,qtd:2},{matId:23,qtd:1},{matId:8,qtd:1},{matId:34,qtd:2},{matId:69,qtd:1},{matId:41,qtd:1}],
+  6:  [{matId:1,qtd:0.5},{matId:40,qtd:0.3},{matId:51,qtd:2},{matId:52,qtd:1},{matId:37,qtd:3},{matId:41,qtd:3},{matId:22,qtd:2},{matId:23,qtd:1},{matId:8,qtd:1},{matId:34,qtd:2},{matId:69,qtd:1}],
+  7:  [{matId:13,qtd:1},{matId:3,qtd:0.5},{matId:37,qtd:2},{matId:8,qtd:1},{matId:34,qtd:1},{matId:69,qtd:1}],
+  8:  [{matId:2,qtd:0.2},{matId:15,qtd:0.5},{matId:40,qtd:0.5},{matId:52,qtd:3},{matId:51,qtd:2},{matId:37,qtd:5},{matId:22,qtd:3},{matId:41,qtd:4},{matId:23,qtd:1},{matId:8,qtd:1},{matId:34,qtd:2},{matId:69,qtd:1}],
+  9:  [{matId:65,qtd:1},{matId:9,qtd:0.5},{matId:8,qtd:1},{matId:38,qtd:2},{matId:34,qtd:1},{matId:35,qtd:1}],
+  10: [{matId:64,qtd:1},{matId:9,qtd:1},{matId:8,qtd:1},{matId:38,qtd:2},{matId:34,qtd:1},{matId:35,qtd:1},{matId:20,qtd:1}],
+  11: [{matId:37,qtd:2},{matId:8,qtd:1},{matId:38,qtd:1},{matId:34,qtd:1},{matId:69,qtd:1}],
+  12: [{matId:40,qtd:0.2},{matId:52,qtd:1},{matId:53,qtd:1},{matId:22,qtd:2},{matId:37,qtd:3},{matId:41,qtd:2},{matId:8,qtd:1},{matId:34,qtd:2},{matId:69,qtd:1}],
+  13: [{matId:40,qtd:0.2},{matId:52,qtd:1},{matId:22,qtd:1},{matId:37,qtd:2},{matId:8,qtd:1},{matId:34,qtd:1}],
+  14: [{matId:14,qtd:1},{matId:71,qtd:0.5},{matId:38,qtd:2},{matId:8,qtd:1},{matId:34,qtd:1}],
+  15: [{matId:14,qtd:1},{matId:55,qtd:0.5},{matId:38,qtd:2},{matId:8,qtd:1},{matId:34,qtd:1}],
+  93: [{matId:31,qtd:5},{matId:72,qtd:1},{matId:19,qtd:3},{matId:8,qtd:1},{matId:34,qtd:1},{matId:49,qtd:1}],
+  94: [{matId:57,qtd:1},{matId:87,qtd:0.1},{matId:38,qtd:2},{matId:8,qtd:1},{matId:34,qtd:1}],
+  95: [{matId:1,qtd:0.5},{matId:40,qtd:0.4},{matId:52,qtd:3},{matId:51,qtd:2},{matId:37,qtd:4},{matId:22,qtd:3},{matId:41,qtd:3},{matId:8,qtd:1},{matId:34,qtd:2},{matId:69,qtd:1}],
+  // ── CIRURGIA ──
+  16: [{matId:33,qtd:1},{matId:10,qtd:0.5},{matId:5,qtd:1},{matId:30,qtd:4},{matId:38,qtd:4},{matId:8,qtd:1},{matId:34,qtd:2},{matId:35,qtd:1},{matId:4,qtd:1},{matId:20,qtd:1}],
+  17: [{matId:33,qtd:2},{matId:10,qtd:1},{matId:5,qtd:1},{matId:30,qtd:6},{matId:38,qtd:4},{matId:8,qtd:1},{matId:34,qtd:2},{matId:35,qtd:1},{matId:4,qtd:1},{matId:28,qtd:1},{matId:11,qtd:1},{matId:86,qtd:1}],
+  18: [{matId:33,qtd:2},{matId:10,qtd:1},{matId:6,qtd:1},{matId:30,qtd:8},{matId:38,qtd:6},{matId:8,qtd:1},{matId:34,qtd:2},{matId:35,qtd:1},{matId:4,qtd:1},{matId:27,qtd:1},{matId:11,qtd:1},{matId:86,qtd:1},{matId:26,qtd:1}],
+  19: [{matId:33,qtd:2},{matId:10,qtd:1},{matId:6,qtd:1},{matId:86,qtd:1},{matId:27,qtd:1},{matId:30,qtd:8},{matId:38,qtd:6},{matId:4,qtd:1},{matId:8,qtd:1},{matId:34,qtd:2},{matId:11,qtd:1}],
+  20: [{matId:33,qtd:1},{matId:10,qtd:1},{matId:5,qtd:1},{matId:86,qtd:1},{matId:28,qtd:1},{matId:30,qtd:4},{matId:38,qtd:4},{matId:8,qtd:1},{matId:34,qtd:2}],
+  84: [{matId:33,qtd:1},{matId:10,qtd:1},{matId:5,qtd:1},{matId:86,qtd:1},{matId:27,qtd:1},{matId:30,qtd:4},{matId:38,qtd:4},{matId:4,qtd:1},{matId:8,qtd:1},{matId:34,qtd:2}],
+  85: [{matId:33,qtd:1},{matId:10,qtd:1},{matId:5,qtd:1},{matId:17,qtd:5},{matId:30,qtd:4},{matId:38,qtd:4},{matId:8,qtd:1},{matId:34,qtd:2},{matId:49,qtd:1}],
+  86: [{matId:33,qtd:2},{matId:10,qtd:1},{matId:6,qtd:1},{matId:86,qtd:1},{matId:27,qtd:1},{matId:30,qtd:6},{matId:38,qtd:4},{matId:4,qtd:1},{matId:8,qtd:1},{matId:34,qtd:2},{matId:11,qtd:1}],
+  87: [{matId:33,qtd:2},{matId:10,qtd:1},{matId:6,qtd:1},{matId:86,qtd:1},{matId:27,qtd:1},{matId:30,qtd:6},{matId:38,qtd:4},{matId:4,qtd:1},{matId:8,qtd:1},{matId:34,qtd:2}],
+  // ── ENDODONTIA ──
+  21: [{matId:33,qtd:1},{matId:10,qtd:0.5},{matId:5,qtd:1},{matId:24,qtd:5},{matId:31,qtd:20},{matId:19,qtd:5},{matId:30,qtd:4},{matId:8,qtd:1},{matId:34,qtd:2},{matId:72,qtd:1}],
+  22: [{matId:33,qtd:1},{matId:10,qtd:1},{matId:5,qtd:1},{matId:70,qtd:1},{matId:24,qtd:10},{matId:31,qtd:30},{matId:19,qtd:10},{matId:18,qtd:4},{matId:12,qtd:1},{matId:72,qtd:2},{matId:55,qtd:1},{matId:23,qtd:1},{matId:8,qtd:1},{matId:34,qtd:2}],
+  23: [{matId:33,qtd:1},{matId:10,qtd:1},{matId:5,qtd:1},{matId:70,qtd:1},{matId:24,qtd:10},{matId:31,qtd:25},{matId:19,qtd:8},{matId:18,qtd:3},{matId:12,qtd:1},{matId:72,qtd:1},{matId:23,qtd:1},{matId:8,qtd:1}],
+  24: [{matId:33,qtd:1},{matId:10,qtd:1},{matId:5,qtd:1},{matId:70,qtd:2},{matId:24,qtd:15},{matId:31,qtd:40},{matId:19,qtd:15},{matId:18,qtd:6},{matId:12,qtd:2},{matId:72,qtd:3},{matId:23,qtd:1},{matId:8,qtd:1}],
+  25: [{matId:33,qtd:1},{matId:10,qtd:1},{matId:5,qtd:1},{matId:70,qtd:3},{matId:24,qtd:20},{matId:31,qtd:50},{matId:19,qtd:20},{matId:18,qtd:8},{matId:12,qtd:2},{matId:72,qtd:4},{matId:23,qtd:1},{matId:8,qtd:1}],
+  26: [{matId:33,qtd:1},{matId:10,qtd:1},{matId:5,qtd:1},{matId:70,qtd:2},{matId:24,qtd:15},{matId:31,qtd:40},{matId:19,qtd:15},{matId:18,qtd:6},{matId:12,qtd:2},{matId:72,qtd:3},{matId:23,qtd:1},{matId:8,qtd:1}],
+  59: [{matId:33,qtd:1},{matId:10,qtd:1},{matId:5,qtd:1},{matId:55,qtd:1},{matId:56,qtd:0.1},{matId:19,qtd:3},{matId:24,qtd:5},{matId:31,qtd:10},{matId:8,qtd:1},{matId:34,qtd:2}],
+  60: [{matId:33,qtd:1},{matId:10,qtd:1},{matId:5,qtd:1},{matId:70,qtd:1},{matId:24,qtd:8},{matId:31,qtd:20},{matId:19,qtd:6},{matId:18,qtd:2},{matId:12,qtd:1},{matId:72,qtd:1},{matId:8,qtd:1}],
+  61: [{matId:55,qtd:1},{matId:56,qtd:0.1},{matId:40,qtd:0.2},{matId:37,qtd:2},{matId:8,qtd:1},{matId:34,qtd:1},{matId:69,qtd:1}],
+  62: [{matId:55,qtd:1},{matId:14,qtd:0.5},{matId:37,qtd:2},{matId:8,qtd:1},{matId:34,qtd:1}],
+  63: [{matId:33,qtd:1},{matId:10,qtd:0.5},{matId:5,qtd:1},{matId:55,qtd:1},{matId:19,qtd:4},{matId:24,qtd:6},{matId:31,qtd:15},{matId:18,qtd:2},{matId:12,qtd:1},{matId:8,qtd:1}],
+  64: [{matId:33,qtd:1},{matId:10,qtd:0.5},{matId:5,qtd:1},{matId:72,qtd:1},{matId:55,qtd:1},{matId:19,qtd:3},{matId:8,qtd:1},{matId:34,qtd:1}],
+  65: [{matId:33,qtd:1},{matId:10,qtd:1},{matId:5,qtd:1},{matId:70,qtd:1},{matId:24,qtd:8},{matId:31,qtd:20},{matId:8,qtd:1},{matId:34,qtd:2}],
+  66: [{matId:33,qtd:2},{matId:10,qtd:1},{matId:6,qtd:1},{matId:86,qtd:1},{matId:27,qtd:1},{matId:30,qtd:6},{matId:4,qtd:1},{matId:8,qtd:1},{matId:34,qtd:2},{matId:11,qtd:1}],
+  // ── PERIODONTIA ──
+  27: [{matId:16,qtd:20},{matId:38,qtd:4},{matId:8,qtd:1},{matId:34,qtd:2},{matId:35,qtd:1},{matId:20,qtd:1}],
+  28: [{matId:33,qtd:1},{matId:10,qtd:1},{matId:5,qtd:1},{matId:16,qtd:20},{matId:38,qtd:4},{matId:8,qtd:1},{matId:34,qtd:2}],
+  29: [{matId:33,qtd:1},{matId:10,qtd:1},{matId:5,qtd:1},{matId:86,qtd:1},{matId:27,qtd:1},{matId:30,qtd:6},{matId:38,qtd:4},{matId:4,qtd:1},{matId:8,qtd:1},{matId:34,qtd:2}],
+  30: [{matId:33,qtd:1},{matId:10,qtd:1},{matId:5,qtd:1},{matId:86,qtd:1},{matId:27,qtd:1},{matId:30,qtd:6},{matId:38,qtd:4},{matId:4,qtd:1},{matId:8,qtd:1},{matId:34,qtd:2}],
+  67: [{matId:33,qtd:2},{matId:10,qtd:1},{matId:6,qtd:1},{matId:86,qtd:1},{matId:27,qtd:1},{matId:30,qtd:8},{matId:38,qtd:6},{matId:8,qtd:1},{matId:34,qtd:2},{matId:11,qtd:1}],
+  68: [{matId:33,qtd:2},{matId:10,qtd:1},{matId:6,qtd:1},{matId:86,qtd:1},{matId:27,qtd:1},{matId:30,qtd:8},{matId:38,qtd:6},{matId:8,qtd:1},{matId:34,qtd:2},{matId:11,qtd:1}],
+  69: [{matId:33,qtd:2},{matId:10,qtd:1},{matId:6,qtd:1},{matId:86,qtd:1},{matId:27,qtd:1},{matId:80,qtd:0.5},{matId:81,qtd:1},{matId:30,qtd:8},{matId:38,qtd:6},{matId:8,qtd:1},{matId:34,qtd:2}],
+  // ── PRÓTESE ──
+  31: [{matId:7,qtd:30},{matId:58,qtd:200},{matId:63,qtd:5},{matId:62,qtd:2},{matId:8,qtd:1},{matId:34,qtd:2},{matId:35,qtd:1}],
+  32: [{matId:7,qtd:30},{matId:58,qtd:150},{matId:63,qtd:3},{matId:62,qtd:2},{matId:8,qtd:1},{matId:34,qtd:2}],
+  33: [{matId:63,qtd:5},{matId:14,qtd:2},{matId:62,qtd:1},{matId:8,qtd:1},{matId:34,qtd:1}],
+  34: [{matId:73,qtd:1},{matId:15,qtd:0.5},{matId:66,qtd:2},{matId:38,qtd:3},{matId:8,qtd:1},{matId:34,qtd:2}],
+  74: [{matId:66,qtd:2},{matId:60,qtd:5},{matId:15,qtd:0.5},{matId:73,qtd:1},{matId:8,qtd:1},{matId:34,qtd:2}],
+  75: [{matId:82,qtd:1},{matId:83,qtd:1},{matId:66,qtd:2},{matId:15,qtd:0.5},{matId:8,qtd:1},{matId:34,qtd:2}],
+  76: [{matId:2,qtd:0.3},{matId:15,qtd:0.5},{matId:61,qtd:5},{matId:66,qtd:1},{matId:37,qtd:3},{matId:8,qtd:1},{matId:34,qtd:2}],
+  77: [{matId:2,qtd:0.3},{matId:61,qtd:5},{matId:15,qtd:0.5},{matId:66,qtd:1},{matId:8,qtd:1},{matId:34,qtd:2}],
+  78: [{matId:40,qtd:0.3},{matId:53,qtd:2},{matId:37,qtd:3},{matId:69,qtd:1},{matId:8,qtd:1},{matId:34,qtd:1}],
+  79: [{matId:63,qtd:3},{matId:14,qtd:1},{matId:8,qtd:1},{matId:34,qtd:1}],
+  80: [{matId:63,qtd:2},{matId:8,qtd:1},{matId:34,qtd:1}],
+  // ── IMPLANTODONTIA ──
+  35: [{matId:82,qtd:1},{matId:33,qtd:2},{matId:10,qtd:1},{matId:6,qtd:1},{matId:80,qtd:0.5},{matId:81,qtd:1},{matId:30,qtd:8},{matId:38,qtd:6},{matId:4,qtd:1},{matId:27,qtd:1},{matId:8,qtd:1},{matId:34,qtd:2},{matId:11,qtd:1}],
+  36: [{matId:83,qtd:1},{matId:66,qtd:1},{matId:15,qtd:0.5},{matId:33,qtd:1},{matId:30,qtd:4},{matId:8,qtd:1},{matId:34,qtd:2}],
+  81: [{matId:80,qtd:1},{matId:81,qtd:1},{matId:33,qtd:2},{matId:10,qtd:1},{matId:6,qtd:1},{matId:27,qtd:1},{matId:30,qtd:6},{matId:38,qtd:4},{matId:8,qtd:1},{matId:34,qtd:2}],
+  82: [{matId:80,qtd:1},{matId:81,qtd:1},{matId:33,qtd:2},{matId:10,qtd:1},{matId:6,qtd:1},{matId:27,qtd:1},{matId:30,qtd:6},{matId:8,qtd:1},{matId:34,qtd:2}],
+  83: [{matId:82,qtd:1},{matId:33,qtd:1},{matId:10,qtd:1},{matId:5,qtd:1},{matId:30,qtd:4},{matId:27,qtd:1},{matId:8,qtd:1},{matId:34,qtd:2}],
+  // ── ORTODONTIA ──
+  37: [{matId:43,qtd:1},{matId:48,qtd:0.3},{matId:74,qtd:0.2},{matId:76,qtd:1},{matId:8,qtd:1},{matId:34,qtd:2},{matId:35,qtd:1},{matId:37,qtd:4}],
+  38: [{matId:75,qtd:0.3},{matId:46,qtd:1},{matId:8,qtd:1},{matId:34,qtd:1},{matId:37,qtd:2}],
+  39: [{matId:60,qtd:5},{matId:14,qtd:2},{matId:33,qtd:1},{matId:10,qtd:1},{matId:5,qtd:1},{matId:8,qtd:1}],
+  41: [{matId:7,qtd:30},{matId:58,qtd:100},{matId:8,qtd:1},{matId:34,qtd:1}],
+  42: [{matId:7,qtd:20},{matId:8,qtd:1},{matId:34,qtd:1}],
+  43: [{matId:43,qtd:1},{matId:48,qtd:0.5},{matId:74,qtd:0.3},{matId:76,qtd:1},{matId:8,qtd:1},{matId:34,qtd:2},{matId:35,qtd:1},{matId:37,qtd:5}],
+  44: [{matId:44,qtd:1},{matId:48,qtd:0.5},{matId:74,qtd:0.3},{matId:76,qtd:1},{matId:8,qtd:1},{matId:34,qtd:2},{matId:35,qtd:1},{matId:37,qtd:5}],
+  45: [{matId:77,qtd:1},{matId:75,qtd:0.5},{matId:8,qtd:1},{matId:34,qtd:1}],
+  46: [{matId:48,qtd:0.1},{matId:37,qtd:2},{matId:8,qtd:1},{matId:34,qtd:1}],
+  47: [{matId:38,qtd:4},{matId:30,qtd:2},{matId:8,qtd:1},{matId:34,qtd:1}],
+  48: [{matId:48,qtd:0.2},{matId:37,qtd:3},{matId:78,qtd:0.3},{matId:8,qtd:1},{matId:34,qtd:1}],
+  49: [{matId:63,qtd:3},{matId:8,qtd:1},{matId:34,qtd:1}],
+  50: [{matId:8,qtd:1},{matId:29,qtd:1},{matId:38,qtd:2},{matId:34,qtd:1}],
+  51: [{matId:45,qtd:1},{matId:48,qtd:0.5},{matId:74,qtd:0.3},{matId:76,qtd:1},{matId:8,qtd:1},{matId:34,qtd:2},{matId:37,qtd:5}],
+  // ── ATM ──
+  40: [{matId:90,qtd:0.3},{matId:49,qtd:2},{matId:30,qtd:2},{matId:8,qtd:1},{matId:34,qtd:1}],
+  96: [{matId:60,qtd:5},{matId:14,qtd:2},{matId:33,qtd:1},{matId:10,qtd:1},{matId:5,qtd:1},{matId:8,qtd:1}],
+  97: [{matId:38,qtd:2},{matId:8,qtd:1},{matId:34,qtd:1}],
+  98: [{matId:60,qtd:5},{matId:14,qtd:2},{matId:33,qtd:1},{matId:10,qtd:1},{matId:5,qtd:1},{matId:8,qtd:1}],
+  // ── DIAGNÓSTICO ──
+  52: [{matId:8,qtd:1},{matId:34,qtd:1},{matId:35,qtd:1},{matId:20,qtd:1}],
+  53: [{matId:8,qtd:1},{matId:34,qtd:1}],
+  54: [{matId:8,qtd:1},{matId:34,qtd:1}],
+  55: [{matId:8,qtd:1},{matId:34,qtd:1}],
+  56: [{matId:8,qtd:1},{matId:34,qtd:1}],
+  57: [{matId:7,qtd:30},{matId:8,qtd:1},{matId:34,qtd:1}],
+  58: [{matId:8,qtd:1},{matId:34,qtd:1}],
+  // ── ODONTOPEDIATRIA ──
+  88: [{matId:8,qtd:1},{matId:38,qtd:2},{matId:34,qtd:1},{matId:35,qtd:1},{matId:20,qtd:1}],
+  89: [{matId:40,qtd:0.2},{matId:85,qtd:1},{matId:37,qtd:2},{matId:38,qtd:2},{matId:8,qtd:1},{matId:34,qtd:1},{matId:69,qtd:1}],
+  90: [{matId:33,qtd:1},{matId:10,qtd:0.5},{matId:5,qtd:1},{matId:30,qtd:3},{matId:38,qtd:3},{matId:8,qtd:1},{matId:34,qtd:1}],
+  91: [{matId:84,qtd:1},{matId:73,qtd:0.5},{matId:33,qtd:1},{matId:10,qtd:0.5},{matId:5,qtd:1},{matId:38,qtd:2},{matId:8,qtd:1},{matId:34,qtd:1}],
+  92: [{matId:7,qtd:20},{matId:58,qtd:100},{matId:33,qtd:1},{matId:10,qtd:0.5},{matId:5,qtd:1},{matId:8,qtd:1},{matId:34,qtd:1}],
+  // ── ESTÉTICA FACIAL ──
+  99: [{matId:89,qtd:1},{matId:49,qtd:2},{matId:30,qtd:2},{matId:8,qtd:1},{matId:34,qtd:1},{matId:35,qtd:1}],
+  100:[{matId:90,qtd:0.5},{matId:49,qtd:3},{matId:30,qtd:2},{matId:8,qtd:1},{matId:34,qtd:1},{matId:35,qtd:1}],
+  101:[{matId:33,qtd:2},{matId:10,qtd:1},{matId:6,qtd:1},{matId:86,qtd:1},{matId:27,qtd:1},{matId:30,qtd:6},{matId:8,qtd:1},{matId:34,qtd:2}],
+  102:[{matId:88,qtd:1},{matId:49,qtd:2},{matId:30,qtd:2},{matId:8,qtd:1},{matId:34,qtd:1},{matId:35,qtd:1}],
+};
 
 // Procedimentos padrão completos (51 procedimentos do Pétala)
 const DEFAULT_PROCS_FIN = [
@@ -3944,6 +4097,287 @@ const DEFAULT_MATS_FIN = [
 const DEFAULT_COMBOS_FIN = []; // Cada clínica cria seus próprios combos
 
 
+
+// ══════════════════════════════════════════════════════
+// PLANO — MÚLTIPLOS DENTES + SYNC VALOR
+// ══════════════════════════════════════════════════════
+let pacPlanDentesSel = []; // dentes selecionados no form do plano
+
+function pacPlanAddDente(val){
+  if(!val) return;
+  const n = parseInt(val);
+  if(!pacPlanDentesSel.includes(n)) pacPlanDentesSel.push(n);
+  pacPlanRenderDentesSel();
+  document.getElementById('pac-plan-dente-add').value = '';
+  document.getElementById('pac-plan-dente').value = pacPlanDentesSel.join(',');
+  pacPlanSyncValorTotal();
+}
+
+function pacPlanRemDente(n){
+  pacPlanDentesSel = pacPlanDentesSel.filter(d=>d!==n);
+  pacPlanRenderDentesSel();
+  document.getElementById('pac-plan-dente').value = pacPlanDentesSel.join(',');
+  pacPlanSyncValorTotal();
+}
+
+function pacPlanRenderDentesSel(){
+  const c = document.getElementById('pac-plan-dentes-sel'); if(!c) return;
+  c.innerHTML = pacPlanDentesSel.map(n=>`
+    <span style="background:var(--rose-lighter);color:var(--rose-dark);border-radius:20px;padding:3px 10px;font-size:12px;font-weight:700;display:inline-flex;align-items:center;gap:4px;">
+      ${n} <button onclick="pacPlanRemDente(${n})" style="border:none;background:none;color:var(--rose);cursor:pointer;font-size:14px;padding:0;line-height:1;">×</button>
+    </span>`).join('');
+}
+
+function pacPlanSyncValor(){
+  // Quando muda procedimento, preenche valor unitário automaticamente
+  const sel = document.getElementById('pac-plan-proc');
+  const opt = sel?.options[sel.selectedIndex];
+  const preco = opt?.dataset?.preco;
+  if(preco && preco !== '0'){
+    const el = document.getElementById('pac-plan-valor');
+    if(el) el.value = parseFloat(preco).toFixed(2).replace('.',',');
+  }
+  pacPlanSyncValorTotal();
+}
+
+function pacPlanSyncValorTotal(){
+  const valEl = document.getElementById('pac-plan-valor');
+  const totEl = document.getElementById('pac-plan-valor-total');
+  if(!valEl || !totEl) return;
+  const valUnit = parseFloat((valEl.value||'0').replace(',','.')) || 0;
+  const qtdDentes = pacPlanDentesSel.length || 1;
+  const total = valUnit * qtdDentes;
+  totEl.value = 'R$ ' + total.toFixed(2).replace('.',',');
+}
+
+function pacPlanSyncFromValor(){
+  pacPlanSyncValorTotal();
+}
+
+// Sobrescreve pacTogglePlanForm para resetar dentes
+const _origTogglePlanForm = pacTogglePlanForm;
+function pacTogglePlanForm(){
+  const f = document.getElementById('pac-plan-form');
+  if(!f) return;
+  if(f.style.display==='none'){
+    f.style.display='';
+    pacPlanDentesSel = [];
+    pacPlanRenderDentesSel();
+    document.getElementById('pac-plan-dente').value = '';
+    const totEl = document.getElementById('pac-plan-valor-total');
+    if(totEl) totEl.value = '';
+    pacPlanoEditId = null;
+  } else {
+    f.style.display='none';
+    pacPlanoEditId = null;
+  }
+}
+
+// Sobrescreve pacSalvarPlano para usar múltiplos dentes
+async function pacSalvarPlano(pacId){
+  const dentesVal = document.getElementById('pac-plan-dente')?.value || '';
+  const face  = document.getElementById('pac-plan-face')?.value || '–';
+  const proc  = document.getElementById('pac-plan-proc')?.value;
+  const valorUnit = (document.getElementById('pac-plan-valor')?.value || '0').replace(',','.');
+  const desc  = document.getElementById('pac-plan-desc')?.value.trim() || '';
+  if(!dentesVal){ showToast('Selecione pelo menos um dente.','warn'); return; }
+  if(!proc){ showToast('Selecione o procedimento.','warn'); return; }
+  const dentes = dentesVal.split(',').filter(Boolean);
+  const qtd = dentes.length;
+  const valorTotal = (parseFloat(valorUnit) * qtd).toFixed(2).replace('.',',');
+  showLoading(true);
+  let error;
+  if(pacPlanoEditId){
+    ({ error } = await _sb.from('plano_tratamento').update({
+      dente: dentesVal, face, procedimento:proc,
+      valor: valorTotal, valor_unit: valorUnit,
+      quantidade_dentes: qtd, descricao:desc
+    }).eq('id',pacPlanoEditId));
+    if(!error){
+      pacPlanoList = pacPlanoList.map(i=> i.id===pacPlanoEditId
+        ? {...i,dente:dentesVal,face,procedimento:proc,valor:valorTotal,valor_unit:valorUnit,quantidade_dentes:qtd,descricao:desc}
+        : i);
+    }
+  } else {
+    const { data:novo, error:e } = await _sb.from('plano_tratamento').insert([{
+      clinica_id:clinicaId, paciente_id:pacId,
+      dente:dentesVal, face, procedimento:proc,
+      valor:valorTotal, valor_unit:valorUnit,
+      quantidade_dentes:qtd, descricao:desc, status:'pendente'
+    }]).select().single();
+    error = e;
+    if(!error) pacPlanoList.unshift(novo);
+  }
+  showLoading(false);
+  if(error){ showToast('Erro: '+error.message,'error'); return; }
+  pacTogglePlanForm();
+  pacRenderPlanoResumo();
+  pacRenderPlanoLista();
+  showToast('Salvo no plano!');
+}
+
+// Sobrescreve pacEditarPlano para carregar múltiplos dentes
+async function pacEditarPlano(id){
+  const item = pacPlanoList.find(i=>i.id===id);
+  if(!item) return;
+  pacPlanoEditId = id;
+  const f = document.getElementById('pac-plan-form');
+  if(f) f.style.display='';
+  // Carrega dentes
+  pacPlanDentesSel = (item.dente||'').split(',').filter(Boolean).map(Number);
+  pacPlanRenderDentesSel();
+  document.getElementById('pac-plan-dente').value = item.dente||'';
+  const set = (elId, val) => { const el=document.getElementById(elId); if(el) el.value=val||''; };
+  set('pac-plan-face',  item.face);
+  set('pac-plan-proc',  item.procedimento);
+  set('pac-plan-valor', (item.valor_unit||item.valor||'').replace(',','.'));
+  set('pac-plan-desc',  item.descricao);
+  pacPlanSyncValorTotal();
+  f?.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+
+// Atualiza renderPlanoLista para mostrar múltiplos dentes
+function pacRenderPlanoLista(){
+  const c = document.getElementById('pac-plano-lista');
+  if(!c) return;
+  if(!pacPlanoList.length){
+    c.innerHTML='<div style="text-align:center;color:var(--rose-text);font-size:13px;padding:16px;">Nenhum procedimento planejado ainda.</div>';
+    return;
+  }
+  const STATUS_CORES = {
+    pendente : {bg:'#FFF3CD',txt:'#856404',dot:'#FFC107'},
+    aprovado : {bg:'#D1ECF1',txt:'#0C5460',dot:'#17A2B8'},
+    realizado: {bg:'#D4EDDA',txt:'#155724',dot:'#28A745'},
+    cancelado: {bg:'#F8D7DA',txt:'#721C24',dot:'#DC3545'},
+  };
+  c.innerHTML = pacPlanoList.map(item => {
+    const sc = STATUS_CORES[item.status] || STATUS_CORES.pendente;
+    const statusLabel = {pendente:'Pendente',aprovado:'Aprovado',realizado:'Realizado',cancelado:'Cancelado'}[item.status]||item.status;
+    const dentes = (item.dente||'').split(',').filter(Boolean);
+    const dentesHtml = dentes.map(d=>`<span style="background:var(--rose-lighter);color:var(--rose-dark);border-radius:6px;padding:2px 7px;font-size:11px;font-weight:700;">🦷${d}</span>`).join(' ');
+    const btnAprovar  = item.status==='pendente' ? `<button class="btn-secondary" style="font-size:11px;padding:4px 10px;" onclick="pacAlterarStatusPlano(${item.id},'aprovado')">✔ Aprovar</button>` : '';
+    const btnRealizar = (item.status==='aprovado'||item.status==='pendente') ? `<button class="btn-secondary" style="font-size:11px;padding:4px 10px;color:#2e7d32;border-color:#a5d6a7;" onclick="pacAlterarStatusPlano(${item.id},'realizado')">✅ Realizado</button>` : '';
+    return `<div style="border:1px solid var(--rose-light);border-radius:12px;padding:13px;margin-bottom:8px;background:#fff;">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;">
+        <div>
+          <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px;">${dentesHtml}</div>
+          <strong style="font-size:13px;">${escapeHtml(item.procedimento)}</strong>
+          ${item.face&&item.face!=='–'?`<span style="font-size:11px;color:var(--rose-text);margin-left:6px;">(${escapeHtml(item.face)})</span>`:''}
+          ${dentes.length>1?`<span style="font-size:11px;color:var(--rose-text);margin-left:6px;">${dentes.length} dentes</span>`:''}
+        </div>
+        <span style="background:${sc.bg};color:${sc.txt};padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;display:inline-flex;align-items:center;gap:4px;">
+          <span style="width:6px;height:6px;border-radius:50%;background:${sc.dot};display:inline-block;"></span>${statusLabel}
+        </span>
+      </div>
+      ${item.descricao?`<div style="font-size:12px;color:var(--rose-text);margin-top:5px;">${escapeHtml(item.descricao)}</div>`:''}
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;flex-wrap:wrap;gap:6px;">
+        <div>
+          <strong style="font-size:14px;color:#2e7d32;">R$ ${escapeHtml(item.valor||'0,00')}</strong>
+          ${dentes.length>1&&item.valor_unit?`<span style="font-size:11px;color:var(--rose-text);margin-left:6px;">(R$ ${escapeHtml(item.valor_unit)}/dente)</span>`:''}
+        </div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;">
+          ${btnAprovar}${btnRealizar}
+          <button class="btn-secondary" style="font-size:11px;padding:4px 10px;" onclick="pacEditarPlano(${item.id})">✏️ Editar</button>
+          <button class="btn-danger" style="font-size:11px;padding:4px 8px;" onclick="pacRemoverPlano(${item.id})"><i class="ti ti-trash"></i></button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ══════════════════════════════════════════════════════
+// ORÇAMENTO RÁPIDO NO ODONTOGRAMA
+// ══════════════════════════════════════════════════════
+let pacOdontoOrcList = [];
+
+function pacOdontoToggleOrc(){
+  const panel = document.getElementById('pac-odonto-orc-panel');
+  const icon = document.getElementById('pac-odonto-orc-icon');
+  if(!panel) return;
+  const showing = panel.style.display !== 'none';
+  panel.style.display = showing ? 'none' : '';
+  if(icon) icon.className = showing ? 'ti ti-chevron-down' : 'ti ti-chevron-up';
+  if(!showing) pacOdontoInitOrc();
+}
+
+function pacOdontoInitOrc(){
+  // Popula select de procedimentos
+  const sel = document.getElementById('pac-odonto-orc-proc');
+  if(!sel) return;
+  sel.innerHTML = '<option value="">Selecione procedimento</option>' +
+    procs.map(p=>`<option value="${p.id}" data-preco="${p.precoFinal||0}" data-nome="${escapeHtml(p.nome)}">${escapeHtml(p.nome)} — R$ ${(p.precoFinal||0).toFixed(2).replace('.',',')}</option>`).join('');
+  // Botão com nome do paciente
+  const btn = document.getElementById('pac-odonto-orc-btn-pac');
+  if(btn) btn.innerHTML = '<i class="ti ti-device-floppy"></i> Salvar orçamento';
+  pacOdontoRenderOrcLista();
+}
+
+function pacOdontoAddOrc(){
+  const sel = document.getElementById('pac-odonto-orc-proc');
+  const opt = sel?.options[sel.selectedIndex];
+  if(!opt || !opt.value) { showToast('Selecione um procedimento.','warn'); return; }
+  // Usa dentes marcados no odontograma
+  const dentesMarcados = Object.keys(pacDentesMap).map(Number);
+  const dentesStr = dentesMarcados.length ? dentesMarcados.join(',') : '';
+  const preco = parseFloat(opt.dataset.preco)||0;
+  const qtd = dentesMarcados.length || 1;
+  pacOdontoOrcList.push({
+    procId: parseInt(opt.value),
+    nome: opt.dataset.nome || opt.text,
+    precoUnit: preco,
+    qtd,
+    dentes: dentesStr,
+    total: preco * qtd
+  });
+  pacOdontoRenderOrcLista();
+}
+
+function pacOdontoRenderOrcLista(){
+  const c = document.getElementById('pac-odonto-orc-lista'); if(!c) return;
+  if(!pacOdontoOrcList.length){
+    c.innerHTML = '<div style="color:var(--rose-text);font-size:12px;text-align:center;padding:8px;">Nenhum item. Clique nos dentes e adicione procedimentos.</div>';
+    document.getElementById('pac-odonto-orc-total').textContent = 'R$ 0,00';
+    return;
+  }
+  let total = 0;
+  c.innerHTML = pacOdontoOrcList.map((it,i)=>{
+    total += it.total;
+    return `<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--rose-light);font-size:12px;flex-wrap:wrap;">
+      <span style="flex:1;">${escapeHtml(it.nome)}</span>
+      ${it.dentes ? `<span style="background:var(--rose-lighter);color:var(--rose-dark);border-radius:6px;padding:2px 6px;font-size:11px;">🦷 ${it.dentes.split(',').join(', ')}</span>` : ''}
+      <strong style="color:var(--rose-dark);">R$ ${it.total.toFixed(2).replace('.',',')}</strong>
+      <button class="btn-danger" style="padding:2px 6px;" onclick="pacOdontoOrcList.splice(${i},1);pacOdontoRenderOrcLista();"><i class="ti ti-x"></i></button>
+    </div>`;
+  }).join('');
+  document.getElementById('pac-odonto-orc-total').textContent = 'R$ ' + total.toFixed(2).replace('.',',');
+}
+
+function pacOdontoLimparOrc(){
+  pacOdontoOrcList = [];
+  pacOdontoRenderOrcLista();
+}
+
+async function pacOdontoSalvarOrc(){
+  if(!pacOdontoOrcList.length){ showToast('Adicione procedimentos ao orçamento.','warn'); return; }
+  const pacId = selectedPatientId;
+  const pac = pacientes.find(p=>p.id===pacId);
+  const total = pacOdontoOrcList.reduce((a,it)=>a+it.total, 0);
+  // Salva como orçamento em vendas
+  const venda = {
+    id: nextVendaId++, status:'orcamento',
+    pacienteId: pacId, pacienteNome: pac?.nome||'',
+    itens: pacOdontoOrcList.map(it=>({procId:it.procId,qtd:it.qtd,nome:it.nome,dente:it.dentes,descDente:''})),
+    subtotal: parseFloat(total.toFixed(2)),
+    desconto: 0, total: parseFloat(total.toFixed(2)),
+    data: new Date().toISOString()
+  };
+  vendas.push(venda);
+  showLoading(true); await saveFinanceiro(); showLoading(false);
+  pacOdontoOrcList = [];
+  pacOdontoRenderOrcLista();
+  showToast('Orçamento salvo! Veja em Financeiro → Vendas.');
+}
+
 // ══════════════════════════════════════════════════════
 // CONFIGURAÇÕES DA CLÍNICA
 // ══════════════════════════════════════════════════════
@@ -4105,12 +4539,12 @@ async function calSaveNewAppt(){
     <div style="background:var(--rose-lighter);border-radius:8px;padding:8px 12px;font-size:12px;color:var(--rose-dark);margin-bottom:8px;display:flex;justify-content:space-between;">
       <span>Total custo insumos:</span><strong id="mi-total-custo">R$ 0,00</strong>
     </div>
-    <div style="background:#fff8e1;border-radius:7px;padding:7px 10px;font-size:11px;color:#856404;margin-bottom:8px;">
-      <i class="ti ti-info-circle"></i> Ao salvar, o estoque será descontado nas quantidades definidas.
+    <div style="background:#edf7ee;border-radius:7px;padding:7px 10px;font-size:11px;color:#2e6b32;margin-bottom:8px;">
+      <i class="ti ti-info-circle"></i> Os insumos são descontados do estoque apenas ao <strong>finalizar a venda</strong>.
     </div>
     <div class="modal-footer">
       <button class="btn-secondary" onclick="closeModal('modal-insumos')">Cancelar</button>
-      <button class="btn-primary" onclick="saveInsumos()"><i class="ti ti-device-floppy"></i> Salvar e descontar estoque</button>
+      <button class="btn-primary" onclick="saveInsumos()"><i class="ti ti-device-floppy"></i> Salvar insumos</button>
     </div>
   </div>
 </div>
