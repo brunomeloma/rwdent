@@ -4684,9 +4684,7 @@ function pacOdontoRenderOrcLista(){
     return `<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--rose-light);font-size:12px;flex-wrap:wrap;">
       <span style="flex:1;">${escapeHtml(it.nome)}</span>
       ${it.dentes ? `<span style="background:var(--rose-lighter);color:var(--rose-dark);border-radius:6px;padding:2px 6px;font-size:11px;">🦷 ${it.dentes.split(',').join(', ')}</span>` : ''}
-      <input type="number" min="0" step="0.01" value="${it.total.toFixed(2)}"
-        onchange="pacOdontoOrcList[${i}].total=parseFloat(this.value)||0;pacOdontoOrcList[${i}].precoUnit=parseFloat(this.value)||0;pacOdontoRenderOrcLista();"
-        style="width:80px;padding:3px 6px;border:1px solid var(--rose-light);border-radius:6px;font-size:12px;text-align:right;font-weight:700;color:var(--rose-dark);"/>
+      <input type="number" min="0" step="0.01" value="${it.total.toFixed(2)}" onchange="pacOdontoOrcList[${i}].total=parseFloat(this.value)||0;pacOdontoOrcList[${i}].precoUnit=parseFloat(this.value)||0;pacOdontoRenderOrcLista();" style="width:80px;padding:3px 6px;border:1px solid var(--rose-light);border-radius:6px;font-size:12px;text-align:right;font-weight:700;color:var(--rose-dark);"/>
       <button class="btn-danger" style="padding:2px 6px;" onclick="pacOdontoOrcList.splice(${i},1);pacOdontoRenderOrcLista();"><i class="ti ti-x"></i></button>
     </div>`;
   }).join('');
@@ -5215,11 +5213,10 @@ async function filtrarResgate(meses){
       <td style="padding:10px;text-align:center;">
         ${temTel
           ? `<div style="display:flex;flex-direction:column;align-items:center;gap:3px;">
-              <button onclick="abrirResgateModal('${escapeHtml(pac.nome)}','${escapeHtml(pac.telefone||'')}','${escapeHtml(ultimoProc)}',${Math.round(mesesAusencia)})"
-                style="background:#25d366;border:none;border-radius:50%;width:38px;height:38px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(37,211,102,.4);" title="Enviar WhatsApp">
+              <button onclick="abrirResgateModal('${escapeHtml(pac.nome)}','${escapeHtml(pac.telefone||'')}','${escapeHtml(ultimoProc)}',${Math.round(mesesAusencia)})" style="background:#25d366;border:none;border-radius:50%;width:38px;height:38px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(37,211,102,.4);" title="Enviar WhatsApp">
                 <i class="ti ti-brand-whatsapp" style="color:#fff;font-size:18px;"></i>
               </button>
-              \${getResgateContador('${escapeHtml(pac.nome)}')>0?`<span style="font-size:10px;color:#856404;font-weight:700;">\${getResgateContador('${escapeHtml(pac.nome)}')}x</span>`:''}
+              ${(()=>{const n=escapeHtml(pac.nome);const c=getResgateContador(n);return c>0?'<span style="font-size:10px;color:#856404;font-weight:700;">'+c+'x</span>':'';})()} 
             </div>`
           : `<span style="font-size:11px;color:var(--rose-text);">Sem tel.</span>`
         }
