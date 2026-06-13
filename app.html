@@ -1688,9 +1688,7 @@ function renderPatientDetail(abaAtiva){
                 <label>Condições (selecione uma ou mais)</label>
                 <div style="display:flex;flex-wrap:wrap;gap:6px;">
                   ${[['restaurado','🔵 Restaurado'],['canal','🟡 Canal'],['coroa','🔷 Coroa'],['extraido','⬜ Extraído'],['implante','🟣 Implante'],['carie','🔴 Cárie'],['selante','🩵 Selante'],['higido','⬜ Hígido'],['fratura','🟠 Fratura'],['outro','⚪ Outro']].map(([v,l])=>`
-                    <label style="display:flex;align-items:center;gap:5px;background:var(--rose-lighter);padding:5px 10px;border-radius:8px;cursor:pointer;font-size:12px;">
-                      <input type="checkbox" name="hist-cond-cb" value="${v}" style="accent-color:var(--rose);"/> ${l}
-                    </label>`).join('')}
+                    <button type="button" id="hist-cond-btn-${v}" onclick="histToggleCond('${v}')" style="border:2px solid var(--rose-light);border-radius:8px;padding:5px 12px;background:var(--rose-lighter);color:var(--rose-text);cursor:pointer;font-size:12px;font-family:inherit;transition:all .15s;">${l}</button>`).join('')}
                 </div>
               </div>
               <div class="form-group full">
@@ -5019,6 +5017,23 @@ async function histCarregar(pacId){
 
 let histDentesSel = [];
 
+let histCondsSel = [];
+
+function histToggleCond(val){
+  const idx = histCondsSel.indexOf(val);
+  if(idx>=0) histCondsSel.splice(idx,1);
+  else histCondsSel.push(val);
+  ['restaurado','canal','coroa','extraido','implante','carie','selante','higido','fratura','outro'].forEach(v=>{
+    const btn = document.getElementById('hist-cond-btn-'+v);
+    if(!btn) return;
+    if(histCondsSel.includes(v)){
+      btn.style.background='var(--rose)'; btn.style.color='#fff'; btn.style.borderColor='var(--rose)';
+    } else {
+      btn.style.background='var(--rose-lighter)'; btn.style.color='var(--rose-text)'; btn.style.borderColor='var(--rose-light)';
+    }
+  });
+}
+
 function histToggleDente(num){
   const idx = histDentesSel.indexOf(num);
   if(idx>=0) histDentesSel.splice(idx,1);
@@ -5052,16 +5067,20 @@ function histLimpar(){
     const el=document.getElementById(id); if(el) el.value='';
   });
   const dd=document.getElementById('hist-data'); if(dd) dd.value=hoje();
-  document.querySelectorAll('input[name="hist-cond-cb"]').forEach(cb=>cb.checked=false);
+  histCondsSel=[];
+  ['restaurado','canal','coroa','extraido','implante','carie','selante','higido','fratura','outro'].forEach(v=>{
+    const btn=document.getElementById('hist-cond-btn-'+v);
+    if(btn){ btn.style.background='var(--rose-lighter)'; btn.style.color='var(--rose-text)'; btn.style.borderColor='var(--rose-light)'; }
+  });
   const sel=document.getElementById('hist-dentes-sel'); if(sel) sel.innerHTML='';
 }
 
 async function histSalvar(pacId){
   const data   = document.getElementById('hist-data')?.value || hoje();
   const dentesRaw = document.getElementById('hist-dentes')?.value.trim() || '';
-  const conds  = [...document.querySelectorAll('input[name="hist-cond-cb"]:checked')].map(c=>c.value);
-  const cond   = conds.length ? conds[0] : 'restaurado';
-  const condsStr = conds.join(',') || 'restaurado';
+  const conds  = histCondsSel.length ? histCondsSel : ['restaurado'];
+  const cond   = conds[0];
+  const condsStr = conds.join(',');
   const proc   = document.getElementById('hist-proc')?.value.trim() || '';
   const obs    = document.getElementById('hist-obs')?.value.trim() || '';
   const profId = document.getElementById('hist-prof')?.value || null;
