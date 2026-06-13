@@ -2911,33 +2911,20 @@ async function loadFinanceiro(){
 
   recalcularInsumos(true);
 
-  // Salva só o necessário — NUNCA sobrescreve estoque no carregamento
+  // Salva padrões sem sobrescrever estoque
   if(precisaSalvar){
-    await saveFinanceiroSemEstoque();
+    // Guarda estoque atual antes de salvar
+    const _estoqueBackup = JSON.parse(JSON.stringify(estoque));
+    await saveFinanceiro();
+    // Restaura estoque do banco após save
+    const { data: _fresh } = await _sb.from('financeiro_config').select('estoque').eq('clinica_id',clinicaId).single();
+    if(_fresh && _fresh.estoque && _fresh.estoque !== '{}'){
+      const _est = JSON.parse(_fresh.estoque||'{}');
+      if(Object.keys(_est).length > 0) estoque = _est;
+    }
   }
 
   _financeiroCarregado = true;
-}
-
-async function saveFinanceiroSemEstoque(){
-  // Igual ao saveFinanceiro mas NÃO atualiza o campo estoque
-  if(!clinicaId) return;
-  const payload = {
-    clinica_id   : clinicaId,
-    procs        : JSON.stringify(procs),
-    mats         : JSON.stringify(mats),
-    proc_insumos : JSON.stringify(procInsumos),
-    vendas       : JSON.stringify(vendas),
-    cfg          : JSON.stringify(cfg),
-    taxas_cfg    : JSON.stringify(taxasCfg),
-    combos       : JSON.stringify(combos),
-    desc_cfg     : JSON.stringify(descCfg),
-    updated_at   : new Date().toISOString()
-    // estoque NÃO incluído — preserva o que está no banco
-  };
-  const { data: existing } = await _sb.from('financeiro_config').select('id').eq('clinica_id',clinicaId).single();
-  if(existing){ await _sb.from('financeiro_config').update(payload).eq('clinica_id',clinicaId); }
-  else         { await _sb.from('financeiro_config').insert([{...payload, estoque: JSON.stringify(estoque)}]); }
 }
 
 async function saveFinanceiro(){
