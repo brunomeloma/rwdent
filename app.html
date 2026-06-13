@@ -314,8 +314,9 @@ button{font-family:inherit;}
 
 
 /* ── ODONTOGRAMA ── */
-.odonto-arcada{display:flex;justify-content:center;gap:2px;overflow-x:auto;padding:4px 0;-webkit-overflow-scrolling:touch;}
-.odonto-dente-wrap{display:flex;flex-direction:column;align-items:center;gap:1px;cursor:pointer;}
+.odonto-arcada{display:flex;justify-content:flex-start;gap:2px;overflow-x:auto;padding:4px 2px;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
+.odonto-arcada::-webkit-scrollbar{display:none;}
+.odonto-dente-wrap{display:flex;flex-direction:column;align-items:center;gap:1px;cursor:pointer;flex-shrink:0;}
 .odonto-dente-wrap:hover .odonto-dente-box{border-color:var(--rose);transform:scale(1.08);}
 .odonto-dente-wrap.selected .odonto-dente-box{border-color:var(--rose);box-shadow:0 0 0 2px rgba(212,115,90,.3);}
 .odonto-dente-box{
@@ -1571,6 +1572,7 @@ function renderPatientDetail(abaAtiva){
         <button class="pac-tab ${abaAtiva==='info'?'active':''}" onclick="renderPatientDetail('info')"><i class="ti ti-info-circle"></i> Dados</button>
         <button class="pac-tab ${abaAtiva==='odonto'?'active':''}" onclick="renderPatientDetail('odonto')"><i class="ti ti-tooth"></i> Odontograma</button>
         <button class="pac-tab ${abaAtiva==='plano'?'active':''}" onclick="renderPatientDetail('plano')"><i class="ti ti-clipboard-list"></i> Plano</button>
+        <button class="pac-tab ${abaAtiva==='orcamentos'?'active':''}" onclick="renderPatientDetail('orcamentos')"><i class="ti ti-receipt"></i> Orçamentos</button>
         <button class="pac-tab ${abaAtiva==='procs'?'active':''}" onclick="renderPatientDetail('procs')"><i class="ti ti-check"></i> Realizados</button>
       </div>
 
@@ -1730,6 +1732,16 @@ function renderPatientDetail(abaAtiva){
         </div>
       </div>
 
+      <!-- ABA: ORÇAMENTOS -->
+      <div id="pac-aba-orcamentos" style="display:${abaAtiva==='orcamentos'?'':'none'};">
+        <div style="margin-top:14px;" id="pac-orc-container">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+            <span style="font-size:13px;font-weight:700;color:var(--rose-dark);">Orçamentos e Vendas</span>
+          </div>
+          <div id="pac-orc-lista"></div>
+        </div>
+      </div>
+
       <!-- ABA: PROCEDIMENTOS REALIZADOS -->
       <div id="pac-aba-procs" style="display:${abaAtiva==='procs'?'':'none'};">
         <div style="margin-top:14px;">
@@ -1775,6 +1787,7 @@ function renderPatientDetail(abaAtiva){
   // Carrega dados das abas
   if(abaAtiva==='odonto') pacCarregarOdonto(p.id);
   if(abaAtiva==='procs') pacCarregarProcs(p.id);
+  if(abaAtiva==='orcamentos') pacRenderOrcamentos(p.id);
   if(abaAtiva==='plano'){ pacCarregarPlano(p.id); setTimeout(()=>renderPlanoSimulador(p.id),50); }
 }
 
@@ -3678,11 +3691,12 @@ function renderPlanoSimulador(pacId){
         <div id="sim-liquido-info" style="font-size:12px;color:#2e7d32;margin-top:6px;display:none;"></div>
       </div>
 
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-        <button class="btn-secondary" onclick="salvarOrcPac(${pacId})" style="justify-content:center;"><i class="ti ti-device-floppy"></i> Salvar orçamento</button>
-        <button class="btn-primary" onclick="finalizarVendaPac(${pacId})" style="justify-content:center;"><i class="ti ti-circle-check"></i> Finalizar venda</button>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px;">
+        <button class="btn-secondary" onclick="salvarOrcPac(${pacId})" style="justify-content:center;padding:12px;"><i class="ti ti-device-floppy"></i> Salvar</button>
+        <button class="btn-primary" onclick="finalizarVendaPac(${pacId})" style="justify-content:center;padding:12px;"><i class="ti ti-circle-check"></i> Finalizar</button>
       </div>
-      <button class="btn-secondary" onclick="orcamento=[];renderOrcPac();" style="width:100%;margin-top:8px;justify-content:center;"><i class="ti ti-eraser"></i> Limpar</button>
+      <button class="btn-secondary" onclick="renderPatientDetail('orcamentos')" style="width:100%;margin-top:8px;justify-content:center;"><i class="ti ti-receipt"></i> Ver orçamentos</button>
+      <button class="btn-secondary" onclick="orcamento=[];renderOrcPac();" style="width:100%;margin-top:6px;justify-content:center;color:var(--rose-text);"><i class="ti ti-eraser"></i> Limpar</button>
     </div>
   `;
     renderSimSelectPac();
@@ -3847,7 +3861,9 @@ async function salvarOrcPac(pacId){
   };
   vendas.push(venda);
   showLoading(true); await saveFinanceiro(); showLoading(false);
-  showToast('Orçamento salvo! Acesse Vendas para finalizar.');
+  showToast('Orçamento salvo!');
+  // Atualiza aba de orçamentos se estiver aberta
+  if(document.getElementById('pac-orc-lista')) pacRenderOrcamentos(pacId);
 }
 
 async function finalizarVendaPac(pacId){
@@ -3877,7 +3893,11 @@ async function finalizarVendaPac(pacId){
   showLoading(true); await saveFinanceiro(); showLoading(false);
   renderOrcPac();
   renderEstoque();
-  showToast('Venda finalizada! Estoque atualizado.');
+  showToast('Venda finalizada!');
+  // Atualiza orçamentos e vai para realizados
+  if(document.getElementById('pac-orc-lista')) pacRenderOrcamentos(pacId);
+  renderPatientDetail('procs');
+  setTimeout(()=>{ showToast('Colete as assinaturas na aba Realizados.','warn'); },1000);
 }
 
 // ── Carregar padrões manualmente ──
@@ -4681,6 +4701,55 @@ function renderSignArea(pacId, atendId, nomeAtend, profNome, profCro, sigExist){
   </div>`;
 }
 
+
+
+// ══════════════════════════════════════════════════════
+// ORÇAMENTOS DO PACIENTE
+// ══════════════════════════════════════════════════════
+function pacRenderOrcamentos(pacId){
+  const c = document.getElementById('pac-orc-lista'); if(!c) return;
+  const pacVendas = vendas.filter(v=>v.pacienteId===pacId).slice().reverse();
+  if(!pacVendas.length){
+    c.innerHTML='<div style="text-align:center;color:var(--rose-text);font-size:13px;padding:20px;">Nenhum orçamento registrado ainda.</div>';
+    return;
+  }
+  const STATUS = {orcamento:{lbl:'Orçamento',cls:'orcamento'},finalizada:{lbl:'Finalizada',cls:'finalizada'},cancelada:{lbl:'Cancelada',cls:'cancelada'}};
+  c.innerHTML = pacVendas.map(v=>{
+    const si = STATUS[v.status]||STATUS.orcamento;
+    const dt = new Date(v.data).toLocaleDateString('pt-BR');
+    const itens = (v.itens||[]).map(i=>escapeHtml(i.nome||'')).join(', ');
+    return `<div style="border:1px solid var(--rose-light);border-radius:12px;padding:13px;margin-bottom:8px;background:#fff;">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;margin-bottom:8px;">
+        <span style="font-size:12px;color:var(--rose-text);">${dt}</span>
+        <span class="fin-badge ${si.cls}">${si.lbl}</span>
+      </div>
+      <div style="font-size:13px;color:#3a2020;margin-bottom:8px;">${itens||'—'}</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+        <strong style="font-size:15px;color:var(--rose-dark);">${fmtBRL(v.total||v.subtotal||0)}</strong>
+        <div style="display:flex;gap:6px;">
+          ${v.status==='orcamento'?`<button class="btn-primary" style="font-size:12px;padding:6px 12px;" onclick="pacFinalizarVendaLista(${v.id},${pacId})"><i class="ti ti-circle-check"></i> Finalizar</button>`:''}
+          ${v.status==='finalizada'?`<button class="btn-secondary" style="font-size:12px;padding:6px 10px;" onclick="cancelarVenda(${v.id});setTimeout(()=>pacRenderOrcamentos(${pacId}),300)"><i class="ti ti-arrow-back-up"></i> Cancelar</button>`:''}
+          <button class="btn-danger" style="font-size:12px;padding:6px 8px;" onclick="excluirVenda(${v.id});setTimeout(()=>pacRenderOrcamentos(${pacId}),300)"><i class="ti ti-trash"></i></button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function pacFinalizarVendaLista(vendaId, pacId){
+  const v = vendas.find(x=>x.id===vendaId); if(!v) return;
+  if(!confirm(`Finalizar venda de ${fmtBRL(v.total||0)}? O estoque será descontado.`)) return;
+  const itensProc = (v.itens||[]).filter(i=>i.procId).map(i=>({procId:i.procId,qtd:i.qtd||1}));
+  const consumo = computeConsumo(itensProc);
+  const aplicado = aplicarBaixaEstoque(consumo);
+  v.status='finalizada'; v.consumo=aplicado; v.dataFinal=new Date().toISOString();
+  showLoading(true); await saveFinanceiro(); showLoading(false);
+  showToast('Venda finalizada!');
+  pacRenderOrcamentos(pacId);
+  // Abre aba de realizados para assinar
+  renderPatientDetail('procs');
+  setTimeout(()=>{ showToast('Adicione o procedimento realizado e colete as assinaturas.','warn'); },800);
+}
 
 // ══════════════════════════════════════════════════════
 // CONFIGURAÇÕES DA CLÍNICA
