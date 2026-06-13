@@ -347,10 +347,11 @@ button{font-family:inherit;}
 
 
 /* ── ABAS DO PACIENTE ── */
-.pac-tabs{display:flex;gap:4px;margin:14px 0 0;background:var(--rose-lighter);border-radius:12px;padding:4px;}
-.pac-tab{flex:1;border:none;background:none;padding:9px 6px;border-radius:9px;font-size:12px;font-weight:700;color:var(--rose-text);cursor:pointer;transition:all .18s;display:flex;align-items:center;justify-content:center;gap:5px;font-family:inherit;}
+.pac-tabs{display:flex;gap:3px;margin:14px 0 0;background:var(--rose-lighter);border-radius:12px;padding:4px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
+.pac-tabs::-webkit-scrollbar{display:none;}
+.pac-tab{flex:0 0 auto;border:none;background:none;padding:8px 10px;border-radius:9px;font-size:11px;font-weight:700;color:var(--rose-text);cursor:pointer;transition:all .18s;display:flex;align-items:center;justify-content:center;gap:4px;font-family:inherit;white-space:nowrap;}
 .pac-tab.active{background:#fff;color:var(--rose-dark);box-shadow:0 2px 8px rgba(212,115,90,.15);}
-.pac-tab i{font-size:14px;}
+.pac-tab i{font-size:13px;}
 
 
 /* ══ FINANCEIRO ══ */
@@ -2754,11 +2755,24 @@ async function pacSalvarDente(pacId){
     error = e;
     if(!error) pacDentesMap[pacDenteSel] = novo;
   }
+  // Adiciona ao plano de tratamento automaticamente
+  if(!error && procedimento){
+    const valorProc = procs.find(p=>p.nome.toLowerCase().includes(procedimento.toLowerCase()));
+    const valor = valorProc ? valorProc.precoFinal.toFixed(2).replace('.',',') : '0,00';
+    const { error: ep } = await _sb.from('plano_tratamento').insert([{
+      clinica_id:clinicaId, paciente_id:pacId,
+      dente: String(pacDenteSel), face:'–',
+      procedimento, valor, descricao:obs||'', status:'pendente'
+    }]);
+    if(!ep){ pacPlanoList.unshift({id:Date.now(),dente:String(pacDenteSel),face:'–',procedimento,valor,descricao:obs||'',status:'pendente'}); }
+  }
   showLoading(false);
   if(error){ showToast('Erro: '+error.message,'error'); return; }
   pacFecharDente();
   pacRenderDentesHistorico();
-  showToast('Dente salvo!');
+  pacRenderPlanoResumo();
+  pacRenderPlanoLista();
+  showToast('Dente salvo e adicionado ao plano!');
 }
 
 function pacRenderDentesHistorico(){
@@ -4676,12 +4690,14 @@ function abrirAssinaturaProfissional(pacId, atendId, nomeAtend){
 }
 
 async function salvarAssinaturas(pacId, atendId){
-  // Salva como JSON no campo obs do atendimento
   const key = getSignKey(pacId, atendId);
   const sigs = assinaturasAtend[key] || {};
   const sigJson = JSON.stringify(sigs);
-  // Atualiza campo de assinatura no banco
-  await _sb.from('atendimentos_odonto').update({ assinaturas: sigJson }).eq('id', atendId);
+  showLoading(true);
+  const { error } = await _sb.from('atendimentos_odonto').update({ assinaturas: sigJson }).eq('id', atendId).eq('clinica_id', clinicaId);
+  showLoading(false);
+  if(error){ showToast('Erro ao salvar assinatura: '+error.message,'error'); console.error(error); }
+  else { showToast('Assinatura salva!'); }
 }
 
 function renderSignArea(pacId, atendId, nomeAtend, profNome, profCro, sigExist){
