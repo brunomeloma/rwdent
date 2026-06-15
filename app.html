@@ -570,6 +570,7 @@ button{font-family:inherit;}
       <button class="sidebar-item" data-tab="vendas_fin" onclick="switchTab('vendas_fin')"><i class="ti ti-receipt"></i><span>Vendas</span></button>
       <div class="sidebar-divider"></div>
       <div class="sidebar-divider"></div>
+      <button class="sidebar-item" data-tab="invisalign_apresentacao" onclick="switchTab('invisalign_apresentacao')"><i class="ti ti-align-box-left-stretch"></i><span>Invisalign</span></button>
       <button class="sidebar-item" data-tab="resgate" onclick="switchTab('resgate')"><i class="ti ti-heart-handshake"></i><span>Resgate</span></button>
       <button class="sidebar-item" data-tab="configuracoes" onclick="switchTab('configuracoes')"><i class="ti ti-settings"></i><span>Configurações</span></button>
     </nav>
@@ -1121,6 +1122,218 @@ button{font-family:inherit;}
       </div>
     </div>
 
+    <!-- ══════════════════════════════════════════════════
+         INVISALIGN — APRESENTAÇÃO PARA O PACIENTE
+    ══════════════════════════════════════════════════ -->
+    <div id="tab-invisalign_apresentacao" class="content" style="display:none;">
+
+      <!-- HERO -->
+      <div style="background:linear-gradient(135deg,#d4735a 0%,#7a3020 100%);border-radius:20px;padding:32px 28px;margin-bottom:18px;color:#fff;text-align:center;">
+        <div style="font-size:48px;margin-bottom:10px;">✨</div>
+        <h1 style="font-size:1.6rem;font-weight:900;margin-bottom:8px;">Invisalign</h1>
+        <p style="font-size:.95rem;opacity:.9;max-width:460px;margin:0 auto 16px;line-height:1.6;">O alinhador transparente mais avançado do mundo — corrija seu sorriso sem que ninguém perceba.</p>
+        <div style="display:inline-block;background:rgba(255,255,255,.18);border-radius:40px;padding:8px 22px;font-size:.8rem;font-weight:700;">Discreto · Removível · Confortável</div>
+      </div>
+
+      <!-- COMPARATIVO -->
+      <div class="card" style="margin-bottom:18px;">
+        <h2><i class="ti ti-scale"></i> Invisalign vs Aparelho Fixo</h2>
+        <div style="overflow-x:auto;">
+          <table style="width:100%;border-collapse:collapse;font-size:13px;">
+            <thead>
+              <tr>
+                <th style="padding:10px 14px;text-align:left;background:var(--rose-lighter);color:var(--rose-dark);font-size:11px;text-transform:uppercase;">Critério</th>
+                <th style="padding:10px 14px;text-align:center;background:linear-gradient(135deg,#d4735a,#7a3020);color:#fff;font-size:11px;text-transform:uppercase;">✨ Invisalign</th>
+                <th style="padding:10px 14px;text-align:center;background:#f0f0f0;color:#666;font-size:11px;text-transform:uppercase;">Aparelho Fixo</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr style="border-bottom:1px solid var(--rose-lighter);">
+                <td style="padding:10px 14px;font-weight:600;">Aparência</td>
+                <td style="padding:10px 14px;text-align:center;color:#7a3020;font-weight:600;background:rgba(212,115,90,.05);">Totalmente invisível 😍</td>
+                <td style="padding:10px 14px;text-align:center;color:#888;">Metálico ou colorido</td>
+              </tr>
+              <tr style="border-bottom:1px solid var(--rose-lighter);">
+                <td style="padding:10px 14px;font-weight:600;">Conforto</td>
+                <td style="padding:10px 14px;text-align:center;color:#7a3020;font-weight:600;background:rgba(212,115,90,.05);">Sem arames, sem arranhões</td>
+                <td style="padding:10px 14px;text-align:center;color:#888;">Pode machucar a bochecha</td>
+              </tr>
+              <tr style="border-bottom:1px solid var(--rose-lighter);">
+                <td style="padding:10px 14px;font-weight:600;">Remove para comer</td>
+                <td style="padding:10px 14px;text-align:center;color:#7a3020;font-weight:600;background:rgba(212,115,90,.05);">✅ Sim, livre total</td>
+                <td style="padding:10px 14px;text-align:center;color:#888;">❌ Não remove</td>
+              </tr>
+              <tr style="border-bottom:1px solid var(--rose-lighter);">
+                <td style="padding:10px 14px;font-weight:600;">Higiene bucal</td>
+                <td style="padding:10px 14px;text-align:center;color:#7a3020;font-weight:600;background:rgba(212,115,90,.05);">Escova normalmente</td>
+                <td style="padding:10px 14px;text-align:center;color:#888;">Difícil limpar ao redor</td>
+              </tr>
+              <tr style="border-bottom:1px solid var(--rose-lighter);">
+                <td style="padding:10px 14px;font-weight:600;">Consultas</td>
+                <td style="padding:10px 14px;text-align:center;color:#7a3020;font-weight:600;background:rgba(212,115,90,.05);">A cada 6 a 10 semanas</td>
+                <td style="padding:10px 14px;text-align:center;color:#888;">Mensalmente</td>
+              </tr>
+              <tr style="border-bottom:1px solid var(--rose-lighter);">
+                <td style="padding:10px 14px;font-weight:600;">Resultado previsível</td>
+                <td style="padding:10px 14px;text-align:center;color:#7a3020;font-weight:600;background:rgba(212,115,90,.05);">Simulação 3D antes de começar</td>
+                <td style="padding:10px 14px;text-align:center;color:#888;">Estimativa geral</td>
+              </tr>
+              <tr>
+                <td style="padding:10px 14px;font-weight:600;">Ideal para adultos</td>
+                <td style="padding:10px 14px;text-align:center;color:#7a3020;font-weight:600;background:rgba(212,115,90,.05);">✅ Perfeito, sem vergonha</td>
+                <td style="padding:10px 14px;text-align:center;color:#888;">Pode gerar insegurança</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- COMO FUNCIONA -->
+      <div class="card" style="margin-bottom:18px;">
+        <h2><i class="ti ti-route"></i> Como Funciona o Tratamento</h2>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;">
+          <div style="background:var(--rose-lighter);border-radius:14px;padding:16px;text-align:center;">
+            <div style="width:36px;height:36px;background:linear-gradient(135deg,var(--rose),var(--rose-dark));border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 8px;color:#fff;font-weight:900;">1</div>
+            <i class="ti ti-scan" style="font-size:22px;color:var(--rose);display:block;margin-bottom:6px;"></i>
+            <div style="font-size:12px;font-weight:700;color:var(--rose-dark);margin-bottom:4px;">Escaneamento 3D</div>
+            <div style="font-size:11px;color:var(--rose-text);line-height:1.5;">Mapeamos seus dentes digitalmente. Sem moldagem desconfortável.</div>
+          </div>
+          <div style="background:var(--rose-lighter);border-radius:14px;padding:16px;text-align:center;">
+            <div style="width:36px;height:36px;background:linear-gradient(135deg,var(--rose),var(--rose-dark));border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 8px;color:#fff;font-weight:900;">2</div>
+            <i class="ti ti-3d-rotate" style="font-size:22px;color:var(--rose);display:block;margin-bottom:6px;"></i>
+            <div style="font-size:12px;font-weight:700;color:var(--rose-dark);margin-bottom:4px;">Simulação Digital</div>
+            <div style="font-size:11px;color:var(--rose-text);line-height:1.5;">Você vê o resultado final antes mesmo de começar.</div>
+          </div>
+          <div style="background:var(--rose-lighter);border-radius:14px;padding:16px;text-align:center;">
+            <div style="width:36px;height:36px;background:linear-gradient(135deg,var(--rose),var(--rose-dark));border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 8px;color:#fff;font-weight:900;">3</div>
+            <i class="ti ti-package" style="font-size:22px;color:var(--rose);display:block;margin-bottom:6px;"></i>
+            <div style="font-size:12px;font-weight:700;color:var(--rose-dark);margin-bottom:4px;">Fabricação</div>
+            <div style="font-size:11px;color:var(--rose-text);line-height:1.5;">Alinhadores personalizados fabricados nos EUA e enviados para cá.</div>
+          </div>
+          <div style="background:var(--rose-lighter);border-radius:14px;padding:16px;text-align:center;">
+            <div style="width:36px;height:36px;background:linear-gradient(135deg,var(--rose),var(--rose-dark));border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 8px;color:#fff;font-weight:900;">4</div>
+            <i class="ti ti-tooth" style="font-size:22px;color:var(--rose);display:block;margin-bottom:6px;"></i>
+            <div style="font-size:12px;font-weight:700;color:var(--rose-dark);margin-bottom:4px;">Instalação</div>
+            <div style="font-size:11px;color:var(--rose-text);line-height:1.5;">Você já sai com os alinhadores. Sem dor.</div>
+          </div>
+          <div style="background:var(--rose-lighter);border-radius:14px;padding:16px;text-align:center;">
+            <div style="width:36px;height:36px;background:linear-gradient(135deg,var(--rose),var(--rose-dark));border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 8px;color:#fff;font-weight:900;">5</div>
+            <i class="ti ti-refresh" style="font-size:22px;color:var(--rose);display:block;margin-bottom:6px;"></i>
+            <div style="font-size:12px;font-weight:700;color:var(--rose-dark);margin-bottom:4px;">Troca em Casa</div>
+            <div style="font-size:11px;color:var(--rose-text);line-height:1.5;">A cada 1–2 semanas você mesmo troca para o próximo alinhador.</div>
+          </div>
+          <div style="background:var(--rose-lighter);border-radius:14px;padding:16px;text-align:center;">
+            <div style="width:36px;height:36px;background:linear-gradient(135deg,var(--rose),var(--rose-dark));border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 8px;color:#fff;font-weight:900;">6</div>
+            <i class="ti ti-check" style="font-size:22px;color:var(--rose);display:block;margin-bottom:6px;"></i>
+            <div style="font-size:12px;font-weight:700;color:var(--rose-dark);margin-bottom:4px;">Resultado Final</div>
+            <div style="font-size:11px;color:var(--rose-text);line-height:1.5;">Sorriso perfeito! Refinamento se precisar de ajuste fino.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- INVESTIMENTO -->
+      <div class="card" style="margin-bottom:18px;">
+        <h2><i class="ti ti-coin"></i> Investimento</h2>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px;">
+          <div style="background:linear-gradient(135deg,#d4735a,#7a3020);border-radius:16px;padding:22px;color:#fff;text-align:center;">
+            <div style="font-size:11px;font-weight:700;opacity:.85;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">Tratamento Completo</div>
+            <div style="font-size:2rem;font-weight:900;line-height:1;">R$ 9.800</div>
+            <div style="font-size:11px;opacity:.8;margin-top:6px;">Inclui todos os alinhadores + consultas</div>
+          </div>
+          <div style="background:var(--rose-lighter);border:2px solid var(--rose-light);border-radius:16px;padding:22px;text-align:center;">
+            <div style="font-size:11px;font-weight:700;color:var(--rose-text);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">Refinamento (se precisar)</div>
+            <div style="font-size:2rem;font-weight:900;color:var(--rose-dark);line-height:1;">R$ 1.200</div>
+            <div style="font-size:11px;color:var(--rose-text);margin-top:6px;">Cobrado só se necessário ao final</div>
+          </div>
+        </div>
+        <!-- Exemplo parcelamento -->
+        <div style="background:var(--rose-lighter);border-radius:12px;padding:14px;margin-bottom:14px;">
+          <div style="font-size:12px;font-weight:700;color:var(--rose-dark);margin-bottom:10px;">📊 Exemplo de parcelamento</div>
+          <div style="display:flex;flex-direction:column;gap:6px;">
+            <div style="display:flex;justify-content:space-between;font-size:13px;padding:7px 10px;background:#fff;border-radius:8px;">
+              <span>Entrada</span><strong style="color:var(--rose-dark);">R$ 2.000</strong>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:13px;padding:7px 10px;background:#fff;border-radius:8px;">
+              <span>Restante (R$ 7.800) em 10x</span><strong style="color:var(--rose-dark);">R$ 780/mês</strong>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:13px;padding:7px 10px;background:#fff;border-radius:8px;">
+              <span>Refinamento (se necessário)</span><strong style="color:var(--rose-dark);">R$ 1.200 à parte</strong>
+            </div>
+          </div>
+        </div>
+        <!-- O que inclui -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <div style="background:#f0fff8;border:1.5px solid #b2f0e0;border-radius:12px;padding:14px;">
+            <div style="font-size:11px;font-weight:700;color:#2e7d32;margin-bottom:10px;text-transform:uppercase;">✅ Incluso</div>
+            <div style="font-size:12px;color:#1a3a1a;line-height:1.8;">
+              • Todos os alinhadores<br>
+              • Escaneamento 3D<br>
+              • Simulação digital<br>
+              • Consultas de acompanhamento<br>
+              • Suporte durante o tratamento
+            </div>
+          </div>
+          <div style="background:#fffbf0;border:1.5px solid #ffe082;border-radius:12px;padding:14px;">
+            <div style="font-size:11px;font-weight:700;color:#856404;margin-bottom:10px;text-transform:uppercase;">⚠️ Separado</div>
+            <div style="font-size:12px;color:#3a2a00;line-height:1.8;">
+              • Refinamento (R$ 1.200)<br>
+              • Exames complementares<br>
+              • Contenção pós-tratamento
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- FAQ -->
+      <div class="card" style="margin-bottom:18px;">
+        <h2><i class="ti ti-help-circle"></i> Dúvidas Frequentes</h2>
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          <div style="border:1.5px solid var(--rose-light);border-radius:12px;overflow:hidden;">
+            <button onclick="toggleFaq(0)" style="width:100%;background:none;border:none;padding:14px 16px;text-align:left;font-size:13px;font-weight:700;color:var(--rose-dark);cursor:pointer;display:flex;justify-content:space-between;align-items:center;font-family:inherit;">
+              Quanto tempo dura o tratamento?<i class="ti ti-chevron-down" id="faq-ico-0" style="font-size:16px;transition:transform .2s;"></i>
+            </button>
+            <div id="faq-body-0" style="display:none;padding:0 16px 14px;font-size:13px;color:#3a2020;line-height:1.6;">Em média de 12 a 18 meses. Casos mais simples podem ser resolvidos em 6 a 8 meses.</div>
+          </div>
+          <div style="border:1.5px solid var(--rose-light);border-radius:12px;overflow:hidden;">
+            <button onclick="toggleFaq(1)" style="width:100%;background:none;border:none;padding:14px 16px;text-align:left;font-size:13px;font-weight:700;color:var(--rose-dark);cursor:pointer;display:flex;justify-content:space-between;align-items:center;font-family:inherit;">
+              Preciso usar o dia todo?<i class="ti ti-chevron-down" id="faq-ico-1" style="font-size:16px;transition:transform .2s;"></i>
+            </button>
+            <div id="faq-body-1" style="display:none;padding:0 16px 14px;font-size:13px;color:#3a2020;line-height:1.6;">Recomendamos 20 a 22 horas por dia. Remove só para comer, beber e escovar.</div>
+          </div>
+          <div style="border:1.5px solid var(--rose-light);border-radius:12px;overflow:hidden;">
+            <button onclick="toggleFaq(2)" style="width:100%;background:none;border:none;padding:14px 16px;text-align:left;font-size:13px;font-weight:700;color:var(--rose-dark);cursor:pointer;display:flex;justify-content:space-between;align-items:center;font-family:inherit;">
+              Dói?<i class="ti ti-chevron-down" id="faq-ico-2" style="font-size:16px;transition:transform .2s;"></i>
+            </button>
+            <div id="faq-body-2" style="display:none;padding:0 16px 14px;font-size:13px;color:#3a2020;line-height:1.6;">Muito mais confortável que aparelho fixo. Pode haver leve pressão nos primeiros dias de cada alinhador — sinal que está funcionando.</div>
+          </div>
+          <div style="border:1.5px solid var(--rose-light);border-radius:12px;overflow:hidden;">
+            <button onclick="toggleFaq(3)" style="width:100%;background:none;border:none;padding:14px 16px;text-align:left;font-size:13px;font-weight:700;color:var(--rose-dark);cursor:pointer;display:flex;justify-content:space-between;align-items:center;font-family:inherit;">
+              Aparece na foto?<i class="ti ti-chevron-down" id="faq-ico-3" style="font-size:16px;transition:transform .2s;"></i>
+            </button>
+            <div id="faq-body-3" style="display:none;padding:0 16px 14px;font-size:13px;color:#3a2020;line-height:1.6;">Praticamente nada. Plástico transparente de alta tecnologia — na maioria das fotos nem se percebe.</div>
+          </div>
+          <div style="border:1.5px solid var(--rose-light);border-radius:12px;overflow:hidden;">
+            <button onclick="toggleFaq(4)" style="width:100%;background:none;border:none;padding:14px 16px;text-align:left;font-size:13px;font-weight:700;color:var(--rose-dark);cursor:pointer;display:flex;justify-content:space-between;align-items:center;font-family:inherit;">
+              O refinamento é garantido?<i class="ti ti-chevron-down" id="faq-ico-4" style="font-size:16px;transition:transform .2s;"></i>
+            </button>
+            <div id="faq-body-4" style="display:none;padding:0 16px 14px;font-size:13px;color:#3a2020;line-height:1.6;">Nem todos os casos precisam. Quando necessário para ajustes finais, custa R$ 1.200 separado.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- CTA -->
+      <div style="background:linear-gradient(135deg,#d4735a 0%,#7a3020 100%);border-radius:20px;padding:28px;text-align:center;color:#fff;margin-bottom:24px;">
+        <div style="font-size:36px;margin-bottom:8px;">🦷</div>
+        <h2 style="font-size:1.2rem;font-weight:900;margin-bottom:8px;">Pronto para transformar seu sorriso?</h2>
+        <p style="font-size:.9rem;opacity:.9;margin-bottom:18px;">Agende sua avaliação e veja o resultado antes de começar!</p>
+        <button onclick="switchTab('agendar')" style="background:#fff;color:var(--rose-dark);border:none;border-radius:40px;padding:12px 30px;font-size:14px;font-weight:800;cursor:pointer;">
+          <i class="ti ti-calendar-plus"></i> Agendar Avaliação Gratuita
+        </button>
+      </div>
+
+    </div>
+
+
     <!-- CONFIGURAÇÕES -->
     <div id="tab-configuracoes" class="content" style="display:none;">
       <div class="card">
@@ -1183,6 +1396,7 @@ button{font-family:inherit;}
       <button class="mobile-nav-item" data-tab="calendario" onclick="switchTab('calendario')"><i class="ti ti-calendar-month"></i>Calendário</button>
       <button class="mobile-nav-item" data-tab="pacientes" onclick="switchTab('pacientes')"><i class="ti ti-users"></i>Pacientes</button>
       <button class="mobile-nav-item" data-tab="profissionais" onclick="switchTab('profissionais')"><i class="ti ti-stethoscope"></i>Profissionais</button>
+      <button class="mobile-nav-item" data-tab="invisalign_apresentacao" onclick="switchTab('invisalign_apresentacao')"><i class="ti ti-align-box-left-stretch"></i>Invisalign</button>
       <button class="mobile-nav-item" data-tab="resgate" onclick="switchTab('resgate')"><i class="ti ti-heart-handshake"></i>Resgate</button>
       <button class="mobile-nav-item" onclick="doLogout()" style="color:#b33;"><i class="ti ti-logout"></i>Sair</button>
     </div>
@@ -1481,8 +1695,16 @@ function toggleSidebar(){
   document.getElementById('sidebar').classList.toggle('open',sidebarOpen);
 }
 
+function toggleFaq(i){
+  const body=document.getElementById('faq-body-'+i);
+  const ico=document.getElementById('faq-ico-'+i);
+  const open=body.style.display==='none';
+  body.style.display=open?'block':'none';
+  ico.style.transform=open?'rotate(180deg)':'';
+}
+
 function switchTab(tab){
-  ['home','agendar','lista','calendario','pacientes','profissionais','configuracoes','financeiro','procedimentos_fin','materiais_fin','estoque_fin','vendas_fin','resgate'].forEach(t=>{
+  ['home','agendar','lista','calendario','pacientes','profissionais','configuracoes','financeiro','procedimentos_fin','materiais_fin','estoque_fin','vendas_fin','resgate','invisalign_apresentacao'].forEach(t=>{
     const el=document.getElementById('tab-'+t);
     if(el) el.style.display = t===tab?'':'none';
   });
@@ -1510,11 +1732,14 @@ function switchTab(tab){
       });
       return;
     }
-    if(tab==='financeiro') renderFinanceiroDash();
-    if(tab==='procedimentos_fin') renderProcs();
-    if(tab==='materiais_fin') renderMats();
-    if(tab==='estoque_fin') renderEstoque();
-    if(tab==='vendas_fin') renderVendas();
+    // requestAnimationFrame evita flash visual (tab aparece vazio por um frame)
+    requestAnimationFrame(()=>{
+      if(tab==='financeiro') renderFinanceiroDash();
+      if(tab==='procedimentos_fin') renderProcs();
+      if(tab==='materiais_fin') renderMats();
+      if(tab==='estoque_fin') renderEstoque();
+      if(tab==='vendas_fin') renderVendas();
+    });
   }
   window.scrollTo(0,0);
 }
@@ -2098,10 +2323,11 @@ function renderPatientDetail(abaAtiva){
               </div>
               <div class="form-group full">
                 <label>Procedimento realizado</label>
-                <input type="text" id="hist-proc" placeholder="Ex: Restauração em resina, Canal, Limpeza..." list="hist-proc-list"/>
-                <datalist id="hist-proc-list">
-                  ${procs.slice(0,20).map(p=>`<option value="${escapeHtml(p.nome)}">`).join('')}
-                </datalist>
+                <div style="display:flex;gap:6px;">
+                  <input type="text" id="hist-proc" placeholder="Ex: Restauração em resina, Canal, Limpeza..." style="flex:1;"/>
+                  <button type="button" onclick="histAbrirSelectProc()" style="background:var(--rose);color:#fff;border:none;border-radius:8px;padding:8px 12px;cursor:pointer;font-size:13px;white-space:nowrap;"><i class="ti ti-list"></i> Escolher</button>
+                </div>
+                <div id="hist-proc-opcoes" style="display:none;border:1.5px solid var(--rose-light);border-radius:10px;background:#fff;margin-top:6px;max-height:200px;overflow-y:auto;box-shadow:0 4px 16px rgba(0,0,0,.1);"></div>
               </div>
               <div class="form-group full">
                 <label>Observações</label>
@@ -4583,10 +4809,38 @@ function renderEstoque(){
 function updateEstField(id, field, val){
   if(!estoque[id]) estoque[id]={atual:0,min:0,compra:0};
   estoque[id][field] = parseFloat(val)||0;
-  renderEstoque();
-  // Salva no banco com debounce para não sobrecarregar
+  // NÃO chama renderEstoque() aqui — evita recriar os inputs e perder o foco
+  // Atualiza só o badge de status inline sem re-renderizar toda a tabela
+  _atualizarStatusEstLinha(id);
+  // Autosave com debounce de 2s
   clearTimeout(window._estSaveTimer);
-  window._estSaveTimer = setTimeout(()=>{ saveFinanceiro(); }, 1500);
+  window._estSaveTimer = setTimeout(async ()=>{
+    await saveFinanceiro();
+    showToast('Estoque salvo!','ok');
+  }, 2000);
+}
+function _atualizarStatusEstLinha(id){
+  // Atualiza apenas o badge de status e barra de progresso na linha do material
+  const e = estoque[id]||{atual:0,min:0,compra:0};
+  const st = getEstStatus(id);
+  const stLbl = st==='danger'?'Crítico':st==='warn'?'Atenção':st==='ok'?'OK':'—';
+  const stCls = st==='danger'?'danger':st==='warn'?'warn':st==='ok'?'ok':'';
+  // Procura na tabela por linhas que contenham o botão de edição desse material
+  const btns = document.querySelectorAll(`#est-tbody button[onclick="openEstEdit(${id})"]`);
+  btns.forEach(btn=>{
+    const tr = btn.closest('tr');
+    if(!tr) return;
+    const badge = tr.querySelector('.fin-badge');
+    if(badge){ badge.className=`fin-badge ${stCls}`; badge.textContent=stLbl; }
+    const pct = e.compra>0?Math.min(100,Math.round((e.atual/e.compra)*100)):null;
+    const progWrap = tr.querySelector('.prog-wrap');
+    const progBar  = tr.querySelector('.prog-bar');
+    if(progBar && pct!==null){
+      const barCls = st==='danger'?'prog-danger':st==='warn'?'prog-warn':'prog-ok';
+      progBar.className = `prog-bar ${barCls}`;
+      progBar.style.width = `${pct}%`;
+    }
+  });
 }
 
 // ── INSUMOS DOS PROCEDIMENTOS ──
@@ -6828,7 +7082,7 @@ function histConfirmarDente(){
   histDentesProc[histDenteAtual] = conds.map(c=>({cond:c, qtd:histDenteCondAtual[c]}));
 
   // Atualiza visual do botão do dente
-  const btn = document.querySelector('[data-hist-dente="'+histDenteAtual+'"]');
+  const btn = document.querySelector('[data-hist-dente="'+String(histDenteAtual)+'"]');
   if(btn){
     btn.style.background = 'var(--rose)';
     btn.style.color = '#fff';
@@ -6860,6 +7114,37 @@ function histAtualizarResumo(){
     }).join('');
   }
   if(inp) inp.value = dentes.join(',');
+}
+
+async function histAbrirSelectProc(){
+  const div = document.getElementById('hist-proc-opcoes');
+  if(!div) return;
+  if(div.style.display !== 'none'){ div.style.display='none'; return; }
+  // Garante que procs está carregado
+  if(!procs.length && !_financeiroCarregado){
+    showLoading(true);
+    await loadFinanceiro();
+    showLoading(false);
+  }
+  const lista = procs.length ? procs : [];
+  if(!lista.length){
+    div.innerHTML='<div style="padding:12px;font-size:13px;color:var(--rose-text);">Nenhum procedimento cadastrado.<br>Cadastre em Financeiro → Procedimentos.</div>';
+  } else {
+    div.innerHTML = lista.map(p=>`
+      <button type="button" onclick="histSelecionarProc(${JSON.stringify(escapeHtml(p.nome))})"
+        style="display:block;width:100%;text-align:left;padding:10px 14px;border:none;border-bottom:1px solid var(--rose-lighter);background:#fff;font-size:13px;cursor:pointer;color:#3a2020;">
+        ${escapeHtml(p.nome)}
+      </button>`).join('');
+  }
+  div.style.display='block';
+  div.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+
+function histSelecionarProc(nome){
+  const inp = document.getElementById('hist-proc');
+  if(inp) inp.value = nome;
+  const div = document.getElementById('hist-proc-opcoes');
+  if(div) div.style.display='none';
 }
 
 function histLimparDentes(){
