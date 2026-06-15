@@ -7120,19 +7120,17 @@ async function histAbrirSelectProc(){
   const div = document.getElementById('hist-proc-opcoes');
   if(!div) return;
   if(div.style.display !== 'none'){ div.style.display='none'; return; }
-  // Garante que procs está carregado
   if(!procs.length && !_financeiroCarregado){
     showLoading(true);
     await loadFinanceiro();
     showLoading(false);
   }
-  const lista = procs.length ? procs : [];
-  if(!lista.length){
+  if(!procs.length){
     div.innerHTML='<div style="padding:12px;font-size:13px;color:var(--rose-text);">Nenhum procedimento cadastrado.<br>Cadastre em Financeiro → Procedimentos.</div>';
   } else {
-    div.innerHTML = lista.map(p=>`
-      <button type="button" onclick="histSelecionarProc(${JSON.stringify(escapeHtml(p.nome))})"
-        style="display:block;width:100%;text-align:left;padding:10px 14px;border:none;border-bottom:1px solid var(--rose-lighter);background:#fff;font-size:13px;cursor:pointer;color:#3a2020;">
+    div.innerHTML = procs.map((p,i)=>`
+      <button type="button" onclick="histSelecionarProc(${i})"
+        style="display:block;width:100%;text-align:left;padding:11px 14px;border:none;border-bottom:1px solid var(--rose-lighter);background:#fff;font-size:13px;cursor:pointer;color:#3a2020;-webkit-tap-highlight-color:rgba(0,0,0,.08);">
         ${escapeHtml(p.nome)}
       </button>`).join('');
   }
@@ -7140,9 +7138,11 @@ async function histAbrirSelectProc(){
   div.scrollIntoView({behavior:'smooth',block:'nearest'});
 }
 
-function histSelecionarProc(nome){
+function histSelecionarProc(idx){
+  const p = procs[idx];
+  if(!p) return;
   const inp = document.getElementById('hist-proc');
-  if(inp) inp.value = nome;
+  if(inp){ inp.value = p.nome; inp.dispatchEvent(new Event('input')); }
   const div = document.getElementById('hist-proc-opcoes');
   if(div) div.style.display='none';
 }
