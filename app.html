@@ -4419,7 +4419,9 @@ async function saveMat(){
   closeModal('modal-mat');
   renderMats(); renderEstoque();
   recalcularInsumos(true);
-  showToast('Material salvo!');
+  recalcularInsumos(true);
+  renderProcs();
+  showToast('Material salvo! Custos atualizados.');
 }
 async function deleteMat(id){
   if(!confirm('Excluir este material? Será removido do estoque e dos insumos dos procedimentos.')) return;
@@ -4581,8 +4583,10 @@ function renderEstoque(){
 function updateEstField(id, field, val){
   if(!estoque[id]) estoque[id]={atual:0,min:0,compra:0};
   estoque[id][field] = parseFloat(val)||0;
-  // Não salva a cada digitação — salva no logout
   renderEstoque();
+  // Salva no banco com debounce para não sobrecarregar
+  clearTimeout(window._estSaveTimer);
+  window._estSaveTimer = setTimeout(()=>{ saveFinanceiro(); }, 1500);
 }
 
 // ── INSUMOS DOS PROCEDIMENTOS ──
@@ -7480,4 +7484,3 @@ async function calSaveNewAppt(){
 
 </body>
 </html>
-     
