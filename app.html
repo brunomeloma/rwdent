@@ -31,6 +31,79 @@
 }
 body{font-family:'Segoe UI',Arial,sans-serif;background:#fdf6f3;color:#3a2020;min-height:100vh;overscroll-behavior:none;overflow-x:hidden;}
 
+/* ── HOME CAROUSEL ── */
+.home-carousel{
+  position:relative;border-radius:18px;overflow:hidden;height:220px;margin-bottom:18px;
+  box-shadow:0 8px 32px rgba(212,115,90,.22);
+}
+.hc-slide{
+  position:absolute;inset:0;display:none;
+  align-items:center;justify-content:center;flex-direction:column;
+  transition:opacity .4s;
+}
+.hc-slide.active{display:flex;}
+.hc-content{text-align:center;padding:20px 60px;position:relative;z-index:1;}
+.hc-icon{font-size:42px;color:rgba(255,255,255,.85);margin-bottom:10px;line-height:1;}
+.hc-content h2{color:#fff;font-size:1.35rem;font-weight:800;text-shadow:0 2px 10px rgba(0,0,0,.3);margin-bottom:8px;}
+.hc-content p{color:rgba(255,255,255,.82);font-size:.88rem;line-height:1.6;max-width:480px;margin:0 auto;}
+.hc-arrow{
+  position:absolute;top:50%;transform:translateY(-50%);
+  background:rgba(255,255,255,.22);color:#fff;border:none;
+  width:38px;height:38px;border-radius:50%;font-size:24px;line-height:1;
+  cursor:pointer;z-index:3;transition:background .2s;display:flex;align-items:center;justify-content:center;
+}
+.hc-arrow:hover{background:rgba(255,255,255,.38);}
+.hc-prev{left:14px;}
+.hc-next{right:14px;}
+.hc-dots{
+  position:absolute;bottom:12px;left:50%;transform:translateX(-50%);
+  display:flex;gap:7px;z-index:3;
+}
+.hc-dot{
+  width:9px;height:9px;border-radius:50%;
+  background:rgba(255,255,255,.4);border:none;cursor:pointer;padding:0;transition:background .2s,transform .2s;
+}
+.hc-dot.active{background:#fff;transform:scale(1.25);}
+
+/* ── HOME STAT CARDS ── */
+.home-stat-card{
+  background:#fff;border-radius:16px;padding:16px 20px;
+  display:flex;align-items:center;gap:14px;flex:1;min-width:140px;
+  box-shadow:0 2px 12px rgba(212,115,90,.10);border:1px solid var(--rose-light);
+}
+.home-stat-icon{
+  width:46px;height:46px;border-radius:13px;display:flex;align-items:center;justify-content:center;
+  font-size:22px;flex-shrink:0;
+}
+.home-stat-num{font-size:26px;font-weight:800;color:#3a2020;line-height:1;}
+.home-stat-label{font-size:11px;color:var(--rose-text);margin-top:3px;font-weight:500;}
+
+/* ── HOME TABLES ── */
+.home-tables-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+@media(max-width:700px){.home-tables-row{grid-template-columns:1fr;}}
+.home-table-card{padding:16px 18px!important;}
+.home-table-title{font-size:14px;font-weight:700;color:#3a2020;margin-bottom:12px;display:flex;align-items:center;gap:7px;}
+.home-table-title i{color:var(--rose);font-size:16px;}
+.home-table-row{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:9px 0;border-bottom:1px solid var(--rose-lighter);font-size:13px;gap:8px;
+}
+.home-table-row:last-child{border-bottom:none;}
+.home-table-name{font-weight:600;color:#3a2020;flex:1;}
+.home-table-sub{font-size:11px;color:var(--rose-text);}
+.home-badge{
+  font-size:10px;font-weight:700;padding:3px 9px;border-radius:20px;text-transform:uppercase;letter-spacing:.4px;
+}
+.home-badge.confirmada{background:#dcfce7;color:#166534;}
+.home-badge.pendente{background:#fef9c3;color:#854d0e;}
+.home-badge.completada{background:#dbeafe;color:#1d4ed8;}
+.home-btn-ver{
+  background:var(--rose);color:#fff;border:none;border-radius:8px;
+  padding:5px 12px;font-size:12px;font-weight:600;cursor:pointer;transition:background .2s;
+}
+.home-btn-ver:hover{background:var(--rose-dark);}
+.home-empty{color:var(--rose-text);font-size:13px;text-align:center;padding:20px 0;opacity:.7;}
+
 /* ── LOGIN SCREEN ── */
 #login-screen{
   display:flex;align-items:center;justify-content:center;
@@ -527,25 +600,66 @@ button{font-family:inherit;}
 
     <!-- HOME -->
     <div id="tab-home" class="content">
-      <div class="card" style="text-align:center;">
-        <div style="max-width:680px;margin:0 auto;">
-          <div style="display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">
-            <svg width="100" height="100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-              <rect width="100" height="100" rx="22" fill="#d4735a"/>
-              <text x="50" y="62" text-anchor="middle" font-family="Arial Black,sans-serif" font-size="52" font-weight="900" fill="#fff">R</text>
-              <circle cx="72" cy="28" r="12" fill="#fff" opacity="0.2"/>
-              <circle cx="72" cy="28" r="6" fill="#fff" opacity="0.4"/>
-            </svg>
-          </div>
-          <h2 style="font-size:20px;margin-bottom:10px;">Bem-vindo ao Sistema</h2>
-          <p style="color:var(--rose-text);line-height:1.7;margin-bottom:20px;">Gerencie sua clínica com praticidade e eficiência.</p>
-          <div id="home-stats" style="display:flex;flex-wrap:wrap;justify-content:center;gap:12px;margin-bottom:20px;"></div>
-          <div style="display:flex;flex-wrap:wrap;justify-content:center;gap:10px;">
-            <button class="btn-primary" onclick="switchTab('agendar')"><i class="ti ti-calendar-plus"></i> Novo Agendamento</button>
-            <button class="btn-secondary" onclick="switchTab('lista')"><i class="ti ti-list-check"></i> Ver Agenda</button>
+
+      <!-- ── CAROUSEL ── -->
+      <div class="home-carousel" id="home-carousel">
+        <div class="hc-slide active" style="background:linear-gradient(135deg,#d4735a,#7a3020);">
+          <div class="hc-content">
+            <div class="hc-icon"><i class="ti ti-calendar-plus"></i></div>
+            <h2>Agendamento Inteligente</h2>
+            <p>Cadastre e gerencie consultas com facilidade. Visualize sua agenda por dia, semana ou mês.</p>
           </div>
         </div>
+        <div class="hc-slide" style="background:linear-gradient(135deg,#b05a3a,#5a1a08);">
+          <div class="hc-content">
+            <div class="hc-icon"><i class="ti ti-users"></i></div>
+            <h2>Gestão de Pacientes</h2>
+            <p>Prontuários completos, histórico de tratamentos, anamnese e documentos em um só lugar.</p>
+          </div>
+        </div>
+        <div class="hc-slide" style="background:linear-gradient(135deg,#c06040,#8a2a10);">
+          <div class="hc-content">
+            <div class="hc-icon"><i class="ti ti-tooth"></i></div>
+            <h2>Odontograma Digital</h2>
+            <p>Mapeamento completo da arcada dentária com marcação de procedimentos por dente.</p>
+          </div>
+        </div>
+        <div class="hc-slide" style="background:linear-gradient(135deg,#a04828,#6a2010);">
+          <div class="hc-content">
+            <div class="hc-icon"><i class="ti ti-report-money"></i></div>
+            <h2>Controle Financeiro</h2>
+            <p>Acompanhe receitas, despesas, planos de tratamento e geração de orçamentos em PDF.</p>
+          </div>
+        </div>
+        <div class="hc-slide" style="background:linear-gradient(135deg,#e08060,#9a4030);">
+          <div class="hc-content">
+            <div class="hc-icon"><i class="ti ti-package"></i></div>
+            <h2>Estoque & Materiais</h2>
+            <p>Controle o inventário da sua clínica, alertas de estoque mínimo e histórico de movimentações.</p>
+          </div>
+        </div>
+        <button class="hc-arrow hc-prev" onclick="hcPrev()">&#8249;</button>
+        <button class="hc-arrow hc-next" onclick="hcNext()">&#8250;</button>
+        <div class="hc-dots" id="hc-dots"></div>
       </div>
+
+      <!-- ── STATS CARDS ── -->
+      <div id="home-stats" style="display:flex;flex-wrap:wrap;gap:12px;margin-bottom:18px;"></div>
+
+      <!-- ── TABLES ROW ── -->
+      <div class="home-tables-row">
+        <!-- Próximas consultas hoje -->
+        <div class="card home-table-card">
+          <h3 class="home-table-title"><i class="ti ti-clock"></i> Próximas consultas hoje</h3>
+          <div id="home-today-list"><div class="home-empty">Nenhuma consulta hoje.</div></div>
+        </div>
+        <!-- Últimos pacientes registrados -->
+        <div class="card home-table-card">
+          <h3 class="home-table-title"><i class="ti ti-user-plus"></i> Últimos pacientes registrados</h3>
+          <div id="home-recent-patients"><div class="home-empty">Nenhum paciente cadastrado.</div></div>
+        </div>
+      </div>
+
     </div>
 
     <!-- AGENDAR -->
@@ -1068,6 +1182,7 @@ button{font-family:inherit;}
       <button class="mobile-nav-item" data-tab="lista" onclick="switchTab('lista')"><i class="ti ti-list-check"></i>Agenda</button>
       <button class="mobile-nav-item" data-tab="calendario" onclick="switchTab('calendario')"><i class="ti ti-calendar-month"></i>Calendário</button>
       <button class="mobile-nav-item" data-tab="pacientes" onclick="switchTab('pacientes')"><i class="ti ti-users"></i>Pacientes</button>
+      <button class="mobile-nav-item" data-tab="profissionais" onclick="switchTab('profissionais')"><i class="ti ti-stethoscope"></i>Profissionais</button>
       <button class="mobile-nav-item" data-tab="resgate" onclick="switchTab('resgate')"><i class="ti ti-heart-handshake"></i>Resgate</button>
       <button class="mobile-nav-item" onclick="doLogout()" style="color:#b33;"><i class="ti ti-logout"></i>Sair</button>
     </div>
@@ -1264,6 +1379,41 @@ async function loadAll(){
   showLoading(false);
 }
 
+// ══════════════════════════════════════════════════════
+// HOME CAROUSEL
+// ══════════════════════════════════════════════════════
+let _hcIdx = 0;
+let _hcTimer = null;
+const _HC_TOTAL = 5;
+
+function initHomeCarousel(){
+  const dotsEl = document.getElementById('hc-dots');
+  if(!dotsEl) return;
+  dotsEl.innerHTML = '';
+  for(let i=0;i<_HC_TOTAL;i++){
+    const d = document.createElement('button');
+    d.className = 'hc-dot' + (i===0?' active':'');
+    d.setAttribute('aria-label','Slide '+(i+1));
+    d.onclick = ()=>hcGo(i);
+    dotsEl.appendChild(d);
+  }
+  clearInterval(_hcTimer);
+  _hcTimer = setInterval(()=>hcNext(), 4500);
+}
+
+function hcGo(i){
+  const slides = document.querySelectorAll('.hc-slide');
+  const dots   = document.querySelectorAll('.hc-dot');
+  if(!slides.length) return;
+  slides[_hcIdx].classList.remove('active');
+  dots[_hcIdx] && dots[_hcIdx].classList.remove('active');
+  _hcIdx = i;
+  slides[_hcIdx].classList.add('active');
+  dots[_hcIdx] && dots[_hcIdx].classList.add('active');
+}
+function hcNext(){ hcGo((_hcIdx+1) % _HC_TOTAL); }
+function hcPrev(){ hcGo((_hcIdx-1+_HC_TOTAL) % _HC_TOTAL); }
+
 function initApp(){
   document.getElementById('data').value = hoje();
   renderSelectProf();
@@ -1271,6 +1421,7 @@ function initApp(){
   renderPatients();
   renderScheduleOptions();
   renderHomeStats();
+  initHomeCarousel();
   calSetView('semana', false);
 }
 
@@ -1373,20 +1524,79 @@ function renderHomeStats(){
   const hoje_count = agendamentos.filter(a=>a.data===hoje_str).length;
   const semana_end = new Date(); semana_end.setDate(semana_end.getDate()+7);
   const semana_count = agendamentos.filter(a=>a.data>=hoje_str && a.data<=semana_end.toISOString().slice(0,10)).length;
+  const confirmadas = agendamentos.filter(a=>a.data===hoje_str && (a.status||'').toLowerCase()==='confirmado').length;
+
   document.getElementById('home-stats').innerHTML = `
-    <div style="background:var(--rose-lighter);border-radius:14px;padding:16px 22px;text-align:center;min-width:120px;">
-      <div style="font-size:28px;font-weight:800;color:var(--rose);">${hoje_count}</div>
-      <div style="font-size:12px;color:var(--rose-text);margin-top:4px;">Consultas hoje</div>
+    <div class="home-stat-card">
+      <div class="home-stat-icon" style="background:#fdf0eb;color:#d4735a;"><i class="ti ti-users"></i></div>
+      <div><div class="home-stat-num">${pacientes.length}</div><div class="home-stat-label">Total de Pacientes</div></div>
     </div>
-    <div style="background:var(--rose-lighter);border-radius:14px;padding:16px 22px;text-align:center;min-width:120px;">
-      <div style="font-size:28px;font-weight:800;color:var(--rose);">${semana_count}</div>
-      <div style="font-size:12px;color:var(--rose-text);margin-top:4px;">Próximos 7 dias</div>
+    <div class="home-stat-card">
+      <div class="home-stat-icon" style="background:#fff4e5;color:#e08a20;"><i class="ti ti-calendar"></i></div>
+      <div><div class="home-stat-num">${semana_count}</div><div class="home-stat-label">Consultas na semana</div></div>
     </div>
-    <div style="background:var(--rose-lighter);border-radius:14px;padding:16px 22px;text-align:center;min-width:120px;">
-      <div style="font-size:28px;font-weight:800;color:var(--rose);">${pacientes.length}</div>
-      <div style="font-size:12px;color:var(--rose-text);margin-top:4px;">Pacientes</div>
+    <div class="home-stat-card">
+      <div class="home-stat-icon" style="background:#e8f5e9;color:#2e7d32;"><i class="ti ti-clock"></i></div>
+      <div><div class="home-stat-num">${hoje_count}</div><div class="home-stat-label">Consultas hoje</div></div>
+    </div>
+    <div class="home-stat-card">
+      <div class="home-stat-icon" style="background:#fce4e4;color:#c0392b;"><i class="ti ti-check"></i></div>
+      <div><div class="home-stat-num">${confirmadas}</div><div class="home-stat-label">Confirmadas hoje</div></div>
     </div>
   `;
+
+  // Próximas consultas de hoje
+  const todayAgs = agendamentos
+    .filter(a=>a.data===hoje_str)
+    .sort((a,b)=>(a.horario||'').localeCompare(b.horario||''))
+    .slice(0,5);
+  const todayEl = document.getElementById('home-today-list');
+  if(todayEl){
+    if(!todayAgs.length){
+      todayEl.innerHTML='<div class="home-empty">Nenhuma consulta hoje.</div>';
+    } else {
+      todayEl.innerHTML = todayAgs.map(a=>{
+        const pac = pacientes.find(p=>p.id===a.paciente_id);
+        const nome = pac ? pac.nome : (a.nome_paciente||'—');
+        const st = (a.status||'pendente').toLowerCase();
+        const badgeCls = st.includes('confirm') ? 'confirmada' : st.includes('complet') ? 'completada' : 'pendente';
+        const badgeTxt = st.includes('confirm') ? 'Confirmada' : st.includes('complet') ? 'Completada' : 'Pendente';
+        return `<div class="home-table-row">
+          <div>
+            <div class="home-table-name">${escapeHtml(nome)}</div>
+            <div class="home-table-sub">${a.procedimento||''}</div>
+          </div>
+          <div style="font-weight:700;color:#3a2020;min-width:44px;text-align:center;">${(a.horario||'').slice(0,5)}</div>
+          <span class="home-badge ${badgeCls}">${badgeTxt}</span>
+        </div>`;
+      }).join('');
+    }
+  }
+
+  // Últimos pacientes registrados
+  const recentPacs = [...pacientes]
+    .sort((a,b)=>new Date(b.created_at||0)-new Date(a.created_at||0))
+    .slice(0,5);
+  const recEl = document.getElementById('home-recent-patients');
+  if(recEl){
+    if(!recentPacs.length){
+      recEl.innerHTML='<div class="home-empty">Nenhum paciente cadastrado.</div>';
+    } else {
+      recEl.innerHTML = recentPacs.map(p=>{
+        const dt = p.created_at ? new Date(p.created_at).toLocaleDateString('pt-BR',{day:'2-digit',month:'short',year:'numeric'}) : '—';
+        return `<div class="home-table-row">
+          <div class="home-table-name">${escapeHtml(p.nome)}</div>
+          <div class="home-table-sub">${dt}</div>
+          <button class="home-btn-ver" onclick="verPacienteHome('${p.id}')">Ver</button>
+        </div>`;
+      }).join('');
+    }
+  }
+}
+
+function verPacienteHome(id){
+  switchTab('pacientes');
+  setTimeout(()=>{ openPatient(id); }, 150);
 }
 
 // ══════════════════════════════════════════════════════
