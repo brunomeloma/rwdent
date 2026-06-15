@@ -1305,8 +1305,11 @@ async function checkClinicaApproval(){
 document.addEventListener('keydown', e=>{ if(e.key==='Enter'&&document.getElementById('login-screen').style.display!=='none') doLogin(); });
 
 async function doLogout(){
-  // Salva dados financeiros antes de sair
-  try { await saveFinanceiro(); } catch(e){}
+  // Salva dados financeiros E estoque antes de sair
+  try { 
+    await saveFinanceiro();
+    showToast('Dados salvos!');
+  } catch(e){ console.error('Erro ao salvar:', e); }
   await _sb.auth.signOut();
   currentUser=null; agendamentos=[]; profissionais=[]; pacientes=[];
   procs=[]; mats=[]; estoque={}; procInsumos={}; vendas=[]; combos=[];
@@ -3739,6 +3742,337 @@ function pacOdontoSelecionarProc(id){
   if(dd) dd.style.display='none';
 }
 
+
+// ── Injeta novos materiais e procedimentos de ortodontia ──
+function injetarNovosMatsOrto(){
+  const NOVOS_MATS = [{"id": 91, "nome": "Fio NiTi 0.012 Superior", "cat": "Ortodontia", "unid": "unid", "qtde": 10, "preco": 25, "custo": 2.5}, {"id": 92, "nome": "Fio NiTi 0.012 Inferior", "cat": "Ortodontia", "unid": "unid", "qtde": 10, "preco": 25, "custo": 2.5}, {"id": 93, "nome": "Fio NiTi 0.014 Superior", "cat": "Ortodontia", "unid": "unid", "qtde": 10, "preco": 28, "custo": 2.8}, {"id": 94, "nome": "Fio NiTi 0.014 Inferior", "cat": "Ortodontia", "unid": "unid", "qtde": 10, "preco": 28, "custo": 2.8}, {"id": 95, "nome": "Fio NiTi 0.016 Superior", "cat": "Ortodontia", "unid": "unid", "qtde": 10, "preco": 30, "custo": 3.0}, {"id": 96, "nome": "Fio NiTi 0.016 Inferior", "cat": "Ortodontia", "unid": "unid", "qtde": 10, "preco": 30, "custo": 3.0}, {"id": 97, "nome": "Fio NiTi 0.018 Superior", "cat": "Ortodontia", "unid": "unid", "qtde": 10, "preco": 32, "custo": 3.2}, {"id": 98, "nome": "Fio NiTi 0.018 Inferior", "cat": "Ortodontia", "unid": "unid", "qtde": 10, "preco": 32, "custo": 3.2}, {"id": 99, "nome": "Fio NiTi 0.019x25 Superior", "cat": "Ortodontia", "unid": "unid", "qtde": 10, "preco": 35, "custo": 3.5}, {"id": 100, "nome": "Fio NiTi 0.019x25 Inferior", "cat": "Ortodontia", "unid": "unid", "qtde": 10, "preco": 35, "custo": 3.5}, {"id": 101, "nome": "Fio NiTi 0.020 Superior", "cat": "Ortodontia", "unid": "unid", "qtde": 10, "preco": 32, "custo": 3.2}, {"id": 102, "nome": "Fio NiTi 0.020 Inferior", "cat": "Ortodontia", "unid": "unid", "qtde": 10, "preco": 32, "custo": 3.2}, {"id": 103, "nome": "Fio Aço 0.012 Superior", "cat": "Ortodontia", "unid": "unid", "qtde": 10, "preco": 20, "custo": 2.0}, {"id": 104, "nome": "Fio Aço 0.012 Inferior", "cat": "Ortodontia", "unid": "unid", "qtde": 10, "preco": 20, "custo": 2.0}, {"id": 105, "nome": "Fio Aço 0.014 Superior", "cat": "Ortodontia", "unid": "unid", "qtde": 10, "preco": 22, "custo": 2.2}, {"id": 106, "nome": "Fio Aço 0.014 Inferior", "cat": "Ortodontia", "unid": "unid", "qtde": 10, "preco": 22, "custo": 2.2}, {"id": 107, "nome": "Fio Aço 0.016 Superior", "cat": "Ortodontia", "unid": "unid", "qtde": 10, "preco": 22, "custo": 2.2}, {"id": 108, "nome": "Fio Aço 0.016 Inferior", "cat": "Ortodontia", "unid": "unid", "qtde": 10, "preco": 22, "custo": 2.2}, {"id": 109, "nome": "Fio Aço 0.018 Superior", "cat": "Ortodontia", "unid": "unid", "qtde": 10, "preco": 24, "custo": 2.4}, {"id": 110, "nome": "Fio Aço 0.018 Inferior", "cat": "Ortodontia", "unid": "unid", "qtde": 10, "preco": 24, "custo": 2.4}, {"id": 111, "nome": "Fio Aço 0.020 Superior", "cat": "Ortodontia", "unid": "unid", "qtde": 10, "preco": 24, "custo": 2.4}, {"id": 112, "nome": "Fio Aço 0.020 Inferior", "cat": "Ortodontia", "unid": "unid", "qtde": 10, "preco": 24, "custo": 2.4}, {"id": 113, "nome": "Fio Aço 0.019x25 Superior", "cat": "Ortodontia", "unid": "unid", "qtde": 10, "preco": 28, "custo": 2.8}, {"id": 114, "nome": "Fio Aço 0.019x25 Inferior", "cat": "Ortodontia", "unid": "unid", "qtde": 10, "preco": 28, "custo": 2.8}, {"id": 115, "nome": "Fio Aço 0.017x25 Superior", "cat": "Ortodontia", "unid": "unid", "qtde": 10, "preco": 28, "custo": 2.8}, {"id": 116, "nome": "Fio Aço 0.017x25 Inferior", "cat": "Ortodontia", "unid": "unid", "qtde": 10, "preco": 28, "custo": 2.8}, {"id": 117, "nome": "Braquete Cerâmico Kit", "cat": "Ortodontia", "unid": "kit", "qtde": 1, "preco": 680, "custo": 680}, {"id": 118, "nome": "Braquete Porcelana Kit", "cat": "Ortodontia", "unid": "kit", "qtde": 1, "preco": 750, "custo": 750}, {"id": 119, "nome": "Braquete Safira Kit", "cat": "Ortodontia", "unid": "kit", "qtde": 1, "preco": 890, "custo": 890}, {"id": 120, "nome": "Braquete Autoligado Estético Kit", "cat": "Ortodontia", "unid": "kit", "qtde": 1, "preco": 950, "custo": 950}, {"id": 121, "nome": "Braquete Metálico Tradicional Kit", "cat": "Ortodontia", "unid": "kit", "qtde": 1, "preco": 189, "custo": 189}, {"id": 122, "nome": "Braquete Autoligado Metálico Kit", "cat": "Ortodontia", "unid": "kit", "qtde": 1, "preco": 320, "custo": 320}, {"id": 123, "nome": "Alinhador Invisalign (jogo completo)", "cat": "Ortodontia", "unid": "kit", "qtde": 1, "preco": 4500, "custo": 4500}, {"id": 124, "nome": "Refinamento Invisalign", "cat": "Ortodontia", "unid": "kit", "qtde": 1, "preco": 800, "custo": 800}, {"id": 125, "nome": "Escaneamento 3D (iTero/similar)", "cat": "Ortodontia", "unid": "unid", "qtde": 1, "preco": 300, "custo": 300}];
+  const NOVOS_PROCS = [{"id": 103, "nome": "Instalação Aparelho Estético Cerâmico", "grupo": "Ortodontia", "tempo": 120, "insumos": 0, "horaClin": 0, "laboratorio": 0, "margem": 100, "precoFinal": 2800, "tipo_cobranca": "global"}, {"id": 104, "nome": "Instalação Aparelho Estético Porcelana", "grupo": "Ortodontia", "tempo": 120, "insumos": 0, "horaClin": 0, "laboratorio": 0, "margem": 100, "precoFinal": 3200, "tipo_cobranca": "global"}, {"id": 105, "nome": "Instalação Aparelho Estético Safira", "grupo": "Ortodontia", "tempo": 120, "insumos": 0, "horaClin": 0, "laboratorio": 0, "margem": 100, "precoFinal": 3800, "tipo_cobranca": "global"}, {"id": 106, "nome": "Instalação Aparelho Estético Autoligado", "grupo": "Ortodontia", "tempo": 120, "insumos": 0, "horaClin": 0, "laboratorio": 0, "margem": 100, "precoFinal": 4200, "tipo_cobranca": "global"}, {"id": 107, "nome": "Instalação Aparelho Metálico Tradicional", "grupo": "Ortodontia", "tempo": 120, "insumos": 0, "horaClin": 0, "laboratorio": 0, "margem": 100, "precoFinal": 2200, "tipo_cobranca": "global"}, {"id": 108, "nome": "Instalação Aparelho Metálico Autoligado", "grupo": "Ortodontia", "tempo": 120, "insumos": 0, "horaClin": 0, "laboratorio": 0, "margem": 100, "precoFinal": 2800, "tipo_cobranca": "global"}, {"id": 109, "nome": "Tratamento Invisalign (completo)", "grupo": "Ortodontia", "tempo": 60, "insumos": 0, "horaClin": 0, "laboratorio": 4500, "margem": 100, "precoFinal": 9800, "tipo_cobranca": "global"}, {"id": 110, "nome": "Manutenção Aparelho Estético Cerâmico", "grupo": "Ortodontia", "tempo": 30, "insumos": 0, "horaClin": 0, "laboratorio": 0, "margem": 100, "precoFinal": 180, "tipo_cobranca": "global"}, {"id": 111, "nome": "Manutenção Aparelho Estético Porcelana", "grupo": "Ortodontia", "tempo": 30, "insumos": 0, "horaClin": 0, "laboratorio": 0, "margem": 100, "precoFinal": 180, "tipo_cobranca": "global"}, {"id": 112, "nome": "Manutenção Aparelho Estético Safira", "grupo": "Ortodontia", "tempo": 30, "insumos": 0, "horaClin": 0, "laboratorio": 0, "margem": 100, "precoFinal": 180, "tipo_cobranca": "global"}, {"id": 113, "nome": "Manutenção Aparelho Estético Autoligado", "grupo": "Ortodontia", "tempo": 30, "insumos": 0, "horaClin": 0, "laboratorio": 0, "margem": 100, "precoFinal": 180, "tipo_cobranca": "global"}, {"id": 114, "nome": "Manutenção Aparelho Metálico Tradicional", "grupo": "Ortodontia", "tempo": 30, "insumos": 0, "horaClin": 0, "laboratorio": 0, "margem": 100, "precoFinal": 150, "tipo_cobranca": "global"}, {"id": 115, "nome": "Manutenção Aparelho Metálico Autoligado", "grupo": "Ortodontia", "tempo": 30, "insumos": 0, "horaClin": 0, "laboratorio": 0, "margem": 100, "precoFinal": 150, "tipo_cobranca": "global"}, {"id": 116, "nome": "Manutenção Invisalign (refinamento)", "grupo": "Ortodontia", "tempo": 30, "insumos": 0, "horaClin": 0, "laboratorio": 800, "margem": 100, "precoFinal": 1200, "tipo_cobranca": "global"}];
+  
+  let alterou = false;
+  NOVOS_MATS.forEach(nm=>{
+    if(!mats.find(m=>m.id===nm.id)){
+      mats.push(nm);
+      if(!estoque[nm.id]) estoque[nm.id]={atual:0,min:2,compra:5};
+      alterou=true;
+    }
+  });
+  NOVOS_PROCS.forEach(np=>{
+    if(!procs.find(p=>p.id===np.id)){
+      procs.push(np);
+      alterou=true;
+    }
+  });
+  if(alterou){
+    nextMatId = Math.max(...mats.map(m=>m.id))+1;
+    nextProcId = Math.max(...procs.map(p=>p.id))+1;
+    saveFinanceiro();
+  }
+}
+
+
+let fioCallback = null;
+
+function abrirSeletorFio(callback){
+  fioCallback = callback;
+  fioAtualizarNumeracoes();
+  fioAtualizarInfo();
+  document.getElementById('fio-modal-bg').style.display='flex';
+}
+
+function fioAtualizarNumeracoes(){
+  const tipo = document.getElementById('fio-tipo').value;
+  const numEl = document.getElementById('fio-num');
+  const niti  = ['0.012','0.014','0.016','0.018','0.019x25','0.020'];
+  const aco   = ['0.012','0.014','0.016','0.018','0.020','0.019x25','0.017x25'];
+  const nums  = tipo==='niti' ? niti : aco;
+  numEl.innerHTML = nums.map(n=>`<option value="${n}">${n}</option>`).join('');
+  fioAtualizarInfo();
+}
+
+function fioAtualizarInfo(){
+  const tipo   = document.getElementById('fio-tipo').value;
+  const num    = document.getElementById('fio-num')?.value||'';
+  const arcada = document.getElementById('fio-arcada')?.value||'';
+  const tipoNome = tipo==='niti'?'NiTi':'Aço';
+  const arcNome = arcada==='ambas'?'Superior + Inferior':arcada.charAt(0).toUpperCase()+arcada.slice(1);
+  // Busca material correspondente
+  const matNome = `Fio ${tipoNome} ${num} ${arcNome.split(' ')[0]}`;
+  const mat = mats.find(m=>m.nome.toLowerCase().includes(tipo==='niti'?'niti':'aço')&&m.nome.includes(num)&&m.nome.toLowerCase().includes(arcada==='ambas'?'superior':arcada));
+  const infoEl = document.getElementById('fio-mat-info');
+  if(infoEl){
+    if(mat){
+      const est = estoque[mat.id]||{atual:0};
+      const cor = est.atual<=0?'#dc2626':est.atual<=2?'#856404':'#2e7d32';
+      infoEl.innerHTML = `<b>${mat.nome}</b><br>Estoque: <span style="color:${cor};font-weight:700;">${est.atual} unid</span> · Custo: R$ ${mat.custo.toFixed(2)}`;
+    } else {
+      infoEl.innerHTML = `Fio ${tipoNome} ${num} ${arcNome} — material não cadastrado`;
+    }
+  }
+  document.getElementById('fio-tipo').onchange = fioAtualizarInfo;
+  document.getElementById('fio-num').onchange = fioAtualizarInfo;
+  document.getElementById('fio-arcada').onchange = fioAtualizarInfo;
+}
+
+function fioConfirmar(){
+  const tipo   = document.getElementById('fio-tipo').value;
+  const num    = document.getElementById('fio-num').value;
+  const arcada = document.getElementById('fio-arcada').value;
+  const tipoNome = tipo==='niti'?'NiTi':'Aço';
+  const arcadas = arcada==='ambas'?['superior','inferior']:[arcada];
+  
+  // Desconta estoque
+  arcadas.forEach(arc=>{
+    const mat = mats.find(m=>
+      m.nome.toLowerCase().includes(tipo==='niti'?'niti':'aço')&&
+      m.nome.includes(num)&&
+      m.nome.toLowerCase().includes(arc));
+    if(mat){
+      if(!estoque[mat.id]) estoque[mat.id]={atual:0,min:2,compra:5};
+      estoque[mat.id].atual = Math.max(0,(estoque[mat.id].atual||0)-1);
+    }
+  });
+
+  const desc = `Fio ${tipoNome} ${num} — ${arcada==='ambas'?'Superior+Inferior':arcada.charAt(0).toUpperCase()+arcada.slice(1)}`;
+  document.getElementById('fio-modal-bg').style.display='none';
+  if(fioCallback) fioCallback(desc);
+  showToast('Fio registrado: '+desc);
+}
+
+
+// ══════════════════════════════════════════════════════
+// MANUTENÇÃO ORTODÔNTICA COM QUEBRAS/PERDAS
+// ══════════════════════════════════════════════════════
+
+// Preços das peças por tipo de aparelho
+const PECAS_ORTO = {
+  'ceramico':   [
+    {id:'bq',nome:'Braquete Cerâmico',preco:45},
+    {id:'arc',nome:'Arco',preco:30},
+    {id:'lig',nome:'Ligadura Estética',preco:5},
+    {id:'tub',nome:'Tubo Molar',preco:35},
+    {id:'banda',nome:'Banda Molar',preco:40},
+  ],
+  'porcelana':  [
+    {id:'bq',nome:'Braquete Porcelana',preco:55},
+    {id:'arc',nome:'Arco',preco:30},
+    {id:'lig',nome:'Ligadura',preco:5},
+    {id:'tub',nome:'Tubo Molar',preco:35},
+    {id:'banda',nome:'Banda Molar',preco:40},
+  ],
+  'safira':     [
+    {id:'bq',nome:'Braquete Safira',preco:75},
+    {id:'arc',nome:'Arco',preco:30},
+    {id:'lig',nome:'Ligadura',preco:5},
+    {id:'tub',nome:'Tubo Molar',preco:35},
+    {id:'banda',nome:'Banda Molar',preco:40},
+  ],
+  'autoligado_estetico': [
+    {id:'bq',nome:'Braquete Autoligado Estético',preco:95},
+    {id:'arc',nome:'Arco',preco:35},
+    {id:'tub',nome:'Tubo Molar Autoligado',preco:45},
+    {id:'banda',nome:'Banda Molar',preco:40},
+  ],
+  'metalico_tradicional': [
+    {id:'bq',nome:'Braquete Metálico',preco:20},
+    {id:'arc',nome:'Arco',preco:25},
+    {id:'lig',nome:'Ligadura Metálica',preco:3},
+    {id:'tub',nome:'Tubo Molar',preco:25},
+    {id:'banda',nome:'Banda Molar',preco:35},
+    {id:'mola',nome:'Mola de Abertura',preco:30},
+  ],
+  'metalico_autoligado': [
+    {id:'bq',nome:'Braquete Autoligado Metálico',preco:45},
+    {id:'arc',nome:'Arco',preco:25},
+    {id:'tub',nome:'Tubo Molar Autoligado',preco:35},
+    {id:'banda',nome:'Banda Molar',preco:35},
+    {id:'mola',nome:'Mola de Abertura',preco:30},
+  ],
+  'invisalign': [
+    {id:'alin',nome:'Alinhador Avulso',preco:350},
+    {id:'retent',nome:'Retentor',preco:200},
+    {id:'anex',nome:'Attachment',preco:80},
+  ],
+};
+
+// Preços base de manutenção por tipo
+const MANUT_PRECOS = {
+  'ceramico':             180,
+  'porcelana':            180,
+  'safira':               180,
+  'autoligado_estetico':  190,
+  'metalico_tradicional': 150,
+  'metalico_autoligado':  160,
+  'invisalign':           250,
+};
+
+let manutTipoAtual = 'metalico_tradicional';
+let manutPecasSel = {}; // {id: qtd}
+let manutCallback = null;
+
+
+function abrirManutModal(){
+  const proc = (document.getElementById('pac-at-proc')?.value||'').toLowerCase();
+  let tipo = 'metalico_tradicional';
+  if(proc.includes('cerâmic')||proc.includes('ceramic')) tipo='ceramico';
+  else if(proc.includes('porcelana')) tipo='porcelana';
+  else if(proc.includes('safira')) tipo='safira';
+  else if(proc.includes('autoligado') && (proc.includes('estético')||proc.includes('estetico'))) tipo='autoligado_estetico';
+  else if(proc.includes('autoligado')) tipo='metalico_autoligado';
+  else if(proc.includes('invisalign')) tipo='invisalign';
+  
+  abrirManutencao(tipo, (desc, total)=>{
+    const obsEl=document.getElementById('pac-at-obs');
+    if(obsEl) obsEl.value=(obsEl.value?obsEl.value+' | ':'')+desc;
+    const valorEl=document.getElementById('pac-at-valor');
+    if(valorEl) valorEl.value=total.toFixed(2);
+    showToast('Fio e peças registrados!');
+  });
+}
+
+function abrirManutencao(tipo, callback){
+  manutTipoAtual = tipo || 'metalico_tradicional';
+  manutPecasSel = {};
+  manutCallback = callback;
+
+  const label = {
+    ceramico:'Aparelho Estético Cerâmico',
+    porcelana:'Aparelho Estético Porcelana',
+    safira:'Aparelho Estético Safira',
+    autoligado_estetico:'Aparelho Estético Autoligado',
+    metalico_tradicional:'Aparelho Metálico Tradicional',
+    metalico_autoligado:'Aparelho Metálico Autoligado',
+    invisalign:'Invisalign',
+  }[tipo]||tipo;
+
+  document.getElementById('manut-tipo-label').textContent = label;
+  manutAtualizarFio();
+  manutRenderPecas();
+  manutCalcTotal();
+  document.getElementById('manut-modal-bg').style.display='flex';
+}
+
+function manutAtualizarFio(){
+  const tipo = document.getElementById('manut-fio-tipo').value;
+  const nums = tipo==='niti'
+    ? ['0.012','0.014','0.016','0.018','0.019x25','0.020']
+    : ['0.012','0.014','0.016','0.018','0.020','0.019x25','0.017x25'];
+  const el = document.getElementById('manut-fio-num');
+  if(el) el.innerHTML = nums.map(n=>`<option value="${n}">${n}</option>`).join('');
+  manutInfoFio();
+}
+
+function manutInfoFio(){
+  const tipo = document.getElementById('manut-fio-tipo')?.value||'niti';
+  const num  = document.getElementById('manut-fio-num')?.value||'0.016';
+  const arc  = document.getElementById('manut-fio-arcada')?.value||'ambas';
+  const tn   = tipo==='niti'?'NiTi':'Aço';
+  const arcs = arc==='ambas'?['superior','inferior']:[arc];
+  let info = `Fio ${tn} ${num} — `;
+  let estOk = true;
+  arcs.forEach(a=>{
+    const mat = mats.find(m=>m.nome.toLowerCase().includes(tn.toLowerCase())&&m.nome.includes(num)&&m.nome.toLowerCase().includes(a));
+    if(mat){
+      const qt=(estoque[mat.id]||{atual:0}).atual;
+      info += `${a}: ${qt} unid  `;
+      if(qt<=0) estOk=false;
+    }
+  });
+  const el=document.getElementById('manut-fio-info');
+  if(el){ el.textContent=info; el.style.color=estOk?'#2e7d32':'#dc2626'; }
+}
+
+function manutRenderPecas(){
+  const pecas = PECAS_ORTO[manutTipoAtual]||[];
+  const el = document.getElementById('manut-pecas-btns');
+  if(!el) return;
+  el.innerHTML = pecas.map(p=>`
+    <button type="button" onclick="manutTogglePeca('${p.id}')"
+      data-peca="${p.id}"
+      style="padding:6px 12px;border:2px solid var(--rose-light);border-radius:8px;background:#fff;cursor:pointer;font-size:12px;font-weight:600;">
+      ${p.nome} <span style="color:var(--rose-dark);">+R$${p.preco}</span>
+    </button>`).join('');
+}
+
+function manutTogglePeca(id){
+  const pecas = PECAS_ORTO[manutTipoAtual]||[];
+  const p = pecas.find(x=>x.id===id);
+  if(!p) return;
+  if(manutPecasSel[id]){
+    manutPecasSel[id]++;
+  } else {
+    manutPecasSel[id]=1;
+  }
+  // Atualiza visual do botão
+  const btn=document.querySelector(`[data-peca="${id}"]`);
+  if(btn){
+    btn.style.borderColor='var(--rose)';
+    btn.style.background='var(--rose-lighter)';
+    btn.textContent='';
+    var spanExtra='<span style="color:var(--rose-dark);">+R$'+(p.preco*manutPecasSel[id])+'</span>';
+    var spanX='<span onclick="event.stopPropagation();manutRemovePeca(\'' +id+ '\')" style="cursor:pointer;color:#dc2626;font-size:14px;">✕</span>';
+    btn.innerHTML=p.nome+' ×'+manutPecasSel[id]+' '+spanExtra+' '+spanX;
+  }
+  manutCalcTotal();
+}
+
+function manutRemovePeca(id){
+  delete manutPecasSel[id];
+  const pecas=PECAS_ORTO[manutTipoAtual]||[];
+  const p=pecas.find(x=>x.id===id);
+  const btn=document.querySelector('[data-peca="'+id+'"]');
+  if(btn&&p){
+    btn.style.borderColor='var(--rose-light)';
+    btn.style.background='#fff';
+    btn.innerHTML=p.nome+' <span style="color:var(--rose-dark);">+R$'+p.preco+'</span>';
+  }
+  manutCalcTotal();
+}
+
+function manutCalcTotal(){
+  const base = MANUT_PRECOS[manutTipoAtual]||150;
+  const pecas = PECAS_ORTO[manutTipoAtual]||[];
+  let extra = 0;
+  Object.entries(manutPecasSel).forEach(([id,qtd])=>{
+    const p=pecas.find(x=>x.id===id);
+    if(p) extra+=p.preco*qtd;
+  });
+  const total=base+extra;
+  const fmt=v=>'R$ '+v.toFixed(2).replace('.',',');
+  const elBase=document.getElementById('manut-val-base'); if(elBase) elBase.textContent=fmt(base);
+  const elExtra=document.getElementById('manut-val-extra'); if(elExtra) elExtra.textContent=fmt(extra);
+  const elTotal=document.getElementById('manut-val-total'); if(elTotal) elTotal.textContent=fmt(total);
+  const rowExtra=document.getElementById('manut-val-extra-row');
+  if(rowExtra) rowExtra.style.display=extra>0?'flex':'none';
+  const extTotal=document.getElementById('manut-extra-total');
+  if(extTotal) extTotal.textContent=extra>0?'Extra total: '+fmt(extra):'';
+}
+
+function manutConfirmar(){
+  const tipo=document.getElementById('manut-fio-tipo')?.value||'niti';
+  const num=document.getElementById('manut-fio-num')?.value||'0.016';
+  const arc=document.getElementById('manut-fio-arcada')?.value||'ambas';
+  const tn=tipo==='niti'?'NiTi':'Aço';
+  const base=MANUT_PRECOS[manutTipoAtual]||150;
+  const pecas=PECAS_ORTO[manutTipoAtual]||[];
+  let extra=0;
+  const pecasDesc=[];
+  Object.entries(manutPecasSel).forEach(([id,qtd])=>{
+    const p=pecas.find(x=>x.id===id);
+    if(p){extra+=p.preco*qtd;pecasDesc.push(p.nome+'×'+qtd);}
+  });
+  const total=base+extra;
+  // Desconta fio do estoque
+  const arcs=arc==='ambas'?['superior','inferior']:[arc];
+  arcs.forEach(a=>{
+    const mat=mats.find(m=>m.nome.toLowerCase().includes(tn.toLowerCase())&&m.nome.includes(num)&&m.nome.toLowerCase().includes(a));
+    if(mat){if(!estoque[mat.id])estoque[mat.id]={atual:0,min:2,compra:5};estoque[mat.id].atual=Math.max(0,(estoque[mat.id].atual||0)-1);}
+  });
+  const desc=`Fio ${tn} ${num} (${arc==='ambas'?'Sup+Inf':arc})${pecasDesc.length?' | Quebras: '+pecasDesc.join(', '):''}`;
+  document.getElementById('manut-modal-bg').style.display='none';
+  if(manutCallback) manutCallback(desc, total);
+  showToast('Manutenção registrada — Total: R$ '+total.toFixed(2).replace('.',','));
+}
+
 async function loadFinanceiro(){
   if(!clinicaId) return;
 
@@ -3807,6 +4141,7 @@ async function loadFinanceiro(){
   }
 
   _financeiroCarregado = true;
+  injetarNovosMatsOrto();
 }
 
 async function saveFinanceiro(){
@@ -7046,5 +7381,103 @@ async function calSaveNewAppt(){
   </div>
 </div>
 
+
+<!-- Modal Seleção de Fio Ortodôntico -->
+<div id="fio-modal-bg" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1500;align-items:center;justify-content:center;padding:16px;">
+  <div style="background:#fff;border-radius:18px;padding:24px;max-width:440px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.3);">
+    <h2 style="font-size:15px;font-weight:700;color:var(--rose-dark);margin-bottom:16px;"><i class="ti ti-git-branch"></i> Selecionar Fio Ortodôntico</h2>
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Tipo de fio</label>
+        <select id="fio-tipo" onchange="fioAtualizarNumeracoes()">
+          <option value="niti">NiTi (Níquel-Titânio)</option>
+          <option value="aco">Aço Inoxidável</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Numeração</label>
+        <select id="fio-num">
+          <option value="0.012">0.012</option>
+          <option value="0.014">0.014</option>
+          <option value="0.016">0.016</option>
+          <option value="0.018">0.018</option>
+          <option value="0.019x25">0.019x25</option>
+          <option value="0.020">0.020</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Arcada</label>
+        <select id="fio-arcada">
+          <option value="superior">Superior</option>
+          <option value="inferior">Inferior</option>
+          <option value="ambas">Ambas (superior + inferior)</option>
+        </select>
+      </div>
+    </div>
+    <div id="fio-mat-info" style="background:var(--rose-lighter);border-radius:8px;padding:10px;margin:10px 0;font-size:12px;color:var(--rose-dark);"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px;">
+      <button class="btn-secondary" onclick="document.getElementById('fio-modal-bg').style.display='none'">Cancelar</button>
+      <button class="btn-primary" onclick="fioConfirmar()"><i class="ti ti-check"></i> Confirmar fio</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- Modal Manutenção Ortodôntica -->
+<div id="manut-modal-bg" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:1500;align-items:flex-start;justify-content:center;padding:16px;overflow-y:auto;">
+  <div style="background:#fff;border-radius:18px;padding:24px;max-width:520px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.3);margin:auto;">
+    <h2 style="font-size:15px;font-weight:700;color:var(--rose-dark);margin-bottom:4px;"><i class="ti ti-settings"></i> Manutenção Ortodôntica</h2>
+    <p id="manut-tipo-label" style="font-size:12px;color:var(--rose-text);margin-bottom:16px;"></p>
+
+    <!-- Fio -->
+    <div style="border:1.5px solid var(--rose-light);border-radius:12px;padding:14px;margin-bottom:12px;">
+      <div style="font-size:12px;font-weight:700;color:var(--rose-dark);margin-bottom:10px;text-transform:uppercase;">🔩 Fio utilizado</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <select id="manut-fio-tipo" onchange="manutAtualizarFio()" style="flex:1;min-width:120px;">
+          <option value="niti">NiTi</option>
+          <option value="aco">Aço</option>
+        </select>
+        <select id="manut-fio-num" style="flex:1;min-width:100px;">
+          <option>0.012</option><option>0.014</option><option selected>0.016</option>
+          <option>0.018</option><option>0.019x25</option><option>0.020</option>
+        </select>
+        <select id="manut-fio-arcada" style="flex:1;min-width:120px;">
+          <option value="ambas">Superior + Inferior</option>
+          <option value="superior">Só Superior</option>
+          <option value="inferior">Só Inferior</option>
+        </select>
+      </div>
+      <div id="manut-fio-info" style="font-size:11px;color:var(--rose-text);margin-top:6px;"></div>
+    </div>
+
+    <!-- Quebras/Perdas -->
+    <div style="border:1.5px solid var(--rose-light);border-radius:12px;padding:14px;margin-bottom:12px;">
+      <div style="font-size:12px;font-weight:700;color:var(--rose-dark);margin-bottom:10px;text-transform:uppercase;">⚠️ Quebras / Perdas (cobrar extra)</div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;" id="manut-pecas-btns"></div>
+      <div id="manut-pecas-sel" style="margin-top:10px;display:flex;flex-wrap:wrap;gap:6px;"></div>
+      <div id="manut-extra-total" style="font-size:13px;font-weight:700;color:#dc2626;margin-top:8px;text-align:right;"></div>
+    </div>
+
+    <!-- Total -->
+    <div style="background:var(--rose-lighter);border-radius:10px;padding:12px;margin-bottom:14px;">
+      <div style="display:flex;justify-content:space-between;font-size:13px;">
+        <span>Manutenção base</span><span id="manut-val-base">R$ 0,00</span>
+      </div>
+      <div id="manut-val-extra-row" style="display:none;display:flex;justify-content:space-between;font-size:13px;color:#dc2626;">
+        <span>Extras (quebra/perda)</span><span id="manut-val-extra">R$ 0,00</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:15px;font-weight:800;margin-top:8px;border-top:1px solid var(--rose-light);padding-top:8px;">
+        <span>Total</span><span id="manut-val-total" style="color:var(--rose-dark);">R$ 0,00</span>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:8px;justify-content:flex-end;">
+      <button class="btn-secondary" onclick="document.getElementById('manut-modal-bg').style.display='none'">Cancelar</button>
+      <button class="btn-primary" onclick="manutConfirmar()"><i class="ti ti-check"></i> Confirmar manutenção</button>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
+     
