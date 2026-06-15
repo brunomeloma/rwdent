@@ -29,7 +29,7 @@
   --rose-mid:#e0a090;--rose-dark:#7a3020;--rose-text:#a05040;
   --sidebar-w:68px;--header-h:64px;
 }
-body{font-family:'Segoe UI',Arial,sans-serif;background:#fdf6f3;color:#3a2020;min-height:100vh;overscroll-behavior:none;}
+body{font-family:'Segoe UI',Arial,sans-serif;background:#fdf6f3;color:#3a2020;min-height:100vh;overscroll-behavior:none;overflow-x:hidden;}
 
 /* ── LOGIN SCREEN ── */
 #login-screen{
@@ -184,6 +184,13 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#fdf6f3;color:#3a2020;mi
 /* ── FORMS ── */
 .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
 @media(max-width:640px){.form-grid{grid-template-columns:1fr;}}
+@media(max-width:640px){
+  .an-grid-2{grid-template-columns:1fr!important;}
+  .pac-tabs{gap:2px;}
+  .pac-tab{font-size:10px;padding:7px 8px;}
+  #painel-paciente .card{padding:14px;}
+  .form-row-2{grid-template-columns:1fr!important;}
+}
 .form-group{display:flex;flex-direction:column;gap:5px;}
 .form-group.full{grid-column:1/-1;}
 .form-group.half{}
@@ -196,6 +203,8 @@ input,select,textarea{
   -webkit-appearance:none;appearance:none;width:100%;
 }
 input:focus,select:focus,textarea:focus{border-color:var(--rose);background:#fff;box-shadow:0 0 0 3px rgba(212,115,90,.12);}
+input[type="radio"],input[type="checkbox"]{-webkit-appearance:auto;appearance:auto;width:auto;border:none;background:none;padding:0;box-shadow:none;accent-color:var(--rose);min-width:0;flex-shrink:0;}
+input[type="radio"]:focus,input[type="checkbox"]:focus{box-shadow:none;border:none;background:none;}
 textarea{resize:vertical;min-height:68px;}
 select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23a05040' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;padding-right:32px;}
 button{font-family:inherit;}
@@ -1255,6 +1264,18 @@ async function loadAll(){
       profissionais = pr;
     }
     pacientes = (pa||[]).map(p=>({ ...p, prontuarios: p.prontuarios||[] }));
+    // Carrega anamneses da tabela separada e mescla
+    try {
+      const { data: anList } = await _sb.from('anamneses').select('*').eq('clinica_id', clinicaId);
+      if(anList && anList.length){
+        const anMap = {};
+        anList.forEach(a=>{ anMap[a.paciente_id] = a.dados; });
+        pacientes = pacientes.map(p=>({
+          ...p,
+          anamnese: anMap[p.id] || p.anamnese || null
+        }));
+      }
+    } catch(e){ /* tabela pode não existir ainda, usa anamnese do próprio paciente */ }
     initApp();
   } catch(e){
     showToast('Erro ao carregar dados: '+e.message,'error');
@@ -1625,6 +1646,7 @@ function renderPatientDetail(abaAtiva){
       <!-- ABAS DO PACIENTE -->
       <div class="pac-tabs">
         <button class="pac-tab ${abaAtiva==='info'?'active':''}" onclick="renderPatientDetail('info')"><i class="ti ti-info-circle"></i> Dados</button>
+        <button class="pac-tab ${abaAtiva==='anamnese'?'active':''}" onclick="renderPatientDetail('anamnese')"><i class="ti ti-clipboard-heart"></i> Anamnese</button>
         <button class="pac-tab ${abaAtiva==='historico'?'active':''}" onclick="renderPatientDetail('historico')"><i class="ti ti-history"></i> Histórico</button>
         <button class="pac-tab ${abaAtiva==='odonto'?'active':''}" onclick="renderPatientDetail('odonto')"><i class="ti ti-tooth"></i> Odontograma</button>
         <button class="pac-tab ${abaAtiva==='plano'?'active':''}" onclick="renderPatientDetail('plano')"><i class="ti ti-clipboard-list"></i> Plano</button>
@@ -1640,6 +1662,181 @@ function renderPatientDetail(abaAtiva){
           <div><strong>E-mail:</strong> ${escapeHtml(p.email||'-')}</div>
           <div><strong>Plano:</strong> ${escapeHtml(p.plano||'-')}</div>
           ${p.notas?`<div style="grid-column:span 2"><strong>Obs:</strong> ${escapeHtml(p.notas)}</div>`:''}
+        </div>
+      </div>
+
+      <!-- ABA: ANAMNESE -->
+      <div id="pac-aba-anamnese" style="display:${abaAtiva==='anamnese'?'':'none'};">
+        <div style="margin-top:14px;" id="pac-anam-body">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px;">
+            <span style="font-size:13px;font-weight:700;color:var(--rose-dark);"><i class="ti ti-clipboard-heart"></i> Anamnese</span>
+            <button class="btn-primary" onclick="anamneseSalvar(${p.id})"><i class="ti ti-device-floppy"></i> Salvar</button>
+          </div>
+
+          <!-- ── SEÇÃO 1: ANAMNESE ── -->
+          <div style="border:1.5px solid var(--rose-light);border-radius:12px;padding:16px;margin-bottom:14px;background:#fff;">
+            <div style="font-size:12px;font-weight:800;color:var(--rose-dark);text-transform:uppercase;letter-spacing:.5px;margin-bottom:14px;border-bottom:1px solid var(--rose-light);padding-bottom:8px;">📋 Anamnese</div>
+
+            <div class="form-group" style="margin-bottom:12px;">
+              <label>Queixa principal</label>
+              <textarea id="an-queixa" rows="2" placeholder="Descreva a queixa principal do paciente..." style="resize:vertical;">${escapeHtml(p.anamnese?.queixa||'')}</textarea>
+            </div>
+
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;" class="an-grid-2">
+              <div class="form-group">
+                <label>Uso de medicação</label>
+                <div style="display:flex;gap:8px;margin-top:4px;">
+                  <label style="display:flex;align-items:center;gap:5px;font-size:13px;font-weight:400;text-transform:none;letter-spacing:0;cursor:pointer;"><input type="radio" name="an-med" value="sim" ${p.anamnese?.medicacao==='sim'?'checked':''} onchange="anamneseToggle('an-med-qual','sim')"> Sim</label>
+                  <label style="display:flex;align-items:center;gap:5px;font-size:13px;font-weight:400;text-transform:none;letter-spacing:0;cursor:pointer;"><input type="radio" name="an-med" value="nao" ${p.anamnese?.medicacao==='nao'||!p.anamnese?.medicacao?'checked':''} onchange="anamneseToggle('an-med-qual','nao')"> Não</label>
+                </div>
+                <input type="text" id="an-med-qual" placeholder="Qual medicação?" value="${escapeHtml(p.anamnese?.medicacaoQual||'')}" style="margin-top:6px;display:${p.anamnese?.medicacao==='sim'?'':'none'};"/>
+              </div>
+              <div class="form-group">
+                <label>Alergia</label>
+                <div style="display:flex;gap:8px;margin-top:4px;">
+                  <label style="display:flex;align-items:center;gap:5px;font-size:13px;font-weight:400;text-transform:none;letter-spacing:0;cursor:pointer;"><input type="radio" name="an-alergia" value="sim" ${p.anamnese?.alergia==='sim'?'checked':''} onchange="anamneseToggle('an-alergia-qual','sim')"> Sim</label>
+                  <label style="display:flex;align-items:center;gap:5px;font-size:13px;font-weight:400;text-transform:none;letter-spacing:0;cursor:pointer;"><input type="radio" name="an-alergia" value="nao" ${p.anamnese?.alergia==='nao'||!p.anamnese?.alergia?'checked':''} onchange="anamneseToggle('an-alergia-qual','nao')"> Não</label>
+                </div>
+                <input type="text" id="an-alergia-qual" placeholder="Qual alergia?" value="${escapeHtml(p.anamnese?.alergiaQual||'')}" style="margin-top:6px;display:${p.anamnese?.alergia==='sim'?'':'none'};"/>
+              </div>
+            </div>
+
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;" class="an-grid-2">
+              <div class="form-group">
+                <label>Pressão arterial</label>
+                <div style="display:flex;gap:8px;margin-top:4px;flex-wrap:wrap;">
+                  ${['alta','baixa','normal'].map(v=>`<label style="display:flex;align-items:center;gap:5px;font-size:13px;font-weight:400;text-transform:none;letter-spacing:0;cursor:pointer;"><input type="radio" name="an-pa-tipo" value="${v}" ${p.anamnese?.paTipo===v?'checked':''}> ${v.charAt(0).toUpperCase()+v.slice(1)}</label>`).join('')}
+                </div>
+              </div>
+              <div class="form-group">
+                <label>PA (mmHg)</label>
+                <input type="text" id="an-pa" placeholder="Ex: 120/80" value="${escapeHtml(p.anamnese?.pa||'')}"/>
+              </div>
+            </div>
+
+            <!-- DOENÇAS -->
+            <div style="margin-bottom:12px;">
+              <label style="display:block;margin-bottom:8px;">Sofre ou sofreu alguma dessas doenças?</label>
+              <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:6px;">
+                ${[['anemia','Anemia'],['diabete','Diabete'],['respiratoria','Respiratória'],['osteoporose','Osteoporose'],['sifilis','Sífilis'],['hiv','HIV'],['epilepsia','Epilepsia'],['cancer','Câncer'],['cardiaco','Problemas cardíacos'],['febreReumatica','Febre reumática'],['hemorragia','Hemorragia'],['hepatite','Hepatite'],['hipertensao','Hipertensão'],['endocrino','Endócrino'],['herpes','Herpes'],['endocardite','Endocardite bacteriana'],['tuberculose','Tuberculose'],['afta','Afta'],['distPsicologico','Distúrbios psicológicos']].map(([k,l])=>`
+                <label style="display:flex;align-items:center;gap:7px;font-size:13px;font-weight:400;text-transform:none;letter-spacing:0;cursor:pointer;background:var(--rose-lighter);border:1px solid var(--rose-light);border-radius:8px;padding:7px 10px;">
+                  <input type="checkbox" id="an-d-${k}" ${(p.anamnese?.doencas||{})[k]?'checked':''} style="width:15px;height:15px;accent-color:var(--rose);flex-shrink:0;cursor:pointer;"> ${l}
+                </label>`).join('')}
+              </div>
+              <div class="form-group" style="margin-top:10px;">
+                <label>Especificar</label>
+                <textarea id="an-doenca-esp" rows="2" placeholder="Detalhes sobre as doenças marcadas...">${escapeHtml(p.anamnese?.doencaEsp||'')}</textarea>
+              </div>
+            </div>
+
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;" class="an-grid-2">
+              <div class="form-group">
+                <label>Passou por alguma cirurgia?</label>
+                <div style="display:flex;gap:8px;margin-top:4px;">
+                  <label style="display:flex;align-items:center;gap:5px;font-size:13px;font-weight:400;text-transform:none;letter-spacing:0;cursor:pointer;"><input type="radio" name="an-cirurgia" value="sim" ${p.anamnese?.cirurgia==='sim'?'checked':''}> Sim</label>
+                  <label style="display:flex;align-items:center;gap:5px;font-size:13px;font-weight:400;text-transform:none;letter-spacing:0;cursor:pointer;"><input type="radio" name="an-cirurgia" value="nao" ${p.anamnese?.cirurgia==='nao'||!p.anamnese?.cirurgia?'checked':''}> Não</label>
+                </div>
+              </div>
+              <div class="form-group">
+                <label>Quando se fere, sangramento é:</label>
+                <div style="display:flex;gap:8px;margin-top:4px;">
+                  <label style="display:flex;align-items:center;gap:5px;font-size:13px;font-weight:400;text-transform:none;letter-spacing:0;cursor:pointer;"><input type="radio" name="an-sangramento" value="normal" ${p.anamnese?.sangramento==='normal'||!p.anamnese?.sangramento?'checked':''}> Normal</label>
+                  <label style="display:flex;align-items:center;gap:5px;font-size:13px;font-weight:400;text-transform:none;letter-spacing:0;cursor:pointer;"><input type="radio" name="an-sangramento" value="excessivo" ${p.anamnese?.sangramento==='excessivo'?'checked':''}> Excessivo</label>
+                </div>
+              </div>
+              <div class="form-group">
+                <label>Cicatrização:</label>
+                <div style="display:flex;gap:8px;margin-top:4px;">
+                  <label style="display:flex;align-items:center;gap:5px;font-size:13px;font-weight:400;text-transform:none;letter-spacing:0;cursor:pointer;"><input type="radio" name="an-cicatriz" value="normal" ${p.anamnese?.cicatriz==='normal'||!p.anamnese?.cicatriz?'checked':''}> Normal</label>
+                  <label style="display:flex;align-items:center;gap:5px;font-size:13px;font-weight:400;text-transform:none;letter-spacing:0;cursor:pointer;"><input type="radio" name="an-cicatriz" value="complicada" ${p.anamnese?.cicatriz==='complicada'?'checked':''}> Complicada</label>
+                </div>
+              </div>
+              <div class="form-group">
+                <label>Gestante?</label>
+                <div style="display:flex;gap:8px;margin-top:4px;flex-wrap:wrap;">
+                  <label style="display:flex;align-items:center;gap:5px;font-size:13px;font-weight:400;text-transform:none;letter-spacing:0;cursor:pointer;"><input type="radio" name="an-gestante" value="sim" ${p.anamnese?.gestante==='sim'?'checked':''} onchange="anamneseToggle('an-gestante-semana','sim')"> Sim</label>
+                  <label style="display:flex;align-items:center;gap:5px;font-size:13px;font-weight:400;text-transform:none;letter-spacing:0;cursor:pointer;"><input type="radio" name="an-gestante" value="nao" ${p.anamnese?.gestante==='nao'||!p.anamnese?.gestante?'checked':''} onchange="anamneseToggle('an-gestante-semana','nao')"> Não</label>
+                </div>
+                <input type="text" id="an-gestante-semana" placeholder="Período (semanas)" value="${escapeHtml(p.anamnese?.gestanteSemana||'')}" style="margin-top:6px;display:${p.anamnese?.gestante==='sim'?'':'none'};width:140px;"/>
+              </div>
+            </div>
+          </div>
+
+          <!-- ── SEÇÃO 2: PROBLEMA COM O PACIENTE ── -->
+          <div style="border:1.5px solid var(--rose-light);border-radius:12px;padding:16px;margin-bottom:14px;background:#fff;">
+            <div style="font-size:12px;font-weight:800;color:var(--rose-dark);text-transform:uppercase;letter-spacing:.5px;margin-bottom:14px;border-bottom:1px solid var(--rose-light);padding-bottom:8px;">🦷 Problema com o Paciente</div>
+
+            <div class="an-grid-2" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+
+              ${[
+                ['an-anest','an-anest','an-anest-nao','Teve reação com anestésico local?','anestesia','anestesiaNao'],
+                ['an-dordente','an-dordente','an-dordente-nao','Sente dor nos dentes ou gengiva?','dorDente','dorDenteNao'],
+                ['an-sangGeng','an-sangGeng','an-sangGeng-nao','Sangramento gengival?','sangGeng','sangGengNao'],
+              ].map(([rname,,, lbl, k])=>`
+              <div class="form-group" style="grid-column:${rname==='an-sangGeng'?'span 2':''};">
+                <label>${lbl}</label>
+                <div style="display:flex;gap:8px;margin-top:4px;">
+                  <label style="display:flex;align-items:center;gap:5px;font-size:13px;font-weight:400;text-transform:none;letter-spacing:0;cursor:pointer;"><input type="radio" name="${rname}" value="sim" ${p.anamnese?.[k]==='sim'?'checked':''}> Sim</label>
+                  <label style="display:flex;align-items:center;gap:5px;font-size:13px;font-weight:400;text-transform:none;letter-spacing:0;cursor:pointer;"><input type="radio" name="${rname}" value="nao" ${p.anamnese?.[k]==='nao'||!p.anamnese?.[k]?'checked':''}> Não</label>
+                </div>
+              </div>`).join('')}
+
+              <div class="form-group">
+                <label>Sangramento gengival — quando?</label>
+                <input type="text" id="an-sangGeng-quando" placeholder="Ex: ao escovar, espontâneo..." value="${escapeHtml(p.anamnese?.sangGengQuando||'')}"/>
+              </div>
+
+              ${[
+                ['an-dormaxilar','Dor no maxilar ou ouvido?','dorMaxilar'],
+                ['an-parasFunc','Tem hábitos parafuncionais?','parasFunc'],
+                ['an-tatuagem','Tatuagem?','tatuagem'],
+                ['an-fumante','Fumante?','fumante'],
+              ].map(([rname,lbl,k])=>`
+              <div class="form-group">
+                <label>${lbl}</label>
+                <div style="display:flex;gap:8px;margin-top:4px;">
+                  <label style="display:flex;align-items:center;gap:5px;font-size:13px;font-weight:400;text-transform:none;letter-spacing:0;cursor:pointer;"><input type="radio" name="${rname}" value="sim" ${p.anamnese?.[k]==='sim'?'checked':''}> Sim</label>
+                  <label style="display:flex;align-items:center;gap:5px;font-size:13px;font-weight:400;text-transform:none;letter-spacing:0;cursor:pointer;"><input type="radio" name="${rname}" value="nao" ${p.anamnese?.[k]==='nao'||!p.anamnese?.[k]?'checked':''}> Não</label>
+                </div>
+              </div>`).join('')}
+
+              <div class="form-group">
+                <label>Usa fio dental?</label>
+                <div style="display:flex;gap:8px;margin-top:4px;">
+                  <label style="display:flex;align-items:center;gap:5px;font-size:13px;font-weight:400;text-transform:none;letter-spacing:0;cursor:pointer;"><input type="radio" name="an-fio" value="sim" ${p.anamnese?.fio==='sim'?'checked':''}> Sim</label>
+                  <label style="display:flex;align-items:center;gap:5px;font-size:13px;font-weight:400;text-transform:none;letter-spacing:0;cursor:pointer;"><input type="radio" name="an-fio" value="nao" ${p.anamnese?.fio==='nao'||!p.anamnese?.fio?'checked':''}> Não</label>
+                  <label style="display:flex;align-items:center;gap:5px;font-size:13px;font-weight:400;text-transform:none;letter-spacing:0;cursor:pointer;"><input type="radio" name="an-fio" value="asvezes" ${p.anamnese?.fio==='asvezes'?'checked':''}> Às vezes</label>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label>Gosto ruim ou boca seca?</label>
+                <div style="display:flex;gap:8px;margin-top:4px;">
+                  <label style="display:flex;align-items:center;gap:5px;font-size:13px;font-weight:400;text-transform:none;letter-spacing:0;cursor:pointer;"><input type="radio" name="an-bocaseca" value="sim" ${p.anamnese?.bocaSeca==='sim'?'checked':''}> Sim</label>
+                  <label style="display:flex;align-items:center;gap:5px;font-size:13px;font-weight:400;text-transform:none;letter-spacing:0;cursor:pointer;"><input type="radio" name="an-bocaseca" value="nao" ${p.anamnese?.bocaSeca==='nao'||!p.anamnese?.bocaSeca?'checked':''}> Não</label>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label>Escova os dentes quantas vezes ao dia?</label>
+                <input type="number" id="an-escovacoes" min="0" max="10" placeholder="Ex: 3" value="${p.anamnese?.escovacoes||''}"/>
+              </div>
+
+              <div class="form-group">
+                <label>Último tratamento odontológico</label>
+                <input type="text" id="an-ultimo-trat" placeholder="Ex: há 6 meses, limpeza..." value="${escapeHtml(p.anamnese?.ultimoTrat||'')}"/>
+              </div>
+
+              <div class="form-group" style="grid-column:span 2;">
+                <label>Antecedentes familiares</label>
+                <textarea id="an-antec-fam" rows="2" placeholder="Doenças relevantes na família...">${escapeHtml(p.anamnese?.antecFam||'')}</textarea>
+              </div>
+            </div>
+          </div>
+
+          <div style="display:flex;justify-content:flex-end;margin-top:4px;">
+            <button class="btn-primary" onclick="anamneseSalvar(${p.id})"><i class="ti ti-device-floppy"></i> Salvar anamnese</button>
+          </div>
         </div>
       </div>
 
@@ -1666,30 +1863,42 @@ function renderPatientDetail(abaAtiva){
                 </select>
               </div>
               <div class="form-group full">
-                <label>Dentes tratados (clique para selecionar)</label>
+                <label>Clique em cada dente para marcar o que foi feito nele</label>
                 <div id="hist-odonto-wrap" style="overflow-x:auto;padding:6px 0;">
-                  <div id="hist-dentes-sel" style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px;min-height:24px;"></div>
+                  <div id="hist-dentes-sel" style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px;min-height:24px;"></div>
                   <div style="font-size:11px;color:var(--rose-text);margin-bottom:4px;">Permanentes superiores:</div>
                   <div style="display:flex;gap:3px;flex-wrap:nowrap;overflow-x:auto;padding-bottom:4px;">
-                    ${[18,17,16,15,14,13,12,11,21,22,23,24,25,26,27,28].map(d=>`<button type="button" id="hist-d-${d}" onclick="histToggleDente(${d})" style="min-width:28px;height:28px;border:1.5px solid var(--rose-light);border-radius:5px;background:#fff;font-size:10px;cursor:pointer;flex-shrink:0;">${d}</button>`).join('')}
+                    ${[18,17,16,15,14,13,12,11,21,22,23,24,25,26,27,28].map(d=>`<button type="button" data-hist-dente="${d}" onclick="histAbrirDente(${d})" style="min-width:30px;height:30px;border:1.5px solid var(--rose-light);border-radius:5px;background:#fff;font-size:10px;cursor:pointer;flex-shrink:0;position:relative;">${d}</button>`).join('')}
                   </div>
-                  <div style="font-size:11px;color:var(--rose-text);margin:4px 0 4px;">Permanentes inferiores:</div>
+                  <div style="font-size:11px;color:var(--rose-text);margin:4px 0;">Permanentes inferiores:</div>
                   <div style="display:flex;gap:3px;flex-wrap:nowrap;overflow-x:auto;padding-bottom:4px;">
-                    ${[48,47,46,45,44,43,42,41,31,32,33,34,35,36,37,38].map(d=>`<button type="button" id="hist-d-${d}" onclick="histToggleDente(${d})" style="min-width:28px;height:28px;border:1.5px solid var(--rose-light);border-radius:5px;background:#fff;font-size:10px;cursor:pointer;flex-shrink:0;">${d}</button>`).join('')}
+                    ${[48,47,46,45,44,43,42,41,31,32,33,34,35,36,37,38].map(d=>`<button type="button" data-hist-dente="${d}" onclick="histAbrirDente(${d})" style="min-width:30px;height:30px;border:1.5px solid var(--rose-light);border-radius:5px;background:#fff;font-size:10px;cursor:pointer;flex-shrink:0;">${d}</button>`).join('')}
                   </div>
-                  <div style="font-size:11px;color:var(--rose-text);margin:4px 0 4px;">Decíduos:</div>
+                  <div style="font-size:11px;color:var(--rose-text);margin:4px 0;">Decíduos:</div>
                   <div style="display:flex;gap:3px;flex-wrap:nowrap;overflow-x:auto;">
-                    ${[55,54,53,52,51,61,62,63,64,65,85,84,83,82,81,71,72,73,74,75].map(d=>`<button type="button" id="hist-d-${d}" onclick="histToggleDente(${d})" style="min-width:28px;height:28px;border:1.5px solid var(--rose-light);border-radius:5px;background:#fff;font-size:10px;cursor:pointer;flex-shrink:0;">${d}</button>`).join('')}
+                    ${[55,54,53,52,51,61,62,63,64,65,85,84,83,82,81,71,72,73,74,75].map(d=>`<button type="button" data-hist-dente="${d}" onclick="histAbrirDente(${d})" style="min-width:30px;height:30px;border:1.5px solid var(--rose-light);border-radius:5px;background:#fff;font-size:10px;cursor:pointer;flex-shrink:0;">${d}</button>`).join('')}
+                  </div>
+                </div>
+                <!-- Painel do dente selecionado -->
+                <div id="hist-dente-painel" style="display:none;border:1.5px solid var(--rose);border-radius:12px;padding:14px;margin-top:10px;background:var(--rose-lighter);">
+                  <div style="font-size:13px;font-weight:700;color:var(--rose-dark);margin-bottom:10px;">🦷 Dente <span id="hist-dente-num"></span> — O que foi feito?</div>
+                  <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;">
+                    ${[['restaurado','🔵','Restaurado'],['canal','🟡','Canal'],['coroa','🔷','Coroa'],['extraido','⬜','Extraído'],['implante','🟣','Implante'],['carie','🔴','Cárie'],['selante','🩵','Selante'],['higido','⚪','Hígido'],['fratura','🟠','Fratura'],['outro','⚫','Outro']].map(([v,ic,l])=>`
+                      <div data-dcond-wrap="${v}" style="display:inline-flex;align-items:center;border:2px solid var(--rose-light);border-radius:10px;overflow:hidden;background:#fff;">
+                        <button type="button" onclick="histDenteToggleCond('${v}')" style="padding:5px 10px;border:none;background:transparent;cursor:pointer;font-size:12px;font-weight:600;color:#3a2020;">${ic} ${l}</button>
+                        <div data-dcond-qtd-wrap="${v}" style="display:none;align-items:center;gap:2px;padding-right:6px;">
+                          <button type="button" onclick="histDenteCondQtd('${v}',-1)" style="border:none;background:var(--rose-lighter);border-radius:4px;width:20px;height:20px;cursor:pointer;font-size:13px;font-weight:700;color:var(--rose-dark);">−</button>
+                          <span data-dcond-num="${v}" style="min-width:18px;text-align:center;font-size:12px;font-weight:800;color:var(--rose-dark);">1</span>
+                          <button type="button" onclick="histDenteCondQtd('${v}',+1)" style="border:none;background:var(--rose-lighter);border-radius:4px;width:20px;height:20px;cursor:pointer;font-size:13px;font-weight:700;color:var(--rose-dark);">+</button>
+                        </div>
+                      </div>`).join('')}
+                  </div>
+                  <div style="display:flex;gap:8px;">
+                    <button class="btn-primary" style="flex:1;justify-content:center;" onclick="histConfirmarDente()"><i class="ti ti-check"></i> Confirmar dente</button>
+                    <button class="btn-secondary" onclick="histFecharDente()">Cancelar</button>
                   </div>
                 </div>
                 <input type="hidden" id="hist-dentes"/>
-              </div>
-              <div class="form-group full">
-                <label>Condições (selecione uma ou mais)</label>
-                <div style="display:flex;flex-wrap:wrap;gap:6px;">
-                  ${[['restaurado','🔵 Restaurado'],['canal','🟡 Canal'],['coroa','🔷 Coroa'],['extraido','⬜ Extraído'],['implante','🟣 Implante'],['carie','🔴 Cárie'],['selante','🩵 Selante'],['higido','⬜ Hígido'],['fratura','🟠 Fratura'],['outro','⚪ Outro']].map(([v,l])=>`
-                    <button type="button" id="hist-cond-btn-${v}" onclick="histToggleCond('${v}')" style="border:2px solid var(--rose-light);border-radius:8px;padding:5px 12px;background:var(--rose-lighter);color:var(--rose-text);cursor:pointer;font-size:12px;font-family:inherit;transition:all .15s;">${l}</button>`).join('')}
-                </div>
               </div>
               <div class="form-group full">
                 <label>Procedimento realizado</label>
@@ -1703,8 +1912,9 @@ function renderPatientDetail(abaAtiva){
                 <textarea id="hist-obs" rows="2" placeholder="Detalhes adicionais..."></textarea>
               </div>
             </div>
-            <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:10px;">
+            <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:10px;flex-wrap:wrap;">
               <button class="btn-secondary" onclick="histLimpar()"><i class="ti ti-eraser"></i> Limpar</button>
+              <button class="btn-secondary" onclick="histSalvarEIrOdonto(${p.id})"><i class="ti ti-tooth"></i> Salvar e ir ao Odontograma</button>
               <button class="btn-primary" onclick="histSalvar(${p.id})"><i class="ti ti-check"></i> Salvar no histórico</button>
             </div>
           </div>
@@ -1737,45 +1947,73 @@ function renderPatientDetail(abaAtiva){
           <!-- painel dente selecionado -->
           <div id="pac-dente-panel" style="display:none;border:2px solid var(--rose);border-radius:14px;padding:14px;margin-top:10px;">
             <h2 style="font-size:14px;margin-bottom:12px;"><i class="ti ti-tooth"></i> Dente <span id="pac-dente-num"></span> — <span id="pac-dente-nome" style="font-weight:400;"></span></h2>
-            <div class="form-grid">
-              <div class="form-group full">
-                <label>Condição</label>
-                <select id="pac-d-cond">
-                  <option value="higido">Hígido (saudável)</option>
-                  <option value="carie">Cárie</option>
-                  <option value="restaurado">Restaurado</option>
-                  <option value="extraido">Extraído / Ausente</option>
-                  <option value="canal">Tratamento de Canal</option>
-                  <option value="coroa">Coroa / Prótese</option>
-                  <option value="implante">Implante</option>
-                  <option value="fratura">Fratura</option>
-                  <option value="selante">Selante</option>
-                  <option value="outro">Outro</option>
-                </select>
+
+            <!-- CONDIÇÃO -->
+            <div style="margin-bottom:12px;">
+              <div style="font-size:11px;font-weight:700;color:var(--rose-text);text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px;">Condição</div>
+              <div style="display:flex;flex-wrap:wrap;gap:6px;" id="odonto-cond-btns">
+                ${[['higido','⚪','Hígido'],['carie','🔴','Cárie'],['restaurado','🔵','Restaurado'],['extraido','⬜','Extraído'],['canal','🟡','Canal'],['coroa','🔷','Coroa'],['implante','🟣','Implante'],['fratura','🟠','Fratura'],['selante','🩵','Selante'],['outro','⚫','Outro']].map(([v,ic,l])=>`
+                  <div data-ocond-wrap="${v}" style="display:inline-flex;align-items:center;border:2px solid var(--rose-light);border-radius:10px;overflow:hidden;background:#fff;transition:all .15s;">
+                    <button type="button" onclick="odontoToggleCond('${v}')" style="display:flex;align-items:center;gap:5px;padding:6px 10px;border:none;background:transparent;cursor:pointer;font-size:12px;font-weight:600;color:#3a2020;">${ic} ${l}</button>
+                    <div data-ocond-qtd-wrap="${v}" style="display:none;align-items:center;gap:2px;padding-right:6px;">
+                      <button type="button" onclick="odontoCondQtd('${v}',-1)" style="border:none;background:var(--rose-lighter);border-radius:4px;width:20px;height:20px;cursor:pointer;font-size:13px;font-weight:700;color:var(--rose-dark);">−</button>
+                      <span data-ocond-num="${v}" style="min-width:18px;text-align:center;font-size:12px;font-weight:800;color:var(--rose-dark);">1</span>
+                      <button type="button" onclick="odontoCondQtd('${v}',+1)" style="border:none;background:var(--rose-lighter);border-radius:4px;width:20px;height:20px;cursor:pointer;font-size:13px;font-weight:700;color:var(--rose-dark);">+</button>
+                    </div>
+                  </div>`).join('')}
               </div>
-              <div class="form-group full">
-                <label>Procedimento realizado neste dente</label>
-                <input type="text" id="pac-d-proc" placeholder="Ex: Restauração MOD resina, Canal, Extração..."/>
-              </div>
-              <div class="form-group full">
-                <label>Observações</label>
-                <textarea id="pac-d-obs" rows="2" placeholder="Materiais, intercorrências..."></textarea>
-              </div>
+              <input type="hidden" id="pac-d-cond" value="higido"/>
             </div>
-            <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:10px;">
-              <button class="btn-secondary" onclick="pacFecharDente()">Cancelar</button>
-              <button class="btn-primary" onclick="pacSalvarDente(${p.id})"><i class="ti ti-check"></i> Salvar</button>
+
+            <!-- FACES -->
+            <div style="margin-bottom:12px;">
+              <div style="font-size:11px;font-weight:700;color:var(--rose-text);text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px;">Faces <span style="font-weight:400;font-size:10px;">(selecione uma ou mais)</span></div>
+              <div style="display:flex;flex-wrap:wrap;gap:6px;" id="pac-d-faces-btns">
+                ${['Oclusal','Vestibular','Lingual','Mesial','Distal','Incisal','Cervical'].map(f=>`
+                  <button type="button" data-face="${f}" onclick="pacToggleFace('${f}')"
+                    style="padding:5px 12px;border:2px solid var(--rose-light);border-radius:8px;background:#fff;font-size:12px;font-weight:600;color:#3a2020;cursor:pointer;transition:all .15s;">${f}</button>`).join('')}
+              </div>
+              <input type="hidden" id="pac-d-faces" value=""/>
+            </div>
+
+            <!-- PROCEDIMENTOS -->
+            <div style="margin-bottom:12px;">
+              <div style="font-size:11px;font-weight:700;color:var(--rose-text);text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px;">Procedimentos</div>
+              <!-- busca -->
+              <div style="position:relative;margin-bottom:8px;">
+                <input type="text" id="pac-d-proc-search" placeholder="🔍 Pesquisar procedimento..."
+                  oninput="pacDenteFiltrarProcs()"
+                  onfocus="pacDenteFiltrarProcs();document.getElementById('pac-d-proc-dd').style.display='block'"
+                  onblur="setTimeout(()=>{const d=document.getElementById('pac-d-proc-dd');if(d)d.style.display='none'},350)"
+                  style="width:100%;padding:9px 12px;border:1.5px solid var(--rose-light);border-radius:10px;font-size:13px;background:#fff;"/>
+                <div id="pac-d-proc-dd" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:1.5px solid var(--rose-light);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.15);z-index:300;max-height:200px;overflow-y:auto;margin-top:2px;">
+                  <div id="pac-d-proc-opts"></div>
+                </div>
+              </div>
+              <!-- lista de procs adicionados no dente -->
+              <div id="pac-d-proc-lista" style="display:flex;flex-direction:column;gap:4px;margin-bottom:4px;"></div>
+            </div>
+
+            <!-- OBS -->
+            <div style="margin-bottom:12px;">
+              <div style="font-size:11px;font-weight:700;color:var(--rose-text);text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px;">Observações</div>
+              <textarea id="pac-d-obs" rows="2" placeholder="Materiais, intercorrências..." style="width:100%;padding:9px 12px;border:1.5px solid var(--rose-light);border-radius:10px;font-size:13px;background:#fff;resize:vertical;font-family:inherit;"></textarea>
+            </div>
+
+            <div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;">
+              <button class="btn-secondary" onclick="pacFecharDente()">Fechar</button>
+              <button class="btn-secondary" onclick="pacSalvarRascunhoDenteAtual();pacFecharDente();showToast('Rascunho guardado — clique em outro dente ou salve tudo.');" style="color:var(--rose-dark);border-color:var(--rose);">
+                <i class="ti ti-bookmark"></i> Guardar rascunho
+              </button>
+              <button class="btn-primary" onclick="pacSalvarDente(${p.id})">
+                <i class="ti ti-device-floppy"></i> Salvar todos os dentes
+              </button>
             </div>
           </div>
           <!-- histórico por dente -->
           <div id="pac-dentes-historico" style="margin-top:12px;"></div>
 
-          <!-- BOTÃO SALVAR ODONTOGRAMA E IR PARA PLANO -->
-          <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--rose-light);">
-            <button class="btn-primary" style="width:100%;justify-content:center;padding:14px;font-size:14px;" onclick="odontogramaSalvarEIrParaPlano(selectedPatientId)">
-              <i class="ti ti-arrow-right"></i> Salvar e ir para o Plano de Tratamento
-            </button>
-          </div>
+
 
           <!-- ORÇAMENTO DIRETO NO ODONTOGRAMA -->
           <div style="margin-top:16px;border-top:1px solid var(--rose-light);padding-top:16px;">
@@ -1785,11 +2023,19 @@ function renderPatientDetail(abaAtiva){
             </div>
             <div id="pac-odonto-orc-panel" style="display:none;">
               <div style="font-size:12px;color:var(--rose-text);margin-bottom:8px;">Clique nos dentes acima para marcá-los, depois adicione ao orçamento:</div>
-              <div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;">
-                <select id="pac-odonto-orc-proc" style="flex:1;min-width:160px;font-size:13px;">
-                  <option value="">Selecione procedimento</option>
-                </select>
-                <button class="btn-primary" style="font-size:12px;" onclick="pacOdontoAddOrc()"><i class="ti ti-plus"></i> Adicionar</button>
+              <div style="margin-bottom:10px;">
+                <div style="position:relative;margin-bottom:6px;">
+                  <input type="text" id="pac-odonto-orc-search" placeholder="🔍 Pesquisar procedimento..." oninput="pacOdontoFiltrarProcs()" onfocus="pacOdontoFiltrarProcs();document.getElementById('pac-odonto-orc-dropdown').style.display='block'" onblur="setTimeout(()=>{const d=document.getElementById('pac-odonto-orc-dropdown');if(d)d.style.display='none'},350)"
+                    style="width:100%;padding:10px 12px;border:1.5px solid var(--rose-light);border-radius:10px;font-size:13px;box-sizing:border-box;background:#fff;"/>
+                  <div id="pac-odonto-orc-dropdown" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:1.5px solid var(--rose-light);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.15);z-index:200;max-height:200px;overflow-y:auto;margin-top:2px;">
+                    <div id="pac-odonto-orc-opts"></div>
+                  </div>
+                </div>
+                <input type="hidden" id="pac-odonto-orc-proc" value=""/>
+                <div style="display:flex;align-items:center;gap:8px;">
+                  <span id="pac-odonto-orc-sel-nome" style="flex:1;font-size:12px;color:var(--rose-dark);font-weight:600;min-height:20px;"></span>
+                  <button class="btn-primary" style="font-size:12px;white-space:nowrap;" onclick="pacOdontoAddOrc()"><i class="ti ti-plus"></i> Adicionar</button>
+                </div>
               </div>
               <div id="pac-odonto-orc-lista" style="margin-bottom:10px;"></div>
               <div style="background:var(--rose-lighter);border-radius:8px;padding:8px 12px;display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
@@ -1805,64 +2051,29 @@ function renderPatientDetail(abaAtiva){
         </div>
       </div>
 
-      <!-- ABA: PLANO DE TRATAMENTO -->
+      <!-- ABA: PLANO DE TRATAMENTO (Revisão & Orçamento) -->
       <div id="pac-aba-plano" style="display:${abaAtiva==='plano'?'':'none'};">
         <div style="margin-top:14px;">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
-            <span style="font-size:13px;font-weight:700;color:var(--rose-dark);">Plano de tratamento</span>
-            <button class="btn-secondary" onclick="pacTogglePlanForm()"><i class="ti ti-plus"></i> Novo</button>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;flex-wrap:wrap;gap:8px;">
+            <div>
+              <span style="font-size:13px;font-weight:700;color:var(--rose-dark);">Revisão do Plano &amp; Orçamento</span>
+              <div style="font-size:12px;color:var(--rose-text);margin-top:2px;">Confira e ajuste os valores antes de apresentar ao paciente.</div>
+            </div>
+            <button class="btn-secondary" onclick="renderPatientDetail('odonto')"><i class="ti ti-arrow-left"></i> Voltar ao Odontograma</button>
           </div>
+
           <!-- resumo valores -->
-          <div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;" id="pac-plano-resumo"></div>
-          <!-- form novo item -->
-          <div id="pac-plan-form" style="display:none;border:1.5px solid var(--rose-light);border-radius:12px;padding:14px;margin-bottom:14px;">
-            <div class="form-grid">
-              <div class="form-group full">
-                <label>Dentes (selecione um ou mais)</label>
-                <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px;" id="pac-plan-dentes-sel"></div>
-                <select id="pac-plan-dente-add" onchange="pacPlanAddDente(this.value)" style="max-width:180px;">
-                  <option value="">+ Adicionar dente</option>
-                  ${[18,17,16,15,14,13,12,11,21,22,23,24,25,26,27,28,48,47,46,45,44,43,42,41,31,32,33,34,35,36,37,38,55,54,53,52,51,61,62,63,64,65,85,84,83,82,81,71,72,73,74,75].map(d=>`<option value="${d}">${d}</option>`).join('')}
-                </select>
-                <input type="hidden" id="pac-plan-dente" value=""/>
-              </div>
-              <div class="form-group">
-                <label>Face</label>
-                <select id="pac-plan-face">
-                  <option value="">–</option>
-                  ${['Oclusal','Vestibular','Lingual','Mesial','Distal','Incisal','Cervical'].map(f=>`<option>${f}</option>`).join('')}
-                </select>
-              </div>
-              <div class="form-group">
-                <label>Procedimento *</label>
-                <select id="pac-plan-proc" onchange="pacPlanSyncValor()">
-                  <option value="">Selecione</option>
-                  ${procs.length ? procs.map(p=>`<option value="${p.nome}" data-preco="${p.precoFinal||0}">${p.nome}</option>`).join('') : ['Exodontia','Restauração','Tratamento de Canal','Prótese','Implante','Limpeza / Profilaxia','Clareamento','Extração de Siso','Aparelho Ortodôntico','Outro'].map(p=>`<option>${p}</option>`).join('')}
-                </select>
-              </div>
-              <div class="form-group">
-                <label>Valor por dente (R$)</label>
-                <input type="text" id="pac-plan-valor" placeholder="0,00" oninput="pacPlanSyncFromValor()"/>
-              </div>
-              <div class="form-group">
-                <label>Valor total</label>
-                <input type="text" id="pac-plan-valor-total" placeholder="0,00" disabled style="opacity:.7;font-weight:700;color:var(--rose-dark);"/>
-              </div>
-              <div class="form-group full">
-                <label>Descrição</label>
-                <input type="text" id="pac-plan-desc" placeholder="Ex: Restauração em resina composta face oclusal"/>
-              </div>
-            </div>
-            <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:10px;">
-              <button class="btn-secondary" onclick="pacTogglePlanForm()">Cancelar</button>
-              <button class="btn-primary" onclick="pacSalvarPlano(${p.id})"><i class="ti ti-check"></i> Salvar</button>
-            </div>
-          </div>
-          <!-- lista plano -->
+          <div style="display:flex;gap:10px;margin:14px 0;flex-wrap:wrap;" id="pac-plano-resumo"></div>
+
+          <!-- lista plano (itens revisáveis) -->
           <div id="pac-plano-lista"></div>
-          <hr style="border-color:var(--rose-light);margin:18px 0;"/>
-          <!-- SIMULADOR DE ORÇAMENTO -->
-          <div id="pac-sim-container"></div>
+
+          <!-- AÇÃO DO ORÇAMENTO -->
+          <div style="margin-top:16px;">
+            <button class="btn-primary" style="width:100%;justify-content:center;padding:12px;" onclick="pacAprovarOrcamentoPlano(${p.id})">
+              <i class="ti ti-circle-check"></i> Aprovar Orçamento
+            </button>
+          </div>
         </div>
       </div>
 
@@ -1923,7 +2134,76 @@ function renderPatientDetail(abaAtiva){
   if(abaAtiva==='procs') pacCarregarProcs(p.id);
   if(abaAtiva==='historico') histCarregar(p.id);
   if(abaAtiva==='orcamentos') pacRenderOrcamentos(p.id);
-  if(abaAtiva==='plano'){ pacCarregarPlano(p.id); setTimeout(()=>renderPlanoSimulador(p.id),50); }
+  if(abaAtiva==='plano'){ pacCarregarPlano(p.id); }
+}
+
+function anamneseToggle(fieldId, radioVal){
+  const el = document.getElementById(fieldId);
+  if(!el) return;
+  el.style.display = radioVal === 'sim' ? '' : 'none';
+}
+
+async function anamneseSalvar(pacId){
+  const radio = (name) => document.querySelector(`input[name="${name}"]:checked`)?.value || '';
+  const val   = (id)   => document.getElementById(id)?.value || '';
+  const chk   = (id)   => document.getElementById(id)?.checked || false;
+
+  const anamnese = {
+    queixa        : val('an-queixa'),
+    medicacao     : radio('an-med'),
+    medicacaoQual : val('an-med-qual'),
+    alergia       : radio('an-alergia'),
+    alergiaQual   : val('an-alergia-qual'),
+    paTipo        : radio('an-pa-tipo'),
+    pa            : val('an-pa'),
+    doencas: {
+      anemia:chk('an-d-anemia'), diabete:chk('an-d-diabete'), respiratoria:chk('an-d-respiratoria'),
+      osteoporose:chk('an-d-osteoporose'), sifilis:chk('an-d-sifilis'), hiv:chk('an-d-hiv'),
+      epilepsia:chk('an-d-epilepsia'), cancer:chk('an-d-cancer'), cardiaco:chk('an-d-cardiaco'),
+      febreReumatica:chk('an-d-febreReumatica'), hemorragia:chk('an-d-hemorragia'), hepatite:chk('an-d-hepatite'),
+      hipertensao:chk('an-d-hipertensao'), endocrino:chk('an-d-endocrino'), herpes:chk('an-d-herpes'),
+      endocardite:chk('an-d-endocardite'), tuberculose:chk('an-d-tuberculose'), afta:chk('an-d-afta'),
+      distPsicologico:chk('an-d-distPsicologico')
+    },
+    doencaEsp     : val('an-doenca-esp'),
+    cirurgia      : radio('an-cirurgia'),
+    sangramento   : radio('an-sangramento'),
+    cicatriz      : radio('an-cicatriz'),
+    gestante      : radio('an-gestante'),
+    gestanteSemana: val('an-gestante-semana'),
+    anestesia     : radio('an-anest'),
+    dorDente      : radio('an-dordente'),
+    sangGeng      : radio('an-sangGeng'),
+    sangGengQuando: val('an-sangGeng-quando'),
+    bocaSeca      : radio('an-bocaseca'),
+    dorMaxilar    : radio('an-dormaxilar'),
+    parasFunc     : radio('an-parasFunc'),
+    tatuagem      : radio('an-tatuagem'),
+    fumante       : radio('an-fumante'),
+    fio           : radio('an-fio'),
+    escovacoes    : val('an-escovacoes'),
+    ultimoTrat    : val('an-ultimo-trat'),
+    antecFam      : val('an-antec-fam'),
+  };
+
+  showLoading(true);
+  // Tenta salvar na tabela 'anamneses' (upsert por paciente_id)
+  const { error: errAn } = await _sb.from('anamneses')
+    .upsert({ paciente_id: pacId, clinica_id: clinicaId, dados: anamnese }, { onConflict: 'paciente_id' });
+  if(errAn){
+    // Fallback: tenta update direto em pacientes (compatibilidade)
+    const { error: errPac } = await _sb.from('pacientes').update({ anamnese }).eq('id', pacId);
+    if(errPac){
+      showLoading(false);
+      showToast('Erro ao salvar: '+errPac.message,'error');
+      return;
+    }
+  }
+  showLoading(false);
+  // Atualiza objeto local
+  const idx = pacientes.findIndex(p=>p.id===pacId);
+  if(idx>=0) pacientes[idx].anamnese = anamnese;
+  showToast('Anamnese salva!');
 }
 
 function editPatient(id){
@@ -2693,6 +2973,55 @@ async function pacAlterarStatusPlano(id, status){
   showLoading(false);
   if(error){ showToast('Erro: '+error.message,'error'); return; }
   pacPlanoList = pacPlanoList.map(i=> i.id===id ? {...i,status} : i);
+
+  // Se aprovado, cria venda/orçamento automaticamente
+  // Se realizado, marca venda correspondente como finalizada
+  if(status === 'realizado'){
+    const item = pacPlanoList.find(i=>i.id===id);
+    if(item){
+      const vendaIdx = vendas.findIndex(v=>v.planoItemId===id||
+        (v.pacienteId===selectedPatientId && v.status==='orcamento' &&
+         v.itens?.some(it=>it.nome===item.procedimento)));
+      if(vendaIdx>=0){
+        vendas[vendaIdx].status='finalizada';
+        vendas[vendaIdx].dataFinal=new Date().toISOString();
+        saveFinanceiro();
+      }
+    }
+  }
+
+  if(status === 'aprovado'){
+    const item = pacPlanoList.find(i=>i.id===id);
+    if(item){
+      const pacId = selectedPatientId;
+      const pac = pacientes.find(p=>p.id===pacId);
+      const proc = procs.find(p=>p.nome===item.procedimento);
+      const total = parseFloat((item.valor||'0').replace(',','.'));
+      const venda = {
+        id: nextVendaId++,
+        status: 'orcamento',
+        pacienteId: pacId,
+        pacienteNome: pac?.nome||'',
+        itens: [{
+          procId: proc?.id||null,
+          qtd: item.quantidade_dentes||1,
+          nome: item.procedimento,
+          dente: item.dente||'',
+          descDente: item.descricao||''
+        }],
+        subtotal: total,
+        desconto: 0,
+        total: total,
+        data: new Date().toISOString(),
+        planoItemId: id
+      };
+      vendas.push(venda);
+      await saveFinanceiro();
+      showToast('Orçamento criado para: '+item.procedimento);
+      if(document.getElementById('pac-orc-lista')) pacRenderOrcamentos(pacId);
+    }
+  }
+
   pacRenderPlanoResumo();
   pacRenderPlanoLista();
 }
@@ -2710,6 +3039,20 @@ async function pacEditarPlano(id){
   set('pac-plan-valor', item.valor);
   set('pac-plan-desc',  item.descricao);
   f?.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+
+// Atualiza o valor de um item do plano direto na tela de revisão (sem abrir formulário)
+async function pacAtualizarValorPlano(id, novoValorStr){
+  const item = pacPlanoList.find(i=>i.id===id);
+  if(!item) return;
+  const limpo = (novoValorStr||'0').replace(/[^\d,.-]/g,'').replace('.',',');
+  showLoading(true);
+  const { error } = await _sb.from('plano_tratamento').update({ valor: limpo }).eq('id',id);
+  showLoading(false);
+  if(error){ showToast('Erro: '+error.message,'error'); return; }
+  item.valor = limpo;
+  pacRenderPlanoResumo();
+  showToast('Valor atualizado.');
 }
 
 async function pacRemoverPlano(id){
@@ -2800,6 +3143,9 @@ async function pacCarregarOdonto(pacId){
   pacDentesMap = {};
   (data||[]).forEach(d => { pacDentesMap[d.dente] = d; });
   pacDenteSel = null;
+  pacDenteProcs = [];
+  pacFacesSel = [];
+  pacDentesRascunho = {};
   pacOdontoOrcList = [];
   pacRenderArcadas();
   pacRenderLegenda();
@@ -2817,15 +3163,19 @@ function pacRenderArcada(id, dentes){
   const c = document.getElementById(id);
   if(!c) return;
   c.innerHTML = dentes.map(num => {
-    const d = pacDentesMap[num] || {};
-    const cond = d.condicao || 'higido';
+    const r    = pacDentesRascunho[num];
+    const d    = pacDentesMap[num] || {};
+    const cond = r ? r.condicao : (d.condicao || 'higido');
     const sel  = pacDenteSel===num ? ' selected' : '';
-    const tip  = d.procedimento ? `${num}: ${d.procedimento}` : `Dente ${num}`;
+    const hasPending = !!r;
+    const tip  = r ? `Dente ${num}: ${r.procs.map(p=>p.nome).join(', ')||'rascunho'} (não salvo)` :
+                 d.procedimento ? `${num}: ${d.procedimento}` : `Dente ${num}`;
     const icon = cond==='extraido'?'<span style="font-size:10px;color:#999;">✕</span>':
                  cond!=='higido'?`<span style="font-size:8px;font-weight:700;color:#555;">${PAC_COND_PT[cond]?.charAt(0)||'?'}</span>`:'';
-    return `<div class="odonto-dente-wrap${sel}" onclick="pacClicarDente(${num})" title="${escapeHtml(tip)}">
+    return `<div class="odonto-dente-wrap${sel}" onclick="pacClicarDente(${num})" title="${escapeHtml(tip)}" style="position:relative;">
       <div class="odonto-dente-num">${num}</div>
-      <div class="odonto-dente-box ${cond}">${icon}</div>
+      <div class="odonto-dente-box ${cond}" style="${hasPending?'outline:2px solid #f59e0b;outline-offset:1px;':''}">${icon}</div>
+      ${hasPending?'<div style="position:absolute;top:-3px;right:-3px;width:7px;height:7px;background:#f59e0b;border-radius:50%;border:1px solid #fff;"></div>':''}
     </div>`;
   }).join('');
 }
@@ -2839,8 +3189,28 @@ function pacRenderLegenda(){
   ).join('');
 }
 
+// ── Rascunho temporário de dentes (antes de salvar) ──
+let pacDentesRascunho = {};  // { num: {condicao, faces, procs:[{nome,preco,global}], obs} }
+
+function pacSalvarRascunhoDenteAtual(){
+  if(!pacDenteSel) return;
+  pacDentesRascunho[pacDenteSel] = {
+    condicao: odontoCondSel.length ? odontoCondSel[0] : 'higido',
+    faces: [...pacFacesSel],
+    procs: pacDenteProcs.map(p=>({...p})),
+    obs: document.getElementById('pac-d-obs')?.value || ''
+  };
+  // Atualiza visual do dente no odontograma já com a nova condição
+  const cond = pacDentesRascunho[pacDenteSel].condicao;
+  if(!pacDentesMap[pacDenteSel]) pacDentesMap[pacDenteSel] = {};
+  pacDentesMap[pacDenteSel].condicao = cond;
+  pacDentesMap[pacDenteSel].procedimento = pacDenteProcs.map(p=>p.nome).join(', ');
+}
+
 function pacClicarDente(num){
-  // Se clicar no dente já selecionado, deseleciona
+  // Salva rascunho do dente atual antes de trocar
+  pacSalvarRascunhoDenteAtual();
+
   if(pacDenteSel === num){
     pacDenteSel = null;
     const panel = document.getElementById('pac-dente-panel');
@@ -2855,58 +3225,142 @@ function pacClicarDente(num){
   panel.style.display = '';
   document.getElementById('pac-dente-num').textContent = num;
   document.getElementById('pac-dente-nome').textContent = DENTE_NOME[num]||'';
-  const d = pacDentesMap[num] || {};
-  document.getElementById('pac-d-cond').value = d.condicao || 'higido';
-  document.getElementById('pac-d-proc').value = d.procedimento || '';
-  document.getElementById('pac-d-obs').value  = d.obs || '';
+
+  // Carrega rascunho se existir, senão usa dado salvo
+  const rascunho = pacDentesRascunho[num];
+  const d = rascunho ? null : (pacDentesMap[num] || {});
+
+  // Condição
+  odontoCondReset();
+  const cond = rascunho ? rascunho.condicao : (d.condicao || 'higido');
+  if(cond && cond !== 'higido') odontoToggleCond(cond);
+  document.getElementById('pac-d-cond').value = cond;
+
+  // Faces
+  pacFacesSel = rascunho ? [...rascunho.faces] : [];
+  document.querySelectorAll('[data-face]').forEach(b=>{
+    b.style.borderColor='var(--rose-light)'; b.style.background='#fff'; b.style.color='#3a2020';
+  });
+  const facesArr = rascunho ? rascunho.faces : (d.face && d.face!=='–' ? d.face.split(',').map(f=>f.trim()).filter(Boolean) : []);
+  facesArr.forEach(f=>pacToggleFace(f));
+  document.getElementById('pac-d-faces').value = facesArr.join(',');
+
+  // Procs
+  if(rascunho){
+    pacDenteProcs = rascunho.procs.map(p=>({...p}));
+  } else {
+    pacDenteProcs = [];
+    if(d.procedimento){
+      const found = procs.find(p=>p.nome===d.procedimento);
+      if(found) pacDenteProcs = [{nome:found.nome, preco:found.precoFinal||0, global:procIsGlobal(found.nome)}];
+      else pacDenteProcs = [{nome:d.procedimento, preco:0, global:false}];
+    }
+  }
+  pacRenderDenteProcs();
+
+  // Obs
+  const searchEl = document.getElementById('pac-d-proc-search');
+  if(searchEl) searchEl.value = '';
+  document.getElementById('pac-d-obs').value = rascunho ? rascunho.obs : (d.obs || '');
   panel.scrollIntoView({behavior:'smooth',block:'nearest'});
 }
 
 function pacFecharDente(){
   pacDenteSel = null;
+  pacDenteProcs = [];
+  pacFacesSel = [];
   const panel = document.getElementById('pac-dente-panel');
   if(panel) panel.style.display = 'none';
   pacRenderArcadas();
 }
 
 async function pacSalvarDente(pacId){
-  if(!pacDenteSel){ showToast('Selecione um dente.','warn'); return; }
-  const condicao     = document.getElementById('pac-d-cond').value;
-  const procedimento = document.getElementById('pac-d-proc').value.trim();
-  const obs          = document.getElementById('pac-d-obs').value.trim();
-  const data         = hoje();
+  // Primeiro salva o rascunho do dente atual visível
+  pacSalvarRascunhoDenteAtual();
+
+  const dentesParaSalvar = Object.entries(pacDentesRascunho);
+  if(!dentesParaSalvar.length){ showToast('Nenhuma alteração para salvar.','warn'); return; }
+
   showLoading(true);
-  const existing = pacDentesMap[pacDenteSel];
-  let error;
-  if(existing?.id){
-    ({ error } = await _sb.from('procedimentos_dentes').update({ condicao, procedimento, obs, data }).eq('id', existing.id));
-    if(!error) pacDentesMap[pacDenteSel] = { ...existing, condicao, procedimento, obs };
-  } else {
-    const { data: novo, error: e } = await _sb.from('procedimentos_dentes').insert([{
-      clinica_id: clinicaId, paciente_id: pacId,
-      dente: pacDenteSel, condicao, procedimento, obs, data
-    }]).select().single();
-    error = e;
-    if(!error) pacDentesMap[pacDenteSel] = novo;
+
+  for(const [numStr, r] of dentesParaSalvar){
+    const num = parseInt(numStr);
+    const condicao    = r.condicao || 'higido';
+    const faces       = r.faces.length ? r.faces.join(',') : '–';
+    const procedimento= r.procs.map(p=>p.nome).join(', ');
+    const obs         = r.obs || '';
+    const data        = hoje();
+    const existing    = pacDentesMap[num];
+
+    let error;
+    if(existing?.id){
+      ({ error } = await _sb.from('procedimentos_dentes').update({ condicao, procedimento, obs, data }).eq('id', existing.id));
+      if(!error) pacDentesMap[num] = { ...existing, condicao, procedimento, obs };
+    } else {
+      const { data: novo, error: e } = await _sb.from('procedimentos_dentes').insert([{
+        clinica_id: clinicaId, paciente_id: pacId,
+        dente: num, condicao, procedimento, obs, data
+      }]).select().single();
+      error = e;
+      if(!error) pacDentesMap[num] = novo;
+    }
+    if(error){ showLoading(false); showToast('Erro ao salvar dente '+num+': '+error.message,'error'); return; }
+
+    // Adiciona ao orçamento rápido e plano
+    if(r.procs.length){
+      const numFaces = r.faces.length || 1;
+      for(const dp of r.procs){
+        const procObj = procs.find(p=>p.nome===dp.nome);
+        if(procObj){
+          const isGlob = procIsGlobal(dp.nome);
+          const qtd    = isGlob ? 1 : numFaces;
+          const exists = pacOdontoOrcList.findIndex(x=>x.procId===procObj.id && x.dentes===String(num));
+          if(exists>=0) pacOdontoOrcList.splice(exists,1);
+          pacOdontoOrcList.push({
+            procId:procObj.id, nome:procObj.nome, precoUnit:procObj.precoFinal||0,
+            qtd, dentes:String(num), tipo:isGlob?'global':'por_dente',
+            faces: isGlob?'':faces, total:(procObj.precoFinal||0)*qtd
+          });
+        }
+        const valor = dp.preco ? dp.preco.toFixed(2).replace('.',',') : '0,00';
+        // Evita duplicar no plano se o procedimento já existe (realizado, pendente ou aprovado) para o mesmo dente
+        const jaExisteNoBD = await _sb.from('plano_tratamento')
+          .select('id').eq('clinica_id',clinicaId).eq('paciente_id',pacId)
+          .eq('dente',String(num)).eq('procedimento',dp.nome)
+          .in('status',['realizado','pendente','aprovado']);
+        const jaExisteLocal = pacPlanoList.some(i =>
+          String(i.dente) === String(num) && i.procedimento === dp.nome &&
+          (i.status === 'realizado' || i.status === 'pendente' || i.status === 'aprovado')
+        );
+        if(!jaExisteNoBD.data?.length && !jaExisteLocal){
+          const { error: ep } = await _sb.from('plano_tratamento').insert([{
+            clinica_id:clinicaId, paciente_id:pacId,
+            dente: String(num), face: faces,
+            procedimento: dp.nome, valor, descricao:obs||'', status:'pendente'
+          }]);
+          if(!ep){ pacPlanoList.unshift({id:Date.now(),dente:String(num),face:faces,procedimento:dp.nome,valor,descricao:obs||'',status:'pendente'}); }
+        }
+      }
+    }
   }
-  // Adiciona ao plano de tratamento automaticamente
-  if(!error && procedimento){
-    const valorProc = procs.find(p=>p.nome.toLowerCase().includes(procedimento.toLowerCase()));
-    const valor = valorProc ? valorProc.precoFinal.toFixed(2).replace('.',',') : '0,00';
-    const { error: ep } = await _sb.from('plano_tratamento').insert([{
-      clinica_id:clinicaId, paciente_id:pacId,
-      dente: String(pacDenteSel), face:'–',
-      procedimento, valor, descricao:obs||'', status:'pendente'
-    }]);
-    if(!ep){ pacPlanoList.unshift({id:Date.now(),dente:String(pacDenteSel),face:'–',procedimento,valor,descricao:obs||'',status:'pendente'}); }
-  }
+
+  // Limpa rascunho e orçamento temporário (itens já foram inseridos no plano acima)
+  pacDentesRascunho = {};
+  pacOdontoOrcList = [];
+
   showLoading(false);
-  if(error){ showToast('Erro: '+error.message,'error'); return; }
+
+  // Abre orçamento automaticamente
+  const orcPanel = document.getElementById('pac-odonto-orc-panel');
+  if(orcPanel && orcPanel.style.display==='none') pacOdontoToggleOrc();
+  pacOdontoRenderOrcLista();
+
   pacFecharDente();
+  pacRenderArcadas();
   pacRenderDentesHistorico();
   pacRenderPlanoResumo();
   pacRenderPlanoLista();
-  showToast('Dente salvo e adicionado ao plano!');
+  showToast('Todos os dentes salvos e adicionados ao orçamento!');
 }
 
 function pacRenderDentesHistorico(){
@@ -3024,8 +3478,122 @@ async function pacRemoverProc(id){
   showToast('Removido.');
 }
 
-// ══════════════════════════════════════════════════════
-// FINANCEIRO — PROCEDIMENTOS, MATERIAIS, ESTOQUE, VENDAS
+// ── ODONTOGRAMA: FACES + PROCS POR DENTE ──
+let pacFacesSel  = [];
+let pacDenteProcs = [];  // [{nome, preco, global}]
+let pacDenteProcSelObj = null;
+
+// Procedimentos que cobram POR DENTE / por face
+const PROCS_POR_DENTE_KEYWORDS = [
+  'restaur','resina','amalgama','civ','faceta','recontorno','selante','coroa','cimentação','núcleo',
+  'exodontia','extração','siso','implante','endodontia','canal','pulpotomia','pulpectomia',
+  'curativo','retratamento','apicectomia','capeamento','urgência endodôntica',
+  'raspagem subgengival','gengivoplastia','frenectomia','biópsia','parendodôntica',
+  'núcleo intrarradicular'
+];
+// Procedimentos GLOBAIS (não por dente)
+const PROCS_GLOBAL_KEYWORDS = [
+  'profilaxia','limpeza','flúor','clareamento','aparelho','ortodon','manutenção mensal',
+  'instalação aparel','remoção de aparel','contenção','placa miorr','toxina','documentação',
+  'moldagem','radiografia','tomografia','fotografia','consulta','orientação','prótese total',
+  'prótese parcial','implante - fase prot'
+];
+
+function procIsGlobal(nome){
+  const n = (nome||'').toLowerCase();
+  // Checa global primeiro (mais específico)
+  if(PROCS_GLOBAL_KEYWORDS.some(k=>n.includes(k))) return true;
+  if(PROCS_POR_DENTE_KEYWORDS.some(k=>n.includes(k))) return false;
+  return true; // default global se não reconhecido
+}
+
+function pacToggleFace(face){
+  const idx = pacFacesSel.indexOf(face);
+  const btn = document.querySelector('[data-face="'+face+'"]');
+  if(idx>=0){
+    pacFacesSel.splice(idx,1);
+    if(btn){ btn.style.borderColor='var(--rose-light)'; btn.style.background='#fff'; btn.style.color='#3a2020'; }
+  } else {
+    pacFacesSel.push(face);
+    if(btn){ btn.style.borderColor='var(--rose)'; btn.style.background='var(--rose)'; btn.style.color='#fff'; }
+  }
+  document.getElementById('pac-d-faces').value = pacFacesSel.join(',');
+}
+
+function pacDenteFiltrarProcs(){
+  const q = (document.getElementById('pac-d-proc-search')?.value||'').toLowerCase().trim();
+  const opts = document.getElementById('pac-d-proc-opts');
+  if(!opts) return;
+  if(!procs.length){
+    opts.innerHTML="<div style='padding:12px;color:var(--rose-text);text-align:center;font-size:13px;'>Carregando...</div>";
+    document.getElementById('pac-d-proc-dd').style.display='block';
+    loadFinanceiro().then(()=>pacDenteFiltrarProcs());
+    return;
+  }
+  const lista = q ? procs.filter(p=>p.nome.toLowerCase().includes(q)) : procs;
+  if(!lista.length){ opts.innerHTML="<div style='padding:12px;color:var(--rose-text);text-align:center;font-size:13px;'>Nenhum encontrado</div>"; return; }
+  const grupos = [...new Set(lista.map(p=>p.grupo).filter(Boolean))].sort();
+  let html = '';
+  grupos.forEach(g=>{
+    html += `<div style='padding:4px 10px;font-size:10px;font-weight:700;color:var(--rose-text);text-transform:uppercase;background:var(--rose-lighter);'>${escapeHtml(g)}</div>`;
+    lista.filter(p=>p.grupo===g).forEach(p=>{
+      const glob = procIsGlobal(p.nome);
+      const tag  = glob
+        ? '<span style="font-size:10px;background:#e3f2fd;color:#0c5460;border-radius:4px;padding:1px 5px;">Global</span>'
+        : '<span style="font-size:10px;background:#e8f5e9;color:#2e7d32;border-radius:4px;padding:1px 5px;">Por dente</span>';
+      html += `<div data-dpid="${p.id}" style="padding:9px 14px;cursor:pointer;font-size:13px;border-bottom:1px solid var(--rose-light);display:flex;justify-content:space-between;align-items:center;gap:8px;">
+        <span>${escapeHtml(p.nome)} ${tag}</span>
+        <span style="color:var(--rose-dark);font-weight:700;white-space:nowrap;">R$ ${(p.precoFinal||0).toFixed(2).replace('.',',')}</span>
+      </div>`;
+    });
+  });
+  opts.innerHTML = html;
+  opts.querySelectorAll('[data-dpid]').forEach(el=>{
+    el.onmouseover = function(){ this.style.background='var(--rose-lighter)'; };
+    el.onmouseout  = function(){ this.style.background='#fff'; };
+    el.onclick = function(){ pacDenteAddProc(parseInt(this.dataset.dpid)); };
+  });
+  document.getElementById('pac-d-proc-dd').style.display = 'block';
+}
+
+function pacDenteAddProc(procId){
+  const p = procs.find(x=>x.id===procId);
+  if(!p) return;
+  // Não duplicar
+  if(pacDenteProcs.find(x=>x.nome===p.nome)){ showToast('Já adicionado.','warn'); return; }
+  pacDenteProcs.push({nome:p.nome, preco:p.precoFinal||0, global:procIsGlobal(p.nome)});
+  const search = document.getElementById('pac-d-proc-search');
+  if(search) search.value='';
+  const dd = document.getElementById('pac-d-proc-dd');
+  if(dd) dd.style.display='none';
+  pacRenderDenteProcs();
+}
+
+function pacRenderDenteProcs(){
+  const c = document.getElementById('pac-d-proc-lista');
+  if(!c) return;
+  if(!pacDenteProcs.length){
+    c.innerHTML = '<div style="font-size:12px;color:var(--rose-text);padding:4px 0;">Nenhum procedimento adicionado.</div>';
+    return;
+  }
+  c.innerHTML = pacDenteProcs.map((dp,i)=>{
+    const tag = dp.global
+      ? '<span style="font-size:10px;background:#e3f2fd;color:#0c5460;border-radius:4px;padding:1px 6px;">Global</span>'
+      : '<span style="font-size:10px;background:#e8f5e9;color:#2e7d32;border-radius:4px;padding:1px 6px;">Por dente</span>';
+    return `<div style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:var(--rose-lighter);border-radius:8px;font-size:13px;">
+      <span style="flex:1;">${escapeHtml(dp.nome)} ${tag}</span>
+      <span style="font-weight:700;color:var(--rose-dark);">R$ ${(dp.preco||0).toFixed(2).replace('.',',')}</span>
+      <button type="button" onclick="pacDenteRemoveProc(${i})" style="border:none;background:none;cursor:pointer;color:#b33;font-size:16px;padding:0 2px;">×</button>
+    </div>`;
+  }).join('');
+}
+
+function pacDenteRemoveProc(idx){
+  pacDenteProcs.splice(idx,1);
+  pacRenderDenteProcs();
+}
+
+
 // Lógica portada do Pétala e adaptada para RWDent + Supabase
 // ══════════════════════════════════════════════════════
 const fmtBRL = v => isNaN(v)?'—':Number(v).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
@@ -3057,6 +3625,109 @@ let vendaModoAtual = 'orcamento'; // 'orcamento' ou 'finalizar'
 let estSelected    = new Set();
 
 // ── Carregar dados financeiros do Supabase ──
+
+// ── MAPA CONDIÇÃO → PROCEDIMENTOS ──
+const COND_PARA_PROC = {
+  'restaurado': ['restaur','resina','civ','amalgama','faceta','recontorno','fechamento'],
+  'carie':      ['restaur','resina','civ','selante','exodontia','extração','urgência'],
+  'canal':      ['canal','endodontia','pulpotomia','pulpectomia','curativo','retratamento'],
+  'coroa':      ['coroa','prótese','cimentação','núcleo','provisória'],
+  'extraido':   ['implante','exodontia','extração','siso'],
+  'implante':   ['implante','prótese sobre implante','fase protética'],
+  'fratura':    ['restaur','resina','exodontia','extração','coroa','urgência'],
+  'selante':    ['selante'],
+  'higido':     [],
+};
+
+// Dentes considerados "anteriores" (incisivos e caninos, permanentes e decíduos)
+const DENTES_ANTERIORES = new Set([
+  11,12,13,21,22,23,31,32,33,41,42,43,
+  51,52,53,61,62,63,71,72,73,81,82,83
+]);
+// Dentes considerados "posteriores" (pré-molares e molares, permanentes e decíduos)
+const DENTES_POSTERIORES = new Set([
+  14,15,16,17,18,24,25,26,27,28,34,35,36,37,38,44,45,46,47,48,
+  54,55,64,65,74,75,84,85
+]);
+
+// Verifica se o procedimento é específico para dentes anteriores ou posteriores
+function regiaoDoProcedimento(procNome){
+  const n = (procNome||'').toLowerCase();
+  if(n.includes('anterior')) return 'anterior';
+  if(n.includes('posterior')) return 'posterior';
+  return null; // procedimento não restrito a região
+}
+
+// Verifica se um dente é compatível com a região exigida pelo procedimento
+function denteCompativelComRegiao(dente, regiao){
+  if(!regiao) return true;
+  if(regiao==='anterior') return DENTES_ANTERIORES.has(dente);
+  if(regiao==='posterior') return DENTES_POSTERIORES.has(dente);
+  return true;
+}
+
+function dentesParaProcedimento(procNome){
+  if(!procNome || !pacDentesMap) return [];
+  const nome = procNome.toLowerCase();
+  const regiao = regiaoDoProcedimento(procNome);
+  const encontrados = [];
+  Object.entries(COND_PARA_PROC).forEach(([cond, procs])=>{
+    if(!procs.some(p=>nome.includes(p)||p.includes(nome.split(' ')[0]))) return;
+    Object.entries(pacDentesMap).forEach(([dente, info])=>{
+      if(!info||!info.condicao) return;
+      if(info.condicao.toLowerCase().includes(cond)){
+        const n=parseInt(dente);
+        if(isNaN(n)||encontrados.includes(n)) return;
+        // Se o procedimento é específico (Anterior/Posterior), só considera dentes da região correta
+        if(!denteCompativelComRegiao(n, regiao)) return;
+        encontrados.push(n);
+      }
+    });
+  });
+  return encontrados.sort((a,b)=>a-b);
+}
+
+let pacOdontoOrcSelProc = null;
+
+function pacOdontoFiltrarProcs(){
+  var q=(document.getElementById("pac-odonto-orc-search")||{value:""}).value.toLowerCase().trim();
+  var opts=document.getElementById("pac-odonto-orc-opts");
+  if(!opts) return;
+  var lista=q?procs.filter(function(p){return p.nome.toLowerCase().includes(q);}):procs;
+  if(!lista.length){ opts.innerHTML="<div style='padding:12px;color:var(--rose-text);text-align:center;'>Nenhum encontrado</div>"; return; }
+  var grupos=[...new Set(lista.map(function(p){return p.grupo;}).filter(Boolean))].sort();
+  var html2="";
+  grupos.forEach(function(g){
+    html2+="<div style='padding:4px 10px;font-size:10px;font-weight:700;color:var(--rose-text);text-transform:uppercase;background:var(--rose-lighter);'>"+escapeHtml(g)+"</div>";
+    lista.filter(function(p){return p.grupo===g;}).forEach(function(p){
+      var preco=(p.precoFinal||0).toFixed(2).replace(".",",");
+      html2+="<div data-pid='"+p.id+"' style='padding:10px 14px;cursor:pointer;font-size:13px;border-bottom:1px solid var(--rose-light);display:flex;justify-content:space-between;gap:8px;'><span>"+escapeHtml(p.nome)+"</span><span style='color:var(--rose-dark);font-weight:700;'>R$ "+preco+"</span></div>";
+    });
+  });
+  opts.innerHTML=html2;
+  opts.querySelectorAll("[data-pid]").forEach(function(el){
+    el.onmouseover=function(){this.style.background="var(--rose-lighter)";};
+    el.onmouseout=function(){this.style.background="#fff";};
+    el.onclick=function(){pacOdontoSelecionarProc(parseInt(this.dataset.pid));};
+  });
+  var dd=document.getElementById("pac-odonto-orc-dropdown");
+  if(dd) dd.style.display="block";
+}
+
+function pacOdontoSelecionarProc(id){
+  const p=procs.find(x=>x.id===id)||{};
+  const nome=p.nome||''; const preco=p.precoFinal||0;
+  pacOdontoOrcSelProc={id,nome,preco};
+  const inp=document.getElementById('pac-odonto-orc-proc');
+  if(inp) inp.value=id;
+  const nm=document.getElementById('pac-odonto-orc-sel-nome');
+  if(nm) nm.textContent=nome+' — R$ '+preco.toFixed(2).replace('.',',');
+  const srch=document.getElementById('pac-odonto-orc-search');
+  if(srch) srch.value=nome;
+  const dd=document.getElementById('pac-odonto-orc-dropdown');
+  if(dd) dd.style.display='none';
+}
+
 async function loadFinanceiro(){
   if(!clinicaId) return;
 
@@ -3745,7 +4416,18 @@ async function cancelarVenda(id){
   const consumo=(v.consumo&&v.consumo.length)?v.consumo:computeConsumo(v.itens||[]);
   devolverEstoque(consumo);
   v.status='cancelada'; v.consumoRevertido=consumo; v.estoqueDevolvido=true; v.consumo=null; v.dataCancel=new Date().toISOString();
-  showLoading(true); await saveFinanceiro(); showLoading(false);
+  showLoading(true);
+  // Volta os itens do plano vinculados para 'aprovado'
+  if(v.planoIds && v.planoIds.length){
+    for(const id2 of v.planoIds){
+      await _sb.from('plano_tratamento').update({ status:'aprovado' }).eq('id',id2);
+      const item = pacPlanoList.find(i=>i.id===id2);
+      if(item) item.status='aprovado';
+    }
+    if(typeof pacRenderPlanoResumo==='function') pacRenderPlanoResumo();
+    if(typeof pacRenderPlanoLista==='function') pacRenderPlanoLista();
+  }
+  await saveFinanceiro(); showLoading(false);
   renderVendas(); renderEstoque();
   showToast('Venda cancelada. Estoque devolvido.');
 }
@@ -3835,19 +4517,8 @@ function renderPlanoSimulador(pacId){
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
           <select id="sim-forma-pag" onchange="updateFormaPag()" style="flex:1;padding:6px 8px;border:1px solid var(--rose-light);border-radius:8px;font-size:13px;">
             <option value="">Dinheiro / Pix</option>
-            <option value="debito">Débito</option>
-            <option value="credito1">Crédito 1x</option>
-            <option value="credito2">Crédito 2x</option>
-            <option value="credito3">Crédito 3x</option>
-            <option value="credito4">Crédito 4x</option>
-            <option value="credito5">Crédito 5x</option>
-            <option value="credito6">Crédito 6x</option>
-            <option value="credito7">Crédito 7x</option>
-            <option value="credito8">Crédito 8x</option>
-            <option value="credito9">Crédito 9x</option>
-            <option value="credito10">Crédito 10x</option>
-            <option value="credito11">Crédito 11x</option>
-            <option value="credito12">Crédito 12x</option>
+            <option value="debito">Débito ${taxasCfg.debito > 0 ? '('+taxasCfg.debito+'%)' : ''}</option>
+            ${[1,2,3,4,5,6,7,8,9,10,11,12].map(n=>{const t=(taxasCfg.credito||[])[n-1]||0;return `<option value="credito${n}">Crédito ${n}x${t>0?' ('+t+'%)':''}</option>`;}).join('')}
           </select>
           <span style="font-size:12px;color:var(--rose-text);" id="sim-taxa-info"></span>
         </div>
@@ -4032,7 +4703,20 @@ async function salvarOrcPac(pacId){
 async function finalizarVendaPac(pacId){
   if(!orcamento.length){ showToast('Adicione procedimentos ao orçamento.','warn'); return; }
   const { subtotal, desconto, total } = calcTotalOrc();
-  if(!confirm(`Finalizar venda de ${fmtBRL(total)}? O estoque dos materiais usados será descontado.`)) return;
+  // Aplica taxa da maquininha se selecionada
+  const formaEl = document.getElementById('sim-forma-pag');
+  const forma = formaEl?.value || '';
+  let taxa = 0, totalComTaxa = total;
+  if(forma === 'debito'){
+    taxa = taxasCfg.debito || 0;
+    totalComTaxa = parseFloat((total / (1 - taxa/100)).toFixed(2));
+  } else if(forma.startsWith('credito')){
+    const par = parseInt(forma.replace('credito',''))||1;
+    const idx = par - 1;
+    taxa = (taxasCfg.credito||[])[idx]||0;
+    totalComTaxa = parseFloat((total / (1 - taxa/100)).toFixed(2));
+  }
+  if(!confirm(`Finalizar venda de ${fmtBRL(totalComTaxa)}${taxa>0?' (inclui taxa '+taxa+'%)':''}? O estoque dos materiais usados será descontado.`)) return;
   const pac = pacientes.find(p=>p.id===pacId);
   const itensProc = orcamento.filter(it=>it.tipo==='proc'||it.procId).map(it=>({procId:it.procId,qtd:it.qtd}));
   // Para combos, expande os procedimentos internos
@@ -4595,13 +5279,13 @@ function pacRenderPlanoLista(){
       </div>
       ${item.descricao?`<div style="font-size:12px;color:var(--rose-text);margin-top:5px;">${escapeHtml(item.descricao)}</div>`:''}
       <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;flex-wrap:wrap;gap:6px;">
-        <div>
-          <strong style="font-size:14px;color:#2e7d32;">R$ ${escapeHtml(item.valor||'0,00')}</strong>
-          ${dentes.length>1&&item.valor_unit?`<span style="font-size:11px;color:var(--rose-text);margin-left:6px;">(R$ ${escapeHtml(item.valor_unit)}/dente)</span>`:''}
+        <div style="display:flex;align-items:center;gap:6px;">
+          <span style="font-size:13px;color:var(--rose-text);">R$</span>
+          <input type="text" value="${escapeHtml(item.valor||'0,00')}" onchange="pacAtualizarValorPlano(${item.id},this.value)" style="width:100px;padding:4px 8px;border:1px solid var(--rose-light);border-radius:8px;text-align:right;font-size:14px;font-weight:700;color:#2e7d32;"/>
+          ${dentes.length>1&&item.valor_unit?`<span style="font-size:11px;color:var(--rose-text);">(R$ ${escapeHtml(item.valor_unit)}/dente)</span>`:''}
         </div>
         <div style="display:flex;gap:6px;flex-wrap:wrap;">
           ${btnAprovar}${btnRealizar}
-          <button class="btn-secondary" style="font-size:11px;padding:4px 10px;" onclick="pacEditarPlano(${item.id})">✏️ Editar</button>
           <button class="btn-danger" style="font-size:11px;padding:4px 8px;" onclick="pacRemoverPlano(${item.id})"><i class="ti ti-trash"></i></button>
         </div>
       </div>
@@ -4610,9 +5294,60 @@ function pacRenderPlanoLista(){
 }
 
 // ══════════════════════════════════════════════════════
-// ORÇAMENTO RÁPIDO NO ODONTOGRAMA
+// REVISÃO DO PLANO → AÇÕES DE ORÇAMENTO
 // ══════════════════════════════════════════════════════
-let pacOdontoOrcList = [];
+
+// Abre/fecha o painel de ajuste de desconto e forma de pagamento (simulador)
+// Aprova todos os itens pendentes do plano (1ª revisão concluída)
+async function pacAprovarOrcamentoPlano(pacId){
+  const ativos = pacPlanoList.filter(i=>i.status!=='cancelado'&&i.status!=='realizado');
+  if(!ativos.length){ showToast('Não há itens no plano para aprovar.','warn'); return; }
+  if(!confirm(`Aprovar orçamento com ${ativos.length} item(ns)?`)) return;
+
+  showLoading(true);
+
+  // Marca itens pendentes como aprovados
+  const pendentes = ativos.filter(i=>i.status==='pendente');
+  for(const item of pendentes){
+    await _sb.from('plano_tratamento').update({ status:'aprovado' }).eq('id',item.id);
+  }
+  pacPlanoList = pacPlanoList.map(i=> pendentes.find(x=>x.id===i.id) ? {...i,status:'aprovado'} : i);
+
+  // Monta a venda (orçamento) a partir dos itens do plano
+  const pac = pacientes.find(p=>p.id===pacId);
+  const itensVenda = ativos.map(item=>{
+    const procObj = procs.find(pr=>pr.nome===item.procedimento);
+    const dentesArr = (item.dente||'').split(',').filter(Boolean);
+    const valorTotal = parseFloat((item.valor||'0').replace(',','.'))||0;
+    return {
+      procId: procObj?.id||null, qtd:1, nome:item.procedimento,
+      dente: dentesArr.join(','), descDente: item.descricao||'',
+      precoUnit: valorTotal
+    };
+  });
+  const subtotal = itensVenda.reduce((a,it)=>a+it.precoUnit*it.qtd,0);
+
+  const venda = {
+    id: nextVendaId++, status:'orcamento', formaPagamento:'',
+    pacienteId: pacId, pacienteNome: pac?.nome||'',
+    itens: itensVenda,
+    subtotal: parseFloat(subtotal.toFixed(2)),
+    desconto: 0, total: parseFloat(subtotal.toFixed(2)),
+    planoIds: ativos.map(i=>i.id),
+    data: new Date().toISOString()
+  };
+  vendas.push(venda);
+  await saveFinanceiro();
+
+  showLoading(false);
+  pacRenderPlanoResumo();
+  pacRenderPlanoLista();
+  showToast('Orçamento aprovado!');
+
+  renderPatientDetail('orcamentos');
+}
+
+
 
 function pacOdontoToggleOrc(){
   const panel = document.getElementById('pac-odonto-orc-panel');
@@ -4649,45 +5384,116 @@ function pacOdontoPopularSelect(){
   sel.innerHTML = optsHtml;
 }
 
-function pacOdontoAddOrc(){
-  const sel = document.getElementById('pac-odonto-orc-proc');
-  const opt = sel?.options[sel.selectedIndex];
-  if(!opt || !opt.value) { showToast('Selecione um procedimento.','warn'); return; }
-  // Usa dentes marcados no odontograma
-  const dentesMarcados = Object.keys(pacDentesMap).map(Number);
-  const dentesStr = dentesMarcados.length ? dentesMarcados.join(',') : '';
-  const preco = parseFloat(opt.dataset.preco)||0;
-  const qtd = dentesMarcados.length || 1;
-  pacOdontoOrcList.push({
-    procId: parseInt(opt.value),
-    nome: opt.dataset.nome || opt.text,
-    precoUnit: preco,
-    qtd,
-    dentes: dentesStr,
-    total: preco * qtd
-  });
-  pacOdontoRenderOrcLista();
+function getTipoCobranca(procId){
+  const p = procs.find(x=>x.id===procId);
+  if(!p) return 'global';
+  if(p.tipoCobranca) return p.tipoCobranca;
+  if(p.tipo_cobranca) return p.tipo_cobranca;
+  return procIsGlobal(p.nome) ? 'global' : 'por_dente';
 }
+
+function pacOdontoAddOrc(){
+  // Tenta de todas as formas encontrar o procedimento
+  let proc = null;
+
+  // 0. Pela variável de seleção (mais confiável)
+  if(pacOdontoOrcSelProc && pacOdontoOrcSelProc.id){
+    proc = procs.find(p=>p.id===pacOdontoOrcSelProc.id);
+  }
+
+  // 1. Pelo hidden input
+  if(!proc){
+    const hidVal = parseInt(document.getElementById('pac-odonto-orc-proc')?.value||'0');
+    if(hidVal) proc = procs.find(p=>p.id===hidVal) || procs.find(p=>String(p.id)===String(hidVal));
+  }
+
+  // 2. Pelo texto da busca
+  if(!proc){
+    const txt = (document.getElementById('pac-odonto-orc-search')?.value||'').trim().toLowerCase();
+    if(txt) proc = procs.find(p=>p.nome.toLowerCase()===txt) || procs.find(p=>p.nome.toLowerCase().includes(txt));
+  }
+
+  // 3. Pelo nome exibido no sel-nome
+  if(!proc){
+    const nm = (document.getElementById('pac-odonto-orc-sel-nome')?.textContent||'').split(' — ')[0].trim();
+    if(nm) proc = procs.find(p=>p.nome===nm);
+  }
+
+  if(!proc){
+    showToast('Selecione um procedimento na lista antes de adicionar.','warn');
+    // Abre o dropdown para ajudar
+    pacOdontoFiltrarProcs();
+    document.getElementById('pac-odonto-orc-dropdown').style.display='block';
+    return;
+  }
+
+  const tipo = getTipoCobranca(proc.id);
+  const preco = proc.precoFinal||0;
+  const dentesAuto = tipo==='por_dente' ? dentesParaProcedimento(proc.nome) : [];
+  const dentesStr = dentesAuto.join(',');
+  const qtd = tipo==='global' ? 1 : Math.max(1, dentesAuto.length);
+
+  pacOdontoOrcList.push({procId:proc.id, nome:proc.nome, precoUnit:preco, qtd, dentes:dentesStr, tipo, total:preco*qtd});
+
+  // Limpa
+  const srch=document.getElementById('pac-odonto-orc-search'); if(srch) srch.value='';
+  const inp=document.getElementById('pac-odonto-orc-proc'); if(inp) inp.value='';
+  const nm2=document.getElementById('pac-odonto-orc-sel-nome'); if(nm2) nm2.textContent='';
+  pacOdontoOrcSelProc=null;
+  pacOdontoRenderOrcLista();
+  showToast(proc.nome+' adicionado'+(dentesAuto.length?' ('+dentesAuto.length+' dentes)':tipo==='global'?' (global)':''));
+}
+
 
 function pacOdontoRenderOrcLista(){
   const c = document.getElementById('pac-odonto-orc-lista'); if(!c) return;
   if(!pacOdontoOrcList.length){
-    c.innerHTML = '<div style="color:var(--rose-text);font-size:12px;text-align:center;padding:8px;">Nenhum item. Clique nos dentes e adicione procedimentos.</div>';
+    c.innerHTML = '<div style="color:var(--rose-text);font-size:12px;text-align:center;padding:8px;">Pesquise e adicione procedimentos acima.</div>';
     document.getElementById('pac-odonto-orc-total').textContent = 'R$ 0,00';
     return;
   }
+  const TODOS = [18,17,16,15,14,13,12,11,21,22,23,24,25,26,27,28,48,47,46,45,44,43,42,41,31,32,33,34,35,36,37,38,55,54,53,52,51,61,62,63,64,65,85,84,83,82,81,71,72,73,74,75];
   let total = 0;
-  c.innerHTML = pacOdontoOrcList.map((it,i)=>{
+  let out = '';
+  pacOdontoOrcList.forEach((it,i)=>{
     total += it.total;
-    return `<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--rose-light);font-size:12px;flex-wrap:wrap;">
-      <span style="flex:1;">${escapeHtml(it.nome)}</span>
-      ${it.dentes ? `<span style="background:var(--rose-lighter);color:var(--rose-dark);border-radius:6px;padding:2px 6px;font-size:11px;">🦷 ${it.dentes.split(',').join(', ')}</span>` : ''}
-      <input type="number" min="0" step="0.01" value="${it.total.toFixed(2)}" onchange="pacOdontoOrcList[${i}].total=parseFloat(this.value)||0;pacOdontoOrcList[${i}].precoUnit=parseFloat(this.value)||0;pacOdontoRenderOrcLista();" style="width:80px;padding:3px 6px;border:1px solid var(--rose-light);border-radius:6px;font-size:12px;text-align:right;font-weight:700;color:var(--rose-dark);"/>
-      <button class="btn-danger" style="padding:2px 6px;" onclick="pacOdontoOrcList.splice(${i},1);pacOdontoRenderOrcLista();"><i class="ti ti-x"></i></button>
-    </div>`;
-  }).join('');
-  document.getElementById('pac-odonto-orc-total').textContent = 'R$ ' + total.toFixed(2).replace('.',',');
+    const dArr = (it.dentes||'').split(',').map(Number).filter(Boolean);
+    const isGlobal = getTipoCobranca(it.procId||0)==='global';
+    let card = '<div style="border:1px solid var(--rose-light);border-radius:10px;padding:10px;margin-bottom:8px;background:#fff;">';
+    card += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">';
+    card += '<span style="flex:1;font-size:13px;font-weight:600;">'+escapeHtml(it.nome)+'</span>';
+    if(isGlobal) card += '<span style="font-size:11px;color:#1565c0;background:#e3f2fd;padding:2px 7px;border-radius:10px;">Global</span>';
+    if(dArr.length) card += '<span style="background:var(--rose-lighter);color:var(--rose-dark);border-radius:6px;padding:2px 6px;font-size:11px;">🦷 '+dArr.join(', ')+'</span>';
+    if(it.faces) card += '<span style="background:#f3e5f5;color:#6a1b9a;border-radius:6px;padding:2px 6px;font-size:11px;">'+escapeHtml(it.faces)+'</span>';
+    card += '<input type="number" min="0" step="0.01" value="'+it.total.toFixed(2)+'" onchange="pacOdontoOrcList['+i+'].total=parseFloat(this.value)||0;pacOdontoOrcList['+i+'].precoUnit=parseFloat(this.value)||0;pacOdontoRenderOrcLista();" style="width:80px;padding:3px 6px;border:1px solid var(--rose-light);border-radius:6px;font-size:12px;text-align:right;font-weight:700;color:var(--rose-dark);"/>';
+    card += '<button class="btn-danger" style="padding:2px 6px;" onclick="pacOdontoOrcList.splice('+i+',1);pacOdontoRenderOrcLista();"><i class="ti ti-x"></i></button>';
+    card += '</div>';
+    if(!isGlobal){
+      card += '<div style="margin-top:4px;"><div style="font-size:11px;color:var(--rose-text);margin-bottom:5px;">'+(dArr.length?'Dentes (clique para ajustar):':'Selecione os dentes:')+'</div>';
+      card += '<div style="display:flex;flex-wrap:wrap;gap:3px;">';
+      TODOS.forEach(d=>{
+        const s=dArr.includes(d);
+        card+='<button type="button" onclick="orcDenteToggle('+i+','+d+')" style="width:26px;height:26px;border:1.5px solid '+(s?'var(--rose)':'var(--rose-light)')+';border-radius:5px;background:'+(s?'var(--rose)':'#fff')+';color:'+(s?'#fff':'#3a2020')+';font-size:10px;cursor:pointer;padding:0;">'+d+'</button>';
+      });
+      card += '</div><div style="font-size:11px;color:var(--rose-text);margin-top:4px;">'+(dArr.length?dArr.length+' dente(s)':'Nenhum selecionado')+'</div></div>';
+    }
+    card += '</div>';
+    out += card;
+  });
+  c.innerHTML = out;
+  document.getElementById('pac-odonto-orc-total').textContent = 'R$ '+total.toFixed(2).replace('.',',');
 }
+
+function orcDenteToggle(idx,d){
+  const it=pacOdontoOrcList[idx]; if(!it) return;
+  let arr=(it.dentes||'').split(',').map(Number).filter(Boolean);
+  const i=arr.indexOf(d);
+  if(i>=0) arr.splice(i,1); else arr.push(d);
+  arr.sort((a,b)=>a-b);
+  it.dentes=arr.join(','); it.qtd=Math.max(1,arr.length); it.total=it.precoUnit*it.qtd;
+  pacOdontoRenderOrcLista();
+}
+
 
 function pacOdontoLimparOrc(){
   pacOdontoOrcList = [];
@@ -4792,11 +5598,7 @@ function signConfirm(){
   const dataUrl = signCanvas.toDataURL('image/png');
   closeSignModal();
   if(signCallback) signCallback(dataUrl);
-  // Força re-render dos realizados para mostrar assinatura imediatamente
-  setTimeout(()=>{
-    const c=document.getElementById('pac-procs-list');
-    if(c) pacCarregarProcs(selectedPatientId).then(()=>renderProcsList(selectedPatientId));
-  }, 300);
+  // Re-render é feito pelo _refreshSignArea dentro de cada callback de assinatura
 }
 
 // Armazena assinaturas por atendimento (em memória + salva no prontuário)
@@ -4810,7 +5612,7 @@ function abrirAssinaturaPaciente(pacId, atendId, nomeAtend){
     if(!assinaturasAtend[key]) assinaturasAtend[key] = {};
     assinaturasAtend[key].paciente = dataUrl;
     showToast('Assinatura do paciente salva!');
-    renderSignArea(pacId, atendId, nomeAtend);
+    _refreshSignArea(pacId, atendId, nomeAtend);
     salvarAssinaturas(pacId, atendId);
   });
 }
@@ -4821,8 +5623,33 @@ function abrirAssinaturaProfissional(pacId, atendId, nomeAtend){
     if(!assinaturasAtend[key]) assinaturasAtend[key] = {};
     assinaturasAtend[key].profissional = dataUrl;
     showToast('Assinatura do profissional salva!');
-    renderSignArea(pacId, atendId, nomeAtend);
+    _refreshSignArea(pacId, atendId, nomeAtend);
     salvarAssinaturas(pacId, atendId);
+  });
+}
+
+function _refreshSignArea(pacId, atendId, nomeAtend){
+  // Atualiza o HTML da área de assinatura imediatamente no DOM sem recarregar tudo
+  const atend = pacProcsList.find(a => a.id === atendId);
+  const prof = atend ? profissionais.find(p=>p.id==atend.profissional_id) : null;
+  const profNome = prof?.nome || atend?.profissional_nome || '';
+  const profCro  = prof?.cro || '';
+  const newHtml = renderSignArea(pacId, atendId, nomeAtend, profNome, profCro);
+  // Encontra o container da assinatura dentro do card correto
+  const lista = document.getElementById('pac-proc-lista');
+  if(!lista) return;
+  const cards = lista.querySelectorAll('.atend-card');
+  cards.forEach(card => {
+    // Identifica o card pelo botão de assinatura que tem o atendId
+    if(card.innerHTML.includes(`abrirAssinaturaPaciente(${pacId},${atendId},`)){
+      const signDiv = card.querySelector('[data-sign-area]');
+      if(signDiv){
+        signDiv.outerHTML = newHtml;
+      } else {
+        // Fallback: re-render full list
+        pacRenderProcLista();
+      }
+    }
   });
 }
 
@@ -4843,7 +5670,7 @@ function renderSignArea(pacId, atendId, nomeAtend, profNome, profCro, sigExist){
   const pacSig = sigs.paciente;
   const profSig = sigs.profissional;
 
-  return `<div style="border:1.5px solid var(--rose-light);border-radius:12px;padding:14px;margin-top:10px;background:#fdfaf9;">
+  return `<div data-sign-area="1" style="border:1.5px solid var(--rose-light);border-radius:12px;padding:14px;margin-top:10px;background:#fdfaf9;">
     <div style="font-size:12px;font-weight:700;color:var(--rose-dark);margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px;">✍️ Assinaturas</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
       <div>
@@ -4881,18 +5708,48 @@ async function odontogramaSalvarEIrParaPlano(pacId){
   const pid = pacId || selectedPatientId;
   if(!pid){ showToast('Selecione um paciente.','warn'); return; }
 
-  // Transfere itens do orçamento rápido para o orcamento global
+  // Transfere itens do orçamento rápido para o Plano de tratamento (banco de dados)
   if(pacOdontoOrcList.length > 0){
-    orcamento = pacOdontoOrcList.map(it=>({
-      tipo: 'proc',
-      procId: it.procId,
-      qtd: it.qtd||1,
-      nome: it.nome,
-      precoUnit: it.precoUnit||0,
-      custo: custoProc(procs.find(p=>p.id===it.procId)||{}),
-      dente: it.dentes||'',
-      descDente: ''
-    }));
+    showLoading(true);
+    for(const it of pacOdontoOrcList){
+      const dentesArr = (it.dentes||'').split(',').filter(Boolean);
+      const dentesStr = dentesArr.join(',') || '–';
+      const qtd = it.qtd || 1;
+      const valorUnit = it.precoUnit || 0;
+      const valorTotal = it.total != null ? it.total : valorUnit*qtd;
+      const valorStr = valorTotal.toFixed(2).replace('.',',');
+      const valorUnitStr = valorUnit.toFixed(2).replace('.',',');
+
+      // Evita duplicar: checa se já existe no plano (qualquer status exceto cancelado)
+      const jaExiste = pacPlanoList.some(i =>
+        String(i.dente) === dentesStr &&
+        i.procedimento === it.nome &&
+        i.status !== 'cancelado'
+      );
+      if(jaExiste) continue;
+
+      const { data: novo, error } = await _sb.from('plano_tratamento').insert([{
+        clinica_id: clinicaId, paciente_id: pid,
+        dente: dentesStr, face: it.faces || '–',
+        procedimento: it.nome, valor: valorStr, valor_unit: valorUnitStr,
+        descricao: '', status: 'pendente'
+      }]).select().single();
+
+      if(!error && novo){
+        pacPlanoList.unshift(novo);
+      } else if(error){
+        // Fallback local se a coluna valor_unit não existir na tabela
+        const { data: novo2, error: e2 } = await _sb.from('plano_tratamento').insert([{
+          clinica_id: clinicaId, paciente_id: pid,
+          dente: dentesStr, face: it.faces || '–',
+          procedimento: it.nome, valor: valorStr,
+          descricao: '', status: 'pendente'
+        }]).select().single();
+        if(!e2 && novo2) pacPlanoList.unshift(novo2);
+      }
+    }
+    showLoading(false);
+    pacOdontoOrcList = [];
     showToast('Procedimentos transferidos para o Plano!');
   } else {
     showToast('Indo para o Plano de Tratamento...','warn');
@@ -4904,16 +5761,11 @@ async function odontogramaSalvarEIrParaPlano(pacId){
   // Vai para aba plano
   renderPatientDetail('plano');
 
-  // Força reconstrução do simulador limpando o dataset
   setTimeout(()=>{
-    const c = document.getElementById('pac-sim-container');
-    if(c) c.dataset.pacId = ''; // Força rebuild
-    renderPlanoSimulador(pid);
-    renderOrcPac();
-    setTimeout(()=>{
-      const sim = document.getElementById('pac-sim-container');
-      if(sim) sim.scrollIntoView({behavior:'smooth',block:'start'});
-    }, 200);
+    pacRenderPlanoResumo();
+    pacRenderPlanoLista();
+    const lista = document.getElementById('pac-plano-lista');
+    if(lista) lista.scrollIntoView({behavior:'smooth',block:'start'});
   }, 200);
 }
 
@@ -4925,12 +5777,71 @@ async function salvarOrcEIrParaOrcamentos(pacId){
 
 // Ao finalizar na aba Orçamentos, vai para Realizados
 async function pacFinalizarEAssinar(vendaId, pacId){
-  await pacFinalizarVendaLista(vendaId, pacId);
+  await pacFinalizarItensSelecionados(vendaId, pacId);
 }
 
 // ══════════════════════════════════════════════════════
 // ORÇAMENTOS DO PACIENTE
 // ══════════════════════════════════════════════════════
+function formaPagamentoLabel(val){
+  if(!val) return 'Dinheiro / Pix';
+  if(val==='debito') return 'Débito';
+  if(val.startsWith('credito')) return 'Crédito '+val.replace('credito','')+'x';
+  return val;
+}
+
+async function pacOrcSetFormaPag(vendaId, valor, pacId){
+  const v = vendas.find(x=>x.id===vendaId); if(!v) return;
+  v.formaPagamento = valor;
+  showLoading(true); await saveFinanceiro(); showLoading(false);
+}
+
+// Estado dos checkboxes e desconto por venda (em memória)
+const _orcSel   = {};  // _orcSel[vendaId]   = Set de índices selecionados
+const _orcDesc  = {};  // _orcDesc[vendaId]  = { tipo:'pct'|'brl', valor: number }
+
+function _orcGetSel(v){
+  if(!_orcSel[v.id]){
+    _orcSel[v.id] = new Set((v.itens||[]).map((_,i)=>i));
+  }
+  return _orcSel[v.id];
+}
+function _orcGetDesc(v){
+  if(!_orcDesc[v.id]) _orcDesc[v.id]={tipo:'pct',valor:0};
+  return _orcDesc[v.id];
+}
+function _orcCalcTotais(v){
+  const sel = _orcGetSel(v);
+  const desc = _orcGetDesc(v);
+  const subtotalSel = (v.itens||[]).reduce((a,it,i)=> sel.has(i) ? a+(it.precoUnit||0)*(it.qtd||1) : a, 0);
+  let descAmt = desc.tipo==='pct' ? subtotalSel*(desc.valor/100) : desc.valor;
+  descAmt = Math.min(descAmt, subtotalSel);
+  const totalSemTaxa = Math.max(0, subtotalSel - descAmt);
+  // Aplica taxa da maquininha
+  const forma = v.formaPagamento||'';
+  let taxa = 0;
+  if(forma==='debito') taxa = taxasCfg.debito||0;
+  else if(forma.startsWith('credito')){
+    const par = parseInt(forma.replace('credito',''))||1;
+    taxa = (taxasCfg.credito||[])[par-1]||0;
+  }
+  const total = taxa>0 ? parseFloat((totalSemTaxa/(1-taxa/100)).toFixed(2)) : totalSemTaxa;
+  const taxaAmt = parseFloat((total - totalSemTaxa).toFixed(2));
+  return {subtotalSel, descAmt, total, taxa, taxaAmt, totalSemTaxa};
+}
+
+function pacOrcToggleItem(vendaId, idx){
+  const v = vendas.find(x=>x.id===vendaId); if(!v) return;
+  const sel = _orcGetSel(v);
+  if(sel.has(idx)) sel.delete(idx); else sel.add(idx);
+  pacRenderOrcamentos(v.pacienteId);
+}
+function pacOrcSetDesconto(vendaId, tipo, valor){
+  const v = vendas.find(x=>x.id===vendaId); if(!v) return;
+  _orcDesc[vendaId] = {tipo, valor: parseFloat(valor)||0};
+  pacRenderOrcamentos(v.pacienteId);
+}
+
 function pacRenderOrcamentos(pacId){
   const c = document.getElementById('pac-orc-lista'); if(!c) return;
   const pacVendas = vendas.filter(v=>v.pacienteId===pacId).slice().reverse();
@@ -4948,37 +5859,103 @@ function pacRenderOrcamentos(pacId){
   const cards = pacVendas.map(v=>{
     const si = STATUS[v.status]||STATUS.orcamento;
     const dt = new Date(v.data).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric'});
-    // Detalhamento dos itens
-    const itensHtml = (v.itens||[]).map(i=>`
-      <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--rose-light);font-size:13px;">
-        <span>${escapeHtml(i.nome||'—')}${i.dente?` <span style="font-size:11px;color:var(--rose-text);">🦷${i.dente}</span>`:''} ${i.qtd>1?`<span style="font-size:11px;color:var(--rose-text);">×${i.qtd}</span>`:''}</span>
-        <strong>${fmtBRL((i.qtd||1)*(procs.find(p=>p.id===i.procId)?.precoFinal||0))}</strong>
-      </div>`).join('');
-    const subtotal = v.subtotal||v.total||0;
-    const desconto = v.desconto||0;
-    const total = v.total||subtotal;
+    const isOrc = v.status==='orcamento';
+    const sel   = _orcGetSel(v);
+    const desc  = _orcGetDesc(v);
+    const {subtotalSel, descAmt, total: totalSel} = _orcCalcTotais(v);
+    const subtotalGeral = v.subtotal||v.total||0;
+    const totalGeral = v.total||subtotalGeral;
+
+    // Itens com checkbox (só em orçamentos abertos)
+    const itensHtml = (v.itens||[]).map((it,i)=>{
+      const valorIt = (it.precoUnit||0)*(it.qtd||1);
+      const checked = sel.has(i);
+      if(isOrc){
+        return `<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--rose-light);font-size:13px;${!checked?'opacity:.45;':''}">
+          <input type="checkbox" ${checked?'checked':''} onchange="pacOrcToggleItem(${v.id},${i})" style="width:16px;height:16px;accent-color:var(--rose);flex-shrink:0;cursor:pointer;" />
+          <span style="flex:1;">${escapeHtml(it.nome||'—')}${it.dente?` <span style="font-size:11px;color:var(--rose-text);">🦷${it.dente}</span>`:''} ${(it.qtd||1)>1?`<span style="font-size:11px;color:var(--rose-text);">×${it.qtd}</span>`:''}</span>
+          <strong style="color:var(--rose-dark);">${fmtBRL(valorIt)}</strong>
+        </div>`;
+      }
+      return `<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--rose-light);font-size:13px;">
+        <span>${escapeHtml(it.nome||'—')}${it.dente?` <span style="font-size:11px;color:var(--rose-text);">🦷${it.dente}</span>`:''} ${(it.qtd||1)>1?`<span style="font-size:11px;color:var(--rose-text);">×${it.qtd}</span>`:''}</span>
+        <strong>${fmtBRL(valorIt)}</strong>
+      </div>`;
+    }).join('');
+
+    // Controles de desconto (só em orçamentos abertos)
+    const descontoHtml = isOrc ? `
+      <div style="margin-bottom:10px;">
+        <label style="display:block;font-size:11px;font-weight:700;color:var(--rose-text);text-transform:uppercase;margin-bottom:6px;">Desconto nos itens selecionados</label>
+        <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+          <select id="orc-desc-tipo-${v.id}"
+            onchange="pacOrcSetDesconto(${v.id},this.value,document.getElementById('orc-desc-val-${v.id}').value)"
+            style="padding:6px 8px;border:1px solid var(--rose-light);border-radius:8px;font-size:13px;background:var(--rose-lighter);">
+            <option value="pct" ${desc.tipo==='pct'?'selected':''}>%</option>
+            <option value="brl" ${desc.tipo==='brl'?'selected':''}>R$</option>
+          </select>
+          <input id="orc-desc-val-${v.id}" type="number" min="0" step="0.01" value="${desc.valor||0}"
+            oninput="pacOrcSetDesconto(${v.id},document.getElementById('orc-desc-tipo-${v.id}').value,this.value)"
+            style="width:90px;padding:6px 8px;border:1px solid var(--rose-light);border-radius:8px;font-size:13px;text-align:right;" />
+          ${descAmt>0?`<span style="font-size:12px;color:#2e7d32;font-weight:700;">− ${fmtBRL(descAmt)}</span>`:''}
+        </div>
+      </div>` : '';
+
+    // Forma de pagamento
+    const formaPagHtml = isOrc ? `
+      <div style="margin-bottom:10px;">
+        <label style="display:block;font-size:11px;font-weight:700;color:var(--rose-text);text-transform:uppercase;margin-bottom:4px;">Forma de pagamento</label>
+        <select onchange="pacOrcSetFormaPag(${v.id},this.value,${pacId})" style="width:100%;">
+          <option value="" ${!v.formaPagamento?'selected':''}>Dinheiro / Pix</option>
+          <option value="debito" ${v.formaPagamento==='debito'?'selected':''}>Débito${taxasCfg.debito>0?' ('+taxasCfg.debito+'%)':''}</option>
+          ${[1,2,3,4,5,6,7,8,9,10,11,12].map(n=>{const t=(taxasCfg.credito||[])[n-1]||0;return `<option value="credito${n}" ${v.formaPagamento==='credito'+n?'selected':''}>Crédito ${n}x${t>0?' ('+t+'%)':''}</option>`;}).join('')}
+        </select>
+      </div>` :
+      (v.formaPagamento?`<div style="font-size:12px;color:var(--rose-text);margin-bottom:10px;">Pagamento: ${formaPagamentoLabel(v.formaPagamento)}</div>`:'');
+
+    // Resumo financeiro
+    const resumoHtml = isOrc ? `
+      <div style="background:var(--rose-lighter);border-radius:10px;padding:10px 12px;font-size:13px;margin-bottom:12px;">
+        <div style="display:flex;justify-content:space-between;color:var(--rose-text);"><span>Selecionados</span><span>${sel.size} de ${(v.itens||[]).length} item(ns)</span></div>
+        <div style="display:flex;justify-content:space-between;margin-top:4px;"><span>Subtotal selecionados</span><span>${fmtBRL(subtotalSel)}</span></div>
+        ${descAmt>0?`<div style="display:flex;justify-content:space-between;color:#2e7d32;"><span>Desconto</span><span>− ${fmtBRL(descAmt)}</span></div>`:''}
+        ${taxaAmt>0?`<div style="display:flex;justify-content:space-between;color:#856404;font-size:12px;"><span>Taxa maquininha (${taxa}%)</span><span>+ ${fmtBRL(taxaAmt)}</span></div>`:''}
+        <div style="display:flex;justify-content:space-between;font-weight:800;font-size:14px;margin-top:6px;border-top:1px solid var(--rose-light);padding-top:6px;"><span>Total a finalizar</span><span style="color:var(--rose-dark);">${fmtBRL(totalSel)}</span></div>
+      </div>` : `
+      <div style="background:var(--rose-lighter);border-radius:10px;padding:10px 12px;font-size:13px;margin-bottom:12px;">
+        <div style="display:flex;justify-content:space-between;"><span>Subtotal</span><span>${fmtBRL(subtotalGeral)}</span></div>
+        ${(v.desconto||0)>0?`<div style="display:flex;justify-content:space-between;color:#2e7d32;"><span>Desconto</span><span>− ${fmtBRL(v.desconto)}</span></div>`:''}
+        <div style="display:flex;justify-content:space-between;font-weight:800;font-size:14px;margin-top:6px;border-top:1px solid var(--rose-light);padding-top:6px;"><span>Total</span><span style="color:var(--rose-dark);">${fmtBRL(totalGeral)}</span></div>
+      </div>`;
+
+    // Aviso de itens pendentes restantes
+    const pendentesRestantes = (v.itens||[]).length - sel.size;
+    const avisoHtml = isOrc && pendentesRestantes > 0 ? `
+      <div style="background:#fff8e1;border:1px solid #ffe082;border-radius:8px;padding:8px 10px;font-size:12px;color:#7a5c00;margin-bottom:8px;">
+        <i class="ti ti-info-circle"></i> ${pendentesRestantes} item(ns) não selecionado(s) continuarão pendentes para a próxima visita.
+      </div>` : '';
+
     return `<div style="border:1.5px solid var(--rose-light);border-radius:14px;padding:16px;margin-bottom:12px;background:#fff;">
       <!-- Cabeçalho -->
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:6px;">
         <div>
+          <div style="font-size:14px;font-weight:700;color:var(--rose-dark);">${escapeHtml(v.pacienteNome||'—')}</div>
           <div style="font-size:12px;color:var(--rose-text);">📅 ${dt}</div>
           <span class="fin-badge ${si.cls}" style="margin-top:4px;">${si.lbl}</span>
         </div>
-        <strong style="font-size:18px;color:var(--rose-dark);">${fmtBRL(total)}</strong>
+        <strong style="font-size:18px;color:var(--rose-dark);">${fmtBRL(isOrc?totalSel:totalGeral)}</strong>
       </div>
       <!-- Itens detalhados -->
       <div style="margin-bottom:10px;">${itensHtml||'<div style="font-size:13px;color:var(--rose-text);">Sem itens detalhados</div>'}</div>
-      <!-- Resumo financeiro -->
-      <div style="background:var(--rose-lighter);border-radius:10px;padding:10px 12px;font-size:13px;">
-        <div style="display:flex;justify-content:space-between;"><span>Subtotal</span><span>${fmtBRL(subtotal)}</span></div>
-        ${desconto>0?`<div style="display:flex;justify-content:space-between;color:#2e7d32;"><span>Desconto</span><span>− ${fmtBRL(desconto)}</span></div>`:''}
-        <div style="display:flex;justify-content:space-between;font-weight:800;font-size:14px;margin-top:6px;border-top:1px solid var(--rose-light);padding-top:6px;"><span>Total</span><span style="color:var(--rose-dark);">${fmtBRL(total)}</span></div>
-      </div>
+      ${descontoHtml}
+      ${formaPagHtml}
+      ${resumoHtml}
+      ${avisoHtml}
       <!-- Ações -->
-      <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;">
-        ${v.status==='orcamento'?`
-          <button class="btn-primary" style="flex:1;justify-content:center;" onclick="pacFinalizarEAssinar(${v.id},${pacId})">
-            <i class="ti ti-circle-check"></i> Finalizar e Assinar
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        ${isOrc?`
+          <button class="btn-primary" style="flex:1;justify-content:center;" onclick="pacFinalizarItensSelecionados(${v.id},${pacId})" ${sel.size===0?'disabled':''}>
+            <i class="ti ti-circle-check"></i> Finalizar${sel.size<(v.itens||[]).length&&sel.size>0?' selecionados':''}
           </button>`:''
         }
         ${v.status==='finalizada'?`<button class="btn-secondary" style="font-size:12px;" onclick="cancelarVenda(${v.id});setTimeout(()=>pacRenderOrcamentos(${pacId}),300)"><i class="ti ti-arrow-back-up"></i> Cancelar</button>`:''}
@@ -4993,46 +5970,261 @@ function pacRenderOrcamentos(pacId){
 async function pacFinalizarVendaLista(vendaId, pacId){
   const v = vendas.find(x=>x.id===vendaId); if(!v) return;
   if(!confirm(`Finalizar venda de ${fmtBRL(v.total||0)}? O estoque será descontado.`)) return;
+  // Atualiza item do plano para realizado
+  if(v.planoItemId){
+    await _sb.from('plano_tratamento').update({status:'realizado'}).eq('id',v.planoItemId);
+    pacPlanoList = pacPlanoList.map(i=>i.id===v.planoItemId?{...i,status:'realizado'}:i);
+  } else if(v.itens?.length){
+    // Tenta achar pelo nome do procedimento
+    v.itens.forEach(async it=>{
+      const planoItem = pacPlanoList.find(p=>p.procedimento===it.nome&&p.status==='aprovado');
+      if(planoItem){
+        await _sb.from('plano_tratamento').update({status:'realizado'}).eq('id',planoItem.id);
+        pacPlanoList = pacPlanoList.map(i=>i.id===planoItem.id?{...i,status:'realizado'}:i);
+      }
+    });
+  }
   const itensProc = (v.itens||[]).filter(i=>i.procId).map(i=>({procId:i.procId,qtd:i.qtd||1}));
   const consumo = computeConsumo(itensProc);
   const aplicado = aplicarBaixaEstoque(consumo);
   v.status='finalizada'; v.consumo=aplicado; v.dataFinal=new Date().toISOString();
-  showLoading(true); await saveFinanceiro(); showLoading(false);
+  showLoading(true);
+  // Marca os itens do plano vinculados como 'realizado'
+  if(v.planoIds && v.planoIds.length){
+    for(const id of v.planoIds){
+      await _sb.from('plano_tratamento').update({ status:'realizado' }).eq('id',id);
+      const item = pacPlanoList.find(i=>i.id===id);
+      if(item) item.status='realizado';
+    }
+    if(typeof pacRenderPlanoResumo==='function') pacRenderPlanoResumo();
+    if(typeof pacRenderPlanoLista==='function') pacRenderPlanoLista();
+  }
+  await saveFinanceiro();
+
+  // Cria automaticamente o registro de atendimento para assinatura
+  const descProcs = (v.itens||[]).map(i=>{
+    const dente = i.dente ? ` (dente ${i.dente})` : '';
+    return `${i.nome||'Procedimento'}${dente}`;
+  }).join(', ');
+  const dentesTratados = JSON.stringify(
+    (v.itens||[]).flatMap(i=>(i.dente||'').split(',').filter(Boolean).map(d=>({dente:parseInt(d),procedimento:i.nome})))
+  );
+  const { data: novoAtend, error: eAtend } = await _sb.from('atendimentos_odonto').insert([{
+    clinica_id: clinicaId, paciente_id: pacId,
+    data: hoje(), procedimentos: descProcs || 'Procedimentos realizados', obs: '',
+    profissional_id: null, profissional_nome: '',
+    dentes_tratados: dentesTratados
+  }]).select().single();
+  if(!eAtend && novoAtend) pacProcsList.unshift(novoAtend);
+
+  showLoading(false);
   showToast('Venda finalizada!');
   pacRenderOrcamentos(pacId);
   // Abre aba de realizados para assinar
   renderPatientDetail('procs');
-  setTimeout(()=>{ showToast('Adicione o procedimento realizado e colete as assinaturas.','warn'); },800);
+  setTimeout(()=>{ showToast('Colete as assinaturas do procedimento realizado.','warn'); },800);
 }
 
+
+// Finaliza apenas os itens selecionados do orçamento; os demais ficam aprovados (pendentes)
+async function pacFinalizarItensSelecionados(vendaId, pacId){
+  const v = vendas.find(x=>x.id===vendaId); if(!v) return;
+  const sel = _orcGetSel(v);
+  const desc = _orcGetDesc(v);
+  if(sel.size===0){ showToast('Selecione ao menos um item para finalizar.','warn'); return; }
+
+  const itensSel   = (v.itens||[]).filter((_,i)=>sel.has(i));
+  const itensRest  = (v.itens||[]).filter((_,i)=>!sel.has(i));
+
+  const {subtotalSel, descAmt, total: totalFinal} = _orcCalcTotais(v);
+
+  if(!confirm(`Finalizar ${itensSel.length} item(ns) por ${fmtBRL(totalFinal)}?\n${itensRest.length>0?itensRest.length+' item(ns) ficará(ão) pendente(s) para a próxima visita.':''}`)) return;
+
+  showLoading(true);
+
+  // 1. Desconta estoque dos itens selecionados
+  const itensProc = itensSel.filter(i=>i.procId).map(i=>({procId:i.procId,qtd:i.qtd||1}));
+  const consumo   = computeConsumo(itensProc);
+  const aplicado  = aplicarBaixaEstoque(consumo);
+
+  // 2. Marca planoIds dos itens selecionados como 'realizado'
+  const planoIdsSel = (v.planoIds||[]).filter((_,i)=>sel.has(i));
+  for(const pid of planoIdsSel){
+    await _sb.from('plano_tratamento').update({status:'realizado'}).eq('id',pid);
+    const pl = pacPlanoList.find(p=>p.id===pid);
+    if(pl) pl.status='realizado';
+  }
+
+  if(itensRest.length===0){
+    // Finaliza a venda inteira normalmente
+    v.status='finalizada';
+    v.desconto=parseFloat(descAmt.toFixed(2));
+    v.subtotal=parseFloat(subtotalSel.toFixed(2));
+    v.total=parseFloat(totalFinal.toFixed(2));
+    v.consumo=aplicado;
+    v.dataFinal=new Date().toISOString();
+    delete _orcSel[vendaId];
+    delete _orcDesc[vendaId];
+  } else {
+    // Cria nova venda finalizada só com os itens selecionados
+    const novaVenda = {
+      id: nextVendaId++, status:'finalizada',
+      formaPagamento: v.formaPagamento||'',
+      pacienteId: pacId, pacienteNome: v.pacienteNome||'',
+      itens: itensSel,
+      subtotal: parseFloat(subtotalSel.toFixed(2)),
+      desconto: parseFloat(descAmt.toFixed(2)),
+      total: parseFloat(totalFinal.toFixed(2)),
+      planoIds: planoIdsSel,
+      consumo: aplicado,
+      data: new Date().toISOString(),
+      dataFinal: new Date().toISOString()
+    };
+    vendas.push(novaVenda);
+
+    // Atualiza venda original: remove itens finalizados, recalcula totais
+    const planoIdsRest = (v.planoIds||[]).filter((_,i)=>!sel.has(i));
+    v.itens    = itensRest;
+    v.planoIds = planoIdsRest;
+    const novoSub = itensRest.reduce((a,it)=>(a+(it.precoUnit||0)*(it.qtd||1)),0);
+    v.subtotal = parseFloat(novoSub.toFixed(2));
+    v.desconto = 0;
+    v.total    = parseFloat(novoSub.toFixed(2));
+    // Reseta estado de checkboxes para a venda original (agora com menos itens)
+    delete _orcSel[vendaId];
+    delete _orcDesc[vendaId];
+  }
+
+  await saveFinanceiro();
+
+  // 3. Cria atendimento para os itens finalizados
+  const descProcs = itensSel.map(i=>{
+    const dente = i.dente ? ` (dente ${i.dente})` : '';
+    return `${i.nome||'Procedimento'}${dente}`;
+  }).join(', ');
+  const dentesTratados = JSON.stringify(
+    itensSel.flatMap(i=>(i.dente||'').split(',').filter(Boolean).map(d=>({dente:parseInt(d),procedimento:i.nome})))
+  );
+  const {data:novoAtend,error:eAtend} = await _sb.from('atendimentos_odonto').insert([{
+    clinica_id:clinicaId, paciente_id:pacId,
+    data:hoje(), procedimentos:descProcs||'Procedimentos realizados', obs:'',
+    profissional_id:null, profissional_nome:'',
+    dentes_tratados:dentesTratados
+  }]).select().single();
+  if(!eAtend && novoAtend) pacProcsList.unshift(novoAtend);
+
+  if(typeof pacRenderPlanoResumo==='function') pacRenderPlanoResumo();
+  if(typeof pacRenderPlanoLista==='function') pacRenderPlanoLista();
+
+  showLoading(false);
+  showToast(itensRest.length>0 ? `${itensSel.length} item(ns) finalizado(s)! ${itensRest.length} ficou(aram) pendente(s).` : 'Venda finalizada!');
+  pacRenderOrcamentos(pacId);
+  renderPatientDetail('procs');
+  setTimeout(()=>{ showToast('Colete as assinaturas do procedimento realizado.','warn'); },800);
+}
 
 // ══════════════════════════════════════════════════════
 // HISTÓRICO DO PACIENTE
 // ══════════════════════════════════════════════════════
+
+async function histSalvarEIrOdonto(pacId){
+  await histSalvar(pacId);
+  // Transfere dentes do histórico para o odontograma
+  const dentes = Object.keys(histDentesProc).map(Number);
+  if(dentes.length){
+    // Salva cada dente no odontograma
+    for(const dente of dentes){
+      const denteProcs = histDentesProc[dente]||[];
+      const cond = denteProcs[0]?.cond||'restaurado';
+      const proc = document.getElementById('hist-proc')?.value||'';
+      const {data:ex}=await _sb.from('procedimentos_dentes').select('id').eq('clinica_id',clinicaId).eq('paciente_id',pacId).eq('dente',dente).single();
+      if(ex){ await _sb.from('procedimentos_dentes').update({condicao:cond,procedimento:proc}).eq('id',ex.id); }
+      else   { await _sb.from('procedimentos_dentes').insert([{clinica_id:clinicaId,paciente_id:pacId,dente,condicao:cond,procedimento:proc,obs:'',data:document.getElementById('hist-data')?.value||hoje()}]); }
+    }
+    await pacCarregarOdonto(pacId);
+  }
+  renderPatientDetail('odonto');
+  setTimeout(()=>showToast('Dentes transferidos para o Odontograma!'),300);
+}
+
 async function histCarregar(pacId){
   // Carrega atendimentos existentes
   await pacCarregarProcs(pacId);
   histRenderLista(pacId);
 }
 
-let histDentesSel = [];
 
-let histCondsSel = [];
+let odontoCondSel = [];
+let odontoCondQtds = {};
+
+function odontoToggleCond(val){
+  const idx = odontoCondSel.indexOf(val);
+  const wrap = document.querySelector('[data-ocond-wrap="'+val+'"]');
+  const qtdWrap = document.querySelector('[data-ocond-qtd-wrap="'+val+'"]');
+  if(idx>=0){
+    odontoCondSel.splice(idx,1);
+    delete odontoCondQtds[val];
+    if(wrap){ wrap.style.borderColor='var(--rose-light)'; wrap.style.background='#fff'; }
+    if(qtdWrap) qtdWrap.style.display='none';
+  } else {
+    odontoCondSel.push(val);
+    odontoCondQtds[val]=1;
+    if(wrap){ wrap.style.borderColor='var(--rose)'; wrap.style.background='var(--rose-lighter)'; }
+    if(qtdWrap) qtdWrap.style.display='flex';
+  }
+  const inp = document.getElementById('pac-d-cond');
+  if(inp) inp.value = odontoCondSel[0]||'higido';
+}
+
+function odontoCondQtd(val, delta){
+  if(!odontoCondQtds[val]) return;
+  odontoCondQtds[val] = Math.max(1,(odontoCondQtds[val]||1)+delta);
+  const num = document.querySelector('[data-ocond-num="'+val+'"]');
+  if(num) num.textContent = odontoCondQtds[val];
+}
+
+function odontoCondReset(){
+  odontoCondSel=[]; odontoCondQtds={};
+  document.querySelectorAll('[data-ocond-wrap]').forEach(w=>{
+    w.style.borderColor='var(--rose-light)'; w.style.background='#fff';
+  });
+  document.querySelectorAll('[data-ocond-qtd-wrap]').forEach(w=>w.style.display='none');
+  document.querySelectorAll('[data-ocond-num]').forEach(n=>n.textContent='1');
+}
+
+
+let histCondSel = [];
+let histCondQtds = {};
 
 function histToggleCond(val){
-  const idx = histCondsSel.indexOf(val);
-  if(idx>=0) histCondsSel.splice(idx,1);
-  else histCondsSel.push(val);
-  ['restaurado','canal','coroa','extraido','implante','carie','selante','higido','fratura','outro'].forEach(v=>{
-    const btn = document.getElementById('hist-cond-btn-'+v);
-    if(!btn) return;
-    if(histCondsSel.includes(v)){
-      btn.style.background='var(--rose)'; btn.style.color='#fff'; btn.style.borderColor='var(--rose)';
-    } else {
-      btn.style.background='var(--rose-lighter)'; btn.style.color='var(--rose-text)'; btn.style.borderColor='var(--rose-light)';
-    }
-  });
+  const idx = histCondSel.indexOf(val);
+  const wrap = document.querySelector('[data-hist-cond-wrap="'+val+'"]');
+  const qtdWrap = document.querySelector('[data-hist-cond-qtd-wrap="'+val+'"]');
+  if(idx>=0){
+    histCondSel.splice(idx,1);
+    delete histCondQtds[val];
+    if(wrap){ wrap.style.borderColor='var(--rose-light)'; wrap.style.background='#fff'; }
+    if(qtdWrap) qtdWrap.style.display='none';
+  } else {
+    histCondSel.push(val);
+    histCondQtds[val]=1;
+    if(wrap){ wrap.style.borderColor='var(--rose)'; wrap.style.background='var(--rose-lighter)'; }
+    if(qtdWrap) qtdWrap.style.display='flex';
+  }
+  const inp=document.getElementById('hist-cond-val');
+  if(inp) inp.value=histCondSel.map(v=>v+':'+(histCondQtds[v]||1)).join(',');
 }
+
+function histCondQtd(val,delta){
+  if(!histCondQtds[val]) return;
+  histCondQtds[val]=Math.max(1,(histCondQtds[val]||1)+delta);
+  const num=document.querySelector('[data-hist-cond-num="'+val+'"]');
+  if(num) num.textContent=histCondQtds[val];
+  const inp=document.getElementById('hist-cond-val');
+  if(inp) inp.value=histCondSel.map(v=>v+':'+(histCondQtds[v]||1)).join(',');
+}
+
+let histDentesSel = [];
 
 function histToggleDente(num){
   const idx = histDentesSel.indexOf(num);
@@ -5060,6 +6252,120 @@ function histToggleDente(num){
   if(inp) inp.value=histDentesSel.join(',');
 }
 
+
+// ── HISTÓRICO: PAINEL POR DENTE ──
+let histDentesProc = {}; // { dente: [{cond, qtd}] }
+let histDenteAtual = null;
+let histDenteCondAtual = {}; // condições do dente que está editando
+
+function histAbrirDente(num){
+  histDenteAtual = num;
+  // Carrega condições já salvas para este dente
+  histDenteCondAtual = {};
+  const saved = histDentesProc[num] || [];
+  saved.forEach(s=>{ histDenteCondAtual[s.cond] = s.qtd; });
+
+  document.getElementById('hist-dente-num').textContent = num;
+  document.getElementById('hist-dente-painel').style.display = 'block';
+  document.getElementById('hist-dente-painel').scrollIntoView({behavior:'smooth',block:'nearest'});
+
+  // Atualiza visual dos botões de condição
+  document.querySelectorAll('[data-dcond-wrap]').forEach(w=>{
+    const v = w.dataset.dcondWrap;
+    const qtdWrap = w.querySelector('[data-dcond-qtd-wrap]');
+    const numEl = w.querySelector('[data-dcond-num]');
+    if(histDenteCondAtual[v]){
+      w.style.borderColor='var(--rose)'; w.style.background='var(--rose-lighter)';
+      if(qtdWrap) qtdWrap.style.display='flex';
+      if(numEl) numEl.textContent=histDenteCondAtual[v];
+    } else {
+      w.style.borderColor='var(--rose-light)'; w.style.background='#fff';
+      if(qtdWrap) qtdWrap.style.display='none';
+      if(numEl) numEl.textContent='1';
+    }
+  });
+}
+
+function histDenteToggleCond(val){
+  if(histDenteCondAtual[val]){
+    delete histDenteCondAtual[val];
+  } else {
+    histDenteCondAtual[val] = 1;
+  }
+  const wrap = document.querySelector('[data-dcond-wrap="'+val+'"]');
+  const qtdWrap = document.querySelector('[data-dcond-qtd-wrap="'+val+'"]');
+  if(wrap){
+    if(histDenteCondAtual[val]){
+      wrap.style.borderColor='var(--rose)'; wrap.style.background='var(--rose-lighter)';
+      if(qtdWrap) qtdWrap.style.display='flex';
+    } else {
+      wrap.style.borderColor='var(--rose-light)'; wrap.style.background='#fff';
+      if(qtdWrap) qtdWrap.style.display='none';
+    }
+  }
+}
+
+function histDenteCondQtd(val, delta){
+  if(!histDenteCondAtual[val]) return;
+  histDenteCondAtual[val] = Math.max(1,(histDenteCondAtual[val]||1)+delta);
+  const num = document.querySelector('[data-dcond-num="'+val+'"]');
+  if(num) num.textContent = histDenteCondAtual[val];
+}
+
+function histConfirmarDente(){
+  if(!histDenteAtual) return;
+  const conds = Object.keys(histDenteCondAtual);
+  if(!conds.length){ showToast('Selecione pelo menos uma condição.','warn'); return; }
+
+  // Salva condições do dente
+  histDentesProc[histDenteAtual] = conds.map(c=>({cond:c, qtd:histDenteCondAtual[c]}));
+
+  // Atualiza visual do botão do dente
+  const btn = document.querySelector('[data-hist-dente="'+histDenteAtual+'"]');
+  if(btn){
+    btn.style.background = 'var(--rose)';
+    btn.style.color = '#fff';
+    btn.style.borderColor = 'var(--rose)';
+  }
+
+  // Atualiza badges e hidden input
+  histAtualizarResumo();
+  histFecharDente();
+  showToast('Dente '+histDenteAtual+' registrado!');
+}
+
+function histFecharDente(){
+  document.getElementById('hist-dente-painel').style.display = 'none';
+  histDenteAtual = null;
+  histDenteCondAtual = {};
+}
+
+function histAtualizarResumo(){
+  const sel = document.getElementById('hist-dentes-sel');
+  const inp = document.getElementById('hist-dentes');
+  const dentes = Object.keys(histDentesProc).map(Number).sort((a,b)=>a-b);
+
+  if(sel){
+    sel.innerHTML = dentes.map(d=>{
+      const conds = histDentesProc[d].map(c=>c.cond+':'+c.qtd).join(',');
+      const labels = histDentesProc[d].map(c=>c.cond+(c.qtd>1?'×'+c.qtd:'')).join('+');
+      return '<span onclick="histAbrirDente('+d+')" style="background:var(--rose);color:#fff;border-radius:8px;padding:3px 10px;font-size:12px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:4px;" title="Clique para editar">🦷'+d+' <span style="font-size:10px;opacity:.85;">'+labels+'</span></span>';
+    }).join('');
+  }
+  if(inp) inp.value = dentes.join(',');
+}
+
+function histLimparDentes(){
+  histDentesProc = {};
+  histDenteAtual = null;
+  histDenteCondAtual = {};
+  document.querySelectorAll('[data-hist-dente]').forEach(btn=>{
+    btn.style.background='#fff'; btn.style.color='#3a2020'; btn.style.borderColor='var(--rose-light)';
+  });
+  const sel=document.getElementById('hist-dentes-sel'); if(sel) sel.innerHTML='';
+  const inp=document.getElementById('hist-dentes'); if(inp) inp.value='';
+}
+
 function histLimpar(){
   histDentesSel=[];
   histToggleDente(-1); // reseta visuais
@@ -5067,20 +6373,16 @@ function histLimpar(){
     const el=document.getElementById(id); if(el) el.value='';
   });
   const dd=document.getElementById('hist-data'); if(dd) dd.value=hoje();
-  histCondsSel=[];
-  ['restaurado','canal','coroa','extraido','implante','carie','selante','higido','fratura','outro'].forEach(v=>{
-    const btn=document.getElementById('hist-cond-btn-'+v);
-    if(btn){ btn.style.background='var(--rose-lighter)'; btn.style.color='var(--rose-text)'; btn.style.borderColor='var(--rose-light)'; }
-  });
+  document.querySelectorAll('input[name="hist-cond-cb"]').forEach(cb=>cb.checked=false);
   const sel=document.getElementById('hist-dentes-sel'); if(sel) sel.innerHTML='';
 }
 
 async function histSalvar(pacId){
   const data   = document.getElementById('hist-data')?.value || hoje();
-  const dentesRaw = document.getElementById('hist-dentes')?.value.trim() || '';
-  const conds  = histCondsSel.length ? histCondsSel : ['restaurado'];
+  const dentesRaw = Object.keys(histDentesProc).join(',') || '';
+  const conds  = histCondSel.length ? histCondSel : ['restaurado'];
   const cond   = conds[0];
-  const condsStr = conds.join(',');
+  const condsStr = conds.map(v=>v+':'+(histCondQtds[v]||1)).join(',');
   const proc   = document.getElementById('hist-proc')?.value.trim() || '';
   const obs    = document.getElementById('hist-obs')?.value.trim() || '';
   const profId = document.getElementById('hist-prof')?.value || null;
@@ -5089,9 +6391,11 @@ async function histSalvar(pacId){
   showLoading(true);
   const dentes = dentesRaw ? dentesRaw.split(',').map(d=>parseInt(d.trim())).filter(n=>!isNaN(n)) : [];
   for(const dente of dentes){
+    const denteProcs = histDentesProc[dente] || [{cond,qtd:1}];
+    const condDente = denteProcs[0]?.cond || cond;
     const {data:ex}=await _sb.from('procedimentos_dentes').select('id').eq('clinica_id',clinicaId).eq('paciente_id',pacId).eq('dente',dente).single();
-    if(ex){ await _sb.from('procedimentos_dentes').update({condicao:cond,procedimento:proc,obs,data}).eq('id',ex.id); }
-    else   { await _sb.from('procedimentos_dentes').insert([{clinica_id:clinicaId,paciente_id:pacId,dente,condicao:cond,procedimento:proc,obs,data}]); }
+    if(ex){ await _sb.from('procedimentos_dentes').update({condicao:condDente,procedimento:proc,obs,data}).eq('id',ex.id); }
+    else   { await _sb.from('procedimentos_dentes').insert([{clinica_id:clinicaId,paciente_id:pacId,dente,condicao:condDente,procedimento:proc,obs,data}]); }
   }
   const dentesArr=dentes.map(d=>({dente:d,procedimento:proc,condicao:condsStr}));
   const {error}=await _sb.from('atendimentos_odonto').insert([{
@@ -5125,15 +6429,7 @@ function histRenderLista(pacId){
         <div style="flex:1;min-width:0;">
           <div style="font-size:13px;font-weight:600;color:#3a2020;">${escapeHtml(a.procedimentos)}</div>
           ${a.profissional_nome?`<div style="font-size:11px;color:var(--rose-text);margin-top:2px;">👤 ${escapeHtml(a.profissional_nome)}</div>`:''}
-          ${(()=>{
-            if(!dentes.length) return '';
-            const condLabel = {restaurado:'🔵 Rest.',carie:'🔴 Cárie',canal:'🟡 Canal',coroa:'🔷 Coroa',extraido:'⬜ Ext.',implante:'🟣 Impl.',selante:'🩵 Sel.',fratura:'🟠 Frat.',outro:'⚪ Outro',higido:'⬜ Híg.'};
-            return '<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:6px;">'+dentes.map(d=>{
-              const conds=(d.condicao||'').split(',').filter(Boolean);
-              const condStr=conds.map(c=>condLabel[c]||c).join(' ');
-              return '<span style="background:var(--rose-lighter);color:var(--rose-dark);border-radius:6px;padding:2px 7px;font-size:11px;font-weight:700;">🦷'+d.dente+(condStr?' · '+condStr:'')+'</span>';
-            }).join('')+ '</div>';
-          })()}
+          ${dentes.length?`<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:6px;">${dentes.map(d=>`<span style="background:var(--rose-lighter);color:var(--rose-dark);border-radius:6px;padding:2px 7px;font-size:11px;font-weight:700;">🦷${d.dente}</span>`).join('')}</div>`:''}
           ${a.obs?`<div style="font-size:12px;color:var(--rose-text);margin-top:4px;">${escapeHtml(a.obs)}</div>`:''}
         </div>
         <button class="btn-danger" style="padding:4px 8px;flex-shrink:0;" onclick="pacRemoverProc(${a.id});setTimeout(()=>histRenderLista(${pacId}),300)"><i class="ti ti-trash"></i></button>
@@ -5240,10 +6536,11 @@ async function filtrarResgate(meses){
       <td style="padding:10px;text-align:center;">
         ${temTel
           ? `<div style="display:flex;flex-direction:column;align-items:center;gap:3px;">
-              <button onclick="abrirResgateModal('${escapeHtml(pac.nome)}','${escapeHtml(pac.telefone||'')}','${escapeHtml(ultimoProc)}',${Math.round(mesesAusencia)})" style="background:#25d366;border:none;border-radius:50%;width:38px;height:38px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(37,211,102,.4);" title="Enviar WhatsApp">
+              <button onclick="abrirResgateModal('${escapeHtml(pac.nome)}','${escapeHtml(pac.telefone||'')}','${escapeHtml(ultimoProc)}',${Math.round(mesesAusencia)})"
+                style="background:#25d366;border:none;border-radius:50%;width:38px;height:38px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(37,211,102,.4);" title="Enviar WhatsApp">
                 <i class="ti ti-brand-whatsapp" style="color:#fff;font-size:18px;"></i>
               </button>
-              ${(()=>{const n=escapeHtml(pac.nome);const c=getResgateContador(n);return c>0?'<span style="font-size:10px;color:#856404;font-weight:700;">'+c+'x</span>':'';})()} 
+              '+( getResgateContador(escapeHtml(pac.nome))>0 ? '<span style="font-size:10px;color:#856404;font-weight:700;">'+getResgateContador(escapeHtml(pac.nome))+'x</span>' : '' )+'
             </div>`
           : `<span style="font-size:11px;color:var(--rose-text);">Sem tel.</span>`
         }
@@ -5378,7 +6675,7 @@ function calcValorLiquido(total, forma, parcelas){
   let taxa = 0;
   if(forma==='debito') taxa = taxasCfg.debito || 0;
   else if(forma==='credito'){
-    const idx = [1,2,3,4,5,6,12].indexOf(parcelas);
+    const idx = parcelas - 1;
     taxa = idx>=0 ? (taxasCfg.credito||[])[idx]||0 : 0;
   }
   return parseFloat((total * (1 - taxa/100)).toFixed(2));
