@@ -1632,6 +1632,7 @@ function renderPatientDetail(abaAtiva){
         <button class="pac-tab ${abaAtiva==='plano'?'active':''}" onclick="renderPatientDetail('plano')"><i class="ti ti-clipboard-list"></i> Plano</button>
         <button class="pac-tab ${abaAtiva==='orcamentos'?'active':''}" onclick="renderPatientDetail('orcamentos')"><i class="ti ti-receipt"></i> Orçamentos</button>
         <button class="pac-tab ${abaAtiva==='procs'?'active':''}" onclick="renderPatientDetail('procs')"><i class="ti ti-check"></i> Realizados</button>
+        <button class="pac-tab ${abaAtiva==='termo'?'active':''}" onclick="renderPatientDetail('termo')"><i class="ti ti-file-signature"></i> Termo</button>
       </div>
 
       <!-- ABA: DADOS -->
@@ -2105,6 +2106,41 @@ function renderPatientDetail(abaAtiva){
             </div>
           </div>
           <div id="pac-proc-lista"></div>
+        </div>
+      </div>
+
+      <!-- ABA: TERMO DE CONSENTIMENTO -->
+      <div id="pac-aba-termo" style="display:${abaAtiva==='termo'?'':'none'};">
+        <div style="margin-top:14px;">
+          <div style="border:1.5px solid var(--rose-light);border-radius:12px;padding:18px;background:#fdfaf9;font-size:13px;line-height:1.7;color:#3a2020;">
+            <div style="text-align:center;font-size:14px;font-weight:800;color:var(--rose-dark);text-transform:uppercase;letter-spacing:.5px;margin-bottom:14px;">
+              Termo de Consentimento Livre e Esclarecido para Tratamento Odontológico
+            </div>
+
+            <p style="margin-bottom:10px;">Eu, <strong>${escapeHtml(p.nome)}</strong>${p.cpf?`, portador(a) do CPF nº <strong>${escapeHtml(p.cpf)}</strong>`:''}${p.nascimento?`, nascido(a) em <strong>${formatDate(p.nascimento)}</strong>`:''}, declaro que fui devidamente informado(a), de forma clara e em linguagem acessível, sobre o diagnóstico, o plano de tratamento odontológico proposto, os procedimentos a serem realizados, suas etapas, a duração estimada, os materiais e técnicas empregados, bem como sobre os riscos, benefícios, possíveis complicações, limitações e alternativas de tratamento existentes, incluindo a opção de não realizar o tratamento e suas consequências.</p>
+
+            <p style="margin-bottom:10px;"><strong>1. Consentimento e autonomia.</strong> Declaro que minhas dúvidas foram esclarecidas pelo(a) cirurgião(ã)-dentista responsável e que autorizo, de forma livre, voluntária e esclarecida, a realização dos procedimentos odontológicos indicados no meu plano de tratamento, ciente de que posso solicitar esclarecimentos adicionais, recusar ou interromper o tratamento em qualquer momento, sem que isso implique qualquer penalidade, nos termos da Resolução CFO nº 118/2012 e do Código de Ética Odontológica.</p>
+
+            <p style="margin-bottom:10px;"><strong>2. Riscos e intercorrências.</strong> Estou ciente de que todo procedimento odontológico, ainda que realizado com técnica adequada, pode apresentar riscos inerentes, tais como sensibilidade, dor, sangramento, infecção, reações alérgicas a medicamentos ou materiais, edema, limitações na resposta biológica individual e, em casos específicos, necessidade de retratamento, sem que isso configure, por si só, erro profissional.</p>
+
+            <p style="margin-bottom:10px;"><strong>3. Responsabilidades do paciente.</strong> Comprometo-me a fornecer informações completas e verdadeiras sobre meu histórico de saúde (anamnese), seguir as orientações pós-operatórias e de higiene fornecidas pela equipe, comparecer às consultas de retorno e manutenção agendadas, e comunicar imediatamente qualquer reação adversa, desconforto ou intercorrência.</p>
+
+            <p style="margin-bottom:10px;"><strong>4. Uso de imagens.</strong> Autorizo o registro de fotografias, radiografias e demais documentos referentes ao meu tratamento para fins de prontuário, diagnóstico, acompanhamento clínico e arquivo da clínica, podendo ser utilizados para divulgação de "antes e depois" em redes sociais ou materiais de marketing <strong>somente mediante autorização específica e separada</strong>, conforme o Código de Ética Odontológica (Resolução CFO nº 196/2019).</p>
+
+            <p style="margin-bottom:10px;"><strong>5. Proteção de dados pessoais (LGPD).</strong> Meus dados pessoais e de saúde serão tratados exclusivamente para as finalidades de prestação do atendimento odontológico, elaboração de prontuário, controle financeiro e cumprimento de obrigações legais e regulatórias, em conformidade com a Lei nº 13.709/2018 (Lei Geral de Proteção de Dados Pessoais – LGPD). Os dados serão mantidos sob sigilo profissional, com acesso restrito à equipe envolvida no atendimento, podendo ser conservados pelo prazo exigido pela legislação e pelos conselhos de classe. Tenho direito de acessar, corrigir, solicitar a portabilidade ou, quando aplicável, a exclusão dos meus dados, mediante solicitação à clínica, sem prejuízo de obrigações legais de guarda do prontuário.</p>
+
+            <p style="margin-bottom:10px;"><strong>6. Honorários e condições financeiras.</strong> Declaro estar de acordo com os valores, formas de pagamento e condições financeiras informados e/ou descritos no plano de tratamento e orçamento apresentados, ciente de que alterações no plano de tratamento poderão gerar ajustes nos valores previamente informados.</p>
+
+            <p style="margin-bottom:10px;"><strong>7. Validade.</strong> Este termo é válido para o plano de tratamento atual e procedimentos dele decorrentes, podendo ser complementado por termos específicos para procedimentos que exijam consentimento adicional (cirurgias, uso de sedação, tratamentos estéticos, entre outros).</p>
+
+            <p style="margin-top:14px;">Declaro ter lido e compreendido integralmente este termo, e firmo o presente documento de livre e espontânea vontade.</p>
+
+            <div style="text-align:right;margin-top:14px;font-size:12px;color:var(--rose-text);">
+              ${(clinicaData?.nome_cli)?escapeHtml(clinicaData.nome_cli)+' — ':''}${formatDate(hoje())}
+            </div>
+          </div>
+
+          ${renderTermoSignArea(p.id, p.nome, (profissionais.find(pr=>pr.id==p.termo_consentimento?.profissionalId)?.nome)||'', (profissionais.find(pr=>pr.id==p.termo_consentimento?.profissionalId)?.cro)||'', p.termo_consentimento?.assinaturas||{})}
         </div>
       </div>
 
@@ -5542,6 +5578,82 @@ function renderAnamneseSignArea(pacId, nomePaciente, profNome, profCro, sigExist
   </div>`;
 }
 
+// ── ASSINATURA DIGITAL — TERMO DE CONSENTIMENTO ──
+const assinaturasTermo = {}; // { pacId: { paciente: dataUrl, profissional: dataUrl } }
+
+function abrirAssinaturaPacienteTermo(pacId, nomePaciente){
+  openSignModal(`Assinatura do Paciente — ${nomePaciente}`, (dataUrl)=>{
+    if(!assinaturasTermo[pacId]) assinaturasTermo[pacId] = {};
+    assinaturasTermo[pacId].paciente = dataUrl;
+    showToast('Assinatura do paciente salva!');
+    _refreshTermoSignArea(pacId, nomePaciente);
+    salvarAssinaturasTermo(pacId);
+  });
+}
+
+function abrirAssinaturaProfissionalTermo(pacId, nomePaciente){
+  openSignModal(`Assinatura do Profissional — ${nomePaciente}`, (dataUrl)=>{
+    if(!assinaturasTermo[pacId]) assinaturasTermo[pacId] = {};
+    assinaturasTermo[pacId].profissional = dataUrl;
+    showToast('Assinatura do profissional salva!');
+    _refreshTermoSignArea(pacId, nomePaciente);
+    salvarAssinaturasTermo(pacId);
+  });
+}
+
+function _refreshTermoSignArea(pacId, nomePaciente){
+  const p = pacientes.find(pt=>pt.id===pacId);
+  const prof = profissionais.find(pr=>pr.id==p?.termo_consentimento?.profissionalId);
+  const newHtml = renderTermoSignArea(pacId, nomePaciente, prof?.nome||'', prof?.cro||'');
+  const container = document.getElementById('pac-aba-termo');
+  if(!container) return;
+  const signDiv = container.querySelector('[data-sign-area]');
+  if(signDiv){ signDiv.outerHTML = newHtml; }
+}
+
+async function salvarAssinaturasTermo(pacId){
+  const sigs = assinaturasTermo[pacId] || {};
+  const p = pacientes.find(pt=>pt.id===pacId);
+  if(!p) return;
+  const termo = { ...(p.termo_consentimento||{}), assinaturas: sigs, data: hoje() };
+  showLoading(true);
+  const { error } = await _sb.from('pacientes').update({ termo_consentimento: termo }).eq('id', pacId);
+  showLoading(false);
+  if(error){ showToast('Erro ao salvar assinatura: '+error.message,'error'); return; }
+  p.termo_consentimento = termo;
+  showToast('Assinatura salva!');
+}
+
+function renderTermoSignArea(pacId, nomePaciente, profNome, profCro, sigExist){
+  const sigs = assinaturasTermo[pacId] || sigExist || {};
+  const pacSig = sigs.paciente;
+  const profSig = sigs.profissional;
+
+  return `<div data-sign-area="1" style="border:1.5px solid var(--rose-light);border-radius:12px;padding:14px;margin-top:14px;background:#fdfaf9;">
+    <div style="font-size:12px;font-weight:700;color:var(--rose-dark);margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px;">✍️ Assinaturas do Termo</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+      <div>
+        <div style="font-size:11px;color:var(--rose-text);margin-bottom:6px;">Paciente</div>
+        <div class="sign-preview" style="min-height:60px;">
+          ${pacSig ? `<img src="${pacSig}" style="max-height:55px;"/>` : '<span style="font-size:11px;color:var(--rose-text);">Sem assinatura</span>'}
+        </div>
+        <button class="btn-secondary" style="width:100%;margin-top:6px;font-size:11px;" onclick="abrirAssinaturaPacienteTermo(${pacId},'${escapeHtml(nomePaciente)}')">
+          <i class="ti ti-signature"></i> ${pacSig ? 'Reassinar' : 'Assinar'}
+        </button>
+      </div>
+      <div>
+        <div style="font-size:11px;color:var(--rose-text);margin-bottom:6px;">Profissional</div>
+        <div class="sign-preview" style="min-height:60px;">
+          ${profSig ? `<img src="${profSig}" style="max-height:55px;"/>` : '<span style="font-size:11px;color:var(--rose-text);">Sem assinatura</span>'}
+        </div>
+        <button class="btn-secondary" style="width:100%;margin-top:6px;font-size:11px;" onclick="abrirAssinaturaProfissionalTermo(${pacId},'${escapeHtml(nomePaciente)}')">
+          <i class="ti ti-signature"></i> ${profSig ? 'Reassinar' : 'Assinar'}
+        </button>
+        ${profNome ? `<div style="font-size:10px;color:var(--rose-text);margin-top:4px;text-align:center;">${escapeHtml(profNome)}${profCro?' · '+escapeHtml(profCro):''}</div>` : ''}
+      </div>
+    </div>
+  </div>`;
+}
 
 
 
