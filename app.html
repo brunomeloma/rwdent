@@ -2322,12 +2322,15 @@ function renderPatientDetail(abaAtiva){
                 <input type="hidden" id="hist-dentes"/>
               </div>
               <div class="form-group full">
-                <label>Procedimento realizado</label>
+                <label>Procedimentos realizados</label>
+                <div id="hist-procs-tags" style="display:flex;flex-wrap:wrap;gap:6px;min-height:32px;margin-bottom:8px;"></div>
                 <div style="display:flex;gap:6px;">
-                  <input type="text" id="hist-proc" placeholder="Ex: Restauração em resina, Canal, Limpeza..." style="flex:1;"/>
-                  <button type="button" onclick="histAbrirSelectProc()" style="background:var(--rose);color:#fff;border:none;border-radius:8px;padding:8px 12px;cursor:pointer;font-size:13px;white-space:nowrap;"><i class="ti ti-list"></i> Escolher</button>
+                  <input type="text" id="hist-proc" placeholder="Digite ou escolha..." style="flex:1;" onkeydown="if(event.key==='Enter'){event.preventDefault();histAdicionarProcDigitado();}"/>
+                  <button type="button" onclick="histAdicionarProcDigitado()" style="background:#fff;color:var(--rose-dark);border:1.5px solid var(--rose);border-radius:8px;padding:8px 10px;cursor:pointer;font-size:13px;white-space:nowrap;">+ Add</button>
+                  <button type="button" onclick="histAbrirSelectProc()" style="background:var(--rose);color:#fff;border:none;border-radius:8px;padding:8px 12px;cursor:pointer;font-size:13px;white-space:nowrap;"><i class="ti ti-list"></i> Lista</button>
                 </div>
                 <div id="hist-proc-opcoes" style="display:none;border:1.5px solid var(--rose-light);border-radius:10px;background:#fff;margin-top:6px;max-height:200px;overflow-y:auto;box-shadow:0 4px 16px rgba(0,0,0,.1);"></div>
+                <input type="hidden" id="hist-procs-hidden"/>
               </div>
               <div class="form-group full">
                 <label>Observações</label>
@@ -7138,13 +7141,40 @@ async function histAbrirSelectProc(){
   div.scrollIntoView({behavior:'smooth',block:'nearest'});
 }
 
+let histProcsLista = []; // lista de procedimentos selecionados
+
+function histAdicionarProcDigitado(){
+  const inp = document.getElementById('hist-proc');
+  const val = inp?.value.trim();
+  if(!val) return;
+  if(!histProcsLista.includes(val)) histProcsLista.push(val);
+  inp.value = '';
+  histRenderProcsTags();
+}
+
 function histSelecionarProc(idx){
   const p = procs[idx];
   if(!p) return;
-  const inp = document.getElementById('hist-proc');
-  if(inp){ inp.value = p.nome; inp.dispatchEvent(new Event('input')); }
+  if(!histProcsLista.includes(p.nome)) histProcsLista.push(p.nome);
+  histRenderProcsTags();
   const div = document.getElementById('hist-proc-opcoes');
   if(div) div.style.display='none';
+}
+
+function histRemoverProc(idx){
+  histProcsLista.splice(idx,1);
+  histRenderProcsTags();
+}
+
+function histRenderProcsTags(){
+  const wrap = document.getElementById('hist-procs-tags');
+  const hidden = document.getElementById('hist-procs-hidden');
+  if(wrap) wrap.innerHTML = histProcsLista.map((nome,i)=>`
+    <span style="display:inline-flex;align-items:center;gap:5px;background:var(--rose);color:#fff;border-radius:20px;padding:4px 12px;font-size:12px;font-weight:600;">
+      ${escapeHtml(nome)}
+      <button type="button" onclick="histRemoverProc(${i})" style="background:rgba(255,255,255,.3);border:none;border-radius:50%;width:16px;height:16px;cursor:pointer;color:#fff;font-size:11px;display:flex;align-items:center;justify-content:center;padding:0;line-height:1;">×</button>
+    </span>`).join('');
+  if(hidden) hidden.value = histProcsLista.join(', ');
 }
 
 function histLimparDentes(){
@@ -7160,13 +7190,15 @@ function histLimparDentes(){
 
 function histLimpar(){
   histDentesSel=[];
-  histToggleDente(-1); // reseta visuais
-  ['hist-data','hist-dentes','hist-proc','hist-obs'].forEach(id=>{
+  histProcsLista=[];
+  histToggleDente(-1);
+  ['hist-data','hist-dentes','hist-proc','hist-procs-hidden','hist-obs'].forEach(id=>{
     const el=document.getElementById(id); if(el) el.value='';
   });
   const dd=document.getElementById('hist-data'); if(dd) dd.value=hoje();
   document.querySelectorAll('input[name="hist-cond-cb"]').forEach(cb=>cb.checked=false);
   const sel=document.getElementById('hist-dentes-sel'); if(sel) sel.innerHTML='';
+  const tags=document.getElementById('hist-procs-tags'); if(tags) tags.innerHTML='';
 }
 
 async function histSalvar(pacId){
@@ -7175,7 +7207,7 @@ async function histSalvar(pacId){
   const conds  = histCondSel.length ? histCondSel : ['restaurado'];
   const cond   = conds[0];
   const condsStr = conds.map(v=>v+':'+(histCondQtds[v]||1)).join(',');
-  const proc   = document.getElementById('hist-proc')?.value.trim() || '';
+  const proc   = (document.getElementById('hist-procs-hidden')?.value || document.getElementById('hist-proc')?.value || '').trim();
   const obs    = document.getElementById('hist-obs')?.value.trim() || '';
   const profId = document.getElementById('hist-prof')?.value || null;
   const prof   = profissionais.find(p=>p.id==profId);
