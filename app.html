@@ -7123,18 +7123,15 @@ async function histAbrirSelectProc(){
   const div = document.getElementById('hist-proc-opcoes');
   if(!div) return;
   if(div.style.display !== 'none'){ div.style.display='none'; return; }
-  // Carrega procs em background só se necessário (sem showLoading para não travar tela)
-  if(!procs.length && !_financeiroCarregado){
-    loadFinanceiro(); // sem await — renderiza assim que chegar
-  }
-  _histRenderListaProcs('');
   div.style.display='block';
   div.scrollIntoView({behavior:'smooth',block:'nearest'});
-  // Filtra ao digitar
-  const inp = document.getElementById('hist-proc');
-  if(inp){
-    inp.oninput = ()=> _histRenderListaProcs(inp.value);
+  if(!procs.length && !_financeiroCarregado){
+    div.innerHTML='<div style="padding:12px;font-size:13px;color:var(--rose-text);">Carregando...</div>';
+    await loadFinanceiro();
   }
+  _histRenderListaProcs(document.getElementById('hist-proc')?.value||'');
+  const inp = document.getElementById('hist-proc');
+  if(inp) inp.oninput = ()=> _histRenderListaProcs(inp.value);
 }
 
 function _histRenderListaProcs(filtro){
