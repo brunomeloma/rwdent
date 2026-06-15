@@ -7123,22 +7123,34 @@ async function histAbrirSelectProc(){
   const div = document.getElementById('hist-proc-opcoes');
   if(!div) return;
   if(div.style.display !== 'none'){ div.style.display='none'; return; }
+  // Carrega procs em background só se necessário (sem showLoading para não travar tela)
   if(!procs.length && !_financeiroCarregado){
-    showLoading(true);
-    await loadFinanceiro();
-    showLoading(false);
+    loadFinanceiro(); // sem await — renderiza assim que chegar
   }
-  if(!procs.length){
-    div.innerHTML='<div style="padding:12px;font-size:13px;color:var(--rose-text);">Nenhum procedimento cadastrado.<br>Cadastre em Financeiro → Procedimentos.</div>';
-  } else {
-    div.innerHTML = procs.map((p,i)=>`
-      <button type="button" onclick="histSelecionarProc(${i})"
-        style="display:block;width:100%;text-align:left;padding:11px 14px;border:none;border-bottom:1px solid var(--rose-lighter);background:#fff;font-size:13px;cursor:pointer;color:#3a2020;-webkit-tap-highlight-color:rgba(0,0,0,.08);">
-        ${escapeHtml(p.nome)}
-      </button>`).join('');
-  }
+  _histRenderListaProcs('');
   div.style.display='block';
   div.scrollIntoView({behavior:'smooth',block:'nearest'});
+  // Filtra ao digitar
+  const inp = document.getElementById('hist-proc');
+  if(inp){
+    inp.oninput = ()=> _histRenderListaProcs(inp.value);
+  }
+}
+
+function _histRenderListaProcs(filtro){
+  const div = document.getElementById('hist-proc-opcoes');
+  if(!div || div.style.display==='none') return;
+  const f = (filtro||'').toLowerCase();
+  const lista = procs.filter(p=> !f || p.nome.toLowerCase().includes(f));
+  if(!lista.length){
+    div.innerHTML='<div style="padding:12px;font-size:13px;color:var(--rose-text);">'+(procs.length?'Nenhum resultado.':'Nenhum procedimento cadastrado.')+'</div>';
+    return;
+  }
+  div.innerHTML = lista.map((p,i)=>`
+    <button type="button" onclick="histSelecionarProc(${procs.indexOf(p)})"
+      style="display:block;width:100%;text-align:left;padding:11px 14px;border:none;border-bottom:1px solid var(--rose-lighter);background:#fff;font-size:13px;cursor:pointer;color:#3a2020;-webkit-tap-highlight-color:rgba(0,0,0,.08);">
+      ${escapeHtml(p.nome)}
+    </button>`).join('');
 }
 
 let histProcsLista = []; // lista de procedimentos selecionados
