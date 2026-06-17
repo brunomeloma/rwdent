@@ -4030,7 +4030,13 @@ function injetarNovosMatsOrto(){
     {"id": 169, "nome": "Braquete Autoligado Estético Kit", "cat": "Ortodontia", "unid": "kit", "qtde": 1, "preco": 980, "custo": 980},
     {"id": 170, "nome": "Alinhador Invisalign (jogo completo)", "cat": "Ortodontia", "unid": "kit", "qtde": 1, "preco": 4500, "custo": 4500},
     {"id": 171, "nome": "Refinamento Invisalign", "cat": "Ortodontia", "unid": "kit", "qtde": 1, "preco": 800, "custo": 800},
-    {"id": 172, "nome": "Escaneamento 3D (iTero/similar)", "cat": "Ortodontia", "unid": "unid", "qtde": 1, "preco": 300, "custo": 300}
+    {"id": 172, "nome": "Escaneamento 3D (iTero/similar)", "cat": "Ortodontia", "unid": "unid", "qtde": 1, "preco": 300, "custo": 300},
+    {"id": 173, "nome": "Braquete Metálico Tradicional (peça avulsa)", "cat": "Ortodontia", "unid": "unid", "qtde": 1, "preco": 9.45, "custo": 9.45},
+    {"id": 174, "nome": "Braquete Cerâmico (peça avulsa)", "cat": "Ortodontia", "unid": "unid", "qtde": 1, "preco": 21.00, "custo": 21.00},
+    {"id": 175, "nome": "Braquete Autoligado Metálico (peça avulsa)", "cat": "Ortodontia", "unid": "unid", "qtde": 1, "preco": 16.00, "custo": 16.00},
+    {"id": 176, "nome": "Braquete Porcelana (peça avulsa)", "cat": "Ortodontia", "unid": "unid", "qtde": 1, "preco": 37.50, "custo": 37.50},
+    {"id": 177, "nome": "Braquete Safira (peça avulsa)", "cat": "Ortodontia", "unid": "unid", "qtde": 1, "preco": 44.50, "custo": 44.50},
+    {"id": 178, "nome": "Braquete Autoligado Estético (peça avulsa)", "cat": "Ortodontia", "unid": "unid", "qtde": 1, "preco": 49.00, "custo": 49.00}
   ];
   // Procedimentos de instalação/manutenção de aparelho. IDs na faixa 200+ para nunca
   // colidir com DEFAULT_PROCS_FIN (1-102) nem com os materiais (91-172).
@@ -4050,7 +4056,13 @@ function injetarNovosMatsOrto(){
     {"id": 211, "nome": "Manutenção Aparelho Estético Autoligado", "grupo": "Ortodontia", "tempo": 30, "insumos": 0, "horaClin": 0, "laboratorio": 0, "margem": 150, "precoFinal": 0, "tipo_cobranca": "global"},
     {"id": 212, "nome": "Manutenção Aparelho Metálico Tradicional", "grupo": "Ortodontia", "tempo": 30, "insumos": 0, "horaClin": 0, "laboratorio": 0, "margem": 150, "precoFinal": 0, "tipo_cobranca": "global"},
     {"id": 213, "nome": "Manutenção Aparelho Metálico Autoligado", "grupo": "Ortodontia", "tempo": 30, "insumos": 0, "horaClin": 0, "laboratorio": 0, "margem": 150, "precoFinal": 0, "tipo_cobranca": "global"},
-    {"id": 214, "nome": "Manutenção Invisalign (refinamento)", "grupo": "Ortodontia", "tempo": 30, "insumos": 0, "horaClin": 0, "laboratorio": 0, "margem": 100, "precoFinal": 0, "tipo_cobranca": "global"}
+    {"id": 214, "nome": "Manutenção Invisalign (refinamento)", "grupo": "Ortodontia", "tempo": 30, "insumos": 0, "horaClin": 0, "laboratorio": 0, "margem": 100, "precoFinal": 0, "tipo_cobranca": "global"},
+    {"id": 215, "nome": "Recolagem Braquete Metálico Tradicional", "grupo": "Ortodontia", "tempo": 20, "insumos": 0, "horaClin": 0, "laboratorio": 0, "margem": 150, "precoFinal": 0, "tipo_cobranca": "global"},
+    {"id": 216, "nome": "Recolagem Braquete Cerâmico", "grupo": "Ortodontia", "tempo": 20, "insumos": 0, "horaClin": 0, "laboratorio": 0, "margem": 150, "precoFinal": 0, "tipo_cobranca": "global"},
+    {"id": 217, "nome": "Recolagem Braquete Autoligado Metálico", "grupo": "Ortodontia", "tempo": 20, "insumos": 0, "horaClin": 0, "laboratorio": 0, "margem": 150, "precoFinal": 0, "tipo_cobranca": "global"},
+    {"id": 218, "nome": "Recolagem Braquete Porcelana", "grupo": "Ortodontia", "tempo": 20, "insumos": 0, "horaClin": 0, "laboratorio": 0, "margem": 150, "precoFinal": 0, "tipo_cobranca": "global"},
+    {"id": 219, "nome": "Recolagem Braquete Safira", "grupo": "Ortodontia", "tempo": 20, "insumos": 0, "horaClin": 0, "laboratorio": 0, "margem": 150, "precoFinal": 0, "tipo_cobranca": "global"},
+    {"id": 220, "nome": "Recolagem Braquete Autoligado Estético", "grupo": "Ortodontia", "tempo": 20, "insumos": 0, "horaClin": 0, "laboratorio": 0, "margem": 150, "precoFinal": 0, "tipo_cobranca": "global"}
   ];
   // Receita de insumos por procedimento — mesmo padrão usado nos procedimentos já
   // existentes "Instalação Aparelho Metálico" (id 43) e "Instalação Aparelho Autoligado
@@ -4070,7 +4082,16 @@ function injetarNovosMatsOrto(){
     211: [{matId:77,qtd:0.3},{matId:8,qtd:1},{matId:34,qtd:1}],
     212: [{matId:78,qtd:0.3},{matId:8,qtd:1},{matId:34,qtd:1}],
     213: [{matId:78,qtd:0.3},{matId:8,qtd:1},{matId:34,qtd:1}],
-    214: [{matId:171,qtd:1},{matId:8,qtd:1},{matId:34,qtd:1}]
+    214: [{matId:171,qtd:1},{matId:8,qtd:1},{matId:34,qtd:1}],
+    // Recolagem: 1 peça avulsa (kit ÷ 20) + um pouco de adesivo + EPI mínimo.
+    // NUNCA usar o kit inteiro (matId 43/44/45/167/168/169) aqui — isso cobraria o
+    // paciente pelo aparelho completo de novo. A peça avulsa é o material certo.
+    215: [{matId:173,qtd:1},{matId:48,qtd:0.05},{matId:8,qtd:1},{matId:34,qtd:1}], // Metálico Tradicional
+    216: [{matId:174,qtd:1},{matId:48,qtd:0.05},{matId:8,qtd:1},{matId:34,qtd:1}], // Cerâmico
+    217: [{matId:175,qtd:1},{matId:48,qtd:0.05},{matId:8,qtd:1},{matId:34,qtd:1}], // Autoligado Metálico
+    218: [{matId:176,qtd:1},{matId:48,qtd:0.05},{matId:8,qtd:1},{matId:34,qtd:1}], // Porcelana
+    219: [{matId:177,qtd:1},{matId:48,qtd:0.05},{matId:8,qtd:1},{matId:34,qtd:1}], // Safira
+    220: [{matId:178,qtd:1},{matId:48,qtd:0.05},{matId:8,qtd:1},{matId:34,qtd:1}]  // Autoligado Estético
   };
   // Custo de laboratório (alinhador Invisalign é fabricado fora — não é "insumo" de estoque
   // consumido na consulta, é encomendado por caso, então entra como laboratório).
