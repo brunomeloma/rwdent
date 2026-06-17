@@ -1962,18 +1962,27 @@ function renderLista(){
     return true;
   });
   if(!lista.length){ container.innerHTML='<div class="empty"><i class="ti ti-calendar-off" style="font-size:32px;display:block;margin-bottom:10px;opacity:.35"></i>Nenhum agendamento encontrado.</div>'; return; }
-  container.innerHTML=lista.map(a=>`
+  container.innerHTML=lista.map(a=>{
+    const status = (a.status||'').toLowerCase();
+    const statusBadge = status==='faltou'
+      ? '<span class="fin-badge danger" style="font-size:9px;margin-left:6px;">NÃO VEIO</span>'
+      : status==='compareceu'
+      ? '<span class="fin-badge ok" style="font-size:9px;margin-left:6px;">COMPARECEU</span>'
+      : '';
+    return `
     <div class="appt-item">
       <div class="appt-time">${a.horario||'--:--'}<small>${formatDate(a.data)}</small></div>
       <div class="appt-info">
-        <div class="name">${escapeHtml(a.nome)}</div>
+        <div class="name">${escapeHtml(a.nome)} ${statusBadge}</div>
         <div class="detail">${escapeHtml(a.procedimento||'Consulta')} · ${escapeHtml(a.prof_nome)} · ${escapeHtml(a.telefone||'Sem telefone')}</div>
       </div>
       <span class="appt-badge badge-main">${escapeHtml((a.prof_nome||'').split(' ')[0])}</span>
+      <button class="btn-secondary" style="padding:6px 10px;background:${status==='compareceu'?'#2e7d32':'#fff'};color:${status==='compareceu'?'#fff':'#2e7d32'};border-color:#2e7d32;" onclick="calMarcarPresenca(${a.id},'compareceu')" title="Marcar que veio"><i class="ti ti-check"></i></button>
+      <button class="btn-secondary" style="padding:6px 10px;background:${status==='faltou'?'#dc2626':'#fff'};color:${status==='faltou'?'#fff':'#dc2626'};border-color:#dc2626;" onclick="calMarcarPresenca(${a.id},'faltou')" title="Marcar que não veio"><i class="ti ti-x"></i></button>
       ${a.telefone ? `<button class="btn-secondary" style="padding:6px 10px;background:#25d366;color:#fff;border-color:#25d366;" onclick="enviarConfirmacaoWpp('${escapeHtml(a.telefone)}','${escapeHtml(a.nome)}','${a.data}','${a.horario}','${escapeHtml(a.procedimento||'Consulta')}')" title="Confirmar via WhatsApp"><i class="ti ti-brand-whatsapp"></i></button>` : ''}
       <button class="btn-danger" onclick="removerAgendamento(${a.id})"><i class="ti ti-trash"></i></button>
     </div>
-  `).join('');
+  `;}).join('');
 }
 
 async function removerAgendamento(id){
@@ -4224,90 +4233,119 @@ function pacOdontoSelecionarProc(id){
 
 // ── Injeta novos materiais e procedimentos de ortodontia ──
 function injetarNovosMatsOrto(){
-  // ── MIGRAÇÃO / LIMPEZA — corrige dados que já estão salvos no Supabase de versões
-  // anteriores: remove procedimentos duplicados (201/205/206 duplicavam 44/43/51) e
-  // atualiza nomes/grupos antigos para a nomenclatura padronizada atual, sem perder
-  // preço, insumos ou margem que o usuário já tenha ajustado.
-  const IDS_DUPLICADOS_REMOVER = [201, 205, 206];
+  // ── MIGRAÇÃO / LIMPEZA TOTAL — dados salvos no Supabase de versões anteriores tinham
+  // nomes levemente diferentes (com/sem "Mensal", com/sem hífen) que IMPEDIAM a detecção
+  // de duplicatas por nome exato. Esta versão identifica cada procedimento pela
+  // COMBINAÇÃO categoria+tipo de aparelho (via palavras-chave no nome, não nome exato),
+  // o que é robusto a qualquer variação de escrita já salva.
   let migrou = false;
-  IDS_DUPLICADOS_REMOVER.forEach(id=>{
-    const idx = procs.findIndex(p=>p.id===id);
-    if(idx>=0){ procs.splice(idx,1); delete procInsumos[id]; migrou=true; }
-  });
-  const RENOMEAR = {
-    37: {nome:"Instalação de Aparelho Fixo (genérico)", grupo:"Ortodontia - Instalação"},
-    38: {nome:"Manutenção Mensal Ortodôntica (genérica)", grupo:"Ortodontia - Manutenção Mensal"},
-    43: {nome:"Instalação Aparelho Metálico Tradicional", grupo:"Ortodontia - Instalação"},
-    44: {nome:"Instalação Aparelho Estético Cerâmico", grupo:"Ortodontia - Instalação"},
-    45: {nome:"Manutenção Mensal — Troca de Fio (genérica)", grupo:"Ortodontia - Manutenção Mensal"},
-    46: {nome:"Recolagem (peça quebrada) — Genérica", grupo:"Ortodontia - Recolagem"},
-    51: {nome:"Instalação Aparelho Metálico Autoligado", grupo:"Ortodontia - Instalação"},
-    202:{nome:"Instalação Aparelho Estético Porcelana", grupo:"Ortodontia - Instalação"},
-    203:{nome:"Instalação Aparelho Estético Safira", grupo:"Ortodontia - Instalação"},
-    204:{nome:"Instalação Aparelho Estético Autoligado", grupo:"Ortodontia - Instalação"},
-    207:{nome:"Instalação Invisalign (tratamento completo)", grupo:"Ortodontia - Instalação"},
-    208:{nome:"Manutenção Mensal — Aparelho Estético Cerâmico", grupo:"Ortodontia - Manutenção Mensal"},
-    209:{nome:"Manutenção Mensal — Aparelho Estético Porcelana", grupo:"Ortodontia - Manutenção Mensal"},
-    210:{nome:"Manutenção Mensal — Aparelho Estético Safira", grupo:"Ortodontia - Manutenção Mensal"},
-    211:{nome:"Manutenção Mensal — Aparelho Estético Autoligado", grupo:"Ortodontia - Manutenção Mensal"},
-    212:{nome:"Manutenção Mensal — Aparelho Metálico Tradicional", grupo:"Ortodontia - Manutenção Mensal"},
-    213:{nome:"Manutenção Mensal — Aparelho Metálico Autoligado", grupo:"Ortodontia - Manutenção Mensal"},
-    214:{nome:"Manutenção Mensal — Invisalign (refinamento)", grupo:"Ortodontia - Manutenção Mensal"},
-    215:{nome:"Recolagem (peça quebrada) — Metálico Tradicional", grupo:"Ortodontia - Recolagem"},
-    216:{nome:"Recolagem (peça quebrada) — Cerâmico", grupo:"Ortodontia - Recolagem"},
-    217:{nome:"Recolagem (peça quebrada) — Metálico Autoligado", grupo:"Ortodontia - Recolagem"},
-    218:{nome:"Recolagem (peça quebrada) — Porcelana", grupo:"Ortodontia - Recolagem"},
-    219:{nome:"Recolagem (peça quebrada) — Safira", grupo:"Ortodontia - Recolagem"},
-    220:{nome:"Recolagem (peça quebrada) — Autoligado Estético", grupo:"Ortodontia - Recolagem"},
-  };
-  Object.entries(RENOMEAR).forEach(([id,info])=>{
-    const p = procs.find(x=>x.id===Number(id));
-    if(p && (p.nome!==info.nome || p.grupo!==info.grupo)){
-      p.nome = info.nome; p.grupo = info.grupo; migrou = true;
-    }
-  });
 
-  // Remove duplicatas por NOME dentro de qualquer grupo de Ortodontia (cobre tanto os
-  // grupos já padronizados quanto o grupo genérico antigo "Ortodontia", caso o usuário
-  // tenha recriado manualmente um procedimento que já existia com nome igual/parecido).
-  // Mantém a entrada mais "completa" (maior precoFinal, mais provável de estar com
-  // insumos/margem corretos) e descarta as outras.
-  (function removerDuplicatasPorNome(){
-    const porNome = {};
+  // Detecta a categoria do procedimento
+  function detectarCategoria(nome){
+    const n = nome.toLowerCase();
+    if(/recolagem/.test(n)) return 'recolagem';
+    if(/manuten/.test(n)) return 'manutencao';
+    if(/instala/.test(n) || /tratamento invisalign/.test(n)) return 'instalacao';
+    return null;
+  }
+  // Detecta o tipo de aparelho do procedimento
+  function detectarTipo(nome){
+    const n = nome.toLowerCase();
+    if(/invisalign/.test(n)) return 'invisalign';
+    if(/safira/.test(n)) return 'safira';
+    if(/porcelana/.test(n)) return 'porcelana';
+    if(/autoligado.*est|est.*autoligado/.test(n)) return 'autoligado_estetico';
+    if(/cer[aâ]mico/.test(n)) return 'ceramico';
+    if(/autoligado.*met|met.*autoligado/.test(n)) return 'autoligado_metalico';
+    if(/met[aá]lico/.test(n) || /fio ortod[oô]ntico/i.test(nome)) return 'metalico_tradicional';
+    return 'generico';
+  }
+
+  // IDs canônicos fixos por categoria+tipo — sempre os mesmos, para nunca duplicar de novo
+  const ID_CANONICO = {
+    'instalacao|ceramico': 44, 'instalacao|porcelana': 202, 'instalacao|safira': 203,
+    'instalacao|autoligado_estetico': 204, 'instalacao|metalico_tradicional': 43,
+    'instalacao|autoligado_metalico': 51, 'instalacao|invisalign': 207, 'instalacao|generico': 37,
+    'manutencao|ceramico': 208, 'manutencao|porcelana': 209, 'manutencao|safira': 210,
+    'manutencao|autoligado_estetico': 211, 'manutencao|metalico_tradicional': 212,
+    'manutencao|autoligado_metalico': 213, 'manutencao|invisalign': 214, 'manutencao|generico': 38,
+    'recolagem|ceramico': 216, 'recolagem|porcelana': 218, 'recolagem|safira': 219,
+    'recolagem|autoligado_estetico': 220, 'recolagem|metalico_tradicional': 215,
+    'recolagem|autoligado_metalico': 217, 'recolagem|generico': 46,
+  };
+  const NOMES_CANONICOS = {
+    37:"Instalação de Aparelho Fixo (genérico)", 38:"Manutenção Mensal Ortodôntica (genérica)",
+    43:"Instalação Aparelho Metálico Tradicional", 44:"Instalação Aparelho Estético Cerâmico",
+    46:"Recolagem (peça quebrada) — Genérica", 51:"Instalação Aparelho Metálico Autoligado",
+    202:"Instalação Aparelho Estético Porcelana", 203:"Instalação Aparelho Estético Safira",
+    204:"Instalação Aparelho Estético Autoligado", 207:"Instalação Invisalign (tratamento completo)",
+    208:"Manutenção Mensal — Aparelho Estético Cerâmico", 209:"Manutenção Mensal — Aparelho Estético Porcelana",
+    210:"Manutenção Mensal — Aparelho Estético Safira", 211:"Manutenção Mensal — Aparelho Estético Autoligado",
+    212:"Manutenção Mensal — Aparelho Metálico Tradicional", 213:"Manutenção Mensal — Aparelho Metálico Autoligado",
+    214:"Manutenção Mensal — Invisalign (refinamento)",
+    215:"Recolagem (peça quebrada) — Metálico Tradicional", 216:"Recolagem (peça quebrada) — Cerâmico",
+    217:"Recolagem (peça quebrada) — Metálico Autoligado", 218:"Recolagem (peça quebrada) — Porcelana",
+    219:"Recolagem (peça quebrada) — Safira", 220:"Recolagem (peça quebrada) — Autoligado Estético",
+  };
+  const GRUPOS_CANONICOS = {
+    instalacao:'Ortodontia - Instalação', manutencao:'Ortodontia - Manutenção Mensal', recolagem:'Ortodontia - Recolagem',
+  };
+
+  (function migrarEDeduplicar(){
+    const baldes = {}; // chave "categoria|tipo" -> lista de procs que caem nela
     procs.forEach(p=>{
-      if(!/^Ortodontia/.test(p.grupo||'')) return;
-      const chave = p.nome.trim().toLowerCase();
-      if(!porNome[chave]) porNome[chave] = [];
-      porNome[chave].push(p);
+      const cat = detectarCategoria(p.nome);
+      if(!cat) return; // não é ortodontia de instalação/manutenção/recolagem — não toca
+      const tipo = detectarTipo(p.nome);
+      const chave = cat+'|'+tipo;
+      if(!baldes[chave]) baldes[chave] = [];
+      baldes[chave].push(p);
     });
-    const idsCanonicos = new Set(Object.keys(RENOMEAR).map(Number));
-    Object.values(porNome).forEach(lista=>{
-      if(lista.length<2) return;
-      migrou = true;
-      // Prioriza manter o ID "canônico" (já conhecido pelo sistema, em RENOMEAR) — assim
-      // o procedimento continua existindo com o mesmo ID e não é "recriado" como novo
-      // pelo passo seguinte. Em caso de empate/nenhum canônico, mantém o de maior preço.
+
+    Object.entries(baldes).forEach(([chave, lista])=>{
+      const idCanon = ID_CANONICO[chave];
+      if(idCanon===undefined) return;
+      // Escolhe a "melhor" entrada: a que já está no ID canônico, senão a de maior preço
       lista.sort((a,b)=>{
-        const aCan = idsCanonicos.has(a.id) ? 1 : 0;
-        const bCan = idsCanonicos.has(b.id) ? 1 : 0;
+        const aCan = a.id===idCanon ? 1 : 0;
+        const bCan = b.id===idCanon ? 1 : 0;
         if(aCan!==bCan) return bCan-aCan;
         return (b.precoFinal||0)-(a.precoFinal||0);
       });
-      const manter = lista[0];
-      lista.slice(1).forEach(dup=>{
-        // Se a duplicata descartada tem mais informação preenchida (insumos/preço maior
-        // que zero) do que a que vamos manter, herda os valores dela antes de descartar —
-        // assim não perdemos um ajuste que o usuário tenha feito na duplicata "errada".
-        if((dup.precoFinal||0) > (manter.precoFinal||0)){
-          manter.insumos = dup.insumos; manter.horaClin = dup.horaClin;
-          manter.laboratorio = dup.laboratorio; manter.margem = dup.margem;
-          manter.precoFinal = dup.precoFinal; manter.tempo = dup.tempo;
-          if(procInsumos[dup.id] && procInsumos[dup.id].length) procInsumos[manter.id] = procInsumos[dup.id];
+      const melhor = lista[0];
+      // Coleta os melhores dados entre TODAS as duplicatas (maior precoFinal>0 e insumos vinculados)
+      let dadosFinais = { insumos:melhor.insumos, horaClin:melhor.horaClin, laboratorio:melhor.laboratorio, margem:melhor.margem, precoFinal:melhor.precoFinal, tempo:melhor.tempo };
+      let melhorInsumosId = melhor.id;
+      lista.forEach(p=>{
+        if((p.precoFinal||0) > (dadosFinais.precoFinal||0)){
+          dadosFinais = { insumos:p.insumos, horaClin:p.horaClin, laboratorio:p.laboratorio, margem:p.margem, precoFinal:p.precoFinal, tempo:p.tempo };
+          melhorInsumosId = p.id;
         }
-        const idx = procs.findIndex(x=>x===dup);
-        if(idx>=0) procs.splice(idx,1);
-        if(dup.id!==manter.id) delete procInsumos[dup.id];
       });
+      const melhorReceita = procInsumos[melhorInsumosId];
+
+      // Remove TODAS as entradas dessa categoria+tipo do array de procs
+      lista.forEach(p=>{
+        const idx = procs.findIndex(x=>x===p);
+        if(idx>=0) procs.splice(idx,1);
+        if(p.id!==idCanon) delete procInsumos[p.id];
+      });
+      // Recria UMA única entrada limpa, no ID canônico, com nome/grupo padronizados e os
+      // melhores dados encontrados entre as duplicatas
+      procs.push({
+        id: idCanon,
+        nome: NOMES_CANONICOS[idCanon] || melhor.nome,
+        grupo: GRUPOS_CANONICOS[chave.split('|')[0]],
+        tempo: dadosFinais.tempo || melhor.tempo || 30,
+        insumos: dadosFinais.insumos || 0,
+        horaClin: dadosFinais.horaClin || 0,
+        laboratorio: dadosFinais.laboratorio || 0,
+        margem: dadosFinais.margem || 100,
+        precoFinal: dadosFinais.precoFinal || 0,
+        tipo_cobranca: 'global'
+      });
+      if(melhorReceita && melhorReceita.length) procInsumos[idCanon] = melhorReceita;
+      migrou = true;
     });
   })();
 
@@ -7795,11 +7833,27 @@ function _histRenderListaProcs(filtro){
     div.innerHTML='<div style="padding:12px;font-size:13px;color:var(--rose-text);">'+(procs.length?'Nenhum resultado.':'Nenhum procedimento cadastrado.')+'</div>';
     return;
   }
-  div.innerHTML = lista.map((p,i)=>`
-    <button type="button" onclick="histSelecionarProc(${procs.indexOf(p)})"
-      style="display:block;width:100%;text-align:left;padding:11px 14px;border:none;border-bottom:1px solid var(--rose-lighter);background:#fff;font-size:13px;cursor:pointer;color:#3a2020;-webkit-tap-highlight-color:rgba(0,0,0,.08);">
-      ${escapeHtml(p.nome)}
-    </button>`).join('');
+  const grupos = [...new Set(lista.map(p=>p.grupo).filter(Boolean))].sort();
+  let html = '';
+  grupos.forEach(g=>{
+    html += `<div style="padding:4px 10px;font-size:10px;font-weight:700;color:var(--rose-text);text-transform:uppercase;background:var(--rose-lighter);position:sticky;top:0;">${escapeHtml(g)}</div>`;
+    lista.filter(p=>p.grupo===g).forEach(p=>{
+      const preco = (p.precoFinal||0).toFixed(2).replace('.',',');
+      html += `<button type="button" onclick="histSelecionarProc(${procs.indexOf(p)})"
+        style="display:flex;justify-content:space-between;gap:8px;width:100%;text-align:left;padding:11px 14px;border:none;border-bottom:1px solid var(--rose-lighter);background:#fff;font-size:13px;cursor:pointer;color:#3a2020;-webkit-tap-highlight-color:rgba(0,0,0,.08);">
+        <span>${escapeHtml(p.nome)}</span><span style="color:var(--rose-dark);font-weight:700;white-space:nowrap;">R$ ${preco}</span>
+      </button>`;
+    });
+  });
+  // Procedimentos sem grupo (fallback) ficam por último, sem cabeçalho
+  lista.filter(p=>!p.grupo).forEach(p=>{
+    const preco = (p.precoFinal||0).toFixed(2).replace('.',',');
+    html += `<button type="button" onclick="histSelecionarProc(${procs.indexOf(p)})"
+      style="display:flex;justify-content:space-between;gap:8px;width:100%;text-align:left;padding:11px 14px;border:none;border-bottom:1px solid var(--rose-lighter);background:#fff;font-size:13px;cursor:pointer;color:#3a2020;">
+      <span>${escapeHtml(p.nome)}</span><span style="color:var(--rose-dark);font-weight:700;white-space:nowrap;">R$ ${preco}</span>
+    </button>`;
+  });
+  div.innerHTML = html;
 }
 
 let histProcsLista = []; // lista de procedimentos selecionados
