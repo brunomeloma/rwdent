@@ -1810,7 +1810,7 @@ function renderHomeStats(){
   const hoje_count = agendamentos.filter(a=>a.data===hoje_str).length;
   const semana_end = new Date(); semana_end.setDate(semana_end.getDate()+7);
   const semana_count = agendamentos.filter(a=>a.data>=hoje_str && a.data<=semana_end.toISOString().slice(0,10)).length;
-  const confirmadas = agendamentos.filter(a=>a.data===hoje_str && (a.status||'').toLowerCase()==='confirmado').length;
+  const confirmadas = agendamentos.filter(a=>a.data===hoje_str && (agGetStatus(a)||'').toLowerCase()==='confirmado').length;
 
   document.getElementById('home-stats').innerHTML = `
     <div class="home-stat-card">
@@ -1844,7 +1844,7 @@ function renderHomeStats(){
       todayEl.innerHTML = todayAgs.map(a=>{
         const pac = pacientes.find(p=>p.id===a.paciente_id);
         const nome = pac ? pac.nome : (a.nome_paciente||'—');
-        const st = (a.status||'pendente').toLowerCase();
+        const st = (agGetStatus(a)||'pendente').toLowerCase();
         const badgeCls = st.includes('confirm') ? 'confirmada' : st.includes('complet') ? 'completada' : 'pendente';
         const badgeTxt = st.includes('confirm') ? 'Confirmada' : st.includes('complet') ? 'Completada' : 'Pendente';
         return `<div class="home-table-row">
@@ -1963,7 +1963,7 @@ function renderLista(){
   });
   if(!lista.length){ container.innerHTML='<div class="empty"><i class="ti ti-calendar-off" style="font-size:32px;display:block;margin-bottom:10px;opacity:.35"></i>Nenhum agendamento encontrado.</div>'; return; }
   container.innerHTML=lista.map(a=>{
-    const status = (a.status||'').toLowerCase();
+    const status = (agGetStatus(a)||'').toLowerCase();
     const statusBadge = status==='faltou'
       ? '<span class="fin-badge danger" style="font-size:9px;margin-left:6px;">NÃO VEIO</span>'
       : status==='compareceu'
@@ -3004,7 +3004,7 @@ function calOpenEvent(e, id){
   if(!a) return;
   const prof=profissionais.find(p=>p.id===a.prof_id);
   const bg=document.getElementById('cal-modal-bg');
-  const status = (a.status||'').toLowerCase();
+  const status = (agGetStatus(a)||'').toLowerCase();
   const statusBadge = status==='faltou'
     ? '<span class="fin-badge danger" style="font-size:10px;">NÃO VEIO</span>'
     : status==='compareceu'
@@ -3034,14 +3034,35 @@ function calOpenEvent(e, id){
   bg.classList.add('show');
 }
 
+// Status do agendamento (compareceu/faltou) é guardado dentro da coluna "obs" (já
+// existente), num marcador — a tabela "agendamentos" não tem coluna "status".
+const AG_STATUS_INICIO = '<!--AGSTATUS:';
+const AG_STATUS_FIM = ':AGSTATUS-->';
+function agParseObs(obsRaw){
+  const raw = obsRaw||'';
+  const i = raw.indexOf(AG_STATUS_INICIO);
+  const j = raw.indexOf(AG_STATUS_FIM);
+  if(i===-1||j===-1||j<i) return { texto: raw, status: '' };
+  const status = raw.slice(i+AG_STATUS_INICIO.length, j);
+  const texto = (raw.slice(0,i)+raw.slice(j+AG_STATUS_FIM.length)).trim();
+  return { texto, status };
+}
+function agBuildObs(texto, status){
+  const t = (texto||'').trim();
+  if(!status) return t;
+  return t + (t?'\n':'') + AG_STATUS_INICIO + status + AG_STATUS_FIM;
+}
+function agGetStatus(a){ return agParseObs(a.obs).status; }
+
 async function calMarcarPresenca(id, status){
   const a = agendamentos.find(x=>x.id===id);
   if(!a) return;
   showLoading(true);
-  const { error } = await _sb.from('agendamentos').update({ status }).eq('id', id);
+  const novoObs = agBuildObs(agParseObs(a.obs).texto, status);
+  const { error } = await _sb.from('agendamentos').update({ obs: novoObs }).eq('id', id);
   showLoading(false);
   if(error){ showToast('Erro: '+error.message,'error'); return; }
-  a.status = status;
+  a.obs = novoObs;
   document.getElementById('cal-modal-bg').classList.remove('show');
   renderCalendario(); renderLista(); renderHomeStats();
   if(status==='compareceu'){
@@ -4290,6 +4311,11 @@ function injetarNovosMatsOrto(){
   const GRUPOS_CANONICOS = {
     instalacao:'Ortodontia - Instalação', manutencao:'Ortodontia - Manutenção Mensal', recolagem:'Ortodontia - Recolagem',
   };
+  // Preços de mercado (pesquisados) usados como fallback quando a fusão de duplicatas
+  // resultar em precoFinal zerado (ex: todas as cópias salvas tinham 0 por bug anterior).
+  const PRECO_MERCADO_FALLBACK = {
+    208: 130, 209: 160, 210: 220, 211: 190, 212: 90, 213: 115, 214: 300,
+  };
 
   (function migrarEDeduplicar(){
     const baldes = {}; // chave "categoria|tipo" -> lista de procs que caem nela
@@ -4331,7 +4357,8 @@ function injetarNovosMatsOrto(){
         if(p.id!==idCanon) delete procInsumos[p.id];
       });
       // Recria UMA única entrada limpa, no ID canônico, com nome/grupo padronizados e os
-      // melhores dados encontrados entre as duplicatas
+      // melhores dados encontrados entre as duplicatas. Se mesmo assim o preço ficar
+      // zerado, usa o valor de mercado calibrado (PRECO_MERCADO_FALLBACK).
       procs.push({
         id: idCanon,
         nome: NOMES_CANONICOS[idCanon] || melhor.nome,
@@ -4341,7 +4368,7 @@ function injetarNovosMatsOrto(){
         horaClin: dadosFinais.horaClin || 0,
         laboratorio: dadosFinais.laboratorio || 0,
         margem: dadosFinais.margem || 100,
-        precoFinal: dadosFinais.precoFinal || 0,
+        precoFinal: dadosFinais.precoFinal>0 ? dadosFinais.precoFinal : (PRECO_MERCADO_FALLBACK[idCanon] || 0),
         tipo_cobranca: 'global'
       });
       if(melhorReceita && melhorReceita.length) procInsumos[idCanon] = melhorReceita;
@@ -4405,13 +4432,13 @@ function injetarNovosMatsOrto(){
     {"id": 207, "nome": "Instalação Invisalign (tratamento completo)", "grupo": "Ortodontia - Instalação", "tempo": 60, "insumos": 0, "horaClin": 0, "laboratorio": 0, "margem": 100, "precoFinal": 0, "tipo_cobranca": "global"},
     // Manutenção mensal por tipo — nome sempre começa com "Manutenção Mensal —" para nunca
     // ser confundido com Recolagem na busca do orçamento
-    {"id": 208, "nome": "Manutenção Mensal — Aparelho Estético Cerâmico", "grupo": "Ortodontia - Manutenção Mensal", "tempo": 30, "insumos": 0, "horaClin": 0, "laboratorio": 0, "margem": 150, "precoFinal": 0, "tipo_cobranca": "global"},
-    {"id": 209, "nome": "Manutenção Mensal — Aparelho Estético Porcelana", "grupo": "Ortodontia - Manutenção Mensal", "tempo": 30, "insumos": 0, "horaClin": 0, "laboratorio": 0, "margem": 150, "precoFinal": 0, "tipo_cobranca": "global"},
-    {"id": 210, "nome": "Manutenção Mensal — Aparelho Estético Safira", "grupo": "Ortodontia - Manutenção Mensal", "tempo": 30, "insumos": 0, "horaClin": 0, "laboratorio": 0, "margem": 150, "precoFinal": 0, "tipo_cobranca": "global"},
-    {"id": 211, "nome": "Manutenção Mensal — Aparelho Estético Autoligado", "grupo": "Ortodontia - Manutenção Mensal", "tempo": 30, "insumos": 0, "horaClin": 0, "laboratorio": 0, "margem": 150, "precoFinal": 0, "tipo_cobranca": "global"},
-    {"id": 212, "nome": "Manutenção Mensal — Aparelho Metálico Tradicional", "grupo": "Ortodontia - Manutenção Mensal", "tempo": 30, "insumos": 0, "horaClin": 0, "laboratorio": 0, "margem": 150, "precoFinal": 0, "tipo_cobranca": "global"},
-    {"id": 213, "nome": "Manutenção Mensal — Aparelho Metálico Autoligado", "grupo": "Ortodontia - Manutenção Mensal", "tempo": 30, "insumos": 0, "horaClin": 0, "laboratorio": 0, "margem": 150, "precoFinal": 0, "tipo_cobranca": "global"},
-    {"id": 214, "nome": "Manutenção Mensal — Invisalign (refinamento)", "grupo": "Ortodontia - Manutenção Mensal", "tempo": 30, "insumos": 0, "horaClin": 0, "laboratorio": 0, "margem": 100, "precoFinal": 0, "tipo_cobranca": "global"},
+    {"id": 208, "nome": "Manutenção Mensal — Aparelho Estético Cerâmico", "grupo": "Ortodontia - Manutenção Mensal", "tempo": 30, "insumos": 0, "horaClin": 0, "laboratorio": 0, "margem": 150, "precoFinal": 130, "tipo_cobranca": "global"},
+    {"id": 209, "nome": "Manutenção Mensal — Aparelho Estético Porcelana", "grupo": "Ortodontia - Manutenção Mensal", "tempo": 30, "insumos": 0, "horaClin": 0, "laboratorio": 0, "margem": 150, "precoFinal": 160, "tipo_cobranca": "global"},
+    {"id": 210, "nome": "Manutenção Mensal — Aparelho Estético Safira", "grupo": "Ortodontia - Manutenção Mensal", "tempo": 30, "insumos": 0, "horaClin": 0, "laboratorio": 0, "margem": 150, "precoFinal": 220, "tipo_cobranca": "global"},
+    {"id": 211, "nome": "Manutenção Mensal — Aparelho Estético Autoligado", "grupo": "Ortodontia - Manutenção Mensal", "tempo": 30, "insumos": 0, "horaClin": 0, "laboratorio": 0, "margem": 150, "precoFinal": 190, "tipo_cobranca": "global"},
+    {"id": 212, "nome": "Manutenção Mensal — Aparelho Metálico Tradicional", "grupo": "Ortodontia - Manutenção Mensal", "tempo": 30, "insumos": 0, "horaClin": 0, "laboratorio": 0, "margem": 150, "precoFinal": 90, "tipo_cobranca": "global"},
+    {"id": 213, "nome": "Manutenção Mensal — Aparelho Metálico Autoligado", "grupo": "Ortodontia - Manutenção Mensal", "tempo": 30, "insumos": 0, "horaClin": 0, "laboratorio": 0, "margem": 150, "precoFinal": 115, "tipo_cobranca": "global"},
+    {"id": 214, "nome": "Manutenção Mensal — Invisalign (refinamento)", "grupo": "Ortodontia - Manutenção Mensal", "tempo": 30, "insumos": 0, "horaClin": 0, "laboratorio": 0, "margem": 100, "precoFinal": 300, "tipo_cobranca": "global"},
     // Recolagem (peça quebrada/perdida) por tipo — nome sempre começa com "Recolagem (peça quebrada) —"
     {"id": 215, "nome": "Recolagem (peça quebrada) — Metálico Tradicional", "grupo": "Ortodontia - Recolagem", "tempo": 20, "insumos": 0, "horaClin": 0, "laboratorio": 0, "margem": 150, "precoFinal": 0, "tipo_cobranca": "global"},
     {"id": 216, "nome": "Recolagem (peça quebrada) — Cerâmico", "grupo": "Ortodontia - Recolagem", "tempo": 20, "insumos": 0, "horaClin": 0, "laboratorio": 0, "margem": 150, "precoFinal": 0, "tipo_cobranca": "global"},
@@ -4479,16 +4506,18 @@ function injetarNovosMatsOrto(){
   if(alterou){
     nextMatId = Math.max(...mats.map(m=>m.id))+1;
     nextProcId = Math.max(...procs.map(p=>p.id))+1;
-    // Calcula insumos (R$), hora clínica e preço final SÓ dos procedimentos novos
-    // (precoFinal===0, recém-criados acima) — nunca toca em procedimentos que o
-    // usuário já tinha e possa ter personalizado manualmente.
+    // Calcula insumos (R$) e hora clínica de todos os procedimentos novos. Para o preço
+    // final, usa o valor calibrado por pesquisa de mercado já definido em NOVOS_PROCS
+    // (quando > 0); só recorre ao cálculo automático por insumos+margem quando o
+    // procedimento não tiver um preço de mercado pré-definido (precoFinal:0 no array).
+    // Nunca toca em procedimentos que o usuário já tinha e possa ter personalizado.
     NOVOS_PROCS.forEach(np=>{
       const p = procs.find(x=>x.id===np.id);
       if(!p || p.precoFinal>0) return;
       const ins = procInsumos[p.id]||[];
       p.insumos = parseFloat(ins.reduce((acc,item)=>{const m=mats.find(x=>x.id===item.matId);return acc+(m?m.custo*item.qtd:0);},0).toFixed(2));
       p.horaClin = parseFloat(((p.tempo/60)*calcHora()).toFixed(2));
-      p.precoFinal = calcPrecoFinal(p);
+      p.precoFinal = np.precoFinal>0 ? np.precoFinal : calcPrecoFinal(p);
     });
     saveFinanceiro();
   }
@@ -7996,10 +8025,10 @@ function renderResgateFaltas(){
   // Pega faltas dos últimos 60 dias. Se o paciente já tem um agendamento futuro marcado
   // (reagendou), não precisa mais aparecer aqui em destaque.
   const faltas = agendamentos.filter(a=>{
-    if((a.status||'').toLowerCase()!=='faltou') return false;
+    if((agGetStatus(a)||'').toLowerCase()!=='faltou') return false;
     const d = new Date(a.data+'T00:00:00');
     if(d < limite60) return false;
-    const jaReagendou = agendamentos.some(b=>b.paciente_id && b.paciente_id===a.paciente_id && b.id!==a.id && b.data > a.data && (b.status||'').toLowerCase()!=='faltou');
+    const jaReagendou = agendamentos.some(b=>b.paciente_id && b.paciente_id===a.paciente_id && b.id!==a.id && b.data > a.data && (agGetStatus(b)||'').toLowerCase()!=='faltou');
     return !jaReagendou;
   }).sort((a,b)=>b.data.localeCompare(a.data));
 
