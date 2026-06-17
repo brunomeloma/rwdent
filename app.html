@@ -4195,34 +4195,34 @@ function fioConfirmar(){
 // Preços das peças por tipo de aparelho
 const PECAS_ORTO = {
   'ceramico':   [
-    {id:'bq',nome:'Braquete Cerâmico',preco:45},
+    {id:'bq',nome:'Braquete Cerâmico',preco:50},
     {id:'arc',nome:'Arco',preco:30},
     {id:'lig',nome:'Ligadura Estética',preco:5},
     {id:'tub',nome:'Tubo Molar',preco:35},
     {id:'banda',nome:'Banda Molar',preco:40},
   ],
   'porcelana':  [
-    {id:'bq',nome:'Braquete Porcelana',preco:55},
+    {id:'bq',nome:'Braquete Porcelana',preco:90},
     {id:'arc',nome:'Arco',preco:30},
     {id:'lig',nome:'Ligadura',preco:5},
     {id:'tub',nome:'Tubo Molar',preco:35},
     {id:'banda',nome:'Banda Molar',preco:40},
   ],
   'safira':     [
-    {id:'bq',nome:'Braquete Safira',preco:75},
+    {id:'bq',nome:'Braquete Safira',preco:110},
     {id:'arc',nome:'Arco',preco:30},
     {id:'lig',nome:'Ligadura',preco:5},
     {id:'tub',nome:'Tubo Molar',preco:35},
     {id:'banda',nome:'Banda Molar',preco:40},
   ],
   'autoligado_estetico': [
-    {id:'bq',nome:'Braquete Autoligado Estético',preco:95},
+    {id:'bq',nome:'Braquete Autoligado Estético',preco:120},
     {id:'arc',nome:'Arco',preco:35},
     {id:'tub',nome:'Tubo Molar Autoligado',preco:45},
     {id:'banda',nome:'Banda Molar',preco:40},
   ],
   'metalico_tradicional': [
-    {id:'bq',nome:'Braquete Metálico',preco:20},
+    {id:'bq',nome:'Braquete Metálico',preco:25},
     {id:'arc',nome:'Arco',preco:25},
     {id:'lig',nome:'Ligadura Metálica',preco:3},
     {id:'tub',nome:'Tubo Molar',preco:25},
@@ -4230,7 +4230,7 @@ const PECAS_ORTO = {
     {id:'mola',nome:'Mola de Abertura',preco:30},
   ],
   'metalico_autoligado': [
-    {id:'bq',nome:'Braquete Autoligado Metálico',preco:45},
+    {id:'bq',nome:'Braquete Autoligado Metálico',preco:40},
     {id:'arc',nome:'Arco',preco:25},
     {id:'tub',nome:'Tubo Molar Autoligado',preco:35},
     {id:'banda',nome:'Banda Molar',preco:35},
@@ -4257,6 +4257,113 @@ const MANUT_PRECOS = {
 let manutTipoAtual = 'metalico_tradicional';
 let manutPecasSel = {}; // {id: qtd}
 let manutCallback = null;
+
+// ── Modal "Recolagem de Braquete" — peça avulsa com preço por tipo de aparelho ──
+let recolProcAtual = null;
+let recolTipoAtual = 'metalico_tradicional';
+let recolPecasSel = {}; // {id: qtd}
+
+function abrirModalRecolagem(proc){
+  recolProcAtual = proc;
+  recolTipoAtual = 'metalico_tradicional';
+  recolPecasSel = {};
+  const sel = document.getElementById('recol-tipo');
+  if(sel) sel.value = recolTipoAtual;
+  recolAtualizarPecas();
+  openModal('modal-recolagem');
+}
+
+function recolAtualizarPecas(){
+  recolTipoAtual = document.getElementById('recol-tipo')?.value || 'metalico_tradicional';
+  recolPecasSel = {};
+  recolRenderPecas();
+  recolCalcTotal();
+}
+
+function recolRenderPecas(){
+  const pecas = PECAS_ORTO[recolTipoAtual]||[];
+  const el = document.getElementById('recol-pecas-btns');
+  if(!el) return;
+  el.innerHTML = pecas.map(p=>`
+    <button type="button" onclick="recolTogglePeca('${p.id}')"
+      data-recol-peca="${p.id}"
+      style="padding:6px 12px;border:2px solid var(--rose-light);border-radius:8px;background:#fff;cursor:pointer;font-size:12px;font-weight:600;">
+      ${p.nome} <span style="color:var(--rose-dark);">+R$${p.preco}</span>
+    </button>`).join('');
+}
+
+function recolTogglePeca(id){
+  const pecas = PECAS_ORTO[recolTipoAtual]||[];
+  const p = pecas.find(x=>x.id===id);
+  if(!p) return;
+  recolPecasSel[id] = (recolPecasSel[id]||0) + 1;
+  const btn = document.querySelector(`[data-recol-peca="${id}"]`);
+  if(btn){
+    btn.style.borderColor='var(--rose)';
+    btn.style.background='var(--rose-lighter)';
+    const spanExtra = '<span style="color:var(--rose-dark);">+R$'+(p.preco*recolPecasSel[id])+'</span>';
+    const spanX = '<span onclick="event.stopPropagation();recolRemovePeca(\''+id+'\')" style="cursor:pointer;color:#dc2626;font-size:14px;">✕</span>';
+    btn.innerHTML = p.nome+' ×'+recolPecasSel[id]+' '+spanExtra+' '+spanX;
+  }
+  recolCalcTotal();
+}
+
+function recolRemovePeca(id){
+  delete recolPecasSel[id];
+  const pecas = PECAS_ORTO[recolTipoAtual]||[];
+  const p = pecas.find(x=>x.id===id);
+  const btn = document.querySelector(`[data-recol-peca="${id}"]`);
+  if(btn && p){
+    btn.style.borderColor='var(--rose-light)';
+    btn.style.background='#fff';
+    btn.innerHTML = p.nome+' <span style="color:var(--rose-dark);">+R$'+p.preco+'</span>';
+  }
+  recolCalcTotal();
+}
+
+function recolCalcTotal(){
+  const base = recolProcAtual ? (recolProcAtual.precoFinal||0) : 0;
+  const pecas = PECAS_ORTO[recolTipoAtual]||[];
+  let extra = 0;
+  Object.entries(recolPecasSel).forEach(([id,qtd])=>{
+    const p = pecas.find(x=>x.id===id);
+    if(p) extra += p.preco*qtd;
+  });
+  const total = base + extra;
+  const fmt = v => 'R$ '+v.toFixed(2).replace('.',',');
+  const elBase = document.getElementById('recol-val-base'); if(elBase) elBase.textContent = fmt(base);
+  const elPecas = document.getElementById('recol-val-pecas'); if(elPecas) elPecas.textContent = fmt(extra);
+  const elTotal = document.getElementById('recol-val-total'); if(elTotal) elTotal.textContent = fmt(total);
+}
+
+function recolConfirmar(){
+  if(!recolProcAtual) return;
+  const pecas = PECAS_ORTO[recolTipoAtual]||[];
+  let extra = 0;
+  const pecasDesc = [];
+  Object.entries(recolPecasSel).forEach(([id,qtd])=>{
+    const p = pecas.find(x=>x.id===id);
+    if(p){ extra += p.preco*qtd; pecasDesc.push(p.nome+' ×'+qtd); }
+  });
+  const base = recolProcAtual.precoFinal||0;
+  const total = parseFloat((base+extra).toFixed(2));
+  const labelTipo = {
+    ceramico:'Estético Cerâmico', porcelana:'Estético Porcelana', safira:'Estético Safira',
+    autoligado_estetico:'Estético Autoligado', metalico_tradicional:'Metálico Tradicional',
+    metalico_autoligado:'Metálico Autoligado', invisalign:'Invisalign',
+  }[recolTipoAtual] || recolTipoAtual;
+  const nomeItem = recolProcAtual.nome + ' — ' + labelTipo + (pecasDesc.length ? ' ('+pecasDesc.join(', ')+')' : '');
+
+  if(typeof pacOdontoOrcList === 'undefined' || !pacOdontoOrcList) pacOdontoOrcList = [];
+  pacOdontoOrcList.push({
+    procId: recolProcAtual.id, nome: nomeItem, precoUnit: total, qtd: 1,
+    dentes: '', tipo: 'global', total: total
+  });
+
+  closeModal('modal-recolagem');
+  pacOdontoRenderOrcLista();
+  showToast(nomeItem+' adicionado — Total: '+'R$ '+total.toFixed(2).replace('.',','));
+}
 
 
 function abrirManutModal(){
@@ -4786,7 +4893,6 @@ async function saveMat(){
   closeModal('modal-mat');
   renderMats(); renderEstoque();
   recalcularInsumos(true);
-  recalcularInsumos(true);
   renderProcs();
   showToast('Material salvo! Custos atualizados.');
 }
@@ -5045,7 +5151,7 @@ async function saveInsumos(){
   renderProcs(); renderEstoque();
   showToast('Insumos salvos!');
 }
-function recalcularInsumos(silent){
+async function recalcularInsumos(silent){
   // Só recalcula insumos e horaClin — NÃO sobrescreve precoFinal (pode ter sido editado manualmente)
   let atualizados=0;
   procs.forEach(p=>{
@@ -5059,7 +5165,13 @@ function recalcularInsumos(silent){
     // No carregamento (silent=true), preserva o preço salvo
     if(!silent) p.precoFinal=calcPrecoFinal(p);
   });
-  if(!silent) showToast(atualizados>0?`${atualizados} procedimento(s) atualizados.`:'Custos já atualizados.');
+  renderProcs();
+  if(!silent){
+    showLoading(true);
+    await saveFinanceiro();
+    showLoading(false);
+    showToast(atualizados>0?`${atualizados} procedimento(s) atualizados.`:'Custos já atualizados.');
+  }
 }
 
 // ── VENDAS ──
@@ -6169,6 +6281,13 @@ function pacOdontoAddOrc(){
     // Abre o dropdown para ajudar
     pacOdontoFiltrarProcs();
     document.getElementById('pac-odonto-orc-dropdown').style.display='block';
+    return;
+  }
+
+  // Recolagem de braquete tem preço variável conforme o tipo de aparelho do paciente —
+  // abre o modal de seleção em vez de adicionar direto com o preço fixo do procedimento.
+  if(/recolagem/i.test(proc.nome) && /braquete|aparelho/i.test(proc.nome)){
+    abrirModalRecolagem(proc);
     return;
   }
 
@@ -7870,11 +7989,52 @@ async function calSaveNewAppt(){
   </div>
 </div>
 
+<!-- Modal Recolagem/Quebra de Peça — preço varia conforme o tipo de aparelho do paciente -->
+<div class="modal-overlay" id="modal-recolagem" onclick="if(event.target===this)closeModal('modal-recolagem')">
+  <div class="modal-box">
+    <h2 class="modal-title"><i class="ti ti-puzzle"></i> Recolagem / Peça Quebrada</h2>
+    <p style="font-size:12px;color:var(--rose-text);margin-bottom:12px;">Escolha o tipo de aparelho do paciente — o valor da peça já vem ajustado conforme o material.</p>
+    <div class="form-group">
+      <label>Tipo de aparelho do paciente</label>
+      <select id="recol-tipo" onchange="recolAtualizarPecas()">
+        <option value="metalico_tradicional">Metálico Tradicional</option>
+        <option value="metalico_autoligado">Metálico Autoligado</option>
+        <option value="ceramico">Estético Cerâmico</option>
+        <option value="porcelana">Estético Porcelana</option>
+        <option value="safira">Estético Safira</option>
+        <option value="autoligado_estetico">Estético Autoligado</option>
+        <option value="invisalign">Invisalign</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Peça(s) perdida(s) ou quebrada(s)</label>
+      <div id="recol-pecas-btns" style="display:flex;flex-wrap:wrap;gap:8px;"></div>
+    </div>
+    <div id="recol-pecas-sel" style="margin-top:4px;display:flex;flex-wrap:wrap;gap:6px;"></div>
+    <div style="background:var(--rose-lighter);border-radius:10px;padding:12px;margin-top:12px;">
+      <div style="display:flex;justify-content:space-between;font-size:13px;">
+        <span>Recolagem (consulta base)</span><span id="recol-val-base">R$ 0,00</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:13px;color:#dc2626;">
+        <span>Peças</span><span id="recol-val-pecas">R$ 0,00</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:15px;font-weight:800;margin-top:8px;border-top:1px solid var(--rose-light);padding-top:8px;">
+        <span>Total</span><span id="recol-val-total" style="color:var(--rose-dark);">R$ 0,00</span>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="closeModal('modal-recolagem')">Cancelar</button>
+      <button class="btn-primary" onclick="recolConfirmar()"><i class="ti ti-check"></i> Adicionar ao orçamento</button>
+    </div>
+  </div>
+</div>
+
 <datalist id="unid-list">
   <option value="ml"/><option value="grama"/><option value="g"/><option value="kg"/>
   <option value="unid"/><option value="m"/><option value="cm"/><option value="kit"/>
   <option value="caixa"/><option value="frasco"/><option value="seringa"/><option value="ampola"/>
 </datalist>
+
 
 
 <!-- ══ MODAL ASSINATURA ══ -->
