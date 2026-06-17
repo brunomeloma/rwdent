@@ -1114,6 +1114,14 @@ button{font-family:inherit;}
           <h2><i class="ti ti-heart-handshake"></i> Resgate de Pacientes</h2>
         </div>
         <p style="font-size:13px;color:var(--rose-text);margin-bottom:16px;">Pacientes que não retornam há algum tempo. Clique no WhatsApp para enviar uma mensagem personalizada.</p>
+
+        <!-- Faltas recentes (prioridade alta — agendamentos marcados como "Não veio") -->
+        <div id="resgate-faltas-section" style="display:none;margin-bottom:20px;">
+          <h3 style="font-size:13px;font-weight:700;color:#dc2626;margin-bottom:10px;display:flex;align-items:center;gap:6px;"><i class="ti ti-calendar-x"></i> Faltaram recentemente — remarcar com prioridade</h3>
+          <div id="resgate-faltas-tbody" style="display:flex;flex-direction:column;gap:8px;"></div>
+          <hr style="border-color:var(--rose-light);margin:18px 0;"/>
+        </div>
+
         <!-- Filtros -->
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px;" id="resgate-filtros">
           <button class="btn-primary" data-meses="1" onclick="filtrarResgate(1)">1 Mês</button>
@@ -2594,7 +2602,8 @@ function renderPatientDetail(abaAtiva){
                 <div style="position:relative;margin-bottom:6px;">
                   <input type="text" id="pac-odonto-orc-search" placeholder="🔍 Pesquisar procedimento..." oninput="pacOdontoFiltrarProcs()" onfocus="pacOdontoFiltrarProcs();document.getElementById('pac-odonto-orc-dropdown').style.display='block'" onblur="setTimeout(()=>{const d=document.getElementById('pac-odonto-orc-dropdown');if(d)d.style.display='none'},350)"
                     style="width:100%;padding:10px 12px;border:1.5px solid var(--rose-light);border-radius:10px;font-size:13px;box-sizing:border-box;background:#fff;"/>
-                  <div id="pac-odonto-orc-dropdown" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:1.5px solid var(--rose-light);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.15);z-index:200;max-height:200px;overflow-y:auto;margin-top:2px;">
+                  <div id="pac-odonto-orc-dropdown" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:1.5px solid var(--rose-light);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.15);z-index:200;max-height:260px;overflow-y:auto;margin-top:2px;">
+                    <div id="pac-odonto-orc-chips" style="display:flex;gap:6px;padding:8px;flex-wrap:wrap;border-bottom:1px solid var(--rose-light);position:sticky;top:0;background:#fff;"></div>
                     <div id="pac-odonto-orc-opts"></div>
                   </div>
                 </div>
@@ -2986,16 +2995,26 @@ function calOpenEvent(e, id){
   if(!a) return;
   const prof=profissionais.find(p=>p.id===a.prof_id);
   const bg=document.getElementById('cal-modal-bg');
+  const status = (a.status||'').toLowerCase();
+  const statusBadge = status==='faltou'
+    ? '<span class="fin-badge danger" style="font-size:10px;">NÃO VEIO</span>'
+    : status==='compareceu'
+    ? '<span class="fin-badge ok" style="font-size:10px;">COMPARECEU</span>'
+    : '';
   bg.innerHTML=`<div class="cal-modal" onclick="event.stopPropagation()">
     <div class="cal-modal-head" style="background:${a.prof_cor||'var(--rose)'};">
       <div class="mh-time"><i class="ti ti-clock"></i> ${a.horario} · ${formatDate(a.data)}</div>
-      <div class="mh-name">${escapeHtml(a.nome)}</div>
+      <div class="mh-name">${escapeHtml(a.nome)} ${statusBadge}</div>
     </div>
     <div class="cal-modal-body">
       <div class="row"><i class="ti ti-stethoscope"></i><span>${escapeHtml(a.procedimento||'Consulta')}</span></div>
       <div class="row"><i class="ti ti-user-check"></i><span>${escapeHtml(a.prof_nome)}</span></div>
       <div class="row"><i class="ti ti-phone"></i><span>${escapeHtml(a.telefone||'Sem telefone')}</span></div>
       ${a.obs?`<div class="row"><i class="ti ti-notes"></i><span>${escapeHtml(a.obs)}</span></div>`:''}
+      <div style="display:flex;gap:8px;margin-top:14px;">
+        <button class="btn-secondary" style="flex:1;background:${status==='compareceu'?'#2e7d32':'#fff'};color:${status==='compareceu'?'#fff':'#2e7d32'};border-color:#2e7d32;" onclick="calMarcarPresenca(${a.id},'compareceu')"><i class="ti ti-check"></i> Veio</button>
+        <button class="btn-secondary" style="flex:1;background:${status==='faltou'?'#dc2626':'#fff'};color:${status==='faltou'?'#fff':'#dc2626'};border-color:#dc2626;" onclick="calMarcarPresenca(${a.id},'faltou')"><i class="ti ti-x"></i> Não veio</button>
+      </div>
     </div>
     <div class="cal-modal-foot">
       <button class="btn-danger" onclick="calRemoveFromModal(${a.id})"><i class="ti ti-trash"></i> Remover</button>
@@ -3004,6 +3023,48 @@ function calOpenEvent(e, id){
     </div>
   </div>`;
   bg.classList.add('show');
+}
+
+async function calMarcarPresenca(id, status){
+  const a = agendamentos.find(x=>x.id===id);
+  if(!a) return;
+  showLoading(true);
+  const { error } = await _sb.from('agendamentos').update({ status }).eq('id', id);
+  showLoading(false);
+  if(error){ showToast('Erro: '+error.message,'error'); return; }
+  a.status = status;
+  document.getElementById('cal-modal-bg').classList.remove('show');
+  renderCalendario(); renderLista(); renderHomeStats();
+  if(status==='compareceu'){
+    showToast(a.nome+' marcado como compareceu. ✅');
+    return;
+  }
+  // Faltou — evita perder o paciente: abre direto a mensagem de reagendamento pronta,
+  // e marca para aparecer destacado na aba Resgate até ser remarcado.
+  showToast(a.nome+' marcado como não veio.','warn');
+  if(a.telefone){
+    abrirResgateModalFalta(a.nome, a.telefone, a.procedimento||'Consulta');
+  } else {
+    showToast('Sem telefone cadastrado para reagendar — adicione o contato no cadastro do paciente.','warn');
+  }
+}
+
+function gerarMensagemFalta(nome, proc){
+  const clinica = clinicaData?.nome_cli || 'nossa clínica';
+  const tipo = classificarTratamento(proc);
+  const msgsFalta = {
+    ortodontia: `Olá, ${nome}! 😊 Notamos que você não pôde vir à sua manutenção do aparelho hoje na ${clinica}. Sem problemas! Vamos remarcar para não atrasar seu tratamento? Me conta um horário melhor pra você que eu já encaixo! 📅🦷`,
+    geral: `Olá, ${nome}! 😊 Notamos que você não pôde vir à sua consulta hoje na ${clinica}. Sem problemas, essas coisas acontecem! Vamos remarcar para um novo dia? Me conta um horário melhor pra você que eu já encaixo! 📅`,
+  };
+  return msgsFalta[tipo] || msgsFalta.geral;
+}
+
+function abrirResgateModalFalta(nome, tel, proc){
+  resgateModalTel = tel;
+  document.getElementById('resgate-modal-nome').textContent = nome;
+  document.getElementById('resgate-modal-msg').value = gerarMensagemFalta(nome, proc);
+  const bg = document.getElementById('resgate-modal-bg');
+  if(bg) bg.style.display = 'flex';
 }
 
 function calCloseEvent(e){ if(e.target.id==='cal-modal-bg') document.getElementById('cal-modal-bg').classList.remove('show'); }
@@ -4006,7 +4067,7 @@ const fmtN2  = v => isNaN(v)?'—':Number(v).toLocaleString('pt-BR',{minimumFrac
 // ── Estado financeiro (salvo no Supabase por clínica) ──
 let procs       = [];   // procedimentos com precificação
 // Materiais que são "kit completo" (20 peças) — nunca usar em procedimentos de recolagem
-const MAT_IDS_KIT_COMPLETO = new Set([43,44,45,117,118,119,120,121,122,167,168,169,170]);
+const MAT_IDS_KIT_COMPLETO = new Set([43,44,45,167,168,169,170]);
 // Materiais que são "peça avulsa" (1 unidade, calculada como kit/20) — usar em recolagem
 const MAT_IDS_PECA_AVULSA  = new Set([173,174,175,176,177,178]);
 // IDs de procedimento que são "Recolagem" — mostram o aviso e priorizam peça avulsa na busca
@@ -4099,11 +4160,33 @@ function dentesParaProcedimento(procNome){
 
 let pacOdontoOrcSelProc = null;
 
+let pacOdontoOrcCategoriaAtiva = '';
+const PAC_ODONTO_CATEGORIAS_RAPIDAS = [
+  {label:'Todos', grupo:''},
+  {label:'Instalação', grupo:'Ortodontia - Instalação'},
+  {label:'Manutenção Mensal', grupo:'Ortodontia - Manutenção Mensal'},
+  {label:'Recolagem', grupo:'Ortodontia - Recolagem'},
+];
+
+function pacOdontoSetCategoria(grupo){
+  pacOdontoOrcCategoriaAtiva = grupo;
+  pacOdontoFiltrarProcs();
+}
+
 function pacOdontoFiltrarProcs(){
   var q=(document.getElementById("pac-odonto-orc-search")||{value:""}).value.toLowerCase().trim();
   var opts=document.getElementById("pac-odonto-orc-opts");
+  var chipsEl=document.getElementById("pac-odonto-orc-chips");
+  if(chipsEl){
+    chipsEl.innerHTML = PAC_ODONTO_CATEGORIAS_RAPIDAS.map(c=>{
+      const ativo = pacOdontoOrcCategoriaAtiva===c.grupo;
+      return `<button type="button" onmousedown="event.preventDefault();pacOdontoSetCategoria('${c.grupo}')" style="padding:4px 10px;border-radius:14px;border:1.5px solid ${ativo?'var(--rose)':'var(--rose-light)'};background:${ativo?'var(--rose-lighter)':'#fff'};color:var(--rose-dark);font-size:11px;font-weight:600;cursor:pointer;">${c.label}</button>`;
+    }).join('');
+  }
   if(!opts) return;
-  var lista=q?procs.filter(function(p){return p.nome.toLowerCase().includes(q);}):procs;
+  var lista = procs;
+  if(pacOdontoOrcCategoriaAtiva) lista = lista.filter(function(p){return p.grupo===pacOdontoOrcCategoriaAtiva;});
+  if(q) lista = lista.filter(function(p){return p.nome.toLowerCase().includes(q);});
   if(!lista.length){ opts.innerHTML="<div style='padding:12px;color:var(--rose-text);text-align:center;'>Nenhum encontrado</div>"; return; }
   var grupos=[...new Set(lista.map(function(p){return p.grupo;}).filter(Boolean))].sort();
   var html2="";
@@ -4141,6 +4224,93 @@ function pacOdontoSelecionarProc(id){
 
 // ── Injeta novos materiais e procedimentos de ortodontia ──
 function injetarNovosMatsOrto(){
+  // ── MIGRAÇÃO / LIMPEZA — corrige dados que já estão salvos no Supabase de versões
+  // anteriores: remove procedimentos duplicados (201/205/206 duplicavam 44/43/51) e
+  // atualiza nomes/grupos antigos para a nomenclatura padronizada atual, sem perder
+  // preço, insumos ou margem que o usuário já tenha ajustado.
+  const IDS_DUPLICADOS_REMOVER = [201, 205, 206];
+  let migrou = false;
+  IDS_DUPLICADOS_REMOVER.forEach(id=>{
+    const idx = procs.findIndex(p=>p.id===id);
+    if(idx>=0){ procs.splice(idx,1); delete procInsumos[id]; migrou=true; }
+  });
+  const RENOMEAR = {
+    37: {nome:"Instalação de Aparelho Fixo (genérico)", grupo:"Ortodontia - Instalação"},
+    38: {nome:"Manutenção Mensal Ortodôntica (genérica)", grupo:"Ortodontia - Manutenção Mensal"},
+    43: {nome:"Instalação Aparelho Metálico Tradicional", grupo:"Ortodontia - Instalação"},
+    44: {nome:"Instalação Aparelho Estético Cerâmico", grupo:"Ortodontia - Instalação"},
+    45: {nome:"Manutenção Mensal — Troca de Fio (genérica)", grupo:"Ortodontia - Manutenção Mensal"},
+    46: {nome:"Recolagem (peça quebrada) — Genérica", grupo:"Ortodontia - Recolagem"},
+    51: {nome:"Instalação Aparelho Metálico Autoligado", grupo:"Ortodontia - Instalação"},
+    202:{nome:"Instalação Aparelho Estético Porcelana", grupo:"Ortodontia - Instalação"},
+    203:{nome:"Instalação Aparelho Estético Safira", grupo:"Ortodontia - Instalação"},
+    204:{nome:"Instalação Aparelho Estético Autoligado", grupo:"Ortodontia - Instalação"},
+    207:{nome:"Instalação Invisalign (tratamento completo)", grupo:"Ortodontia - Instalação"},
+    208:{nome:"Manutenção Mensal — Aparelho Estético Cerâmico", grupo:"Ortodontia - Manutenção Mensal"},
+    209:{nome:"Manutenção Mensal — Aparelho Estético Porcelana", grupo:"Ortodontia - Manutenção Mensal"},
+    210:{nome:"Manutenção Mensal — Aparelho Estético Safira", grupo:"Ortodontia - Manutenção Mensal"},
+    211:{nome:"Manutenção Mensal — Aparelho Estético Autoligado", grupo:"Ortodontia - Manutenção Mensal"},
+    212:{nome:"Manutenção Mensal — Aparelho Metálico Tradicional", grupo:"Ortodontia - Manutenção Mensal"},
+    213:{nome:"Manutenção Mensal — Aparelho Metálico Autoligado", grupo:"Ortodontia - Manutenção Mensal"},
+    214:{nome:"Manutenção Mensal — Invisalign (refinamento)", grupo:"Ortodontia - Manutenção Mensal"},
+    215:{nome:"Recolagem (peça quebrada) — Metálico Tradicional", grupo:"Ortodontia - Recolagem"},
+    216:{nome:"Recolagem (peça quebrada) — Cerâmico", grupo:"Ortodontia - Recolagem"},
+    217:{nome:"Recolagem (peça quebrada) — Metálico Autoligado", grupo:"Ortodontia - Recolagem"},
+    218:{nome:"Recolagem (peça quebrada) — Porcelana", grupo:"Ortodontia - Recolagem"},
+    219:{nome:"Recolagem (peça quebrada) — Safira", grupo:"Ortodontia - Recolagem"},
+    220:{nome:"Recolagem (peça quebrada) — Autoligado Estético", grupo:"Ortodontia - Recolagem"},
+  };
+  Object.entries(RENOMEAR).forEach(([id,info])=>{
+    const p = procs.find(x=>x.id===Number(id));
+    if(p && (p.nome!==info.nome || p.grupo!==info.grupo)){
+      p.nome = info.nome; p.grupo = info.grupo; migrou = true;
+    }
+  });
+
+  // Remove duplicatas por NOME dentro de qualquer grupo de Ortodontia (cobre tanto os
+  // grupos já padronizados quanto o grupo genérico antigo "Ortodontia", caso o usuário
+  // tenha recriado manualmente um procedimento que já existia com nome igual/parecido).
+  // Mantém a entrada mais "completa" (maior precoFinal, mais provável de estar com
+  // insumos/margem corretos) e descarta as outras.
+  (function removerDuplicatasPorNome(){
+    const porNome = {};
+    procs.forEach(p=>{
+      if(!/^Ortodontia/.test(p.grupo||'')) return;
+      const chave = p.nome.trim().toLowerCase();
+      if(!porNome[chave]) porNome[chave] = [];
+      porNome[chave].push(p);
+    });
+    const idsCanonicos = new Set(Object.keys(RENOMEAR).map(Number));
+    Object.values(porNome).forEach(lista=>{
+      if(lista.length<2) return;
+      migrou = true;
+      // Prioriza manter o ID "canônico" (já conhecido pelo sistema, em RENOMEAR) — assim
+      // o procedimento continua existindo com o mesmo ID e não é "recriado" como novo
+      // pelo passo seguinte. Em caso de empate/nenhum canônico, mantém o de maior preço.
+      lista.sort((a,b)=>{
+        const aCan = idsCanonicos.has(a.id) ? 1 : 0;
+        const bCan = idsCanonicos.has(b.id) ? 1 : 0;
+        if(aCan!==bCan) return bCan-aCan;
+        return (b.precoFinal||0)-(a.precoFinal||0);
+      });
+      const manter = lista[0];
+      lista.slice(1).forEach(dup=>{
+        // Se a duplicata descartada tem mais informação preenchida (insumos/preço maior
+        // que zero) do que a que vamos manter, herda os valores dela antes de descartar —
+        // assim não perdemos um ajuste que o usuário tenha feito na duplicata "errada".
+        if((dup.precoFinal||0) > (manter.precoFinal||0)){
+          manter.insumos = dup.insumos; manter.horaClin = dup.horaClin;
+          manter.laboratorio = dup.laboratorio; manter.margem = dup.margem;
+          manter.precoFinal = dup.precoFinal; manter.tempo = dup.tempo;
+          if(procInsumos[dup.id] && procInsumos[dup.id].length) procInsumos[manter.id] = procInsumos[dup.id];
+        }
+        const idx = procs.findIndex(x=>x===dup);
+        if(idx>=0) procs.splice(idx,1);
+        if(dup.id!==manter.id) delete procInsumos[dup.id];
+      });
+    });
+  })();
+
   // Materiais novos de ortodontia (fios + kits de braquete que ainda não existem nos
   // materiais padrão). IDs na faixa 150+ para nunca colidir com DEFAULT_MATS_FIN (1-90)
   // nem com os fios NiTi já injetados antes (91-102).
@@ -4189,39 +4359,40 @@ function injetarNovosMatsOrto(){
   // precoFinal fica 0 propositalmente — é recalculado abaixo por calcPrecoFinal()
   // a partir de insumos + hora clínica + margem, exatamente como os procedimentos 43/44/51.
   const NOVOS_PROCS = [
-    {"id": 201, "nome": "Instalação Aparelho Estético Cerâmico", "grupo": "Ortodontia", "tempo": 120, "insumos": 0, "horaClin": 0, "laboratorio": 0, "margem": 200, "precoFinal": 0, "tipo_cobranca": "global"},
-    {"id": 202, "nome": "Instalação Aparelho Estético Porcelana", "grupo": "Ortodontia", "tempo": 120, "insumos": 0, "horaClin": 0, "laboratorio": 0, "margem": 200, "precoFinal": 0, "tipo_cobranca": "global"},
-    {"id": 203, "nome": "Instalação Aparelho Estético Safira", "grupo": "Ortodontia", "tempo": 120, "insumos": 0, "horaClin": 0, "laboratorio": 0, "margem": 200, "precoFinal": 0, "tipo_cobranca": "global"},
-    {"id": 204, "nome": "Instalação Aparelho Estético Autoligado", "grupo": "Ortodontia", "tempo": 120, "insumos": 0, "horaClin": 0, "laboratorio": 0, "margem": 200, "precoFinal": 0, "tipo_cobranca": "global"},
-    {"id": 205, "nome": "Instalação Aparelho Metálico Tradicional", "grupo": "Ortodontia", "tempo": 120, "insumos": 0, "horaClin": 0, "laboratorio": 0, "margem": 200, "precoFinal": 0, "tipo_cobranca": "global"},
-    {"id": 206, "nome": "Instalação Aparelho Metálico Autoligado", "grupo": "Ortodontia", "tempo": 120, "insumos": 0, "horaClin": 0, "laboratorio": 0, "margem": 200, "precoFinal": 0, "tipo_cobranca": "global"},
-    {"id": 207, "nome": "Tratamento Invisalign (completo)", "grupo": "Ortodontia", "tempo": 60, "insumos": 0, "horaClin": 0, "laboratorio": 0, "margem": 100, "precoFinal": 0, "tipo_cobranca": "global"},
-    {"id": 208, "nome": "Manutenção Aparelho Estético Cerâmico", "grupo": "Ortodontia", "tempo": 30, "insumos": 0, "horaClin": 0, "laboratorio": 0, "margem": 150, "precoFinal": 0, "tipo_cobranca": "global"},
-    {"id": 209, "nome": "Manutenção Aparelho Estético Porcelana", "grupo": "Ortodontia", "tempo": 30, "insumos": 0, "horaClin": 0, "laboratorio": 0, "margem": 150, "precoFinal": 0, "tipo_cobranca": "global"},
-    {"id": 210, "nome": "Manutenção Aparelho Estético Safira", "grupo": "Ortodontia", "tempo": 30, "insumos": 0, "horaClin": 0, "laboratorio": 0, "margem": 150, "precoFinal": 0, "tipo_cobranca": "global"},
-    {"id": 211, "nome": "Manutenção Aparelho Estético Autoligado", "grupo": "Ortodontia", "tempo": 30, "insumos": 0, "horaClin": 0, "laboratorio": 0, "margem": 150, "precoFinal": 0, "tipo_cobranca": "global"},
-    {"id": 212, "nome": "Manutenção Aparelho Metálico Tradicional", "grupo": "Ortodontia", "tempo": 30, "insumos": 0, "horaClin": 0, "laboratorio": 0, "margem": 150, "precoFinal": 0, "tipo_cobranca": "global"},
-    {"id": 213, "nome": "Manutenção Aparelho Metálico Autoligado", "grupo": "Ortodontia", "tempo": 30, "insumos": 0, "horaClin": 0, "laboratorio": 0, "margem": 150, "precoFinal": 0, "tipo_cobranca": "global"},
-    {"id": 214, "nome": "Manutenção Invisalign (refinamento)", "grupo": "Ortodontia", "tempo": 30, "insumos": 0, "horaClin": 0, "laboratorio": 0, "margem": 100, "precoFinal": 0, "tipo_cobranca": "global"},
-    {"id": 215, "nome": "Recolagem Braquete Metálico Tradicional", "grupo": "Ortodontia", "tempo": 20, "insumos": 0, "horaClin": 0, "laboratorio": 0, "margem": 150, "precoFinal": 0, "tipo_cobranca": "global"},
-    {"id": 216, "nome": "Recolagem Braquete Cerâmico", "grupo": "Ortodontia", "tempo": 20, "insumos": 0, "horaClin": 0, "laboratorio": 0, "margem": 150, "precoFinal": 0, "tipo_cobranca": "global"},
-    {"id": 217, "nome": "Recolagem Braquete Autoligado Metálico", "grupo": "Ortodontia", "tempo": 20, "insumos": 0, "horaClin": 0, "laboratorio": 0, "margem": 150, "precoFinal": 0, "tipo_cobranca": "global"},
-    {"id": 218, "nome": "Recolagem Braquete Porcelana", "grupo": "Ortodontia", "tempo": 20, "insumos": 0, "horaClin": 0, "laboratorio": 0, "margem": 150, "precoFinal": 0, "tipo_cobranca": "global"},
-    {"id": 219, "nome": "Recolagem Braquete Safira", "grupo": "Ortodontia", "tempo": 20, "insumos": 0, "horaClin": 0, "laboratorio": 0, "margem": 150, "precoFinal": 0, "tipo_cobranca": "global"},
-    {"id": 220, "nome": "Recolagem Braquete Autoligado Estético", "grupo": "Ortodontia", "tempo": 20, "insumos": 0, "horaClin": 0, "laboratorio": 0, "margem": 150, "precoFinal": 0, "tipo_cobranca": "global"}
+    // Instalação — só os tipos que ainda não existem nos procedimentos originais
+    // (Metálico Tradicional=43, Cerâmico=44, Metálico Autoligado=51 já existem e NÃO são repetidos aqui)
+    {"id": 202, "nome": "Instalação Aparelho Estético Porcelana", "grupo": "Ortodontia - Instalação", "tempo": 120, "insumos": 0, "horaClin": 0, "laboratorio": 0, "margem": 200, "precoFinal": 0, "tipo_cobranca": "global"},
+    {"id": 203, "nome": "Instalação Aparelho Estético Safira", "grupo": "Ortodontia - Instalação", "tempo": 120, "insumos": 0, "horaClin": 0, "laboratorio": 0, "margem": 200, "precoFinal": 0, "tipo_cobranca": "global"},
+    {"id": 204, "nome": "Instalação Aparelho Estético Autoligado", "grupo": "Ortodontia - Instalação", "tempo": 120, "insumos": 0, "horaClin": 0, "laboratorio": 0, "margem": 200, "precoFinal": 0, "tipo_cobranca": "global"},
+    {"id": 207, "nome": "Instalação Invisalign (tratamento completo)", "grupo": "Ortodontia - Instalação", "tempo": 60, "insumos": 0, "horaClin": 0, "laboratorio": 0, "margem": 100, "precoFinal": 0, "tipo_cobranca": "global"},
+    // Manutenção mensal por tipo — nome sempre começa com "Manutenção Mensal —" para nunca
+    // ser confundido com Recolagem na busca do orçamento
+    {"id": 208, "nome": "Manutenção Mensal — Aparelho Estético Cerâmico", "grupo": "Ortodontia - Manutenção Mensal", "tempo": 30, "insumos": 0, "horaClin": 0, "laboratorio": 0, "margem": 150, "precoFinal": 0, "tipo_cobranca": "global"},
+    {"id": 209, "nome": "Manutenção Mensal — Aparelho Estético Porcelana", "grupo": "Ortodontia - Manutenção Mensal", "tempo": 30, "insumos": 0, "horaClin": 0, "laboratorio": 0, "margem": 150, "precoFinal": 0, "tipo_cobranca": "global"},
+    {"id": 210, "nome": "Manutenção Mensal — Aparelho Estético Safira", "grupo": "Ortodontia - Manutenção Mensal", "tempo": 30, "insumos": 0, "horaClin": 0, "laboratorio": 0, "margem": 150, "precoFinal": 0, "tipo_cobranca": "global"},
+    {"id": 211, "nome": "Manutenção Mensal — Aparelho Estético Autoligado", "grupo": "Ortodontia - Manutenção Mensal", "tempo": 30, "insumos": 0, "horaClin": 0, "laboratorio": 0, "margem": 150, "precoFinal": 0, "tipo_cobranca": "global"},
+    {"id": 212, "nome": "Manutenção Mensal — Aparelho Metálico Tradicional", "grupo": "Ortodontia - Manutenção Mensal", "tempo": 30, "insumos": 0, "horaClin": 0, "laboratorio": 0, "margem": 150, "precoFinal": 0, "tipo_cobranca": "global"},
+    {"id": 213, "nome": "Manutenção Mensal — Aparelho Metálico Autoligado", "grupo": "Ortodontia - Manutenção Mensal", "tempo": 30, "insumos": 0, "horaClin": 0, "laboratorio": 0, "margem": 150, "precoFinal": 0, "tipo_cobranca": "global"},
+    {"id": 214, "nome": "Manutenção Mensal — Invisalign (refinamento)", "grupo": "Ortodontia - Manutenção Mensal", "tempo": 30, "insumos": 0, "horaClin": 0, "laboratorio": 0, "margem": 100, "precoFinal": 0, "tipo_cobranca": "global"},
+    // Recolagem (peça quebrada/perdida) por tipo — nome sempre começa com "Recolagem (peça quebrada) —"
+    {"id": 215, "nome": "Recolagem (peça quebrada) — Metálico Tradicional", "grupo": "Ortodontia - Recolagem", "tempo": 20, "insumos": 0, "horaClin": 0, "laboratorio": 0, "margem": 150, "precoFinal": 0, "tipo_cobranca": "global"},
+    {"id": 216, "nome": "Recolagem (peça quebrada) — Cerâmico", "grupo": "Ortodontia - Recolagem", "tempo": 20, "insumos": 0, "horaClin": 0, "laboratorio": 0, "margem": 150, "precoFinal": 0, "tipo_cobranca": "global"},
+    {"id": 217, "nome": "Recolagem (peça quebrada) — Metálico Autoligado", "grupo": "Ortodontia - Recolagem", "tempo": 20, "insumos": 0, "horaClin": 0, "laboratorio": 0, "margem": 150, "precoFinal": 0, "tipo_cobranca": "global"},
+    {"id": 218, "nome": "Recolagem (peça quebrada) — Porcelana", "grupo": "Ortodontia - Recolagem", "tempo": 20, "insumos": 0, "horaClin": 0, "laboratorio": 0, "margem": 150, "precoFinal": 0, "tipo_cobranca": "global"},
+    {"id": 219, "nome": "Recolagem (peça quebrada) — Safira", "grupo": "Ortodontia - Recolagem", "tempo": 20, "insumos": 0, "horaClin": 0, "laboratorio": 0, "margem": 150, "precoFinal": 0, "tipo_cobranca": "global"},
+    {"id": 220, "nome": "Recolagem (peça quebrada) — Autoligado Estético", "grupo": "Ortodontia - Recolagem", "tempo": 20, "insumos": 0, "horaClin": 0, "laboratorio": 0, "margem": 150, "precoFinal": 0, "tipo_cobranca": "global"}
   ];
   // Receita de insumos por procedimento — mesmo padrão usado nos procedimentos já
   // existentes "Instalação Aparelho Metálico" (id 43) e "Instalação Aparelho Autoligado
   // Metálico" (id 51): kit de braquete + adesivo + primer + arco + EPI (babador, luva,
   // máscara, microbrush). Reaproveita os kits já cadastrados (43, 44, 45) quando existem.
   const NOVOS_PROC_INSUMOS = {
-    201: [{matId:44, qtd:1},{matId:48,qtd:0.5},{matId:74,qtd:0.3},{matId:76,qtd:1},{matId:8,qtd:1},{matId:34,qtd:2},{matId:35,qtd:1},{matId:37,qtd:5}], // Cerâmico (kit já existente id 44)
+    // Instalação por kit completo (só os tipos que não existem nos originais 43/44/51)
     202: [{matId:167,qtd:1},{matId:48,qtd:0.5},{matId:74,qtd:0.3},{matId:76,qtd:1},{matId:8,qtd:1},{matId:34,qtd:2},{matId:35,qtd:1},{matId:37,qtd:5}], // Porcelana
     203: [{matId:168,qtd:1},{matId:48,qtd:0.5},{matId:74,qtd:0.3},{matId:76,qtd:1},{matId:8,qtd:1},{matId:34,qtd:2},{matId:35,qtd:1},{matId:37,qtd:5}], // Safira
     204: [{matId:169,qtd:1},{matId:48,qtd:0.5},{matId:74,qtd:0.3},{matId:76,qtd:1},{matId:8,qtd:1},{matId:34,qtd:2},{matId:35,qtd:1},{matId:37,qtd:5}], // Autoligado estético
-    205: [{matId:43, qtd:1},{matId:48,qtd:0.5},{matId:74,qtd:0.3},{matId:76,qtd:1},{matId:8,qtd:1},{matId:34,qtd:2},{matId:35,qtd:1},{matId:37,qtd:5}], // Metálico tradicional (kit já existente id 43)
-    206: [{matId:45, qtd:1},{matId:48,qtd:0.5},{matId:74,qtd:0.3},{matId:76,qtd:1},{matId:8,qtd:1},{matId:34,qtd:2},{matId:35,qtd:1},{matId:37,qtd:5}], // Autoligado metálico (kit já existente id 45)
     207: [{matId:172,qtd:1},{matId:8,qtd:1},{matId:34,qtd:1}], // Invisalign — o alinhador (matId 170) entra como custo de "laboratório" (R$4.500), não como insumo, para não ser contado em dobro
+    // Manutenção mensal por tipo — só troca de fio/EPI, nunca o kit/peça inteira
     208: [{matId:77,qtd:0.3},{matId:8,qtd:1},{matId:34,qtd:1}],
     209: [{matId:77,qtd:0.3},{matId:8,qtd:1},{matId:34,qtd:1}],
     210: [{matId:77,qtd:0.3},{matId:8,qtd:1},{matId:34,qtd:1}],
@@ -4243,7 +4414,7 @@ function injetarNovosMatsOrto(){
   // consumido na consulta, é encomendado por caso, então entra como laboratório).
   const LABORATORIO_POR_PROC = { 207: 4500 };
 
-  let alterou = false;
+  let alterou = migrou;
   NOVOS_MATS.forEach(nm=>{
     if(!mats.find(m=>m.id===nm.id)){
       mats.push(nm);
@@ -6009,21 +6180,21 @@ const DEFAULT_PROCS_FIN = [
   {id:34,nome:"Cimentação de Coroa",grupo:"Prótese",tempo:45,insumos:25.67,horaClin:53.14,laboratorio:0,margem:100,precoFinal:170.22},
   {id:35,nome:"Implante Cirúrgico",grupo:"Implantodontia",tempo:120,insumos:70.70,horaClin:141.70,laboratorio:0,margem:100,precoFinal:458.79},
   {id:36,nome:"Implante - Fase Protética",grupo:"Implantodontia",tempo:90,insumos:19.54,horaClin:106.28,laboratorio:250,margem:100,precoFinal:271.77},
-  {id:37,nome:"Instalação de Aparelho Fixo",grupo:"Ortodontia",tempo:90,insumos:19.59,horaClin:106.28,laboratorio:0,margem:100,precoFinal:271.87},
-  {id:38,nome:"Manutenção Mensal Ortodôntica",grupo:"Ortodontia",tempo:30,insumos:2.06,horaClin:35.43,laboratorio:0,margem:100,precoFinal:80.98},
+  {id:37,nome:"Instalação de Aparelho Fixo (genérico)",grupo:"Ortodontia - Instalação",tempo:90,insumos:19.59,horaClin:106.28,laboratorio:0,margem:100,precoFinal:271.87},
+  {id:38,nome:"Manutenção Mensal Ortodôntica (genérica)",grupo:"Ortodontia - Manutenção Mensal",tempo:30,insumos:2.06,horaClin:35.43,laboratorio:0,margem:100,precoFinal:80.98},
   {id:39,nome:"Placa Miorrelaxante",grupo:"ATM",tempo:75,insumos:10.13,horaClin:88.56,laboratorio:120,margem:100,precoFinal:213.19},
   {id:40,nome:"Toxina Botulínica (Bruxismo)",grupo:"ATM",tempo:30,insumos:2.58,horaClin:35.43,laboratorio:0,margem:100,precoFinal:82.09},
   {id:41,nome:"Documentação Ortodôntica",grupo:"Ortodontia",tempo:60,insumos:1.69,horaClin:70.85,laboratorio:0,margem:100,precoFinal:156.68},
   {id:42,nome:"Moldagem Ortodôntica",grupo:"Ortodontia",tempo:30,insumos:6.68,horaClin:35.43,laboratorio:0,margem:100,precoFinal:90.94},
-  {id:43,nome:"Instalação Aparelho Metálico",grupo:"Ortodontia",tempo:120,insumos:251.72,horaClin:141.70,laboratorio:400,margem:100,precoFinal:849.79},
-  {id:44,nome:"Instalação Aparelho Estético (Cerâmico)",grupo:"Ortodontia",tempo:120,insumos:482.60,horaClin:141.70,laboratorio:800,margem:100,precoFinal:1348.50},
-  {id:45,nome:"Manutenção - Troca de Fio",grupo:"Ortodontia",tempo:30,insumos:11.64,horaClin:35.43,laboratorio:0,margem:100,precoFinal:101.65},
-  {id:46,nome:"Recolagem de Braquete",grupo:"Ortodontia",tempo:20,insumos:13.99,horaClin:23.62,laboratorio:0,margem:100,precoFinal:81.23},
+  {id:43,nome:"Instalação Aparelho Metálico Tradicional",grupo:"Ortodontia - Instalação",tempo:120,insumos:251.72,horaClin:141.70,laboratorio:400,margem:100,precoFinal:849.79},
+  {id:44,nome:"Instalação Aparelho Estético Cerâmico",grupo:"Ortodontia - Instalação",tempo:120,insumos:482.60,horaClin:141.70,laboratorio:800,margem:100,precoFinal:1348.50},
+  {id:45,nome:"Manutenção Mensal — Troca de Fio (genérica)",grupo:"Ortodontia - Manutenção Mensal",tempo:30,insumos:11.64,horaClin:35.43,laboratorio:0,margem:100,precoFinal:101.65},
+  {id:46,nome:"Recolagem (peça quebrada) — Genérica",grupo:"Ortodontia - Recolagem",tempo:20,insumos:13.99,horaClin:23.62,laboratorio:0,margem:100,precoFinal:81.23},
   {id:47,nome:"Remoção de Aparelho Fixo",grupo:"Ortodontia",tempo:60,insumos:24.00,horaClin:70.85,laboratorio:0,margem:100,precoFinal:204.88},
   {id:48,nome:"Contenção Fixa (Fio Colado)",grupo:"Ortodontia",tempo:45,insumos:13.69,horaClin:53.14,laboratorio:0,margem:100,precoFinal:144.35},
   {id:49,nome:"Contenção Removível (Placa Essix)",grupo:"Ortodontia",tempo:30,insumos:15.58,horaClin:35.43,laboratorio:150,margem:100,precoFinal:110.17},
   {id:50,nome:"Orientação e Higiene com Aparelho",grupo:"Ortodontia",tempo:20,insumos:4.21,horaClin:23.62,laboratorio:0,margem:100,precoFinal:60.11},
-  {id:51,nome:"Instalação Aparelho Autoligado Metálico",grupo:"Ortodontia",tempo:120,insumos:384.03,horaClin:141.70,laboratorio:600,margem:100,precoFinal:1135.58},
+  {id:51,nome:"Instalação Aparelho Metálico Autoligado",grupo:"Ortodontia - Instalação",tempo:120,insumos:384.03,horaClin:141.70,laboratorio:600,margem:100,precoFinal:1135.58},
   // Diagnóstico e Radiologia
   {id:52,nome:"Consulta Odontológica",grupo:"Diagnóstico",tempo:30,insumos:2.00,horaClin:35.43,laboratorio:0,margem:100,precoFinal:80.00},
   {id:53,nome:"Radiografia Periapical",grupo:"Diagnóstico",tempo:15,insumos:3.00,horaClin:17.71,laboratorio:0,margem:100,precoFinal:50.00},
@@ -7757,7 +7928,41 @@ function histRenderLista(pacId){
 let resgateFiltrMeses = 1;
 let resgateModalTel = '';
 
-function renderResgate(){ filtrarResgate(resgateFiltrMeses); }
+function renderResgate(){
+  renderResgateFaltas();
+  filtrarResgate(resgateFiltrMeses);
+}
+
+function renderResgateFaltas(){
+  const sec = document.getElementById('resgate-faltas-section');
+  const tb  = document.getElementById('resgate-faltas-tbody');
+  if(!sec || !tb) return;
+  const hoje = new Date();
+  const limite60 = new Date(hoje); limite60.setDate(limite60.getDate()-60);
+  // Pega faltas dos últimos 60 dias. Se o paciente já tem um agendamento futuro marcado
+  // (reagendou), não precisa mais aparecer aqui em destaque.
+  const faltas = agendamentos.filter(a=>{
+    if((a.status||'').toLowerCase()!=='faltou') return false;
+    const d = new Date(a.data+'T00:00:00');
+    if(d < limite60) return false;
+    const jaReagendou = agendamentos.some(b=>b.paciente_id && b.paciente_id===a.paciente_id && b.id!==a.id && b.data > a.data && (b.status||'').toLowerCase()!=='faltou');
+    return !jaReagendou;
+  }).sort((a,b)=>b.data.localeCompare(a.data));
+
+  if(!faltas.length){ sec.style.display='none'; return; }
+  sec.style.display='block';
+  tb.innerHTML = faltas.map(a=>{
+    const dataFmt = formatDate(a.data);
+    return `<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;background:#fff5f5;border:1px solid #fecaca;border-radius:10px;padding:10px 14px;flex-wrap:wrap;">
+      <div>
+        <div style="font-weight:700;font-size:13px;">${escapeHtml(a.nome)}</div>
+        <div style="font-size:12px;color:var(--rose-text);">${escapeHtml(a.procedimento||'Consulta')} · faltou em ${dataFmt}</div>
+      </div>
+      ${a.telefone ? `<button onclick="abrirResgateModalFalta('${escapeHtml(a.nome)}','${escapeHtml(a.telefone)}','${escapeHtml(a.procedimento||'Consulta')}')" style="background:#25d366;border:none;border-radius:50%;width:38px;height:38px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(37,211,102,.4);" title="Reagendar via WhatsApp"><i class="ti ti-brand-whatsapp" style="color:#fff;font-size:18px;"></i></button>`
+      : `<span style="font-size:11px;color:var(--rose-text);">Sem telefone</span>`}
+    </div>`;
+  }).join('');
+}
 
 async function filtrarResgate(meses){
   resgateFiltrMeses = meses;
