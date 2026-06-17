@@ -924,6 +924,9 @@ button{font-family:inherit;}
           <h2><i class="ti ti-list-check"></i> Procedimentos e Precificação</h2>
           <button class="btn-primary" onclick="openAddProc()"><i class="ti ti-plus"></i> Novo</button>
         </div>
+        <div style="background:var(--rose-lighter);border-radius:8px;padding:8px 12px;font-size:12px;color:var(--rose-dark);margin-bottom:12px;">
+          <i class="ti ti-info-circle"></i> A hora clínica e a margem de lucro padrão usadas para calcular os preços ficam em <strong>Configurações → Precificação</strong>. A margem de cada procedimento pode ser ajustada individualmente clicando no lápis (editar) e depois em "Usar calculado".
+        </div>
         <div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;">
           <input type="text" id="proc-search" placeholder="Buscar..." oninput="filterProcs()" style="flex:1;min-width:150px;"/>
           <select id="proc-grupo" onchange="filterProcs()"><option value="">Todos os grupos</option></select>
@@ -1370,6 +1373,24 @@ button{font-family:inherit;}
           </div>
           <div style="display:flex;justify-content:flex-end;margin-top:14px;">
             <button class="btn-primary" onclick="salvarTaxas()"><i class="ti ti-check"></i> Salvar taxas</button>
+          </div>
+
+          <hr style="border-color:var(--rose-light);margin:24px 0;"/>
+          <h2 style="font-size:13px;font-weight:700;color:var(--rose-dark);margin-bottom:14px;display:flex;align-items:center;gap:8px;text-transform:uppercase;letter-spacing:.5px;"><i class="ti ti-calculator"></i> Precificação — Hora Clínica e Margem</h2>
+          <p style="font-size:12px;color:var(--rose-text);margin-bottom:14px;">Esses valores definem a "hora clínica" (quanto custa 1 hora da sua cadeira) e a margem de lucro padrão usada para sugerir o preço de novos procedimentos. Você pode sempre sobrescrever a margem de cada procedimento individualmente na tela de Procedimentos.</p>
+          <div class="form-grid">
+            <div class="form-group"><label>Salário/pró-labore desejado (R$/mês)</label><input type="number" id="cfg-salario" step="0.01" min="0" oninput="cfgAtualizarPreviewHora()"/></div>
+            <div class="form-group"><label>Horas clínicas trabalhadas por mês</label><input type="number" id="cfg-horas" step="1" min="1" oninput="cfgAtualizarPreviewHora()"/></div>
+            <div class="form-group"><label>Tributos/impostos (%)</label><input type="number" id="cfg-trib" step="0.1" min="0" oninput="cfgAtualizarPreviewHora()"/></div>
+            <div class="form-group"><label>Desperdício/imprevistos (%)</label><input type="number" id="cfg-desperd" step="0.1" min="0" oninput="cfgAtualizarPreviewHora()"/></div>
+            <div class="form-group"><label>Margem de lucro padrão (%)</label><input type="number" id="cfg-margem" step="1" min="0" oninput="cfgAtualizarPreviewHora()"/></div>
+          </div>
+          <div style="background:var(--rose-lighter);border-radius:10px;padding:12px 16px;margin-top:10px;font-size:13px;color:var(--rose-dark);">
+            <i class="ti ti-info-circle"></i> Hora clínica resultante: <strong id="cfg-hora-preview">—</strong>
+            <div style="font-size:11px;color:var(--rose-text);margin-top:4px;">Fórmula: (salário ÷ horas) × (1 + tributos%). Esse valor é usado para calcular o custo de "hora clínica" de cada procedimento (tempo do procedimento ÷ 60 × hora clínica).</div>
+          </div>
+          <div style="display:flex;justify-content:flex-end;margin-top:14px;">
+            <button class="btn-primary" onclick="salvarPrecificacao()"><i class="ti ti-check"></i> Salvar precificação</button>
           </div>
 
           <hr style="border-color:var(--rose-light);margin:24px 0;"/>
@@ -3974,9 +3995,87 @@ function pacOdontoSelecionarProc(id){
 
 // ── Injeta novos materiais e procedimentos de ortodontia ──
 function injetarNovosMatsOrto(){
-  const NOVOS_MATS = [{"id": 91, "nome": "Fio NiTi 0.012 Superior", "cat": "Ortodontia", "unid": "unid", "qtde": 10, "preco": 25, "custo": 2.5}, {"id": 92, "nome": "Fio NiTi 0.012 Inferior", "cat": "Ortodontia", "unid": "unid", "qtde": 10, "preco": 25, "custo": 2.5}, {"id": 93, "nome": "Fio NiTi 0.014 Superior", "cat": "Ortodontia", "unid": "unid", "qtde": 10, "preco": 28, "custo": 2.8}, {"id": 94, "nome": "Fio NiTi 0.014 Inferior", "cat": "Ortodontia", "unid": "unid", "qtde": 10, "preco": 28, "custo": 2.8}, {"id": 95, "nome": "Fio NiTi 0.016 Superior", "cat": "Ortodontia", "unid": "unid", "qtde": 10, "preco": 30, "custo": 3.0}, {"id": 96, "nome": "Fio NiTi 0.016 Inferior", "cat": "Ortodontia", "unid": "unid", "qtde": 10, "preco": 30, "custo": 3.0}, {"id": 97, "nome": "Fio NiTi 0.018 Superior", "cat": "Ortodontia", "unid": "unid", "qtde": 10, "preco": 32, "custo": 3.2}, {"id": 98, "nome": "Fio NiTi 0.018 Inferior", "cat": "Ortodontia", "unid": "unid", "qtde": 10, "preco": 32, "custo": 3.2}, {"id": 99, "nome": "Fio NiTi 0.019x25 Superior", "cat": "Ortodontia", "unid": "unid", "qtde": 10, "preco": 35, "custo": 3.5}, {"id": 100, "nome": "Fio NiTi 0.019x25 Inferior", "cat": "Ortodontia", "unid": "unid", "qtde": 10, "preco": 35, "custo": 3.5}, {"id": 101, "nome": "Fio NiTi 0.020 Superior", "cat": "Ortodontia", "unid": "unid", "qtde": 10, "preco": 32, "custo": 3.2}, {"id": 102, "nome": "Fio NiTi 0.020 Inferior", "cat": "Ortodontia", "unid": "unid", "qtde": 10, "preco": 32, "custo": 3.2}, {"id": 103, "nome": "Fio Aço 0.012 Superior", "cat": "Ortodontia", "unid": "unid", "qtde": 10, "preco": 20, "custo": 2.0}, {"id": 104, "nome": "Fio Aço 0.012 Inferior", "cat": "Ortodontia", "unid": "unid", "qtde": 10, "preco": 20, "custo": 2.0}, {"id": 105, "nome": "Fio Aço 0.014 Superior", "cat": "Ortodontia", "unid": "unid", "qtde": 10, "preco": 22, "custo": 2.2}, {"id": 106, "nome": "Fio Aço 0.014 Inferior", "cat": "Ortodontia", "unid": "unid", "qtde": 10, "preco": 22, "custo": 2.2}, {"id": 107, "nome": "Fio Aço 0.016 Superior", "cat": "Ortodontia", "unid": "unid", "qtde": 10, "preco": 22, "custo": 2.2}, {"id": 108, "nome": "Fio Aço 0.016 Inferior", "cat": "Ortodontia", "unid": "unid", "qtde": 10, "preco": 22, "custo": 2.2}, {"id": 109, "nome": "Fio Aço 0.018 Superior", "cat": "Ortodontia", "unid": "unid", "qtde": 10, "preco": 24, "custo": 2.4}, {"id": 110, "nome": "Fio Aço 0.018 Inferior", "cat": "Ortodontia", "unid": "unid", "qtde": 10, "preco": 24, "custo": 2.4}, {"id": 111, "nome": "Fio Aço 0.020 Superior", "cat": "Ortodontia", "unid": "unid", "qtde": 10, "preco": 24, "custo": 2.4}, {"id": 112, "nome": "Fio Aço 0.020 Inferior", "cat": "Ortodontia", "unid": "unid", "qtde": 10, "preco": 24, "custo": 2.4}, {"id": 113, "nome": "Fio Aço 0.019x25 Superior", "cat": "Ortodontia", "unid": "unid", "qtde": 10, "preco": 28, "custo": 2.8}, {"id": 114, "nome": "Fio Aço 0.019x25 Inferior", "cat": "Ortodontia", "unid": "unid", "qtde": 10, "preco": 28, "custo": 2.8}, {"id": 115, "nome": "Fio Aço 0.017x25 Superior", "cat": "Ortodontia", "unid": "unid", "qtde": 10, "preco": 28, "custo": 2.8}, {"id": 116, "nome": "Fio Aço 0.017x25 Inferior", "cat": "Ortodontia", "unid": "unid", "qtde": 10, "preco": 28, "custo": 2.8}, {"id": 117, "nome": "Braquete Cerâmico Kit", "cat": "Ortodontia", "unid": "kit", "qtde": 1, "preco": 680, "custo": 680}, {"id": 118, "nome": "Braquete Porcelana Kit", "cat": "Ortodontia", "unid": "kit", "qtde": 1, "preco": 750, "custo": 750}, {"id": 119, "nome": "Braquete Safira Kit", "cat": "Ortodontia", "unid": "kit", "qtde": 1, "preco": 890, "custo": 890}, {"id": 120, "nome": "Braquete Autoligado Estético Kit", "cat": "Ortodontia", "unid": "kit", "qtde": 1, "preco": 950, "custo": 950}, {"id": 121, "nome": "Braquete Metálico Tradicional Kit", "cat": "Ortodontia", "unid": "kit", "qtde": 1, "preco": 189, "custo": 189}, {"id": 122, "nome": "Braquete Autoligado Metálico Kit", "cat": "Ortodontia", "unid": "kit", "qtde": 1, "preco": 320, "custo": 320}, {"id": 123, "nome": "Alinhador Invisalign (jogo completo)", "cat": "Ortodontia", "unid": "kit", "qtde": 1, "preco": 4500, "custo": 4500}, {"id": 124, "nome": "Refinamento Invisalign", "cat": "Ortodontia", "unid": "kit", "qtde": 1, "preco": 800, "custo": 800}, {"id": 125, "nome": "Escaneamento 3D (iTero/similar)", "cat": "Ortodontia", "unid": "unid", "qtde": 1, "preco": 300, "custo": 300}];
-  const NOVOS_PROCS = [{"id": 103, "nome": "Instalação Aparelho Estético Cerâmico", "grupo": "Ortodontia", "tempo": 120, "insumos": 0, "horaClin": 0, "laboratorio": 0, "margem": 100, "precoFinal": 2800, "tipo_cobranca": "global"}, {"id": 104, "nome": "Instalação Aparelho Estético Porcelana", "grupo": "Ortodontia", "tempo": 120, "insumos": 0, "horaClin": 0, "laboratorio": 0, "margem": 100, "precoFinal": 3200, "tipo_cobranca": "global"}, {"id": 105, "nome": "Instalação Aparelho Estético Safira", "grupo": "Ortodontia", "tempo": 120, "insumos": 0, "horaClin": 0, "laboratorio": 0, "margem": 100, "precoFinal": 3800, "tipo_cobranca": "global"}, {"id": 106, "nome": "Instalação Aparelho Estético Autoligado", "grupo": "Ortodontia", "tempo": 120, "insumos": 0, "horaClin": 0, "laboratorio": 0, "margem": 100, "precoFinal": 4200, "tipo_cobranca": "global"}, {"id": 107, "nome": "Instalação Aparelho Metálico Tradicional", "grupo": "Ortodontia", "tempo": 120, "insumos": 0, "horaClin": 0, "laboratorio": 0, "margem": 100, "precoFinal": 2200, "tipo_cobranca": "global"}, {"id": 108, "nome": "Instalação Aparelho Metálico Autoligado", "grupo": "Ortodontia", "tempo": 120, "insumos": 0, "horaClin": 0, "laboratorio": 0, "margem": 100, "precoFinal": 2800, "tipo_cobranca": "global"}, {"id": 109, "nome": "Tratamento Invisalign (completo)", "grupo": "Ortodontia", "tempo": 60, "insumos": 0, "horaClin": 0, "laboratorio": 4500, "margem": 100, "precoFinal": 9800, "tipo_cobranca": "global"}, {"id": 110, "nome": "Manutenção Aparelho Estético Cerâmico", "grupo": "Ortodontia", "tempo": 30, "insumos": 0, "horaClin": 0, "laboratorio": 0, "margem": 100, "precoFinal": 180, "tipo_cobranca": "global"}, {"id": 111, "nome": "Manutenção Aparelho Estético Porcelana", "grupo": "Ortodontia", "tempo": 30, "insumos": 0, "horaClin": 0, "laboratorio": 0, "margem": 100, "precoFinal": 180, "tipo_cobranca": "global"}, {"id": 112, "nome": "Manutenção Aparelho Estético Safira", "grupo": "Ortodontia", "tempo": 30, "insumos": 0, "horaClin": 0, "laboratorio": 0, "margem": 100, "precoFinal": 180, "tipo_cobranca": "global"}, {"id": 113, "nome": "Manutenção Aparelho Estético Autoligado", "grupo": "Ortodontia", "tempo": 30, "insumos": 0, "horaClin": 0, "laboratorio": 0, "margem": 100, "precoFinal": 180, "tipo_cobranca": "global"}, {"id": 114, "nome": "Manutenção Aparelho Metálico Tradicional", "grupo": "Ortodontia", "tempo": 30, "insumos": 0, "horaClin": 0, "laboratorio": 0, "margem": 100, "precoFinal": 150, "tipo_cobranca": "global"}, {"id": 115, "nome": "Manutenção Aparelho Metálico Autoligado", "grupo": "Ortodontia", "tempo": 30, "insumos": 0, "horaClin": 0, "laboratorio": 0, "margem": 100, "precoFinal": 150, "tipo_cobranca": "global"}, {"id": 116, "nome": "Manutenção Invisalign (refinamento)", "grupo": "Ortodontia", "tempo": 30, "insumos": 0, "horaClin": 0, "laboratorio": 800, "margem": 100, "precoFinal": 1200, "tipo_cobranca": "global"}];
-  
+  // Materiais novos de ortodontia (fios + kits de braquete que ainda não existem nos
+  // materiais padrão). IDs na faixa 150+ para nunca colidir com DEFAULT_MATS_FIN (1-90)
+  // nem com os fios NiTi já injetados antes (91-102).
+  const NOVOS_MATS = [
+    {"id": 91, "nome": "Fio NiTi 0.012 Superior", "cat": "Ortodontia", "unid": "unid", "qtde": 10, "preco": 25, "custo": 2.5},
+    {"id": 92, "nome": "Fio NiTi 0.012 Inferior", "cat": "Ortodontia", "unid": "unid", "qtde": 10, "preco": 25, "custo": 2.5},
+    {"id": 93, "nome": "Fio NiTi 0.014 Superior", "cat": "Ortodontia", "unid": "unid", "qtde": 10, "preco": 28, "custo": 2.8},
+    {"id": 94, "nome": "Fio NiTi 0.014 Inferior", "cat": "Ortodontia", "unid": "unid", "qtde": 10, "preco": 28, "custo": 2.8},
+    {"id": 95, "nome": "Fio NiTi 0.016 Superior", "cat": "Ortodontia", "unid": "unid", "qtde": 10, "preco": 30, "custo": 3.0},
+    {"id": 96, "nome": "Fio NiTi 0.016 Inferior", "cat": "Ortodontia", "unid": "unid", "qtde": 10, "preco": 30, "custo": 3.0},
+    {"id": 97, "nome": "Fio NiTi 0.018 Superior", "cat": "Ortodontia", "unid": "unid", "qtde": 10, "preco": 32, "custo": 3.2},
+    {"id": 98, "nome": "Fio NiTi 0.018 Inferior", "cat": "Ortodontia", "unid": "unid", "qtde": 10, "preco": 32, "custo": 3.2},
+    {"id": 99, "nome": "Fio NiTi 0.019x25 Superior", "cat": "Ortodontia", "unid": "unid", "qtde": 10, "preco": 35, "custo": 3.5},
+    {"id": 100, "nome": "Fio NiTi 0.019x25 Inferior", "cat": "Ortodontia", "unid": "unid", "qtde": 10, "preco": 35, "custo": 3.5},
+    {"id": 101, "nome": "Fio NiTi 0.020 Superior", "cat": "Ortodontia", "unid": "unid", "qtde": 10, "preco": 32, "custo": 3.2},
+    {"id": 102, "nome": "Fio NiTi 0.020 Inferior", "cat": "Ortodontia", "unid": "unid", "qtde": 10, "preco": 32, "custo": 3.2},
+    {"id": 153, "nome": "Fio Aço 0.012 Superior", "cat": "Ortodontia", "unid": "unid", "qtde": 10, "preco": 20, "custo": 2.0},
+    {"id": 154, "nome": "Fio Aço 0.012 Inferior", "cat": "Ortodontia", "unid": "unid", "qtde": 10, "preco": 20, "custo": 2.0},
+    {"id": 155, "nome": "Fio Aço 0.014 Superior", "cat": "Ortodontia", "unid": "unid", "qtde": 10, "preco": 22, "custo": 2.2},
+    {"id": 156, "nome": "Fio Aço 0.014 Inferior", "cat": "Ortodontia", "unid": "unid", "qtde": 10, "preco": 22, "custo": 2.2},
+    {"id": 157, "nome": "Fio Aço 0.016 Superior", "cat": "Ortodontia", "unid": "unid", "qtde": 10, "preco": 22, "custo": 2.2},
+    {"id": 158, "nome": "Fio Aço 0.016 Inferior", "cat": "Ortodontia", "unid": "unid", "qtde": 10, "preco": 22, "custo": 2.2},
+    {"id": 159, "nome": "Fio Aço 0.018 Superior", "cat": "Ortodontia", "unid": "unid", "qtde": 10, "preco": 24, "custo": 2.4},
+    {"id": 160, "nome": "Fio Aço 0.018 Inferior", "cat": "Ortodontia", "unid": "unid", "qtde": 10, "preco": 24, "custo": 2.4},
+    {"id": 161, "nome": "Fio Aço 0.020 Superior", "cat": "Ortodontia", "unid": "unid", "qtde": 10, "preco": 24, "custo": 2.4},
+    {"id": 162, "nome": "Fio Aço 0.020 Inferior", "cat": "Ortodontia", "unid": "unid", "qtde": 10, "preco": 24, "custo": 2.4},
+    {"id": 163, "nome": "Fio Aço 0.019x25 Superior", "cat": "Ortodontia", "unid": "unid", "qtde": 10, "preco": 28, "custo": 2.8},
+    {"id": 164, "nome": "Fio Aço 0.019x25 Inferior", "cat": "Ortodontia", "unid": "unid", "qtde": 10, "preco": 28, "custo": 2.8},
+    {"id": 165, "nome": "Fio Aço 0.017x25 Superior", "cat": "Ortodontia", "unid": "unid", "qtde": 10, "preco": 28, "custo": 2.8},
+    {"id": 166, "nome": "Fio Aço 0.017x25 Inferior", "cat": "Ortodontia", "unid": "unid", "qtde": 10, "preco": 28, "custo": 2.8},
+    {"id": 167, "nome": "Braquete Porcelana Kit", "cat": "Ortodontia", "unid": "kit", "qtde": 1, "preco": 750, "custo": 750},
+    {"id": 168, "nome": "Braquete Safira Kit", "cat": "Ortodontia", "unid": "kit", "qtde": 1, "preco": 890, "custo": 890},
+    {"id": 169, "nome": "Braquete Autoligado Estético Kit", "cat": "Ortodontia", "unid": "kit", "qtde": 1, "preco": 980, "custo": 980},
+    {"id": 170, "nome": "Alinhador Invisalign (jogo completo)", "cat": "Ortodontia", "unid": "kit", "qtde": 1, "preco": 4500, "custo": 4500},
+    {"id": 171, "nome": "Refinamento Invisalign", "cat": "Ortodontia", "unid": "kit", "qtde": 1, "preco": 800, "custo": 800},
+    {"id": 172, "nome": "Escaneamento 3D (iTero/similar)", "cat": "Ortodontia", "unid": "unid", "qtde": 1, "preco": 300, "custo": 300}
+  ];
+  // Procedimentos de instalação/manutenção de aparelho. IDs na faixa 200+ para nunca
+  // colidir com DEFAULT_PROCS_FIN (1-102) nem com os materiais (91-172).
+  // precoFinal fica 0 propositalmente — é recalculado abaixo por calcPrecoFinal()
+  // a partir de insumos + hora clínica + margem, exatamente como os procedimentos 43/44/51.
+  const NOVOS_PROCS = [
+    {"id": 201, "nome": "Instalação Aparelho Estético Cerâmico", "grupo": "Ortodontia", "tempo": 120, "insumos": 0, "horaClin": 0, "laboratorio": 0, "margem": 200, "precoFinal": 0, "tipo_cobranca": "global"},
+    {"id": 202, "nome": "Instalação Aparelho Estético Porcelana", "grupo": "Ortodontia", "tempo": 120, "insumos": 0, "horaClin": 0, "laboratorio": 0, "margem": 200, "precoFinal": 0, "tipo_cobranca": "global"},
+    {"id": 203, "nome": "Instalação Aparelho Estético Safira", "grupo": "Ortodontia", "tempo": 120, "insumos": 0, "horaClin": 0, "laboratorio": 0, "margem": 200, "precoFinal": 0, "tipo_cobranca": "global"},
+    {"id": 204, "nome": "Instalação Aparelho Estético Autoligado", "grupo": "Ortodontia", "tempo": 120, "insumos": 0, "horaClin": 0, "laboratorio": 0, "margem": 200, "precoFinal": 0, "tipo_cobranca": "global"},
+    {"id": 205, "nome": "Instalação Aparelho Metálico Tradicional", "grupo": "Ortodontia", "tempo": 120, "insumos": 0, "horaClin": 0, "laboratorio": 0, "margem": 200, "precoFinal": 0, "tipo_cobranca": "global"},
+    {"id": 206, "nome": "Instalação Aparelho Metálico Autoligado", "grupo": "Ortodontia", "tempo": 120, "insumos": 0, "horaClin": 0, "laboratorio": 0, "margem": 200, "precoFinal": 0, "tipo_cobranca": "global"},
+    {"id": 207, "nome": "Tratamento Invisalign (completo)", "grupo": "Ortodontia", "tempo": 60, "insumos": 0, "horaClin": 0, "laboratorio": 0, "margem": 100, "precoFinal": 0, "tipo_cobranca": "global"},
+    {"id": 208, "nome": "Manutenção Aparelho Estético Cerâmico", "grupo": "Ortodontia", "tempo": 30, "insumos": 0, "horaClin": 0, "laboratorio": 0, "margem": 150, "precoFinal": 0, "tipo_cobranca": "global"},
+    {"id": 209, "nome": "Manutenção Aparelho Estético Porcelana", "grupo": "Ortodontia", "tempo": 30, "insumos": 0, "horaClin": 0, "laboratorio": 0, "margem": 150, "precoFinal": 0, "tipo_cobranca": "global"},
+    {"id": 210, "nome": "Manutenção Aparelho Estético Safira", "grupo": "Ortodontia", "tempo": 30, "insumos": 0, "horaClin": 0, "laboratorio": 0, "margem": 150, "precoFinal": 0, "tipo_cobranca": "global"},
+    {"id": 211, "nome": "Manutenção Aparelho Estético Autoligado", "grupo": "Ortodontia", "tempo": 30, "insumos": 0, "horaClin": 0, "laboratorio": 0, "margem": 150, "precoFinal": 0, "tipo_cobranca": "global"},
+    {"id": 212, "nome": "Manutenção Aparelho Metálico Tradicional", "grupo": "Ortodontia", "tempo": 30, "insumos": 0, "horaClin": 0, "laboratorio": 0, "margem": 150, "precoFinal": 0, "tipo_cobranca": "global"},
+    {"id": 213, "nome": "Manutenção Aparelho Metálico Autoligado", "grupo": "Ortodontia", "tempo": 30, "insumos": 0, "horaClin": 0, "laboratorio": 0, "margem": 150, "precoFinal": 0, "tipo_cobranca": "global"},
+    {"id": 214, "nome": "Manutenção Invisalign (refinamento)", "grupo": "Ortodontia", "tempo": 30, "insumos": 0, "horaClin": 0, "laboratorio": 0, "margem": 100, "precoFinal": 0, "tipo_cobranca": "global"}
+  ];
+  // Receita de insumos por procedimento — mesmo padrão usado nos procedimentos já
+  // existentes "Instalação Aparelho Metálico" (id 43) e "Instalação Aparelho Autoligado
+  // Metálico" (id 51): kit de braquete + adesivo + primer + arco + EPI (babador, luva,
+  // máscara, microbrush). Reaproveita os kits já cadastrados (43, 44, 45) quando existem.
+  const NOVOS_PROC_INSUMOS = {
+    201: [{matId:44, qtd:1},{matId:48,qtd:0.5},{matId:74,qtd:0.3},{matId:76,qtd:1},{matId:8,qtd:1},{matId:34,qtd:2},{matId:35,qtd:1},{matId:37,qtd:5}], // Cerâmico (kit já existente id 44)
+    202: [{matId:167,qtd:1},{matId:48,qtd:0.5},{matId:74,qtd:0.3},{matId:76,qtd:1},{matId:8,qtd:1},{matId:34,qtd:2},{matId:35,qtd:1},{matId:37,qtd:5}], // Porcelana
+    203: [{matId:168,qtd:1},{matId:48,qtd:0.5},{matId:74,qtd:0.3},{matId:76,qtd:1},{matId:8,qtd:1},{matId:34,qtd:2},{matId:35,qtd:1},{matId:37,qtd:5}], // Safira
+    204: [{matId:169,qtd:1},{matId:48,qtd:0.5},{matId:74,qtd:0.3},{matId:76,qtd:1},{matId:8,qtd:1},{matId:34,qtd:2},{matId:35,qtd:1},{matId:37,qtd:5}], // Autoligado estético
+    205: [{matId:43, qtd:1},{matId:48,qtd:0.5},{matId:74,qtd:0.3},{matId:76,qtd:1},{matId:8,qtd:1},{matId:34,qtd:2},{matId:35,qtd:1},{matId:37,qtd:5}], // Metálico tradicional (kit já existente id 43)
+    206: [{matId:45, qtd:1},{matId:48,qtd:0.5},{matId:74,qtd:0.3},{matId:76,qtd:1},{matId:8,qtd:1},{matId:34,qtd:2},{matId:35,qtd:1},{matId:37,qtd:5}], // Autoligado metálico (kit já existente id 45)
+    207: [{matId:172,qtd:1},{matId:8,qtd:1},{matId:34,qtd:1}], // Invisalign — o alinhador (matId 170) entra como custo de "laboratório" (R$4.500), não como insumo, para não ser contado em dobro
+    208: [{matId:77,qtd:0.3},{matId:8,qtd:1},{matId:34,qtd:1}],
+    209: [{matId:77,qtd:0.3},{matId:8,qtd:1},{matId:34,qtd:1}],
+    210: [{matId:77,qtd:0.3},{matId:8,qtd:1},{matId:34,qtd:1}],
+    211: [{matId:77,qtd:0.3},{matId:8,qtd:1},{matId:34,qtd:1}],
+    212: [{matId:78,qtd:0.3},{matId:8,qtd:1},{matId:34,qtd:1}],
+    213: [{matId:78,qtd:0.3},{matId:8,qtd:1},{matId:34,qtd:1}],
+    214: [{matId:171,qtd:1},{matId:8,qtd:1},{matId:34,qtd:1}]
+  };
+  // Custo de laboratório (alinhador Invisalign é fabricado fora — não é "insumo" de estoque
+  // consumido na consulta, é encomendado por caso, então entra como laboratório).
+  const LABORATORIO_POR_PROC = { 207: 4500 };
+
   let alterou = false;
   NOVOS_MATS.forEach(nm=>{
     if(!mats.find(m=>m.id===nm.id)){
@@ -3987,13 +4086,34 @@ function injetarNovosMatsOrto(){
   });
   NOVOS_PROCS.forEach(np=>{
     if(!procs.find(p=>p.id===np.id)){
-      procs.push(np);
+      const proc = {...np};
+      if(LABORATORIO_POR_PROC[np.id]) proc.laboratorio = LABORATORIO_POR_PROC[np.id];
+      procs.push(proc);
       alterou=true;
+    }
+  });
+  // Vincula a receita de insumos a cada procedimento novo (só se ainda não tiver insumos salvos)
+  Object.entries(NOVOS_PROC_INSUMOS).forEach(([pid,receita])=>{
+    const pidNum = Number(pid);
+    if(!procInsumos[pidNum] || !procInsumos[pidNum].length){
+      procInsumos[pidNum] = JSON.parse(JSON.stringify(receita));
+      alterou = true;
     }
   });
   if(alterou){
     nextMatId = Math.max(...mats.map(m=>m.id))+1;
     nextProcId = Math.max(...procs.map(p=>p.id))+1;
+    // Calcula insumos (R$), hora clínica e preço final SÓ dos procedimentos novos
+    // (precoFinal===0, recém-criados acima) — nunca toca em procedimentos que o
+    // usuário já tinha e possa ter personalizado manualmente.
+    NOVOS_PROCS.forEach(np=>{
+      const p = procs.find(x=>x.id===np.id);
+      if(!p || p.precoFinal>0) return;
+      const ins = procInsumos[p.id]||[];
+      p.insumos = parseFloat(ins.reduce((acc,item)=>{const m=mats.find(x=>x.id===item.matId);return acc+(m?m.custo*item.qtd:0);},0).toFixed(2));
+      p.horaClin = parseFloat(((p.tempo/60)*calcHora()).toFixed(2));
+      p.precoFinal = calcPrecoFinal(p);
+    });
     saveFinanceiro();
   }
 }
@@ -4465,6 +4585,7 @@ function renderFinanceiroDash(){
 let editProcId = null;
 function openAddProc(){
   editProcId = null;
+  mpPrecoEditadoManualmente = false;
   document.getElementById('modal-proc-title').textContent = 'Novo procedimento';
   ['mp-nome','mp-grupo','mp-tempo','mp-insumos','mp-laboratorio','mp-margem','mp-preco'].forEach(id=>{
     const el=document.getElementById(id); if(el) el.value='';
@@ -4473,12 +4594,13 @@ function openAddProc(){
   const dl = document.getElementById('grupos-list');
   if(dl) dl.innerHTML = [...new Set(procs.map(p=>p.grupo).filter(Boolean))].sort().map(g=>`<option value="${g}">`).join('');
   const mp = document.getElementById('mp-margem'); if(mp) mp.value = cfg.margem||100;
-  calcProcPreview();
+  calcProcPreview(true);
   openModal('modal-proc');
 }
 function openEditProc(id){
   const p = procs.find(x=>x.id===id); if(!p) return;
   editProcId = id;
+  mpPrecoEditadoManualmente = false;
   document.getElementById('modal-proc-title').textContent = 'Editar procedimento';
   document.getElementById('mp-nome').value      = p.nome;
   document.getElementById('mp-grupo').value     = p.grupo||'';
@@ -4487,10 +4609,11 @@ function openEditProc(id){
   document.getElementById('mp-laboratorio').value = p.laboratorio||0;
   document.getElementById('mp-margem').value    = p.margem || cfg.margem || 100;
   document.getElementById('mp-preco').value     = p.precoFinal||0;
-  calcProcPreview();
+  calcProcPreview(true);
   openModal('modal-proc');
 }
-function calcProcPreview(){
+let mpPrecoEditadoManualmente = false;
+function calcProcPreview(forcarAutoPreco){
   const tempo = Number(document.getElementById('mp-tempo')?.value)||0;
   const insumos = Number(document.getElementById('mp-insumos')?.value)||0;
   const lab   = Number(document.getElementById('mp-laboratorio')?.value)||0;
@@ -4506,7 +4629,17 @@ function calcProcPreview(){
   set('mp-lucro-calc',    fmtBRL(lucro));
   set('mp-preco-calc',    fmtBRL(preco));
   const pp = document.getElementById('mp-preco');
-  if(pp && !pp.value) pp.value = preco.toFixed(2);
+  // Só preenche automaticamente o preço final se o usuário ainda não tiver
+  // sobrescrito manualmente esse campo (ou se for um recálculo forçado).
+  if(pp && (forcarAutoPreco || !mpPrecoEditadoManualmente)){
+    pp.value = preco.toFixed(2);
+  }
+}
+function mpMarcarPrecoManual(){ mpPrecoEditadoManualmente = true; }
+function mpUsarPrecoCalculado(){
+  mpPrecoEditadoManualmente = false;
+  calcProcPreview(true);
+  showToast('Preço final recalculado pela margem.');
 }
 async function saveProc(){
   const nome = document.getElementById('mp-nome')?.value.trim();
@@ -4517,7 +4650,12 @@ async function saveProc(){
   const lab    = Number(document.getElementById('mp-laboratorio')?.value)||0;
   const margem = Number(document.getElementById('mp-margem')?.value)||100;
   const hc     = parseFloat(((tempo/60)*hora).toFixed(2));
-  const preco  = Number(document.getElementById('mp-preco')?.value)||calcPrecoFinal({tempo,insumos,laboratorio:lab,margem});
+  const precoCampo = document.getElementById('mp-preco')?.value;
+  // Se o usuário não editou manualmente o preço, sempre recalcula pela margem atual
+  // (evita salvar um preço "fantasma" de antes de mudar a margem).
+  const preco  = (mpPrecoEditadoManualmente && precoCampo!=='')
+                  ? Number(precoCampo)
+                  : calcPrecoFinal({tempo,insumos,laboratorio:lab,margem});
   const obj    = { nome, grupo:document.getElementById('mp-grupo')?.value||'Geral', tempo, insumos, laboratorio:lab, margem, horaClin:hc, precoFinal:preco };
   if(editProcId){
     const i = procs.findIndex(x=>x.id===editProcId);
@@ -7479,7 +7617,7 @@ function enviarResgateWpp(){
 // ══════════════════════════════════════════════════════
 // CONFIGURAÇÕES DA CLÍNICA
 // ══════════════════════════════════════════════════════
-function renderConfiguracoes(){
+async function renderConfiguracoes(){
   if(!clinicaData) return;
   document.getElementById('cfg-nome-cli').value  = clinicaData.nome_cli  || '';
   document.getElementById('cfg-nome-resp').value = clinicaData.nome_resp || '';
@@ -7492,6 +7630,41 @@ function renderConfiguracoes(){
     const el = document.getElementById('cfg-taxa-cred'+p);
     if(el) el.value = cr[i] || '';
   });
+  // Precificação (hora clínica / margem) — garante que cfg já foi carregado do Supabase
+  if(!_financeiroCarregado){
+    await loadFinanceiro();
+  }
+  document.getElementById('cfg-salario').value  = cfg.salario  ?? 3000;
+  document.getElementById('cfg-horas').value    = cfg.horas    ?? 132;
+  document.getElementById('cfg-trib').value     = cfg.trib     ?? 0;
+  document.getElementById('cfg-desperd').value  = cfg.desperd  ?? 5;
+  document.getElementById('cfg-margem').value   = cfg.margem   ?? 100;
+  cfgAtualizarPreviewHora();
+}
+
+function cfgAtualizarPreviewHora(){
+  const salario = Number(document.getElementById('cfg-salario')?.value)||0;
+  const horas   = Number(document.getElementById('cfg-horas')?.value)||1;
+  const trib    = Number(document.getElementById('cfg-trib')?.value)||0;
+  const hora    = parseFloat(((salario/horas)*(1+trib/100)).toFixed(2));
+  const el = document.getElementById('cfg-hora-preview');
+  if(el) el.textContent = fmtBRL(hora) + ' / hora';
+}
+
+async function salvarPrecificacao(){
+  cfg.salario  = Number(document.getElementById('cfg-salario')?.value)||0;
+  cfg.horas    = Number(document.getElementById('cfg-horas')?.value)||132;
+  cfg.trib     = Number(document.getElementById('cfg-trib')?.value)||0;
+  cfg.desperd  = Number(document.getElementById('cfg-desperd')?.value)||0;
+  cfg.margem   = Number(document.getElementById('cfg-margem')?.value)||100;
+  showLoading(true);
+  // A hora clínica mudou — atualiza horaClin de todos os procedimentos (sem mexer no
+  // preço final, que pode ter sido ajustado manualmente; use "Recalcular custos" na
+  // tela de Procedimentos para também atualizar o preço final pela margem de cada um).
+  recalcularInsumos(true);
+  await saveFinanceiro();
+  showLoading(false);
+  showToast('Precificação salva! Hora clínica atualizada para '+fmtBRL(calcHora())+'.');
 }
 
 async function salvarTaxas(){
@@ -7601,7 +7774,14 @@ async function calSaveNewAppt(){
       <div>Lucro: <strong id="mp-lucro-calc">—</strong></div>
       <div>Preço final: <strong id="mp-preco-calc">—</strong></div>
     </div>
-    <div class="form-group"><label>Preço final (R$) — ajuste manual</label><input type="number" id="mp-preco" step="0.01"/></div>
+    <div class="form-group">
+      <label>Preço final (R$) — ajuste manual</label>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <input type="number" id="mp-preco" step="0.01" style="flex:1;" oninput="mpMarcarPrecoManual()"/>
+        <button type="button" class="btn-secondary" style="white-space:nowrap;" onclick="mpUsarPrecoCalculado()" title="Recalcular o preço final usando a margem de lucro definida acima"><i class="ti ti-refresh"></i> Usar calculado</button>
+      </div>
+      <small style="color:var(--rose-text);font-size:11px;display:block;margin-top:4px;">Se você mudar a margem e quiser que o preço final reflita a nova margem, clique em "Usar calculado".</small>
+    </div>
     <div class="modal-footer">
       <button class="btn-secondary" onclick="closeModal('modal-proc')">Cancelar</button>
       <button class="btn-primary" onclick="saveProc()"><i class="ti ti-check"></i> Salvar</button>
