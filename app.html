@@ -2064,7 +2064,46 @@ function ptCheckMenor(){
   return ehMenor;
 }
 
+// Responsável/contato de emergência são guardados dentro da coluna "notas" (texto livre,
+// já existente no banco), num bloco JSON marcado — assim não exigimos nenhuma coluna nova
+// no Supabase nem corremos o risco de serem sobrescritos pela tela de Anamnese clínica
+// (que grava em "anamnese"/tabela "anamneses", reconstruindo o objeto do zero).
+const PT_META_INICIO = '<!--RWDENT_META:';
+const PT_META_FIM = ':RWDENT_META-->';
+
+function ptParseNotas(notasRaw){
+  const raw = notasRaw||'';
+  const i = raw.indexOf(PT_META_INICIO);
+  const j = raw.indexOf(PT_META_FIM);
+  if(i===-1 || j===-1 || j<i) return { texto: raw.trim(), meta: {} };
+  const jsonStr = raw.slice(i+PT_META_INICIO.length, j);
+  const texto = (raw.slice(0,i)+raw.slice(j+PT_META_FIM.length)).trim();
+  let meta = {};
+  try { meta = JSON.parse(jsonStr)||{}; } catch(e){ meta = {}; }
+  return { texto, meta };
+}
+
+function ptBuildNotas(texto, meta){
+  const temMeta = (meta.responsavel && (meta.responsavel.nome||meta.responsavel.telefone||meta.responsavel.cpf||meta.responsavel.parentesco))
+                || (meta.emergencia && (meta.emergencia.nome||meta.emergencia.telefone||meta.emergencia.parentesco));
+  if(!temMeta) return (texto||'').trim();
+  return (texto||'').trim() + (texto?'\n\n':'') + PT_META_INICIO + JSON.stringify(meta) + PT_META_FIM;
+}
+
 function readPatientForm(){
+  const responsavel = {
+    nome:document.getElementById('pt-resp-nome').value.trim(),
+    parentesco:document.getElementById('pt-resp-parentesco').value.trim(),
+    cpf:document.getElementById('pt-resp-cpf').value.trim(),
+    telefone:document.getElementById('pt-resp-telefone').value.trim()
+  };
+  const emergencia = {
+    nome:document.getElementById('pt-emerg-nome').value.trim(),
+    parentesco:document.getElementById('pt-emerg-parentesco').value.trim(),
+    telefone:document.getElementById('pt-emerg-telefone').value.trim()
+  };
+  const textoNotas = document.getElementById('pt-notas').value.trim();
+  const notas = ptBuildNotas(textoNotas, {responsavel, emergencia});
   return {
     nome:document.getElementById('pt-nome').value.trim(),
     nascimento:document.getElementById('pt-nascimento').value,
@@ -2072,14 +2111,8 @@ function readPatientForm(){
     email:document.getElementById('pt-email').value.trim(),
     plano:document.getElementById('pt-plano').value.trim(),
     cpf:document.getElementById('pt-cpf').value.trim(),
-    notas:document.getElementById('pt-notas').value.trim(),
-    responsavel_nome:document.getElementById('pt-resp-nome').value.trim(),
-    responsavel_parentesco:document.getElementById('pt-resp-parentesco').value.trim(),
-    responsavel_cpf:document.getElementById('pt-resp-cpf').value.trim(),
-    responsavel_telefone:document.getElementById('pt-resp-telefone').value.trim(),
-    emergencia_nome:document.getElementById('pt-emerg-nome').value.trim(),
-    emergencia_parentesco:document.getElementById('pt-emerg-parentesco').value.trim(),
-    emergencia_telefone:document.getElementById('pt-emerg-telefone').value.trim()
+    notas,
+    _responsavel: responsavel, // só para validação em memória, não vai pro banco
   };
 }
 
@@ -2094,11 +2127,12 @@ function resetPatientForm(){
 async function adicionarPaciente(){
   const dados=readPatientForm();
   if(!dados.nome){ showToast('Preencha o nome do paciente.','warn'); return; }
-  if(ptCheckMenor() && !dados.responsavel_nome){
+  if(ptCheckMenor() && !dados._responsavel.nome){
     showToast('Paciente menor de idade: preencha o nome do responsável.','warn');
     document.getElementById('pt-resp-nome').focus();
     return;
   }
+  delete dados._responsavel;
   showLoading(true);
   const { data:novo, error } = await _sb.from('pacientes').insert([{...dados, clinica_id: clinicaId}]).select().single();
   showLoading(false);
@@ -2162,32 +2196,34 @@ function renderPatientDetail(abaAtiva){
 
       <!-- ABA: DADOS -->
       <div id="pac-aba-info" style="display:${abaAtiva==='info'?'':'none'};">
+        ${(()=>{ const _pn = ptParseNotas(p.notas); return `
         <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;font-size:13px;margin-top:14px;">
           <div><strong>CPF:</strong> ${escapeHtml(p.cpf||'-')}</div>
           <div><strong>Tel:</strong> ${escapeHtml(p.telefone||'-')}</div>
           <div><strong>E-mail:</strong> ${escapeHtml(p.email||'-')}</div>
           <div><strong>Plano:</strong> ${escapeHtml(p.plano||'-')}</div>
-          ${p.notas?`<div style="grid-column:span 2"><strong>Obs:</strong> ${escapeHtml(p.notas)}</div>`:''}
+          ${_pn.texto?`<div style="grid-column:span 2"><strong>Obs:</strong> ${escapeHtml(_pn.texto)}</div>`:''}
         </div>
-        ${(p.responsavel_nome||(calcIdade(p.nascimento)!==null&&calcIdade(p.nascimento)<18)) ? `
+        ${(_pn.meta.responsavel?.nome||(calcIdade(p.nascimento)!==null&&calcIdade(p.nascimento)<18)) ? `
         <div style="margin-top:16px;background:var(--rose-lighter);border-radius:10px;padding:12px;">
           <div style="font-size:12px;font-weight:700;color:var(--rose-dark);margin-bottom:8px;display:flex;align-items:center;gap:6px;"><i class="ti ti-user-shield"></i> Responsável</div>
           <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;font-size:13px;">
-            <div><strong>Nome:</strong> ${escapeHtml(p.responsavel_nome||'-')}</div>
-            <div><strong>Parentesco:</strong> ${escapeHtml(p.responsavel_parentesco||'-')}</div>
-            <div><strong>CPF:</strong> ${escapeHtml(p.responsavel_cpf||'-')}</div>
-            <div><strong>Telefone:</strong> ${escapeHtml(p.responsavel_telefone||'-')}</div>
+            <div><strong>Nome:</strong> ${escapeHtml(_pn.meta.responsavel?.nome||'-')}</div>
+            <div><strong>Parentesco:</strong> ${escapeHtml(_pn.meta.responsavel?.parentesco||'-')}</div>
+            <div><strong>CPF:</strong> ${escapeHtml(_pn.meta.responsavel?.cpf||'-')}</div>
+            <div><strong>Telefone:</strong> ${escapeHtml(_pn.meta.responsavel?.telefone||'-')}</div>
           </div>
         </div>` : ''}
-        ${(p.emergencia_nome||p.emergencia_telefone) ? `
+        ${(_pn.meta.emergencia?.nome||_pn.meta.emergencia?.telefone) ? `
         <div style="margin-top:12px;background:#fff8e1;border-radius:10px;padding:12px;">
           <div style="font-size:12px;font-weight:700;color:#856404;margin-bottom:8px;display:flex;align-items:center;gap:6px;"><i class="ti ti-phone-call"></i> Contato de emergência</div>
           <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;font-size:13px;">
-            <div><strong>Nome:</strong> ${escapeHtml(p.emergencia_nome||'-')}</div>
-            <div><strong>Relação:</strong> ${escapeHtml(p.emergencia_parentesco||'-')}</div>
-            <div style="grid-column:span 2"><strong>Telefone:</strong> ${escapeHtml(p.emergencia_telefone||'-')}</div>
+            <div><strong>Nome:</strong> ${escapeHtml(_pn.meta.emergencia?.nome||'-')}</div>
+            <div><strong>Relação:</strong> ${escapeHtml(_pn.meta.emergencia?.parentesco||'-')}</div>
+            <div style="grid-column:span 2"><strong>Telefone:</strong> ${escapeHtml(_pn.meta.emergencia?.telefone||'-')}</div>
           </div>
         </div>` : ''}
+        `; })()}
       </div>
 
       <!-- ABA: ANAMNESE -->
@@ -2780,15 +2816,24 @@ function editPatient(id){
   editingPatientId=id;
   const campoParaCol = {
     'pt-nome':'nome','pt-nascimento':'nascimento','pt-telefone':'telefone','pt-email':'email',
-    'pt-plano':'plano','pt-cpf':'cpf','pt-notas':'notas',
-    'pt-resp-nome':'responsavel_nome','pt-resp-parentesco':'responsavel_parentesco',
-    'pt-resp-cpf':'responsavel_cpf','pt-resp-telefone':'responsavel_telefone',
-    'pt-emerg-nome':'emergencia_nome','pt-emerg-parentesco':'emergencia_parentesco',
-    'pt-emerg-telefone':'emergencia_telefone'
+    'pt-plano':'plano','pt-cpf':'cpf'
   };
   Object.entries(campoParaCol).forEach(([elId,col])=>{
     const el=document.getElementById(elId); if(el) el.value=p[col]||'';
   });
+  // Responsável e contato de emergência vêm de dentro do bloco oculto na coluna "notas";
+  // o texto livre digitado pelo usuário fica separado e é o que aparece no campo Observações.
+  const { texto, meta } = ptParseNotas(p.notas);
+  document.getElementById('pt-notas').value = texto;
+  const resp = meta.responsavel || {};
+  const emer = meta.emergencia || {};
+  document.getElementById('pt-resp-nome').value        = resp.nome||'';
+  document.getElementById('pt-resp-parentesco').value   = resp.parentesco||'';
+  document.getElementById('pt-resp-cpf').value          = resp.cpf||'';
+  document.getElementById('pt-resp-telefone').value     = resp.telefone||'';
+  document.getElementById('pt-emerg-nome').value        = emer.nome||'';
+  document.getElementById('pt-emerg-parentesco').value  = emer.parentesco||'';
+  document.getElementById('pt-emerg-telefone').value    = emer.telefone||'';
   ptCheckMenor();
   const btn=document.getElementById('save-patient-btn');
   btn.innerHTML='<i class="ti ti-check"></i> Atualizar paciente';
@@ -2799,6 +2844,7 @@ function editPatient(id){
 async function savePatientEdit(id){
   const dados=readPatientForm();
   if(!dados.nome){ showToast('Preencha o nome.','warn'); return; }
+  delete dados._responsavel;
   showLoading(true);
   const { error } = await _sb.from('pacientes').update(dados).eq('id',id);
   showLoading(false);
