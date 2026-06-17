@@ -927,7 +927,7 @@ button{font-family:inherit;}
         <div style="background:var(--rose-lighter);border-radius:8px;padding:8px 12px;font-size:12px;color:var(--rose-dark);margin-bottom:12px;">
           <i class="ti ti-info-circle"></i> A hora clínica e a margem de lucro padrão usadas para calcular os preços ficam em <strong>Configurações → Precificação</strong>. A margem de cada procedimento pode ser ajustada individualmente clicando no lápis (editar) e depois em "Usar calculado".
         </div>
-        <div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;">
+        <div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;align-items:center;">
           <input type="text" id="proc-search" placeholder="Buscar..." oninput="filterProcs()" style="flex:1;min-width:150px;"/>
           <select id="proc-grupo" onchange="filterProcs()"><option value="">Todos os grupos</option></select>
           <select id="proc-ordem" onchange="filterProcs()">
@@ -936,6 +936,9 @@ button{font-family:inherit;}
             <option value="preco_asc">Preço ↑</option>
             <option value="preco_desc">Preço ↓</option>
           </select>
+          <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--rose-dark);white-space:nowrap;cursor:pointer;background:var(--rose-lighter);padding:8px 12px;border-radius:8px;">
+            <input type="checkbox" id="proc-so-recolagem" onchange="filterProcs()"/> Mostrar só Recolagem
+          </label>
           <button class="btn-secondary" onclick="recalcularInsumos(false)"><i class="ti ti-refresh"></i> Recalcular custos</button>
         </div>
         <div style="overflow-x:auto;">
@@ -3865,6 +3868,12 @@ const fmtN2  = v => isNaN(v)?'—':Number(v).toLocaleString('pt-BR',{minimumFrac
 
 // ── Estado financeiro (salvo no Supabase por clínica) ──
 let procs       = [];   // procedimentos com precificação
+// Materiais que são "kit completo" (20 peças) — nunca usar em procedimentos de recolagem
+const MAT_IDS_KIT_COMPLETO = new Set([43,44,45,117,118,119,120,121,122,167,168,169,170]);
+// Materiais que são "peça avulsa" (1 unidade, calculada como kit/20) — usar em recolagem
+const MAT_IDS_PECA_AVULSA  = new Set([173,174,175,176,177,178]);
+// IDs de procedimento que são "Recolagem" — mostram o aviso e priorizam peça avulsa na busca
+const PROC_IDS_RECOLAGEM = new Set([46,215,216,217,218,219,220]);
 let mats        = [];   // materiais/insumos
 let combos      = [];   // combos promocionais
 let estoque     = {};   // { matId: { atual, min, compra } }
@@ -4821,6 +4830,8 @@ function renderProcs(){
     gsel.innerHTML = '<option value="">Todos os grupos</option>' + gs.map(g=>`<option value="${g}"${g===cur?' selected':''}>${g}</option>`).join('');
   }
   let list = procs.filter(p=>(!q||p.nome.toLowerCase().includes(q))&&(!grupo||p.grupo===grupo));
+  const soRecolagem = document.getElementById('proc-so-recolagem')?.checked;
+  if(soRecolagem) list = list.filter(p=>PROC_IDS_RECOLAGEM.has(p.id)||/recolagem/i.test(p.nome));
   if(ordem==='az') list=[...list].sort((a,b)=>a.nome.localeCompare(b.nome,'pt-BR'));
   else if(ordem==='preco_asc') list=[...list].sort((a,b)=>(a.precoFinal||0)-(b.precoFinal||0));
   else if(ordem==='preco_desc') list=[...list].sort((a,b)=>(b.precoFinal||0)-(a.precoFinal||0));
@@ -4828,7 +4839,7 @@ function renderProcs(){
   if(!tb) return;
   if(!list.length){ tb.innerHTML='<tr><td colspan="9" style="text-align:center;color:var(--rose-text);padding:20px;">Nenhum procedimento encontrado.</td></tr>'; return; }
   tb.innerHTML = list.map(p=>`<tr style="border-bottom:1px solid var(--rose-light);">
-    <td style="padding:10px;">${escapeHtml(p.nome)}</td>
+    <td style="padding:10px;">${escapeHtml(p.nome)} ${PROC_IDS_RECOLAGEM.has(p.id)||/recolagem/i.test(p.nome)?'<span class="fin-badge ok" style="font-size:9px;">RECOLAGEM</span>':''}</td>
     <td style="padding:10px;"><span style="background:var(--rose-lighter);color:var(--rose-dark);border-radius:6px;padding:2px 8px;font-size:11px;">${escapeHtml(p.grupo||'—')}</span></td>
     <td style="padding:10px;text-align:right;">${p.tempo||0} min</td>
     <td style="padding:10px;text-align:right;">${fmtBRL(p.insumos||0)}</td>
@@ -5114,6 +5125,13 @@ function _atualizarStatusEstLinha(id){
 // ── INSUMOS DOS PROCEDIMENTOS ──
 let insumosEditProcId = null;
 let insumosTemp = [];
+
+function matBadge(m){
+  if(MAT_IDS_KIT_COMPLETO.has(m.id)) return '<span class="fin-badge danger" style="font-size:9px;">KIT (20 peças)</span>';
+  if(MAT_IDS_PECA_AVULSA.has(m.id))  return '<span class="fin-badge ok" style="font-size:9px;">peça avulsa</span>';
+  return '';
+}
+
 function openInsumos(procId){
   const p = procs.find(x=>x.id===procId); if(!p) return;
   insumosEditProcId = procId;
@@ -5122,18 +5140,66 @@ function openInsumos(procId){
   const defaults = DEFAULT_PROC_INSUMOS_DATA[procId] || DEFAULT_PROC_INSUMOS_DATA[String(procId)];
   insumosTemp = JSON.parse(JSON.stringify(saved && saved.length ? saved : (defaults || [])));
   document.getElementById('mi-proc-nome').textContent = p.nome;
-  const sel = document.getElementById('mi-mat-sel');
-  if(sel) sel.innerHTML = mats.map(m=>`<option value="${m.id}">${m.nome} (${m.unid||'unid'}) — ${fmtBRL(m.custo||0)}/un.</option>`).join('');
+  const hint = document.getElementById('mi-recolagem-hint');
+  const ehRecolagem = PROC_IDS_RECOLAGEM.has(procId) || /recolagem/i.test(p.nome);
+  if(hint) hint.style.display = ehRecolagem ? 'block' : 'none';
+  const search = document.getElementById('mi-mat-search'); if(search) search.value = '';
+  const hid = document.getElementById('mi-mat-sel-id'); if(hid) hid.value = '';
   renderInsumosList();
   openModal('modal-insumos');
 }
+
+function miFiltrarMats(){
+  const q = (document.getElementById('mi-mat-search')?.value||'').toLowerCase().trim();
+  const ehRecolagem = PROC_IDS_RECOLAGEM.has(insumosEditProcId);
+  let lista = [...mats];
+  // Em procedimento de recolagem, esconde os kits completos por padrão (evita o erro
+  // de somar o kit inteiro) — só aparecem se o usuário digitar "kit" explicitamente.
+  if(ehRecolagem && !q.includes('kit')){
+    lista = lista.filter(m=>!MAT_IDS_KIT_COMPLETO.has(m.id));
+  }
+  if(q) lista = lista.filter(m=>m.nome.toLowerCase().includes(q));
+  lista = lista.slice(0,60); // performance
+  const dd = document.getElementById('mi-mat-dropdown');
+  if(!dd) return;
+  if(!lista.length){
+    dd.innerHTML = '<div style="padding:12px;color:var(--rose-text);text-align:center;font-size:12px;">Nenhum material encontrado</div>';
+    return;
+  }
+  dd.innerHTML = lista.map(m=>`
+    <div data-matid="${m.id}" style="padding:8px 12px;cursor:pointer;font-size:12px;border-bottom:1px solid var(--rose-light);display:flex;justify-content:space-between;align-items:center;gap:8px;">
+      <span>${escapeHtml(m.nome)} ${matBadge(m)}</span>
+      <span style="color:var(--rose-dark);font-weight:700;white-space:nowrap;">${fmtBRL(m.custo||0)}/${m.unid||'un'}</span>
+    </div>`).join('');
+  dd.querySelectorAll('[data-matid]').forEach(el=>{
+    el.onmouseover=()=>{el.style.background='var(--rose-lighter)';};
+    el.onmouseout=()=>{el.style.background='#fff';};
+    el.onclick=()=>miSelecionarMat(parseInt(el.dataset.matid));
+  });
+}
+
+function miSelecionarMat(matId){
+  const m = mats.find(x=>x.id===matId); if(!m) return;
+  document.getElementById('mi-mat-sel-id').value = matId;
+  document.getElementById('mi-mat-search').value = m.nome;
+  document.getElementById('mi-mat-dropdown').style.display = 'none';
+}
+
 function addInsumoRow(){
-  const matId = Number(document.getElementById('mi-mat-sel')?.value);
+  const matId = Number(document.getElementById('mi-mat-sel-id')?.value);
   const qtd   = parseFloat(document.getElementById('mi-qtd-add')?.value)||1;
-  if(!matId) return;
+  if(!matId){ showToast('Busque e selecione um material na lista antes de adicionar.','warn'); return; }
+  const m = mats.find(x=>x.id===matId);
+  // Aviso extra de segurança: tentando usar kit completo num procedimento de recolagem
+  if(PROC_IDS_RECOLAGEM.has(insumosEditProcId) && m && MAT_IDS_KIT_COMPLETO.has(m.id)){
+    if(!confirm('"'+m.nome+'" é o KIT COMPLETO (20 peças), não a peça avulsa. Isso vai cobrar o paciente pelo aparelho inteiro de novo. Tem certeza que quer usar este material aqui?')) return;
+  }
   const ex = insumosTemp.findIndex(x=>x.matId===matId);
   if(ex>=0) insumosTemp[ex].qtd = parseFloat((insumosTemp[ex].qtd+qtd).toFixed(4));
   else insumosTemp.push({matId,qtd});
+  // Limpa a busca para o próximo insumo
+  document.getElementById('mi-mat-search').value='';
+  document.getElementById('mi-mat-sel-id').value='';
   renderInsumosList();
 }
 function renderInsumosList(){
@@ -5146,7 +5212,7 @@ function renderInsumosList(){
     const e=estoque[m.id]||{atual:0};
     const tagCls=e.atual<item.qtd?'danger':'ok';
     return `<li style="display:grid;grid-template-columns:1fr auto auto auto;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid var(--rose-light);font-size:12px;">
-      <span>${escapeHtml(m.nome)} <span class="fin-badge ${tagCls}" style="font-size:10px;">est:${e.atual} ${m.unid||''}</span></span>
+      <span>${escapeHtml(m.nome)} ${matBadge(m)} <span class="fin-badge ${tagCls}" style="font-size:10px;">est:${e.atual} ${m.unid||''}</span></span>
       <input type="number" class="edit-input-fin" style="width:66px;text-align:center;" min="0.001" step="0.001" value="${item.qtd}" onchange="updateInsumoQtd(${idx},this.value)"/>
       <span style="font-size:11px;color:var(--rose-text);">${m.unid||''}</span>
       <span style="display:flex;align-items:center;gap:4px;">
@@ -7975,10 +8041,17 @@ async function calSaveNewAppt(){
 <div class="modal-overlay" id="modal-insumos" onclick="if(event.target===this)closeModal('modal-insumos')">
   <div class="modal-box" style="max-width:560px;">
     <h2 class="modal-title"><i class="ti ti-flask"></i> Insumos — <span id="mi-proc-nome"></span></h2>
-    <div style="display:flex;gap:8px;margin-bottom:8px;">
-      <select id="mi-mat-sel" style="flex:1;"></select>
-      <input type="number" id="mi-qtd-add" value="1" min="0.001" step="0.001" style="width:70px;" placeholder="Qtde"/>
-      <button class="btn-primary" onclick="addInsumoRow()"><i class="ti ti-plus"></i></button>
+    <div id="mi-recolagem-hint" style="display:none;background:#fff8e1;border-radius:8px;padding:8px 12px;font-size:11px;color:#856404;margin-bottom:8px;">
+      <i class="ti ti-alert-triangle"></i> Procedimento de <strong>recolagem</strong> — use a <strong>peça avulsa</strong> (1 braquete), nunca o "Kit (20 peças)". O kit é só para a instalação completa do aparelho.
+    </div>
+    <div style="position:relative;margin-bottom:8px;">
+      <div style="display:flex;gap:8px;">
+        <input type="text" id="mi-mat-search" placeholder="🔍 Buscar material por nome..." autocomplete="off" oninput="miFiltrarMats()" onfocus="miFiltrarMats();document.getElementById('mi-mat-dropdown').style.display='block'" onblur="setTimeout(()=>{const d=document.getElementById('mi-mat-dropdown');if(d)d.style.display='none'},250)" style="flex:1;padding:9px 12px;border:1.5px solid var(--rose-light);border-radius:10px;font-size:13px;box-sizing:border-box;"/>
+        <input type="number" id="mi-qtd-add" value="1" min="0.001" step="0.001" style="width:70px;" placeholder="Qtde"/>
+        <button class="btn-primary" onclick="addInsumoRow()"><i class="ti ti-plus"></i></button>
+      </div>
+      <input type="hidden" id="mi-mat-sel-id" value=""/>
+      <div id="mi-mat-dropdown" style="display:none;position:absolute;top:100%;left:0;right:78px;background:#fff;border:1.5px solid var(--rose-light);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.15);z-index:200;max-height:260px;overflow-y:auto;margin-top:2px;"></div>
     </div>
     <ul id="mi-list" style="list-style:none;max-height:240px;overflow-y:auto;margin-bottom:10px;"></ul>
     <div style="background:var(--rose-lighter);border-radius:8px;padding:8px 12px;font-size:12px;color:var(--rose-dark);margin-bottom:8px;display:flex;justify-content:space-between;">
