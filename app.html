@@ -4457,14 +4457,16 @@ function injetarNovosMatsOrto(){
     203: [{matId:168,qtd:1},{matId:48,qtd:0.5},{matId:74,qtd:0.3},{matId:76,qtd:1},{matId:8,qtd:1},{matId:34,qtd:2},{matId:35,qtd:1},{matId:37,qtd:5}], // Safira
     204: [{matId:169,qtd:1},{matId:48,qtd:0.5},{matId:74,qtd:0.3},{matId:76,qtd:1},{matId:8,qtd:1},{matId:34,qtd:2},{matId:35,qtd:1},{matId:37,qtd:5}], // Autoligado estético
     207: [{matId:172,qtd:1},{matId:8,qtd:1},{matId:34,qtd:1}], // Invisalign — o alinhador (matId 170) entra como custo de "laboratório" (R$4.500), não como insumo, para não ser contado em dobro
-    // Manutenção mensal por tipo — só troca de fio/EPI, nunca o kit/peça inteira
-    208: [{matId:77,qtd:0.3},{matId:8,qtd:1},{matId:34,qtd:1}],
-    209: [{matId:77,qtd:0.3},{matId:8,qtd:1},{matId:34,qtd:1}],
-    210: [{matId:77,qtd:0.3},{matId:8,qtd:1},{matId:34,qtd:1}],
-    211: [{matId:77,qtd:0.3},{matId:8,qtd:1},{matId:34,qtd:1}],
-    212: [{matId:78,qtd:0.3},{matId:8,qtd:1},{matId:34,qtd:1}],
-    213: [{matId:78,qtd:0.3},{matId:8,qtd:1},{matId:34,qtd:1}],
-    214: [{matId:171,qtd:1},{matId:8,qtd:1},{matId:34,qtd:1}],
+    // Manutenção mensal por tipo — troca de arco + ligadura (quando usa) + EPI completo
+    // EPI: babador (8), luva (34), máscara (35)
+    // Elástico id 75 = pacote ~1040 unid; 28 ligaduras por sessão = qtd 0.027
+    208: [{matId:77,qtd:1},{matId:75,qtd:0.027},{matId:8,qtd:1},{matId:34,qtd:1},{matId:35,qtd:1}],
+    209: [{matId:77,qtd:1},{matId:75,qtd:0.027},{matId:8,qtd:1},{matId:34,qtd:1},{matId:35,qtd:1}],
+    210: [{matId:77,qtd:1},{matId:75,qtd:0.027},{matId:8,qtd:1},{matId:34,qtd:1},{matId:35,qtd:1}],
+    211: [{matId:77,qtd:1},{matId:8,qtd:1},{matId:34,qtd:1},{matId:35,qtd:1}],
+    212: [{matId:78,qtd:1},{matId:75,qtd:0.027},{matId:8,qtd:1},{matId:34,qtd:1},{matId:35,qtd:1}],
+    213: [{matId:78,qtd:1},{matId:8,qtd:1},{matId:34,qtd:1},{matId:35,qtd:1}],
+    214: [{matId:171,qtd:1},{matId:8,qtd:1},{matId:34,qtd:1},{matId:35,qtd:1}],
     // Recolagem: 1 peça avulsa (kit ÷ 20) + um pouco de adesivo + EPI mínimo.
     // NUNCA usar o kit inteiro (matId 43/44/45/167/168/169) aqui — isso cobraria o
     // paciente pelo aparelho completo de novo. A peça avulsa é o material certo.
