@@ -1591,7 +1591,6 @@ button{font-family:inherit;}
   <div style="color:var(--rose-text);font-size:14px;">Carregando...</div>
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script>
 // ══════════════════════════════════════════════════════
 // SUPABASE CLIENT
@@ -3567,52 +3566,6 @@ async function pacCarregarPlano(pacId){
   pacRenderPlanoLista();
 }
 
-function pacTogglePlanForm(){
-  const f = document.getElementById('pac-plan-form');
-  if(!f) return;
-  if(f.style.display==='none'){
-    f.style.display='';
-    // limpa form
-    ['pac-plan-dente','pac-plan-face','pac-plan-proc','pac-plan-valor','pac-plan-desc']
-      .forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
-    pacPlanoEditId = null;
-  } else {
-    f.style.display='none';
-    pacPlanoEditId = null;
-  }
-}
-
-async function pacSalvarPlano(pacId){
-  const dente = document.getElementById('pac-plan-dente')?.value;
-  const face  = document.getElementById('pac-plan-face')?.value || '–';
-  const proc  = document.getElementById('pac-plan-proc')?.value;
-  const valor = document.getElementById('pac-plan-valor')?.value || '0,00';
-  const desc  = document.getElementById('pac-plan-desc')?.value.trim() || '';
-  if(!dente){ showToast('Selecione o dente.','warn'); return; }
-  if(!proc){  showToast('Selecione o procedimento.','warn'); return; }
-  showLoading(true);
-  let error;
-  if(pacPlanoEditId){
-    ({ error } = await _sb.from('plano_tratamento').update({ dente, face, procedimento:proc, valor, descricao:desc }).eq('id',pacPlanoEditId));
-    if(!error){
-      pacPlanoList = pacPlanoList.map(i=> i.id===pacPlanoEditId ? {...i,dente,face,procedimento:proc,valor,descricao:desc} : i);
-    }
-  } else {
-    const { data:novo, error:e } = await _sb.from('plano_tratamento').insert([{
-      clinica_id:clinicaId, paciente_id:pacId,
-      dente, face, procedimento:proc, valor, descricao:desc, status:'pendente'
-    }]).select().single();
-    error = e;
-    if(!error) pacPlanoList.unshift(novo);
-  }
-  showLoading(false);
-  if(error){ showToast('Erro: '+error.message,'error'); return; }
-  pacTogglePlanForm();
-  pacRenderPlanoResumo();
-  pacRenderPlanoLista();
-  showToast('Salvo no plano!');
-}
-
 async function pacAlterarStatusPlano(id, status){
   showLoading(true);
   const { error } = await _sb.from('plano_tratamento').update({ status }).eq('id',id);
@@ -3672,21 +3625,6 @@ async function pacAlterarStatusPlano(id, status){
   pacRenderPlanoLista();
 }
 
-async function pacEditarPlano(id){
-  const item = pacPlanoList.find(i=>i.id===id);
-  if(!item) return;
-  pacPlanoEditId = id;
-  const f = document.getElementById('pac-plan-form');
-  if(f) f.style.display='';
-  const set = (elId, val) => { const el=document.getElementById(elId); if(el) el.value=val||''; };
-  set('pac-plan-dente', item.dente);
-  set('pac-plan-face',  item.face);
-  set('pac-plan-proc',  item.procedimento);
-  set('pac-plan-valor', item.valor);
-  set('pac-plan-desc',  item.descricao);
-  f?.scrollIntoView({behavior:'smooth',block:'nearest'});
-}
-
 // Atualiza o valor de um item do plano direto na tela de revisão (sem abrir formulário)
 async function pacAtualizarValorPlano(id, novoValorStr){
   const item = pacPlanoList.find(i=>i.id===id);
@@ -3731,43 +3669,6 @@ function pacRenderPlanoResumo(){
       <div style="font-size:20px;font-weight:800;color:${s.cor};">${s.val}</div>
     </div>
   `).join('');
-}
-
-function pacRenderPlanoLista(){
-  const c = document.getElementById('pac-plano-lista');
-  if(!c) return;
-  if(!pacPlanoList.length){
-    c.innerHTML='<div style="text-align:center;color:var(--rose-text);font-size:13px;padding:16px;">Nenhum procedimento planejado ainda.</div>';
-    return;
-  }
-  // Mobile: cards. Desktop: tabela
-  c.innerHTML = pacPlanoList.map(item => {
-    const sc = STATUS_CORES[item.status] || STATUS_CORES.pendente;
-    const statusLabel = {pendente:'Pendente',aprovado:'Aprovado',realizado:'Realizado',cancelado:'Cancelado'}[item.status]||item.status;
-    const btnAprovar  = item.status==='pendente' ? `<button class="btn-secondary" style="font-size:11px;padding:4px 10px;" onclick="pacAlterarStatusPlano(${item.id},'aprovado')">✔ Aprovar</button>` : '';
-    const btnRealizar = (item.status==='aprovado'||item.status==='pendente') ? `<button class="btn-secondary" style="font-size:11px;padding:4px 10px;color:#2e7d32;border-color:#a5d6a7;" onclick="pacAlterarStatusPlano(${item.id},'realizado')">✅ Realizado</button>` : '';
-    return `<div style="border:1px solid var(--rose-light);border-radius:12px;padding:13px;margin-bottom:8px;background:#fff;">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;">
-        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-          <span style="font-weight:800;color:var(--rose-dark);font-size:14px;">🦷 Dente ${escapeHtml(item.dente)}</span>
-          ${item.face&&item.face!=='–'?`<span style="font-size:11px;color:var(--rose-text);">(${escapeHtml(item.face)})</span>`:''}
-          <strong style="font-size:13px;">${escapeHtml(item.procedimento)}</strong>
-        </div>
-        <span style="background:${sc.bg};color:${sc.txt};padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;display:inline-flex;align-items:center;gap:4px;">
-          <span style="width:6px;height:6px;border-radius:50%;background:${sc.dot};display:inline-block;"></span>${statusLabel}
-        </span>
-      </div>
-      ${item.descricao?`<div style="font-size:12px;color:var(--rose-text);margin-top:5px;">${escapeHtml(item.descricao)}</div>`:''}
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;flex-wrap:wrap;gap:6px;">
-        <strong style="font-size:13px;color:#2e7d32;">R$ ${escapeHtml(item.valor||'0,00')}</strong>
-        <div style="display:flex;gap:6px;flex-wrap:wrap;">
-          ${btnAprovar}${btnRealizar}
-          <button class="btn-secondary" style="font-size:11px;padding:4px 10px;" onclick="pacEditarPlano(${item.id})">✏️ Editar</button>
-          <button class="btn-danger" style="font-size:11px;padding:4px 8px;" onclick="pacRemoverPlano(${item.id})"><i class="ti ti-trash"></i></button>
-        </div>
-      </div>
-    </div>`;
-  }).join('');
 }
 
 // ══════════════════════════════════════════════════════
@@ -5921,94 +5822,6 @@ async function excluirVenda(id){
   showLoading(true); await saveFinanceiro(); showLoading(false);
   renderVendas();
   showToast('Excluído.');
-}
-
-// ── SIMULADOR DE ORÇAMENTO (dentro do plano do paciente) ──
-function pacAbrirSimulador(pacId, pacNome){
-  // Atualiza o select de paciente no modal de venda
-  const mvPac = document.getElementById('mv-paciente');
-  if(mvPac){
-    mvPac.innerHTML = '<option value="">Sem vincular</option>' +
-      pacientes.map(p=>`<option value="${p.id}"${p.id===pacId?' selected':''}>${escapeHtml(p.nome)}</option>`).join('');
-  }
-  // Reseta orçamento
-  orcamento = [];
-  orcTotalOverride = null;
-  renderPlanoSimulador(pacId);
-}
-
-function renderPlanoSimulador(pacId){
-  const c = document.getElementById('pac-sim-container'); if(!c) return;
-  // Só reconstrói o HTML se ainda não foi criado para este paciente
-  if(!document.getElementById('sim-select-pac') || c.dataset.pacId !== String(pacId)){
-    c.dataset.pacId = pacId;
-    const grupos = [...new Set(procs.map(p=>p.grupo).filter(Boolean))].sort();
-    c.innerHTML = `
-    <div style="border:1.5px solid var(--rose-light);border-radius:12px;padding:14px;margin-bottom:14px;">
-      <h2 style="font-size:13px;font-weight:700;color:var(--rose-dark);margin-bottom:12px;"><i class="ti ti-calculator"></i> Simulador de Orçamento</h2>
-
-      <div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;">
-        <input type="text" id="sim-search-pac" placeholder="Pesquisar..." oninput="renderSimSelectPac()" style="flex:1;min-width:120px;"/>
-        <select id="sim-grupo-pac" onchange="renderSimSelectPac()">
-          <option value="">Todos</option>
-          <option value="__combo__">🎁 Combos</option>
-          ${grupos.map(g=>`<option value="${g}">${g}</option>`).join('')}
-        </select>
-      </div>
-      <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
-        <select id="sim-select-pac" style="flex:1;"></select>
-        <input type="number" id="sim-qtd-pac" value="1" min="1" max="99" style="width:56px;"/>
-        <button class="btn-primary" onclick="addOrcPac()"><i class="ti ti-plus"></i></button>
-      </div>
-
-      <div id="sim-orc-list-pac" style="margin-bottom:12px;"></div>
-
-      <div style="background:var(--rose-lighter);border-radius:8px;padding:10px 12px;margin-bottom:10px;">
-        <div style="font-size:11px;font-weight:700;color:var(--rose-text);text-transform:uppercase;margin-bottom:8px;">Desconto</div>
-        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-          <input type="number" id="sim-desc-val-pac" min="0" step="0.1" value="${descCfg.val||0}" oninput="updateDescPac()" style="width:80px;padding:6px 8px;border:1px solid var(--rose-light);border-radius:8px;font-size:13px;"/>
-          <select id="sim-desc-tipo-pac" onchange="updateDescPac()" style="padding:6px 8px;border:1px solid var(--rose-light);border-radius:8px;font-size:13px;">
-            <option value="pct" ${(descCfg.tipo||'pct')==='pct'?'selected':''}>%</option>
-            <option value="val" ${descCfg.tipo==='val'?'selected':''}>R$</option>
-          </select>
-          <span style="font-size:12px;color:var(--rose-text);" id="sim-desc-info-pac"></span>
-        </div>
-      </div>
-
-      <div style="background:var(--rose-lighter);border-radius:8px;padding:10px 14px;margin-bottom:10px;">
-        <div style="display:flex;justify-content:space-between;align-items:center;font-size:14px;font-weight:700;color:var(--rose-dark);">
-          <span>Total</span>
-          <span id="sim-orc-total-pac">R$ 0,00</span>
-        </div>
-        <div id="sim-desc-total-pac" style="display:none;font-size:12px;color:#2e7d32;margin-top:4px;text-align:right;"></div>
-        <div id="sim-orc-lucro-pac" style="font-size:11px;color:var(--rose-text);margin-top:6px;border-top:1px solid var(--rose-light);padding-top:6px;"></div>
-      </div>
-
-      <div style="background:var(--rose-lighter);border-radius:8px;padding:10px 12px;margin-bottom:10px;">
-        <div style="font-size:11px;font-weight:700;color:var(--rose-text);text-transform:uppercase;margin-bottom:8px;">Forma de pagamento</div>
-        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-          <select id="sim-forma-pag" onchange="updateFormaPag()" style="flex:1;padding:6px 8px;border:1px solid var(--rose-light);border-radius:8px;font-size:13px;">
-            <option value="">Dinheiro / Pix</option>
-            <option value="debito">Débito ${taxasCfg.debito > 0 ? '('+taxasCfg.debito+'%)' : ''}</option>
-            ${[1,2,3,4,5,6,7,8,9,10,11,12].map(n=>{const t=(taxasCfg.credito||[])[n-1]||0;return `<option value="credito${n}">Crédito ${n}x${t>0?' ('+t+'%)':''}</option>`;}).join('')}
-          </select>
-          <span style="font-size:12px;color:var(--rose-text);" id="sim-taxa-info"></span>
-        </div>
-        <div id="sim-liquido-info" style="font-size:12px;color:#2e7d32;margin-top:6px;display:none;"></div>
-      </div>
-
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;margin-top:4px;">
-        <button class="btn-secondary" onclick="salvarOrcEIrParaOrcamentos(${pacId})" style="justify-content:center;padding:12px;"><i class="ti ti-device-floppy"></i> Salvar</button>
-        <button class="btn-primary" onclick="finalizarVendaPac(${pacId})" style="justify-content:center;padding:12px;"><i class="ti ti-circle-check"></i> Finalizar</button>
-      </div>
-
-      <button class="btn-secondary" onclick="orcamento=[];renderOrcPac();" style="width:100%;margin-top:6px;justify-content:center;color:var(--rose-text);"><i class="ti ti-eraser"></i> Limpar</button>
-    </div>
-  `;
-    renderSimSelectPac();
-  }
-  // Sempre atualiza a lista de itens sem recriar o HTML
-  renderOrcPac();
 }
 
 function updateDescPac(){
@@ -8646,22 +8459,6 @@ async function calSaveNewAppt(){
     <div class="modal-footer">
       <button class="btn-secondary" onclick="closeModal('modal-insumos')">Cancelar</button>
       <button class="btn-primary" onclick="saveInsumos()"><i class="ti ti-device-floppy"></i> Salvar insumos</button>
-    </div>
-  </div>
-</div>
-
-<!-- Modal Venda/Orçamento -->
-<div class="modal-overlay" id="modal-venda" onclick="if(event.target===this)closeModal('modal-venda')">
-  <div class="modal-box">
-    <h2 class="modal-title"><i class="ti ti-receipt"></i> <span id="modal-venda-title">Salvar orçamento</span></h2>
-    <div class="form-group"><label>Paciente</label>
-      <select id="mv-paciente"><option value="">Sem vincular a paciente</option></select>
-    </div>
-    <div id="mv-info" style="background:var(--rose-lighter);border-radius:8px;padding:8px 12px;font-size:12px;color:var(--rose-dark);margin-top:8px;"></div>
-    <div id="mv-warn" style="display:none;background:#fff8e1;border-radius:8px;padding:8px 12px;font-size:12px;color:#856404;margin-top:8px;"></div>
-    <div class="modal-footer">
-      <button class="btn-secondary" onclick="closeModal('modal-venda')">Cancelar</button>
-      <button class="btn-primary" id="mv-confirm" onclick="confirmVenda()"><i class="ti ti-check"></i> Confirmar</button>
     </div>
   </div>
 </div>
