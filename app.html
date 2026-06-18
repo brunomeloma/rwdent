@@ -2020,7 +2020,7 @@ function renderHomeStats(){
 
 function verPacienteHome(id){
   switchTab('pacientes');
-  setTimeout(()=>{ openPatient(id); }, 150);
+  setTimeout(()=>{ selectPatient(parseInt(id)); }, 150);
 }
 
 // ══════════════════════════════════════════════════════
@@ -3576,6 +3576,14 @@ async function pacCarregarPlano(pacId){
 }
 
 async function pacAlterarStatusPlano(id, status){
+  let profId = null, profNome = '';
+  if(status === 'realizado'){
+    const sel = document.getElementById('plano-prof-'+id);
+    profId = sel?.value || '';
+    if(!profId){ showToast('Selecione quem atendeu o paciente antes de marcar como realizado.','warn'); return; }
+    profNome = profissionais.find(p=>p.id==profId)?.nome || '';
+  }
+
   showLoading(true);
   const { error } = await _sb.from('plano_tratamento').update({ status }).eq('id',id);
   showLoading(false);
@@ -3583,7 +3591,7 @@ async function pacAlterarStatusPlano(id, status){
   pacPlanoList = pacPlanoList.map(i=> i.id===id ? {...i,status} : i);
 
   // Se aprovado, cria venda/orçamento automaticamente
-  // Se realizado, marca venda correspondente como finalizada
+  // Se realizado, marca venda correspondente como finalizada e registra no Histórico
   if(status === 'realizado'){
     const item = pacPlanoList.find(i=>i.id===id);
     if(item){
@@ -3595,6 +3603,15 @@ async function pacAlterarStatusPlano(id, status){
         vendas[vendaIdx].dataFinal=new Date().toISOString();
         saveFinanceiro();
       }
+
+      const dentesArr = (item.dente||'').split(',').filter(Boolean).map(d=>({dente:parseInt(d)||d,procedimento:item.procedimento}));
+      const { error: histErr } = await _sb.from('atendimentos_odonto').insert([{
+        clinica_id: clinicaId, paciente_id: selectedPatientId,
+        data: hoje(), procedimentos: item.procedimento, obs: item.descricao||'',
+        profissional_id: profId||null, profissional_nome: profNome,
+        dentes_tratados: JSON.stringify(dentesArr)
+      }]);
+      if(histErr) showToast('Realizado, mas não consegui registrar no Histórico: '+histErr.message,'warn');
     }
   }
 
@@ -6558,6 +6575,10 @@ function pacRenderPlanoLista(){
     const dentes = (item.dente||'').split(',').filter(Boolean);
     const dentesHtml = dentes.map(d=>`<span style="background:var(--rose-lighter);color:var(--rose-dark);border-radius:6px;padding:2px 7px;font-size:11px;font-weight:700;">🦷${d}</span>`).join(' ');
     const btnAprovar  = item.status==='pendente' ? `<button class="btn-secondary" style="font-size:11px;padding:4px 10px;" onclick="pacAlterarStatusPlano(${item.id},'aprovado')">✔ Aprovar</button>` : '';
+    const profSelect  = (item.status==='aprovado'||item.status==='pendente') ? `<select id="plano-prof-${item.id}" style="font-size:11px;padding:4px 6px;border:1px solid var(--rose-light);border-radius:8px;max-width:130px;color:#3a2020;">
+      <option value="">Quem atendeu?</option>
+      ${profissionais.map(pr=>`<option value="${pr.id}">${escapeHtml(pr.nome)}</option>`).join('')}
+    </select>` : '';
     const btnRealizar = (item.status==='aprovado'||item.status==='pendente') ? `<button class="btn-secondary" style="font-size:11px;padding:4px 10px;color:#2e7d32;border-color:#a5d6a7;" onclick="pacAlterarStatusPlano(${item.id},'realizado')">✅ Realizado</button>` : '';
     return `<div style="border:1px solid var(--rose-light);border-radius:12px;padding:13px;margin-bottom:8px;background:#fff;">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;">
@@ -6578,8 +6599,8 @@ function pacRenderPlanoLista(){
           <input type="text" value="${escapeHtml(item.valor||'0,00')}" onchange="pacAtualizarValorPlano(${item.id},this.value)" style="width:100px;padding:4px 8px;border:1px solid var(--rose-light);border-radius:8px;text-align:right;font-size:14px;font-weight:700;color:#2e7d32;"/>
           ${dentes.length>1&&item.valor_unit?`<span style="font-size:11px;color:var(--rose-text);">(R$ ${escapeHtml(item.valor_unit)}/dente)</span>`:''}
         </div>
-        <div style="display:flex;gap:6px;flex-wrap:wrap;">
-          ${btnAprovar}${btnRealizar}
+        <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
+          ${btnAprovar}${profSelect}${btnRealizar}
           <button class="btn-danger" style="font-size:11px;padding:4px 8px;" onclick="pacRemoverPlano(${item.id})"><i class="ti ti-trash"></i></button>
         </div>
       </div>
@@ -7424,6 +7445,12 @@ function pacRenderOrcamentos(pacId){
       ${formaPagHtml}
       ${resumoHtml}
       ${avisoHtml}
+      ${isOrc?`<div style="margin-bottom:10px;">
+        <select id="venda-prof-${v.id}" style="width:100%;font-size:12px;padding:6px 8px;border:1px solid var(--rose-light);border-radius:8px;color:#3a2020;">
+          <option value="">Quem atendeu?</option>
+          ${profissionais.map(pr=>`<option value="${pr.id}">${escapeHtml(pr.nome)}</option>`).join('')}
+        </select>
+      </div>`:''}
       <!-- Ações -->
       <div style="display:flex;gap:8px;flex-wrap:wrap;">
         ${isOrc?`
@@ -7506,6 +7533,10 @@ async function pacFinalizarItensSelecionados(vendaId, pacId){
   const desc = _orcGetDesc(v);
   if(sel.size===0){ showToast('Selecione ao menos um item para finalizar.','warn'); return; }
 
+  const profId = document.getElementById('venda-prof-'+vendaId)?.value || '';
+  if(!profId){ showToast('Selecione quem atendeu o paciente antes de finalizar.','warn'); return; }
+  const profNome = profissionais.find(p=>p.id==profId)?.nome || '';
+
   const itensSel   = (v.itens||[]).filter((_,i)=>sel.has(i));
   const itensRest  = (v.itens||[]).filter((_,i)=>!sel.has(i));
 
@@ -7585,7 +7616,7 @@ async function pacFinalizarItensSelecionados(vendaId, pacId){
   const {data:novoAtend,error:eAtend} = await _sb.from('atendimentos_odonto').insert([{
     clinica_id:clinicaId, paciente_id:pacId,
     data:hoje(), procedimentos:descProcs||'Procedimentos realizados', obs:'',
-    profissional_id:null, profissional_nome:'',
+    profissional_id:profId||null, profissional_nome:profNome,
     dentes_tratados:dentesTratados
   }]).select().single();
   if(!eAtend && novoAtend) pacProcsList.unshift(novoAtend);
