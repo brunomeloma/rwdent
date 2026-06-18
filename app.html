@@ -672,11 +672,12 @@ button{font-family:inherit;}
       <div class="sidebar-label">Clínica</div>
       <button class="sidebar-item active" data-tab="home" onclick="switchTab('home')"><i class="ti ti-home"></i><span>Início</span></button>
       <button class="sidebar-item" data-tab="agendar" onclick="switchTab('agendar')"><i class="ti ti-calendar-plus"></i><span>Agendar</span></button>
-      <button class="sidebar-item" data-tab="lista" onclick="switchTab('lista')"><i class="ti ti-list-check"></i><span>Agenda</span></button>
+      <button class="sidebar-item" data-tab="lista" onclick="switchTab('lista')"><i class="ti ti-calendar-event"></i><span>Agenda</span></button>
       <button class="sidebar-item" data-tab="calendario" onclick="switchTab('calendario')"><i class="ti ti-calendar-month"></i><span>Calendário</span></button>
       <div class="sidebar-divider"></div>
       <div class="sidebar-label">Pacientes</div>
       <button class="sidebar-item" data-tab="pacientes" onclick="switchTab('pacientes')"><i class="ti ti-users"></i><span>Pacientes</span></button>
+      <button class="sidebar-item" data-tab="odontograma" onclick="switchTab('odontograma')"><i class="ti ti-tooth"></i><span>Odontograma</span></button>
       <button class="sidebar-item" data-tab="profissionais" onclick="switchTab('profissionais')"><i class="ti ti-briefcase"></i><span>Profissionais</span></button>
       <div class="sidebar-divider"></div>
       <div class="sidebar-label">Financeiro</div>
@@ -709,7 +710,7 @@ button{font-family:inherit;}
 </svg>
     <div class="header-text">
       <h1 id="header-clinica">RWDent</h1>
-      <p>Agendamentos e Prontuários Odontológicos</p>
+      <p id="header-subtitulo">Agendamentos e Prontuários Odontológicos</p>
     </div>
   </div>
 
@@ -1050,9 +1051,9 @@ button{font-family:inherit;}
       <div class="card">
         <div class="section-header"><h2><i class="ti ti-chart-bar"></i> Painel Financeiro</h2></div>
         <div id="fin-metrics" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:20px;"></div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;flex-wrap:wrap;">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;">
           <div>
-            <h2 style="font-size:13px;margin-bottom:10px;"><i class="ti ti-trending-up"></i> Vendas recentes</h2>
+            <h2 style="font-size:13px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;"><span><i class="ti ti-trending-up"></i> Vendas recentes</span> <button class="btn-secondary" style="font-size:11px;padding:4px 10px;" onclick="switchTab('vendas_fin')">Ver todas</button></h2>
             <div id="fin-vendas-recentes"></div>
           </div>
           <div>
@@ -1396,7 +1397,7 @@ button{font-family:inherit;}
       <!-- INVESTIMENTO -->
       <div class="card" style="margin-bottom:18px;">
         <h2><i class="ti ti-coin"></i> Investimento</h2>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px;">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-bottom:16px;">
           <div style="background:linear-gradient(135deg,#d4735a,#7a3020);border-radius:16px;padding:22px;color:#fff;text-align:center;">
             <div style="font-size:11px;font-weight:700;opacity:.85;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">Tratamento Completo</div>
             <div style="font-size:2rem;font-weight:900;line-height:1;">R$ 9.800</div>
@@ -1424,7 +1425,7 @@ button{font-family:inherit;}
           </div>
         </div>
         <!-- O que inclui -->
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;">
           <div style="background:#f0fff8;border:1.5px solid #b2f0e0;border-radius:12px;padding:14px;">
             <div style="font-size:11px;font-weight:700;color:#2e7d32;margin-bottom:10px;text-transform:uppercase;">✅ Incluso</div>
             <div style="font-size:12px;color:#1a3a1a;line-height:1.8;">
@@ -1515,7 +1516,7 @@ button{font-family:inherit;}
           <hr style="border-color:var(--rose-light);margin:24px 0;"/>
           <h2 style="font-size:13px;font-weight:700;color:var(--rose-dark);margin-bottom:14px;display:flex;align-items:center;gap:8px;text-transform:uppercase;letter-spacing:.5px;"><i class="ti ti-credit-card"></i> Taxas da Maquininha</h2>
           <p style="font-size:12px;color:var(--rose-text);margin-bottom:14px;">Configure as taxas para mostrar o valor líquido nos orçamentos e vendas.</p>
-          <div class="form-grid">
+          <div class="form-grid" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr));">
             <div class="form-group"><label>Taxa Débito (%)</label><input type="number" id="cfg-taxa-debito" step="0.01" min="0" max="20" placeholder="1.5"/></div>
             <div class="form-group"><label>Taxa Crédito 1x (%)</label><input type="number" id="cfg-taxa-cred1" step="0.01" min="0" max="20" placeholder="2.49"/></div>
             <div class="form-group"><label>Taxa Crédito 2x (%)</label><input type="number" id="cfg-taxa-cred2" step="0.01" min="0" max="20" placeholder="5.10"/></div>
@@ -1572,9 +1573,10 @@ button{font-family:inherit;}
     <div class="mobile-nav-items">
       <button class="mobile-nav-item active" data-tab="home" onclick="switchTab('home')"><i class="ti ti-home"></i>Início</button>
       <button class="mobile-nav-item" data-tab="agendar" onclick="switchTab('agendar')"><i class="ti ti-calendar-plus"></i>Agendar</button>
-      <button class="mobile-nav-item" data-tab="lista" onclick="switchTab('lista')"><i class="ti ti-list-check"></i>Agenda</button>
+      <button class="mobile-nav-item" data-tab="lista" onclick="switchTab('lista')"><i class="ti ti-calendar-event"></i>Agenda</button>
       <button class="mobile-nav-item" data-tab="calendario" onclick="switchTab('calendario')"><i class="ti ti-calendar-month"></i>Calendário</button>
       <button class="mobile-nav-item" data-tab="pacientes" onclick="switchTab('pacientes')"><i class="ti ti-users"></i>Pacientes</button>
+      <button class="mobile-nav-item" data-tab="odontograma" onclick="switchTab('odontograma')"><i class="ti ti-tooth"></i>Odontograma</button>
       <button class="mobile-nav-item" data-tab="profissionais" onclick="switchTab('profissionais')"><i class="ti ti-stethoscope"></i>Profissionais</button>
       <button class="mobile-nav-item" data-tab="financeiro" onclick="switchTab('financeiro')"><i class="ti ti-chart-bar"></i>Financeiro</button>
       <button class="mobile-nav-item" data-tab="invisalign_apresentacao" onclick="switchTab('invisalign_apresentacao')"><i class="ti ti-align-box-left-stretch"></i>Invisalign</button>
@@ -1886,13 +1888,22 @@ function toggleFaq(i){
 }
 
 function switchTab(tab){
-  ['home','agendar','lista','calendario','pacientes','profissionais','configuracoes','financeiro','procedimentos_fin','materiais_fin','estoque_fin','vendas_fin','resgate','invisalign_apresentacao'].forEach(t=>{
+  ['home','agendar','lista','calendario','pacientes','profissionais','configuracoes','financeiro','procedimentos_fin','materiais_fin','estoque_fin','vendas_fin','resgate','invisalign_apresentacao','odontograma'].forEach(t=>{
     const el=document.getElementById('tab-'+t);
     if(el) el.style.display = t===tab?'':'none';
   });
   document.querySelectorAll('.sidebar-item,.mobile-nav-item').forEach(b=>{
     b.classList.toggle('active', b.dataset.tab===tab);
   });
+  const _tituloAba = {
+    home:'Agendamentos e Prontuários Odontológicos', agendar:'Novo agendamento', lista:'Agenda do dia',
+    calendario:'Calendário de atendimentos', pacientes:'Cadastro de pacientes', odontograma:'Odontograma digital',
+    profissionais:'Equipe e profissionais', financeiro:'Painel financeiro', procedimentos_fin:'Procedimentos e precificação',
+    materiais_fin:'Materiais e insumos', estoque_fin:'Controle de estoque', vendas_fin:'Vendas e orçamentos',
+    resgate:'Resgate de pacientes', invisalign_apresentacao:'Apresentação Invisalign', configuracoes:'Configurações da clínica'
+  };
+  const _subEl = document.getElementById('header-subtitulo');
+  if(_subEl) _subEl.textContent = _tituloAba[tab] || 'Agendamentos e Prontuários Odontológicos';
   if(tab==='agendar') renderScheduleOptions();
   if(tab==='lista') renderLista();
   if(tab==='calendario') renderCalendario();
@@ -1901,6 +1912,7 @@ function switchTab(tab){
   if(tab==='home') renderHomeStats();
   if(tab==='configuracoes') renderConfiguracoes();
   if(tab==='resgate') renderResgate();
+  if(tab==='odontograma') renderOdontogramaTab();
   if(tab==='financeiro'||tab==='procedimentos_fin'||tab==='materiais_fin'||tab==='estoque_fin'||tab==='vendas_fin'){
     if(!_financeiroCarregado){
       showLoading(true);
@@ -3541,10 +3553,18 @@ const STATUS_CORES  = {
   cancelado: {bg:'#F8D7DA',txt:'#721C24',dot:'#DC3545'},
 };
 
+let _pacCarregarPlanoSeq = 0; // evita que uma busca antiga (lenta) sobrescreva dados mais recentes
 async function pacCarregarPlano(pacId){
+  const minhaSeq = ++_pacCarregarPlanoSeq;
   const { data } = await _sb.from('plano_tratamento')
     .select('*').eq('clinica_id',clinicaId).eq('paciente_id',pacId)
     .order('created_at',{ascending:false});
+  // Se outra chamada mais recente a esta função já rodou enquanto esperávamos
+  // a resposta do servidor, descarta este resultado desatualizado (corrige bug
+  // em que aprovar o orçamento logo após ir do Odontograma pro Plano fazia o
+  // orçamento "desaparecer" — uma busca antiga terminava depois e sobrescrevia
+  // a lista já atualizada localmente).
+  if(minhaSeq !== _pacCarregarPlanoSeq) return;
   pacPlanoList = data || [];
   pacRenderPlanoResumo();
   pacRenderPlanoLista();
@@ -5980,7 +6000,7 @@ function renderPlanoSimulador(pacId){
         <div id="sim-liquido-info" style="font-size:12px;color:#2e7d32;margin-top:6px;display:none;"></div>
       </div>
 
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px;">
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;margin-top:4px;">
         <button class="btn-secondary" onclick="salvarOrcEIrParaOrcamentos(${pacId})" style="justify-content:center;padding:12px;"><i class="ti ti-device-floppy"></i> Salvar</button>
         <button class="btn-primary" onclick="finalizarVendaPac(${pacId})" style="justify-content:center;padding:12px;"><i class="ti ti-circle-check"></i> Finalizar</button>
       </div>
@@ -6754,11 +6774,14 @@ function pacRenderPlanoLista(){
 
 // Abre/fecha o painel de ajuste de desconto e forma de pagamento (simulador)
 // Aprova todos os itens pendentes do plano (1ª revisão concluída)
+let _aprovandoOrcamento = false;
 async function pacAprovarOrcamentoPlano(pacId){
+  if(_aprovandoOrcamento) return; // evita duplo-toque criando duas vendas
   const ativos = pacPlanoList.filter(i=>i.status!=='cancelado'&&i.status!=='realizado');
   if(!ativos.length){ showToast('Não há itens no plano para aprovar.','warn'); return; }
   if(!confirm(`Aprovar orçamento com ${ativos.length} item(ns)?`)) return;
 
+  _aprovandoOrcamento = true;
   showLoading(true);
 
   // Marca itens pendentes como aprovados
@@ -6795,6 +6818,7 @@ async function pacAprovarOrcamentoPlano(pacId){
   await saveFinanceiro();
 
   showLoading(false);
+  _aprovandoOrcamento = false;
   pacRenderPlanoResumo();
   pacRenderPlanoLista();
   showToast('Orçamento aprovado!');
@@ -7377,15 +7401,16 @@ async function odontogramaSalvarEIrParaPlano(pacId){
   // Força seleção do paciente correto
   selectedPatientId = pid;
 
-  // Vai para aba plano
+  // Vai para aba plano e ESPERA o plano carregar de fato do banco antes de
+  // liberar a tela — antes havia um setTimeout fixo de 200ms que, em conexões
+  // mais lentas (comum no mobile), terminava antes do carregamento do plano
+  // concluir; quando o carregamento enfim chegava (já depois do usuário ter
+  // clicado em "Aprovar Orçamento"), ele sobrescrevia a lista e fazia o
+  // orçamento recém-aprovado desaparecer.
   renderPatientDetail('plano');
-
-  setTimeout(()=>{
-    pacRenderPlanoResumo();
-    pacRenderPlanoLista();
-    const lista = document.getElementById('pac-plano-lista');
-    if(lista) lista.scrollIntoView({behavior:'smooth',block:'start'});
-  }, 200);
+  await pacCarregarPlano(pid);
+  const lista = document.getElementById('pac-plano-lista');
+  if(lista) lista.scrollIntoView({behavior:'smooth',block:'start'});
 }
 
 // Ao salvar orçamento no Plano, vai para aba Orçamentos
