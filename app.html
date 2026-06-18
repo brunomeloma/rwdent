@@ -677,7 +677,6 @@ button{font-family:inherit;}
       <div class="sidebar-divider"></div>
       <div class="sidebar-label">Pacientes</div>
       <button class="sidebar-item" data-tab="pacientes" onclick="switchTab('pacientes')"><i class="ti ti-users"></i><span>Pacientes</span></button>
-      <button class="sidebar-item" data-tab="odontograma" onclick="switchTab('odontograma')"><i class="ti ti-tooth"></i><span>Odontograma</span></button>
       <button class="sidebar-item" data-tab="profissionais" onclick="switchTab('profissionais')"><i class="ti ti-briefcase"></i><span>Profissionais</span></button>
       <div class="sidebar-divider"></div>
       <div class="sidebar-label">Financeiro</div>
@@ -1576,7 +1575,6 @@ button{font-family:inherit;}
       <button class="mobile-nav-item" data-tab="lista" onclick="switchTab('lista')"><i class="ti ti-calendar-event"></i>Agenda</button>
       <button class="mobile-nav-item" data-tab="calendario" onclick="switchTab('calendario')"><i class="ti ti-calendar-month"></i>Calendário</button>
       <button class="mobile-nav-item" data-tab="pacientes" onclick="switchTab('pacientes')"><i class="ti ti-users"></i>Pacientes</button>
-      <button class="mobile-nav-item" data-tab="odontograma" onclick="switchTab('odontograma')"><i class="ti ti-tooth"></i>Odontograma</button>
       <button class="mobile-nav-item" data-tab="profissionais" onclick="switchTab('profissionais')"><i class="ti ti-stethoscope"></i>Profissionais</button>
       <button class="mobile-nav-item" data-tab="financeiro" onclick="switchTab('financeiro')"><i class="ti ti-chart-bar"></i>Financeiro</button>
       <button class="mobile-nav-item" data-tab="invisalign_apresentacao" onclick="switchTab('invisalign_apresentacao')"><i class="ti ti-align-box-left-stretch"></i>Invisalign</button>
@@ -1888,7 +1886,7 @@ function toggleFaq(i){
 }
 
 function switchTab(tab){
-  ['home','agendar','lista','calendario','pacientes','profissionais','configuracoes','financeiro','procedimentos_fin','materiais_fin','estoque_fin','vendas_fin','resgate','invisalign_apresentacao','odontograma'].forEach(t=>{
+  ['home','agendar','lista','calendario','pacientes','profissionais','configuracoes','financeiro','procedimentos_fin','materiais_fin','estoque_fin','vendas_fin','resgate','invisalign_apresentacao'].forEach(t=>{
     const el=document.getElementById('tab-'+t);
     if(el) el.style.display = t===tab?'':'none';
   });
@@ -1897,7 +1895,7 @@ function switchTab(tab){
   });
   const _tituloAba = {
     home:'Agendamentos e Prontuários Odontológicos', agendar:'Novo agendamento', lista:'Agenda do dia',
-    calendario:'Calendário de atendimentos', pacientes:'Cadastro de pacientes', odontograma:'Odontograma digital',
+    calendario:'Calendário de atendimentos', pacientes:'Cadastro de pacientes',
     profissionais:'Equipe e profissionais', financeiro:'Painel financeiro', procedimentos_fin:'Procedimentos e precificação',
     materiais_fin:'Materiais e insumos', estoque_fin:'Controle de estoque', vendas_fin:'Vendas e orçamentos',
     resgate:'Resgate de pacientes', invisalign_apresentacao:'Apresentação Invisalign', configuracoes:'Configurações da clínica'
@@ -1912,7 +1910,6 @@ function switchTab(tab){
   if(tab==='home') renderHomeStats();
   if(tab==='configuracoes') renderConfiguracoes();
   if(tab==='resgate') renderResgate();
-  if(tab==='odontograma') renderOdontogramaTab();
   if(tab==='financeiro'||tab==='procedimentos_fin'||tab==='materiais_fin'||tab==='estoque_fin'||tab==='vendas_fin'){
     if(!_financeiroCarregado){
       showLoading(true);
