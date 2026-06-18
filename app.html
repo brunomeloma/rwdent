@@ -2320,6 +2320,25 @@ function selectPatient(id){ selectedPatientId=id; renderPatientDetail(); }
 function renderPatientDetail(abaAtiva){
   abaAtiva = abaAtiva || 'info';
   const panel=document.getElementById('painel-paciente');
+  try{
+    renderPatientDetailInner(abaAtiva, panel);
+  }catch(err){
+    // Antes, um erro em qualquer parte do template gigante desta função
+    // deixava o painel do paciente inteiro em branco, sem nenhuma mensagem —
+    // dava a impressão de que a navegação "não tinha ido" para lugar nenhum.
+    console.error('Erro ao renderizar dados do paciente:', err);
+    if(panel){
+      panel.style.display='';
+      panel.innerHTML = `<div class="card" style="text-align:center;color:#a00;padding:30px;">
+        <i class="ti ti-alert-triangle" style="font-size:28px;"></i>
+        <p style="margin-top:10px;font-weight:700;">Houve um erro ao abrir esta tela do paciente.</p>
+        <p style="font-size:12px;color:var(--rose-text);margin-top:6px;">${escapeHtml(err?.message||'Erro desconhecido')}</p>
+        <button class="btn-secondary" style="margin-top:14px;" onclick="renderPatientDetail('${abaAtiva}')">Tentar novamente</button>
+      </div>`;
+    }
+  }
+}
+function renderPatientDetailInner(abaAtiva, panel){
   const p=pacientes.find(pt=>pt.id===selectedPatientId);
   if(!p){ panel.style.display='none'; return; }
   panel.style.display='';
@@ -5100,17 +5119,30 @@ async function saveFinanceiro(){
     combos       : JSON.stringify(combos),
     desc_cfg     : JSON.stringify(descCfg)
   };
-  // Upsert
-  const { data: existing } = await _sb.from('financeiro_config').select('id').eq('clinica_id',clinicaId).single();
-  let saveError;
-  if(existing){
-    const { error } = await _sb.from('financeiro_config').update(payload).eq('clinica_id',clinicaId);
-    saveError = error;
-  } else {
-    const { error } = await _sb.from('financeiro_config').insert([payload]);
-    saveError = error;
+  // Timeout de segurança: em redes móveis mais lentas/instáveis o request pode
+  // nunca resolver (nem sucesso nem erro), o que travava showLoading(true) pra
+  // sempre e dava a impressão de "tela em branco" sem nenhum aviso ao usuário.
+  const comTimeout = (promessa, ms=15000) => Promise.race([
+    promessa,
+    new Promise((_,rej)=>setTimeout(()=>rej(new Error('Tempo esgotado ao salvar. Verifique sua conexão e tente novamente.')), ms))
+  ]);
+  try{
+    // Upsert
+    const { data: existing } = await comTimeout(_sb.from('financeiro_config').select('id').eq('clinica_id',clinicaId).single());
+    let saveError;
+    if(existing){
+      const { error } = await comTimeout(_sb.from('financeiro_config').update(payload).eq('clinica_id',clinicaId));
+      saveError = error;
+    } else {
+      const { error } = await comTimeout(_sb.from('financeiro_config').insert([payload]));
+      saveError = error;
+    }
+    if(saveError){ console.error('saveFinanceiro ERRO:', saveError.message); showToast('Erro ao salvar: '+saveError.message,'error'); throw saveError; }
+  }catch(err){
+    console.error('saveFinanceiro EXCEÇÃO:', err);
+    showToast('Erro ao salvar: '+(err?.message||'tente novamente.'),'error');
+    throw err;
   }
-  if(saveError){ console.error('saveFinanceiro ERRO:', saveError.message); showToast('Erro ao salvar: '+saveError.message,'error'); }
 }
 
 // ── Helpers de cálculo ──
@@ -6664,11 +6696,21 @@ async function pacAprovarOrcamentoPlano(pacId){
     vendas.push(venda);
     await saveFinanceiro();
 
-    pacRenderPlanoResumo();
-    pacRenderPlanoLista();
-    showToast('Orçamento aprovado!');
-    renderPatientDetail('orcamentos');
+    // A venda já foi criada e salva com sucesso neste ponto — qualquer falha
+    // daqui em diante é só de exibição/navegação, então isolamos numa segunda
+    // tentativa para nunca deixar a tela "em branco" sem explicação, e para
+    // não perder o orçamento que já foi salvo no banco.
+    try{
+      pacRenderPlanoResumo();
+      pacRenderPlanoLista();
+      showToast('Orçamento aprovado!');
+      renderPatientDetail('orcamentos');
+    }catch(renderErr){
+      console.error('Erro ao exibir a tela de Orçamentos (orçamento já foi salvo):', renderErr);
+      showToast('Orçamento salvo, mas houve um erro ao abrir a tela. Toque na aba "Orçamentos" para ver.','warn');
+    }
   }catch(err){
+    console.error('Erro ao aprovar orçamento:', err);
     showToast('Erro ao aprovar orçamento: '+(err?.message||'tente novamente.'),'error');
   }finally{
     showLoading(false);
@@ -7338,6 +7380,21 @@ function pacOrcSetDesconto(vendaId, tipo, valor){
 
 function pacRenderOrcamentos(pacId){
   const c = document.getElementById('pac-orc-lista'); if(!c) return;
+  try{
+    pacRenderOrcamentosInner(pacId, c);
+  }catch(err){
+    // Antes, qualquer erro aqui deixava a aba "Orçamentos" completamente em
+    // branco e silenciosa (sem nenhuma mensagem), o que parecia que o
+    // orçamento tinha sumido — mesmo quando ele continuava salvo no banco.
+    console.error('Erro ao renderizar Orçamentos:', err);
+    c.innerHTML = `<div style="text-align:center;color:#a00;font-size:13px;padding:20px;border:1px solid #f5c6cb;border-radius:10px;background:#f8d7da;">
+      <i class="ti ti-alert-triangle"></i> Houve um erro ao exibir os orçamentos.<br>
+      <small>${escapeHtml(err?.message||'Erro desconhecido')}</small><br><br>
+      <button class="btn-secondary" onclick="pacRenderOrcamentos(${pacId})">Tentar novamente</button>
+    </div>`;
+  }
+}
+function pacRenderOrcamentosInner(pacId, c){
   const pacVendas = vendas.filter(v=>v.pacienteId===pacId).slice().reverse();
 
   // Botão voltar ao plano sempre no topo
