@@ -6598,51 +6598,61 @@ async function pacAprovarOrcamentoPlano(pacId){
   if(_aprovandoOrcamento) return; // evita duplo-toque criando duas vendas
   const ativos = pacPlanoList.filter(i=>i.status!=='cancelado'&&i.status!=='realizado');
   if(!ativos.length){ showToast('Não há itens no plano para aprovar.','warn'); return; }
-  if(!confirm(`Aprovar orçamento com ${ativos.length} item(ns)?`)) return;
+
+  // Só os itens ainda pendentes entram nesta aprovação em lote — os que já foram
+  // aprovados individualmente (botão "✔ Aprovar" no item) já geraram sua própria
+  // venda/orçamento, então não devem ser incluídos de novo aqui (evita duplicar valor).
+  const pendentes = ativos.filter(i=>i.status==='pendente');
+  if(!pendentes.length){ showToast('Todos os itens já estão aprovados.','warn'); return; }
+  if(!confirm(`Aprovar orçamento com ${pendentes.length} item(ns)?`)) return;
 
   _aprovandoOrcamento = true;
   showLoading(true);
 
-  // Marca itens pendentes como aprovados
-  const pendentes = ativos.filter(i=>i.status==='pendente');
-  for(const item of pendentes){
-    await _sb.from('plano_tratamento').update({ status:'aprovado' }).eq('id',item.id);
-  }
-  pacPlanoList = pacPlanoList.map(i=> pendentes.find(x=>x.id===i.id) ? {...i,status:'aprovado'} : i);
+  try{
+    // Marca itens pendentes como aprovados
+    for(const item of pendentes){
+      const { error } = await _sb.from('plano_tratamento').update({ status:'aprovado' }).eq('id',item.id);
+      if(error) throw error;
+    }
+    pacPlanoList = pacPlanoList.map(i=> pendentes.find(x=>x.id===i.id) ? {...i,status:'aprovado'} : i);
 
-  // Monta a venda (orçamento) a partir dos itens do plano
-  const pac = pacientes.find(p=>p.id===pacId);
-  const itensVenda = ativos.map(item=>{
-    const procObj = procs.find(pr=>pr.nome===item.procedimento);
-    const dentesArr = (item.dente||'').split(',').filter(Boolean);
-    const valorTotal = parseFloat((item.valor||'0').replace(',','.'))||0;
-    return {
-      procId: procObj?.id||null, qtd:1, nome:item.procedimento,
-      dente: dentesArr.join(','), descDente: item.descricao||'',
-      precoUnit: valorTotal
+    // Monta a venda (orçamento) só com os itens recém-aprovados
+    const pac = pacientes.find(p=>p.id===pacId);
+    const itensVenda = pendentes.map(item=>{
+      const procObj = procs.find(pr=>pr.nome===item.procedimento);
+      const dentesArr = (item.dente||'').split(',').filter(Boolean);
+      const valorTotal = parseFloat((item.valor||'0').replace(',','.'))||0;
+      return {
+        procId: procObj?.id||null, qtd:1, nome:item.procedimento,
+        dente: dentesArr.join(','), descDente: item.descricao||'',
+        precoUnit: valorTotal
+      };
+    });
+    const subtotal = itensVenda.reduce((a,it)=>a+it.precoUnit*it.qtd,0);
+
+    const venda = {
+      id: nextVendaId++, status:'orcamento', formaPagamento:'',
+      pacienteId: pacId, pacienteNome: pac?.nome||'',
+      itens: itensVenda,
+      subtotal: parseFloat(subtotal.toFixed(2)),
+      desconto: 0, total: parseFloat(subtotal.toFixed(2)),
+      planoIds: pendentes.map(i=>i.id),
+      data: new Date().toISOString()
     };
-  });
-  const subtotal = itensVenda.reduce((a,it)=>a+it.precoUnit*it.qtd,0);
+    vendas.push(venda);
+    await saveFinanceiro();
 
-  const venda = {
-    id: nextVendaId++, status:'orcamento', formaPagamento:'',
-    pacienteId: pacId, pacienteNome: pac?.nome||'',
-    itens: itensVenda,
-    subtotal: parseFloat(subtotal.toFixed(2)),
-    desconto: 0, total: parseFloat(subtotal.toFixed(2)),
-    planoIds: ativos.map(i=>i.id),
-    data: new Date().toISOString()
-  };
-  vendas.push(venda);
-  await saveFinanceiro();
-
-  showLoading(false);
-  _aprovandoOrcamento = false;
-  pacRenderPlanoResumo();
-  pacRenderPlanoLista();
-  showToast('Orçamento aprovado!');
-
-  renderPatientDetail('orcamentos');
+    pacRenderPlanoResumo();
+    pacRenderPlanoLista();
+    showToast('Orçamento aprovado!');
+    renderPatientDetail('orcamentos');
+  }catch(err){
+    showToast('Erro ao aprovar orçamento: '+(err?.message||'tente novamente.'),'error');
+  }finally{
+    showLoading(false);
+    _aprovandoOrcamento = false;
+  }
 }
 
 
@@ -7325,7 +7335,7 @@ function pacRenderOrcamentos(pacId){
     const isOrc = v.status==='orcamento';
     const sel   = _orcGetSel(v);
     const desc  = _orcGetDesc(v);
-    const {subtotalSel, descAmt, total: totalSel} = _orcCalcTotais(v);
+    const {subtotalSel, descAmt, total: totalSel, taxa, taxaAmt} = _orcCalcTotais(v);
     const subtotalGeral = v.subtotal||v.total||0;
     const totalGeral = v.total||subtotalGeral;
 
@@ -7512,6 +7522,10 @@ async function pacFinalizarItensSelecionados(vendaId, pacId){
 
   // 2. Marca planoIds dos itens selecionados como 'realizado'
   const planoIdsSel = (v.planoIds||[]).filter((_,i)=>sel.has(i));
+  // Compatibilidade: vendas criadas pelo botão "✔ Aprovar" individual usam
+  // planoItemId (singular) em vez de planoIds — sem isso o item ficava
+  // "aprovado" pra sempre no Plano mesmo após a venda ser finalizada.
+  if(v.planoItemId && !planoIdsSel.includes(v.planoItemId)) planoIdsSel.push(v.planoItemId);
   for(const pid of planoIdsSel){
     await _sb.from('plano_tratamento').update({status:'realizado'}).eq('id',pid);
     const pl = pacPlanoList.find(p=>p.id===pid);
