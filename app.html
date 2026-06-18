@@ -64,6 +64,16 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#fdf6f3;color:#3a2020;mi
   background:rgba(255,255,255,.4);border:none;cursor:pointer;padding:0;transition:background .2s,transform .2s;
 }
 .hc-dot.active{background:#fff;transform:scale(1.25);}
+@media(max-width:768px){
+  .home-carousel{height:170px;border-radius:12px;}
+  .hc-content{padding:16px 48px;}
+  .hc-content h2{font-size:1.1rem;}
+  .hc-content p{font-size:.8rem;}
+  .hc-icon{font-size:32px;margin-bottom:6px;}
+  .hc-arrow{width:30px;height:30px;font-size:18px;}
+  .hc-prev{left:8px;}
+  .hc-next{right:8px;}
+}
 
 /* ── HOME STAT CARDS ── */
 .home-stat-card{
@@ -345,9 +355,9 @@ button{font-family:inherit;}
 .cal-view-btn{border:none;background:none;color:var(--rose-text);padding:7px 12px;border-radius:9px;font-size:12px;font-weight:700;cursor:pointer;transition:background .18s,color .18s;}
 .cal-view-btn.active{background:#fff;color:var(--rose-dark);box-shadow:0 1px 6px rgba(212,115,90,.18);}
 .cal-select{min-width:150px;}
-.cal-body{overflow:auto;}
-.cal-grid{display:grid;border:1px solid var(--rose-light);border-radius:14px;overflow:hidden;min-width:660px;}
-.cal-grid.dia{min-width:auto;}
+.cal-body{overflow:auto;-webkit-overflow-scrolling:touch;}
+.cal-grid{display:grid;border:1px solid var(--rose-light);border-radius:14px;overflow:hidden;min-width:520px;}
+.cal-grid.dia{min-width:auto;width:100%;}
 .cal-grid-head{display:contents;}
 .cal-corner{background:var(--rose-lighter);border-bottom:1px solid var(--rose-light);border-right:1px solid var(--rose-light);}
 .cal-day-head{background:var(--rose-lighter);border-bottom:1px solid var(--rose-light);border-right:1px solid var(--rose-light);padding:9px 6px;text-align:center;}
@@ -366,7 +376,7 @@ button{font-family:inherit;}
 .cal-event .ev-time{font-size:10px;font-weight:700;opacity:.95;}
 .cal-event .ev-name{font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px;}
 .cal-event .ev-meta{font-size:10px;opacity:.92;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.cal-month{display:grid;grid-template-columns:repeat(7,1fr);border:1px solid var(--rose-light);border-radius:14px;overflow:hidden;min-width:660px;}
+.cal-month{display:grid;grid-template-columns:repeat(7,1fr);border:1px solid var(--rose-light);border-radius:14px;overflow:hidden;min-width:320px;}
 .cal-month-dow{background:var(--rose-lighter);border-bottom:1px solid var(--rose-light);border-right:1px solid var(--rose-light);padding:8px 6px;text-align:center;font-size:11px;font-weight:700;color:var(--rose-text);text-transform:uppercase;letter-spacing:.5px;}
 .cal-month-dow:nth-child(7){border-right:none;}
 .cal-cell{min-height:90px;border-right:1px solid var(--rose-light);border-bottom:1px solid var(--rose-light);padding:5px;cursor:pointer;transition:background .15s;display:flex;flex-direction:column;gap:3px;}
@@ -498,14 +508,121 @@ button{font-family:inherit;}
   .sidebar{display:none!important;}
   .header{left:0!important;padding:0 16px;}
   .page-content{margin-left:0!important;width:100%!important;padding-bottom:80px;}
-  .content{padding:14px;}
+  .content{padding:12px;}
   .mobile-bottom-nav{display:block;}
+
+  /* Toast abaixo do header no mobile */
+  .toast{top:66px;right:10px;left:10px;max-width:100%;font-size:12px;}
+
+  /* Modal não corta em telas pequenas */
+  .modal-overlay{padding:16px 10px;align-items:flex-start;}
+  .modal-box{padding:18px 14px;max-width:100%;}
+
+  /* Cards com padding menor */
+  .card{padding:14px 12px;border-radius:12px;}
+  .card h2{font-size:12px;}
+
+  /* Section header empilha em telas muito estreitas */
+  .section-header{flex-direction:column;align-items:flex-start;gap:8px;}
+  .section-header button{width:100%;}
+
+  /* Filter row empilha */
+  .filter-row{flex-direction:column;gap:8px;}
+  .filter-row input,.filter-row select{width:100%;}
+
+  /* Home stat cards: 2 colunas em mobile */
+  .home-stat-card{min-width:0;padding:12px 14px;}
+  .home-stat-num{font-size:22px;}
+
+  /* Appointment items: empilha badge abaixo */
+  .appt-item{flex-wrap:wrap;gap:8px;}
+  .appt-badge{align-self:flex-start;margin-left:auto;}
+  .appt-time{min-width:70px;padding:7px 9px;font-size:12px;}
+  .appt-info .name{font-size:14px;}
+
+  /* Buttons menores */
+  .btn-primary,.btn-secondary,.btn-danger{padding:9px 13px;font-size:12px;}
+  .btn-danger span{display:none;}
+
+  /* Calendário */
   .cal-tools{gap:6px;}
   .cal-range{font-size:13px;}
   .cal-btn{padding:7px 9px;font-size:12px;}
   .cal-views{display:none;}
-  .appt-item{flex-wrap:wrap;}
-  .btn-danger span{display:none;}
+  #cal-view-mobile{display:inline-block!important;}
+  .cal-card{padding:10px;}
+  .cal-toolbar{gap:6px;}
+  .cal-body{border-radius:10px;}
+  .cal-month .cal-cell{min-height:52px;padding:3px;}
+  .cal-month .cal-pill{font-size:9px;padding:1px 3px;}
+  .cal-month .cell-num{font-size:11px;}
+  /* Select profissional no calendário ocupa full em mobile */
+  .cal-select{min-width:0;flex:1;}
+  .cal-tools{width:100%;}
+  .cal-toolbar{flex-direction:column;align-items:stretch;}
+  .cal-nav{justify-content:space-between;}
+
+  /* Tabelas financeiras */
+  .fin-table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+  table{min-width:480px;}
+
+  /* Paciente: abas com scroll */
+  .pac-tabs{gap:2px;}
+  .pac-tab{font-size:10px;padding:7px 8px;}
+  #painel-paciente .card{padding:12px 10px;}
+  .form-row-2{grid-template-columns:1fr!important;}
+
+  /* Formulários: coluna única */
+  .form-grid{grid-template-columns:1fr;}
+  .an-grid-2{grid-template-columns:1fr!important;}
+
+  /* Odontograma: scroll horizontal */
+  .odonto-arcada{overflow-x:auto;}
+
+  /* Sim orçamento */
+  .sim-orcamento-item{font-size:12px;}
+
+  /* Resgate / Invisalign: textos menores */
+  .content h2{font-size:16px;}
+}
+/* ── FULLSCREEN ── */
+#cal-card:fullscreen,
+#cal-card:-webkit-full-screen,
+#cal-card:-moz-full-screen{
+  background:#fdf6f3;
+  padding:16px;
+  overflow:auto;
+  display:flex;
+  flex-direction:column;
+  height:100vh;
+  width:100vw;
+  box-sizing:border-box;
+  border-radius:0;
+}
+#cal-card:fullscreen .cal-body,
+#cal-card:-webkit-full-screen .cal-body,
+#cal-card:-moz-full-screen .cal-body{
+  flex:1;
+  overflow:auto;
+  min-height:0;
+}
+#cal-card:fullscreen .cal-grid,
+#cal-card:-webkit-full-screen .cal-grid,
+#cal-card:-moz-full-screen .cal-grid{
+  min-width:auto;
+  width:100%;
+}
+#cal-card:fullscreen .cal-month,
+#cal-card:-webkit-full-screen .cal-month,
+#cal-card:-moz-full-screen .cal-month{
+  min-width:auto;
+  width:100%;
+  height:100%;
+}
+#cal-card:fullscreen .cal-cell,
+#cal-card:-webkit-full-screen .cal-cell,
+#cal-card:-moz-full-screen .cal-cell{
+  min-height:100px;
 }
 @media(min-width:769px) and (max-width:960px){
   :root{--sidebar-w:64px;}
@@ -714,6 +831,11 @@ button{font-family:inherit;}
               <button class="cal-view-btn active" data-view="semana" onclick="calSetView('semana')">Semana</button>
               <button class="cal-view-btn" data-view="dia" onclick="calSetView('dia')">Dia</button>
             </div>
+            <select id="cal-view-mobile" class="cal-select" style="display:none;" onchange="calSetView(this.value)">
+              <option value="dia">Dia</option>
+              <option value="semana" selected>Semana</option>
+              <option value="mes">Mês</option>
+            </select>
             <select id="cal-prof" class="cal-select" onchange="renderCalendario()"></select>
             <button class="cal-btn" onclick="calNewQuick()"><i class="ti ti-plus"></i> Agendar</button>
             <button class="cal-btn cal-full" onclick="calFullscreen()"><i class="ti ti-maximize"></i></button>
@@ -1454,8 +1576,10 @@ button{font-family:inherit;}
       <button class="mobile-nav-item" data-tab="calendario" onclick="switchTab('calendario')"><i class="ti ti-calendar-month"></i>Calendário</button>
       <button class="mobile-nav-item" data-tab="pacientes" onclick="switchTab('pacientes')"><i class="ti ti-users"></i>Pacientes</button>
       <button class="mobile-nav-item" data-tab="profissionais" onclick="switchTab('profissionais')"><i class="ti ti-stethoscope"></i>Profissionais</button>
+      <button class="mobile-nav-item" data-tab="financeiro" onclick="switchTab('financeiro')"><i class="ti ti-chart-bar"></i>Financeiro</button>
       <button class="mobile-nav-item" data-tab="invisalign_apresentacao" onclick="switchTab('invisalign_apresentacao')"><i class="ti ti-align-box-left-stretch"></i>Invisalign</button>
       <button class="mobile-nav-item" data-tab="resgate" onclick="switchTab('resgate')"><i class="ti ti-heart-handshake"></i>Resgate</button>
+      <button class="mobile-nav-item" data-tab="configuracoes" onclick="switchTab('configuracoes')"><i class="ti ti-settings"></i>Config.</button>
       <button class="mobile-nav-item" onclick="doLogout()" style="color:#b33;"><i class="ti ti-logout"></i>Sair</button>
     </div>
   </nav>
@@ -2898,7 +3022,7 @@ function calISO(d){ return d.toISOString().slice(0,10); }
 function calWeekStart(d){ const c=new Date(d); c.setDate(c.getDate()-c.getDay()); return c; }
 function calWeekEnd(d){ const c=new Date(d); c.setDate(c.getDate()+(6-c.getDay())); return c; }
 
-function calSetView(v, render=true){ calView=v; document.querySelectorAll('.cal-view-btn').forEach(b=>b.classList.toggle('active',b.dataset.view===v)); if(render) renderCalendario(); }
+function calSetView(v, render=true){ calView=v; document.querySelectorAll('.cal-view-btn').forEach(b=>b.classList.toggle('active',b.dataset.view===v)); const mob=document.getElementById('cal-view-mobile'); if(mob) mob.value=v; if(render) renderCalendario(); }
 function calToday(){ calRef=new Date(); renderCalendario(); }
 function calNavigate(dir){
   const d=new Date(calRef);
@@ -2909,9 +3033,19 @@ function calNavigate(dir){
 }
 function calFullscreen(){
   const el=document.getElementById('cal-card');
-  if(!document.fullscreenElement) el.requestFullscreen?.();
-  else document.exitFullscreen?.();
+  const btn=el.querySelector('.cal-full i');
+  if(!document.fullscreenElement){
+    (el.requestFullscreen||el.webkitRequestFullscreen||el.mozRequestFullScreen).call(el);
+  } else {
+    (document.exitFullscreen||document.webkitExitFullscreen||document.mozCancelFullScreen).call(document);
+  }
 }
+document.addEventListener('fullscreenchange',()=>{
+  const el=document.getElementById('cal-card');
+  const icon=el?.querySelector('.cal-full i');
+  if(icon) icon.className=document.fullscreenElement?'ti ti-minimize':'ti ti-maximize';
+  renderCalendario();
+});
 
 function renderCalendario(){
   const profFiltro=document.getElementById('cal-prof')?.value;
