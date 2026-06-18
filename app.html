@@ -1638,7 +1638,8 @@ function showToast(msg, type='success'){
   setTimeout(()=>{ t.className='toast'; }, 3800);
 }
 function escapeHtml(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
-function hoje(){ return new Date().toISOString().slice(0,10); }
+function toLocalISO(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function hoje(){ return toLocalISO(new Date()); }
 function formatDate(v){ if(!v)return''; const [y,m,d]=v.split('-'); return`${d}/${m}/${y}`; }
 function initials(text){ return String(text||'').split(' ').filter(Boolean).slice(0,2).map(w=>w[0].toUpperCase()).join(''); }
 function hashColor(text){
@@ -1941,7 +1942,7 @@ function renderHomeStats(){
   const hoje_str = hoje();
   const hoje_count = agendamentos.filter(a=>a.data===hoje_str).length;
   const semana_end = new Date(); semana_end.setDate(semana_end.getDate()+7);
-  const semana_count = agendamentos.filter(a=>a.data>=hoje_str && a.data<=semana_end.toISOString().slice(0,10)).length;
+  const semana_count = agendamentos.filter(a=>a.data>=hoje_str && a.data<=toLocalISO(semana_end)).length;
   const confirmadas = agendamentos.filter(a=>a.data===hoje_str && (agGetStatus(a)||'').toLowerCase()==='confirmado').length;
 
   document.getElementById('home-stats').innerHTML = `
@@ -3026,7 +3027,7 @@ async function removerPaciente(id){
 // ══════════════════════════════════════════════════════
 // CALENDÁRIO
 // ══════════════════════════════════════════════════════
-function calISO(d){ return d.toISOString().slice(0,10); }
+function calISO(d){ return toLocalISO(d); }
 function calWeekStart(d){ const c=new Date(d); c.setDate(c.getDate()-c.getDay()); return c; }
 function calWeekEnd(d){ const c=new Date(d); c.setDate(c.getDate()+(6-c.getDay())); return c; }
 
@@ -3125,7 +3126,7 @@ function renderCalendario(){
   }
 }
 
-function calDayClick(iso){ if(!iso) return; calRef=new Date(iso); calSetView('dia'); }
+function calDayClick(iso){ if(!iso) return; calRef=new Date(iso+'T00:00:00'); calSetView('dia'); }
 
 function calDayColClick(e, iso){
   if(e.target.classList.contains('cal-event')) return;
@@ -8030,7 +8031,7 @@ async function filtrarResgate(meses){
   const hoje = new Date();
   const limite = new Date(hoje);
   limite.setMonth(limite.getMonth() - meses);
-  const limiteISO = limite.toISOString().slice(0,10);
+  const limiteISO = toLocalISO(limite);
 
   // Para cada paciente, pega o último atendimento
   const pacResgate = [];
