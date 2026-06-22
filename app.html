@@ -691,6 +691,7 @@ button{font-family:inherit;}
     <nav class="sidebar-menu">
       <div class="sidebar-label">Clínica</div>
       <button class="sidebar-item active" data-tab="home" onclick="switchTab('home')"><i class="ti ti-home"></i><span>Início</span></button>
+      <button class="sidebar-item" data-tab="venda_rapida" onclick="switchTab('venda_rapida')"><i class="ti ti-shopping-cart"></i><span>Venda Rápida</span></button>
       <button class="sidebar-item" data-tab="agendar" onclick="switchTab('agendar')"><i class="ti ti-calendar-plus"></i><span>Agendar</span></button>
       <button class="sidebar-item" data-tab="lista" onclick="switchTab('lista')"><i class="ti ti-calendar-event"></i><span>Agenda</span></button>
       <button class="sidebar-item" data-tab="calendario" onclick="switchTab('calendario')"><i class="ti ti-calendar-month"></i><span>Calendário</span></button>
@@ -704,7 +705,6 @@ button{font-family:inherit;}
       <button class="sidebar-item" data-tab="procedimentos_fin" onclick="switchTab('procedimentos_fin')"><i class="ti ti-list-check"></i><span>Procedimentos</span></button>
       <button class="sidebar-item" data-tab="materiais_fin" onclick="switchTab('materiais_fin')"><i class="ti ti-box"></i><span>Materiais</span></button>
       <button class="sidebar-item" data-tab="estoque_fin" onclick="switchTab('estoque_fin')"><i class="ti ti-package"></i><span>Estoque</span></button>
-      <button class="sidebar-item" data-tab="venda_rapida" onclick="switchTab('venda_rapida')"><i class="ti ti-shopping-cart"></i><span>Venda Rápida</span></button>
       <button class="sidebar-item" data-tab="vendas_fin" onclick="switchTab('vendas_fin')"><i class="ti ti-receipt"></i><span>Vendas</span></button>
       <div class="sidebar-divider"></div>
       <div class="sidebar-divider"></div>
@@ -2031,7 +2031,7 @@ function toggleFaq(i){
 }
 
 function switchTab(tab){
-  ['home','agendar','lista','calendario','pacientes','profissionais','configuracoes','financeiro','procedimentos_fin','materiais_fin','estoque_fin','vendas_fin','resgate','invisalign_apresentacao'].forEach(t=>{
+  ['home','agendar','lista','calendario','pacientes','profissionais','configuracoes','financeiro','procedimentos_fin','materiais_fin','estoque_fin','vendas_fin','venda_rapida','resgate','invisalign_apresentacao'].forEach(t=>{
     const el=document.getElementById('tab-'+t);
     if(el) el.style.display = t===tab?'':'none';
   });
@@ -2043,7 +2043,7 @@ function switchTab(tab){
     calendario:'Calendário de atendimentos', pacientes:'Cadastro de pacientes',
     profissionais:'Equipe e profissionais', financeiro:'Painel financeiro', procedimentos_fin:'Procedimentos e precificação',
     materiais_fin:'Materiais e insumos', estoque_fin:'Controle de estoque', vendas_fin:'Vendas e orçamentos',
-    resgate:'Resgate de pacientes', invisalign_apresentacao:'Apresentação Invisalign', configuracoes:'Configurações da clínica'
+    venda_rapida:'Venda Rápida', resgate:'Resgate de pacientes', invisalign_apresentacao:'Apresentação Invisalign', configuracoes:'Configurações da clínica'
   };
   const _subEl = document.getElementById('header-subtitulo');
   if(_subEl) _subEl.textContent = _tituloAba[tab] || 'Agendamentos e Prontuários Odontológicos';
@@ -2055,7 +2055,7 @@ function switchTab(tab){
   if(tab==='home') renderHomeStats();
   if(tab==='configuracoes') renderConfiguracoes();
   if(tab==='resgate') renderResgate();
-  if(tab==='financeiro'||tab==='procedimentos_fin'||tab==='materiais_fin'||tab==='estoque_fin'||tab==='vendas_fin'){
+  if(tab==='venda_rapida'||tab==='financeiro'||tab==='procedimentos_fin'||tab==='materiais_fin'||tab==='estoque_fin'||tab==='vendas_fin'){
     if(!_financeiroCarregado){
       showLoading(true);
       loadFinanceiro().then(()=>{
@@ -2069,7 +2069,6 @@ function switchTab(tab){
       });
       return;
     }
-    // requestAnimationFrame evita flash visual (tab aparece vazio por um frame)
     requestAnimationFrame(()=>{
       if(tab==='financeiro') renderFinanceiroDash();
       if(tab==='procedimentos_fin') renderProcs();
