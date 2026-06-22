@@ -5430,10 +5430,11 @@ async function saveProc(){
   const precoCampo = document.getElementById('mp-preco')?.value;
   // Se o usuário não editou manualmente o preço, sempre recalcula pela margem atual
   // (evita salvar um preço "fantasma" de antes de mudar a margem).
-  const preco  = (mpPrecoEditadoManualmente && precoCampo!=='')
+  const precoManual = mpPrecoEditadoManualmente && precoCampo!=='';
+  const preco  = precoManual
                   ? Number(precoCampo)
                   : calcPrecoFinal({tempo,insumos,laboratorio:lab,margem});
-  const obj    = { nome, grupo:document.getElementById('mp-grupo')?.value||'Geral', tempo, insumos, laboratorio:lab, margem, horaClin:hc, precoFinal:preco };
+  const obj    = { nome, grupo:document.getElementById('mp-grupo')?.value||'Geral', tempo, insumos, laboratorio:lab, margem, horaClin:hc, precoFinal:preco, tempoManual:true, horaClinManual:true, precoFinalManual:precoManual };
   if(editProcId){
     const i = procs.findIndex(x=>x.id===editProcId);
     procs[i] = { ...procs[i], ...obj };
@@ -5879,18 +5880,23 @@ async function saveInsumos(){
   showToast('Insumos salvos!');
 }
 async function recalcularInsumos(silent){
-  // Só recalcula insumos e horaClin — NÃO sobrescreve precoFinal (pode ter sido editado manualmente)
+  // Só recalcula insumos e horaClin — NÃO sobrescreve o que foi editado manualmente
   let atualizados=0;
   procs.forEach(p=>{
+    // Recalcula custo de insumos (sempre — reflete mudança de preço de materiais)
     const ins=procInsumos[p.id]||[];
     if(ins.length){
       const novo=parseFloat(ins.reduce((acc,item)=>{const m=mats.find(x=>x.id===item.matId);return acc+(m?m.custo*item.qtd:0);},0).toFixed(2));
       if(novo!==p.insumos){p.insumos=novo;atualizados++;}
     }
-    p.horaClin=parseFloat(((p.tempo/60)*calcHora()).toFixed(2));
-    // Só recalcula precoFinal se chamado manualmente (silent=false)
-    // No carregamento (silent=true), preserva o preço salvo
-    if(!silent) p.precoFinal=calcPrecoFinal(p);
+    // Só recalcula horaClin se NÃO foi editado manualmente
+    if(!p.horaClinManual){
+      p.horaClin=parseFloat(((p.tempo/60)*calcHora()).toFixed(2));
+    }
+    // Só recalcula precoFinal se chamado manualmente (silent=false) E não foi fixado manualmente
+    if(!silent && !p.precoFinalManual){
+      p.precoFinal=calcPrecoFinal(p);
+    }
   });
   renderProcs();
   if(!silent){
