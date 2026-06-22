@@ -389,20 +389,26 @@ button{font-family:inherit;}
 .cal-pill{font-size:10px;font-weight:700;color:#fff;border-radius:5px;padding:2px 5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .cal-more{font-size:10px;font-weight:700;color:var(--rose-text);padding:0 3px;}
 .vr-pag-btn{
-  padding:8px 6px;border:1.5px solid var(--rose-light);border-radius:10px;
+  padding:9px 6px;border:1.5px solid var(--rose-light);border-radius:10px;
   background:#fff;color:var(--rose-dark);font-size:12px;font-weight:600;cursor:pointer;
-  transition:all .2s;
+  transition:all .2s;display:flex;align-items:center;justify-content:center;gap:5px;
 }
+.vr-pag-btn:hover{border-color:var(--rose);background:var(--rose-lighter);}
 .vr-pag-btn.active{background:var(--rose-dark);color:#fff;border-color:var(--rose-dark);}
 .vr-proc-item{
-  display:flex;align-items:center;gap:12px;padding:10px 12px;
+  display:flex;align-items:center;gap:12px;padding:11px 14px;
   background:#fff;border:1.5px solid var(--rose-light);border-radius:12px;cursor:pointer;
-  transition:all .2s;
+  transition:all .18s;
 }
-.vr-proc-item:hover{border-color:var(--rose);background:var(--rose-lighter);}
+.vr-proc-item:hover{border-color:var(--rose);background:var(--rose-lighter);transform:translateX(2px);}
+.vr-cat-btn{
+  padding:5px 14px;border:1.5px solid var(--rose-light);border-radius:20px;
+  background:#fff;color:var(--rose-dark);font-size:12px;font-weight:600;cursor:pointer;transition:all .2s;
+}
+.vr-cat-btn.active{background:var(--rose-dark);color:#fff;border-color:var(--rose-dark);}
 .vr-cart-item{
-  display:flex;align-items:center;gap:8px;padding:8px 10px;
-  background:var(--rose-lighter);border-radius:10px;font-size:13px;
+  display:flex;align-items:center;gap:10px;padding:10px 12px;
+  background:#fff;border:1.5px solid var(--rose-light);border-radius:12px;
 }inset:0;background:rgba(60,30,20,.42);z-index:1200;display:flex;align-items:center;justify-content:center;padding:16px;opacity:0;pointer-events:none;transition:opacity .2s;}
 .cal-modal-bg.show{opacity:1;pointer-events:auto;}
 .cal-modal{background:#fff;border-radius:18px;max-width:420px;width:100%;padding:0;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.3);transform:translateY(10px);transition:transform .2s;}
@@ -1218,87 +1224,100 @@ button{font-family:inherit;}
     <!-- ══════════════════════════════════════════════════
          VENDA RÁPIDA
     ══════════════════════════════════════════════════ -->
-    <div id="tab-venda_rapida" class="content" style="display:none;">
-      <div style="display:grid;grid-template-columns:1fr 380px;gap:16px;height:calc(100vh - 120px);min-height:500px;">
+    <div id="tab-venda_rapida" class="content" style="display:none;padding:0;">
+      <div style="display:grid;grid-template-columns:1fr 420px;height:calc(100vh - 72px);overflow:hidden;">
 
-        <!-- COLUNA ESQUERDA: busca e lista de procedimentos -->
-        <div class="card" style="display:flex;flex-direction:column;overflow:hidden;">
-          <div class="section-header"><h2><i class="ti ti-shopping-cart"></i> Venda Rápida</h2></div>
+        <!-- ── ESQUERDA: Procedimentos ── -->
+        <div style="display:flex;flex-direction:column;overflow:hidden;padding:20px 16px 20px 20px;gap:14px;">
+
+          <!-- Header -->
+          <div style="display:flex;align-items:center;gap:10px;">
+            <div style="background:var(--rose-dark);color:#fff;border-radius:12px;width:36px;height:36px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+              <i class="ti ti-shopping-cart" style="font-size:18px;"></i>
+            </div>
+            <div>
+              <div style="font-size:16px;font-weight:800;color:var(--rose-dark);">Venda Rápida</div>
+              <div style="font-size:11px;color:var(--rose-text);">Selecione os procedimentos e finalize</div>
+            </div>
+          </div>
 
           <!-- Busca -->
-          <div style="padding:0 0 12px;">
-            <input type="text" id="vr-search" placeholder="🔍 Buscar procedimento..." oninput="vrFiltrar()"
-              style="width:100%;padding:10px 14px;border:1.5px solid var(--rose-light);border-radius:10px;font-size:14px;color:var(--rose-dark);"/>
+          <div style="position:relative;">
+            <i class="ti ti-search" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--rose-light);font-size:16px;"></i>
+            <input type="text" id="vr-search" placeholder="Buscar procedimento..." oninput="vrFiltrar()"
+              style="width:100%;padding:11px 14px 11px 38px;border:1.5px solid var(--rose-light);border-radius:12px;font-size:14px;color:var(--rose-dark);background:#fff;outline:none;"/>
           </div>
 
-          <!-- Filtro categoria -->
-          <div id="vr-cats" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;"></div>
+          <!-- Categorias -->
+          <div id="vr-cats" style="display:flex;gap:6px;flex-wrap:wrap;"></div>
 
-          <!-- Lista de procedimentos -->
-          <div id="vr-lista" style="flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:8px;"></div>
+          <!-- Lista -->
+          <div id="vr-lista" style="flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:6px;padding-right:4px;"></div>
         </div>
 
-        <!-- COLUNA DIREITA: carrinho + pagamento -->
-        <div style="display:flex;flex-direction:column;gap:12px;overflow-y:auto;">
+        <!-- ── DIREITA: Carrinho + Pagamento ── -->
+        <div style="background:#fff;border-left:1px solid var(--rose-light);display:flex;flex-direction:column;overflow:hidden;">
 
-          <!-- Carrinho -->
-          <div class="card" style="flex:1;min-height:0;display:flex;flex-direction:column;">
-            <h3 style="font-size:13px;font-weight:700;color:var(--rose-dark);margin-bottom:12px;display:flex;align-items:center;gap:6px;">
-              <i class="ti ti-list-check"></i> Carrinho
-              <span id="vr-count" style="background:var(--rose);color:#fff;border-radius:20px;padding:1px 8px;font-size:11px;margin-left:auto;">0</span>
-            </h3>
-            <div id="vr-carrinho" style="flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:8px;min-height:60px;">
-              <div style="text-align:center;color:var(--rose-light);font-size:13px;padding:20px 0;">Nenhum item adicionado</div>
+          <!-- Cabeçalho carrinho -->
+          <div style="padding:18px 20px 14px;border-bottom:1px solid var(--rose-lighter);display:flex;align-items:center;gap:8px;flex-shrink:0;">
+            <i class="ti ti-list-check" style="color:var(--rose-dark);font-size:18px;"></i>
+            <span style="font-size:15px;font-weight:800;color:var(--rose-dark);flex:1;">Carrinho</span>
+            <span id="vr-count" style="background:var(--rose);color:#fff;border-radius:20px;padding:2px 10px;font-size:12px;font-weight:700;">0</span>
+          </div>
+
+          <!-- Itens do carrinho -->
+          <div id="vr-carrinho" style="flex:1;overflow-y:auto;padding:14px 16px;display:flex;flex-direction:column;gap:8px;">
+            <div style="text-align:center;color:var(--rose-light);font-size:13px;padding:30px 0;">
+              <i class="ti ti-shopping-cart-off" style="font-size:32px;display:block;margin-bottom:8px;"></i>
+              Nenhum procedimento adicionado
             </div>
           </div>
 
-          <!-- Desconto + Pagamento -->
-          <div class="card">
-            <h3 style="font-size:13px;font-weight:700;color:var(--rose-dark);margin-bottom:12px;"><i class="ti ti-cash"></i> Pagamento</h3>
+          <!-- Painel de pagamento -->
+          <div style="border-top:1px solid var(--rose-lighter);padding:16px 20px;display:flex;flex-direction:column;gap:12px;flex-shrink:0;background:#fdf8f6;">
 
-            <!-- Paciente (opcional) -->
-            <div style="margin-bottom:10px;">
-              <label style="font-size:12px;color:var(--rose-text);font-weight:600;">Paciente (opcional)</label>
-              <select id="vr-paciente" style="width:100%;margin-top:4px;padding:8px 10px;border:1.5px solid var(--rose-light);border-radius:8px;font-size:13px;color:var(--rose-dark);">
-                <option value="">— Sem vínculo —</option>
-              </select>
-            </div>
-
-            <!-- Profissional -->
-            <div style="margin-bottom:10px;">
-              <label style="font-size:12px;color:var(--rose-text);font-weight:600;">Quem atendeu</label>
-              <select id="vr-prof" style="width:100%;margin-top:4px;padding:8px 10px;border:1.5px solid var(--rose-light);border-radius:8px;font-size:13px;color:var(--rose-dark);">
-                <option value="">— Selecionar —</option>
-              </select>
+            <!-- Paciente + Profissional -->
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+              <div>
+                <label style="font-size:10px;font-weight:700;color:var(--rose-text);text-transform:uppercase;letter-spacing:.5px;">Paciente</label>
+                <select id="vr-paciente" style="width:100%;margin-top:4px;padding:7px 8px;border:1.5px solid var(--rose-light);border-radius:8px;font-size:12px;color:var(--rose-dark);background:#fff;">
+                  <option value="">— Sem vínculo —</option>
+                </select>
+              </div>
+              <div>
+                <label style="font-size:10px;font-weight:700;color:var(--rose-text);text-transform:uppercase;letter-spacing:.5px;">Profissional</label>
+                <select id="vr-prof" style="width:100%;margin-top:4px;padding:7px 8px;border:1.5px solid var(--rose-light);border-radius:8px;font-size:12px;color:var(--rose-dark);background:#fff;">
+                  <option value="">— Selecionar —</option>
+                </select>
+              </div>
             </div>
 
             <!-- Desconto -->
-            <div style="margin-bottom:10px;">
-              <label style="font-size:12px;color:var(--rose-text);font-weight:600;">Desconto</label>
-              <div style="display:flex;gap:8px;margin-top:4px;">
-                <select id="vr-desc-tipo" onchange="vrCalcTotal()" style="padding:8px;border:1.5px solid var(--rose-light);border-radius:8px;font-size:13px;color:var(--rose-dark);">
+            <div>
+              <label style="font-size:10px;font-weight:700;color:var(--rose-text);text-transform:uppercase;letter-spacing:.5px;">Desconto</label>
+              <div style="display:flex;gap:6px;margin-top:4px;">
+                <select id="vr-desc-tipo" onchange="vrCalcTotal()" style="flex:1;padding:7px 8px;border:1.5px solid var(--rose-light);border-radius:8px;font-size:12px;color:var(--rose-dark);background:#fff;">
                   <option value="nenhum">Sem desconto</option>
                   <option value="pct">% Percentual</option>
-                  <option value="fixo">R$ Valor fixo</option>
+                  <option value="fixo">R$ Fixo</option>
                 </select>
                 <input type="number" id="vr-desc-val" value="0" min="0" oninput="vrCalcTotal()"
-                  style="width:90px;padding:8px;border:1.5px solid var(--rose-light);border-radius:8px;font-size:13px;color:var(--rose-dark);"/>
+                  style="width:72px;padding:7px 8px;border:1.5px solid var(--rose-light);border-radius:8px;font-size:13px;font-weight:700;color:var(--rose-dark);text-align:center;background:#fff;"/>
               </div>
             </div>
 
             <!-- Forma de pagamento -->
-            <div style="margin-bottom:14px;">
-              <label style="font-size:12px;color:var(--rose-text);font-weight:600;">Forma de pagamento</label>
+            <div>
+              <label style="font-size:10px;font-weight:700;color:var(--rose-text);text-transform:uppercase;letter-spacing:.5px;">Pagamento</label>
               <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px;">
-                <button class="vr-pag-btn active" onclick="vrSelPag(this,'pix')">💠 Pix</button>
-                <button class="vr-pag-btn" onclick="vrSelPag(this,'dinheiro')">💵 Dinheiro</button>
-                <button class="vr-pag-btn" onclick="vrSelPag(this,'debito')">💳 Débito</button>
-                <button class="vr-pag-btn" onclick="vrSelPag(this,'credito')">💳 Crédito</button>
+                <button class="vr-pag-btn active" onclick="vrSelPag(this,'pix')"><i class="ti ti-brand-mastercard"></i> Pix</button>
+                <button class="vr-pag-btn" onclick="vrSelPag(this,'dinheiro')"><i class="ti ti-cash"></i> Dinheiro</button>
+                <button class="vr-pag-btn" onclick="vrSelPag(this,'debito')"><i class="ti ti-credit-card"></i> Débito</button>
+                <button class="vr-pag-btn" onclick="vrSelPag(this,'credito')"><i class="ti ti-credit-card"></i> Crédito</button>
               </div>
-              <div id="vr-parcelas-wrap" style="display:none;margin-top:8px;">
-                <label style="font-size:12px;color:var(--rose-text);">Parcelas</label>
-                <select id="vr-parcelas" onchange="vrCalcTotal()" style="width:100%;margin-top:4px;padding:8px;border:1.5px solid var(--rose-light);border-radius:8px;font-size:13px;color:var(--rose-dark);">
-                  <option value="1">1x</option><option value="2">2x</option><option value="3">3x</option>
+              <div id="vr-parcelas-wrap" style="display:none;margin-top:6px;">
+                <select id="vr-parcelas" onchange="vrCalcTotal()" style="width:100%;padding:7px 8px;border:1.5px solid var(--rose-light);border-radius:8px;font-size:12px;color:var(--rose-dark);background:#fff;">
+                  <option value="1">1x sem juros</option><option value="2">2x</option><option value="3">3x</option>
                   <option value="4">4x</option><option value="5">5x</option><option value="6">6x</option>
                   <option value="7">7x</option><option value="8">8x</option><option value="9">9x</option>
                   <option value="10">10x</option><option value="11">11x</option><option value="12">12x</option>
@@ -1307,28 +1326,31 @@ button{font-family:inherit;}
             </div>
 
             <!-- Totais -->
-            <div style="background:var(--rose-lighter);border-radius:10px;padding:12px 14px;margin-bottom:14px;display:flex;flex-direction:column;gap:6px;">
-              <div style="display:flex;justify-content:space-between;font-size:13px;color:var(--rose-text);">
-                <span>Subtotal</span><span id="vr-subtotal">R$ 0,00</span>
+            <div style="background:#fff;border-radius:12px;padding:12px 14px;border:1.5px solid var(--rose-light);">
+              <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--rose-text);margin-bottom:5px;">
+                <span>Subtotal</span><span id="vr-subtotal" style="font-weight:600;">R$ 0,00</span>
               </div>
-              <div style="display:flex;justify-content:space-between;font-size:13px;color:var(--rose-text);">
-                <span>Desconto</span><span id="vr-desconto-txt" style="color:#c0392b;">— R$ 0,00</span>
+              <div style="display:flex;justify-content:space-between;font-size:12px;color:#c0392b;margin-bottom:5px;">
+                <span>Desconto</span><span id="vr-desconto-txt">— R$ 0,00</span>
               </div>
-              <div style="display:flex;justify-content:space-between;font-size:13px;color:var(--rose-text);">
-                <span>Taxa máquina</span><span id="vr-taxa-txt" style="color:#c0392b;">— R$ 0,00</span>
+              <div style="display:flex;justify-content:space-between;font-size:12px;color:#c0392b;margin-bottom:8px;">
+                <span>Taxa máquina</span><span id="vr-taxa-txt">— R$ 0,00</span>
               </div>
-              <div style="display:flex;justify-content:space-between;font-size:15px;font-weight:800;color:var(--rose-dark);border-top:1px solid var(--rose-light);padding-top:8px;margin-top:2px;">
-                <span>Total líquido</span><span id="vr-total">R$ 0,00</span>
+              <div style="display:flex;justify-content:space-between;font-size:17px;font-weight:900;color:var(--rose-dark);border-top:1.5px solid var(--rose-lighter);padding-top:8px;">
+                <span>Total</span><span id="vr-total">R$ 0,00</span>
               </div>
             </div>
 
-            <button class="btn-primary" style="width:100%;justify-content:center;padding:14px;font-size:15px;" onclick="vrFinalizar()">
-              <i class="ti ti-check"></i> Finalizar venda
+            <!-- Botão finalizar -->
+            <button class="btn-primary" style="width:100%;justify-content:center;padding:14px;font-size:15px;font-weight:800;border-radius:12px;" onclick="vrFinalizar()">
+              <i class="ti ti-check"></i> Finalizar Venda
             </button>
+
           </div>
         </div>
       </div>
     </div>
+
 
     <!-- ══════════════════════════════════════════════════
          FINANCEIRO — VENDAS
@@ -6586,8 +6608,8 @@ function vrInit(){
 function vrRenderCats(){
   const cats = [...new Set(procs.map(p=>p.cat||p.categoria||'Geral'))].sort();
   const wrap = document.getElementById('vr-cats'); if(!wrap) return;
-  wrap.innerHTML = `<button class="tag${vrCatAtiva===''?' active':''}" onclick="vrSetCat('')" style="cursor:pointer;">Todos</button>` +
-    cats.map(c=>`<button class="tag${vrCatAtiva===c?' active':''}" onclick="vrSetCat('${escapeHtml(c)}')" style="cursor:pointer;">${escapeHtml(c)}</button>`).join('');
+  wrap.innerHTML = `<button class="vr-cat-btn${vrCatAtiva===''?' active':''}" onclick="vrSetCat('')">Todos</button>` +
+    cats.map(c=>`<button class="vr-cat-btn${vrCatAtiva===c?' active':''}" onclick="vrSetCat('${escapeHtml(c)}')">${escapeHtml(c)}</button>`).join('');
 }
 
 function vrSetCat(cat){ vrCatAtiva = cat; vrRenderCats(); vrFiltrar(); }
@@ -6645,19 +6667,27 @@ function vrSetQtd(procId, val){
 function vrRenderCarrinho(){
   const wrap = document.getElementById('vr-carrinho'); if(!wrap) return;
   const cnt  = document.getElementById('vr-count');
-  if(cnt) cnt.textContent = vrCarrinho.reduce((a,i)=>a+i.qtd,0);
+  const total = vrCarrinho.reduce((a,i)=>a+i.qtd,0);
+  if(cnt) cnt.textContent = total;
   if(!vrCarrinho.length){
-    wrap.innerHTML='<div style="text-align:center;color:var(--rose-light);font-size:13px;padding:20px 0;">Nenhum item adicionado</div>';
+    wrap.innerHTML=`<div style="text-align:center;color:var(--rose-light);padding:30px 0;">
+      <i class="ti ti-shopping-cart-off" style="font-size:32px;display:block;margin-bottom:8px;"></i>
+      Nenhum procedimento adicionado
+    </div>`;
     return;
   }
   wrap.innerHTML = vrCarrinho.map(item=>`
     <div class="vr-cart-item">
-      <div style="flex:1;font-weight:600;color:var(--rose-dark);font-size:13px;">${escapeHtml(item.nome)}</div>
-      <div style="display:flex;align-items:center;gap:6px;">
-        <input type="number" value="${item.qtd}" min="1" style="width:46px;padding:4px;border:1px solid var(--rose-light);border-radius:6px;text-align:center;font-size:13px;"
-          onchange="vrSetQtd(${item.procId},this.value)"/>
-        <span style="font-size:13px;font-weight:700;color:var(--rose);min-width:64px;text-align:right;">${fmtBRL(item.preco*item.qtd)}</span>
-        <button onclick="vrRemItem(${item.procId})" style="border:none;background:none;color:#c0392b;cursor:pointer;font-size:16px;padding:0;">×</button>
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:13px;font-weight:700;color:var(--rose-dark);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(item.nome)}</div>
+        <div style="font-size:11px;color:var(--rose-text);margin-top:2px;">${fmtBRL(item.preco)} / un</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
+        <button onclick="vrSetQtd(${item.procId},${item.qtd-1})" style="width:26px;height:26px;border:1.5px solid var(--rose-light);border-radius:6px;background:#fff;color:var(--rose-dark);font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;">−</button>
+        <span style="font-size:14px;font-weight:800;color:var(--rose-dark);min-width:20px;text-align:center;">${item.qtd}</span>
+        <button onclick="vrSetQtd(${item.procId},${item.qtd+1})" style="width:26px;height:26px;border:1.5px solid var(--rose-light);border-radius:6px;background:#fff;color:var(--rose-dark);font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;">+</button>
+        <span style="font-size:13px;font-weight:800;color:var(--rose);min-width:70px;text-align:right;">${fmtBRL(item.preco*item.qtd)}</span>
+        <button onclick="vrRemItem(${item.procId})" style="width:26px;height:26px;border:none;background:none;color:#c0392b;cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;line-height:1;">×</button>
       </div>
     </div>`).join('');
 }
