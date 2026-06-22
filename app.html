@@ -8504,7 +8504,11 @@ async function filtrarResgate(meses){
       ultimoProc = ag.procedimento || 'Consulta';
     }
 
-    if(!ultimaData) continue; // Nunca veio — não inclui
+    if(!ultimaData) {
+      // Paciente sem nenhum registro — inclui na lista "Nunca veio"
+      pacResgate.push({ pac, ultimaData: null, ultimoProc: 'Sem registro', dias: 9999, mesesAusencia: 999 });
+      continue;
+    }
 
     const dias = Math.floor((hoje - new Date(ultimaData)) / (1000*60*60*24));
     const mesesAusencia = dias/30;
@@ -8542,9 +8546,10 @@ async function filtrarResgate(meses){
 
   tb.innerHTML = pacResgate.map(r=>{
     const {pac, ultimaData, ultimoProc, dias, mesesAusencia} = r;
-    const dataFmt = formatDate(ultimaData);
-    const mesesStr = mesesAusencia < 1 ? `${dias} dias` : `${Math.round(mesesAusencia)} meses`;
-    const cor = mesesAusencia >= 5 ? '#dc2626' : mesesAusencia >= 3 ? '#856404' : '#2e7d32';
+    const semRegistro = !ultimaData;
+    const dataFmt = semRegistro ? '—' : formatDate(ultimaData);
+    const mesesStr = semRegistro ? 'Nunca veio' : mesesAusencia < 1 ? `${dias} dias` : `${Math.round(mesesAusencia)} meses`;
+    const cor = semRegistro ? '#6b21a8' : mesesAusencia >= 5 ? '#dc2626' : mesesAusencia >= 3 ? '#856404' : '#2e7d32';
     const procCurto = ultimoProc.length > 35 ? ultimoProc.slice(0,35)+'...' : ultimoProc;
     const temTel = !!pac.telefone;
     return `<tr style="border-bottom:1px solid var(--rose-light);">
@@ -8561,7 +8566,7 @@ async function filtrarResgate(meses){
                 style="background:#25d366;border:none;border-radius:50%;width:38px;height:38px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(37,211,102,.4);" title="Enviar WhatsApp">
                 <i class="ti ti-brand-whatsapp" style="color:#fff;font-size:18px;"></i>
               </button>
-              '+( getResgateContador(escapeHtml(pac.nome))>0 ? '<span style="font-size:10px;color:#856404;font-weight:700;">'+getResgateContador(escapeHtml(pac.nome))+'x</span>' : '' )+'
+              ${getResgateContador(escapeHtml(pac.nome))>0 ? `<span style="font-size:10px;color:#856404;font-weight:700;">${getResgateContador(escapeHtml(pac.nome))}x enviado(s)</span>` : ''}
             </div>`
           : `<span style="font-size:11px;color:var(--rose-text);">Sem tel.</span>`
         }
@@ -8583,8 +8588,14 @@ function classificarTratamento(proc){
 }
 
 function gerarMensagemResgate(nome, proc, meses){
-  const tipo = classificarTratamento(proc);
   const clinica = clinicaData?.nome_cli || 'nossa clínica';
+
+  // Paciente sem registro — mensagem de primeiro contato
+  if(!proc || proc === 'Sem registro' || meses >= 999){
+    return `Olá, ${nome}! 😊 Tudo bem?\n\nPassando para te convidar para uma avaliação no ${clinica}! 🦷\n\nOfertamos consulta de avaliação completa, limpeza profissional, clareamento, aparelhos e muito mais. Temos horários disponíveis essa semana!\n\nQue tal agendarmos? Será um prazer te atender! ✨`;
+  }
+
+  const tipo = classificarTratamento(proc);
   const msgs = {
     ortodontia: {
       1: `Olá, ${nome}! 😊 Passando para lembrar que já faz 1 mês desde sua última manutenção do aparelho na ${clinica}. Atrasar as manutenções pode comprometer o resultado do seu tratamento ortodôntico! Que tal agendarmos? 📅`,
