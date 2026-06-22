@@ -388,7 +388,22 @@ button{font-family:inherit;}
 .cal-cell.is-today .cell-num{background:var(--rose);color:#fff;border-radius:50%;width:22px;height:22px;display:inline-flex;align-items:center;justify-content:center;}
 .cal-pill{font-size:10px;font-weight:700;color:#fff;border-radius:5px;padding:2px 5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .cal-more{font-size:10px;font-weight:700;color:var(--rose-text);padding:0 3px;}
-.cal-modal-bg{position:fixed;inset:0;background:rgba(60,30,20,.42);z-index:1200;display:flex;align-items:center;justify-content:center;padding:16px;opacity:0;pointer-events:none;transition:opacity .2s;}
+.vr-pag-btn{
+  padding:8px 6px;border:1.5px solid var(--rose-light);border-radius:10px;
+  background:#fff;color:var(--rose-dark);font-size:12px;font-weight:600;cursor:pointer;
+  transition:all .2s;
+}
+.vr-pag-btn.active{background:var(--rose-dark);color:#fff;border-color:var(--rose-dark);}
+.vr-proc-item{
+  display:flex;align-items:center;gap:12px;padding:10px 12px;
+  background:#fff;border:1.5px solid var(--rose-light);border-radius:12px;cursor:pointer;
+  transition:all .2s;
+}
+.vr-proc-item:hover{border-color:var(--rose);background:var(--rose-lighter);}
+.vr-cart-item{
+  display:flex;align-items:center;gap:8px;padding:8px 10px;
+  background:var(--rose-lighter);border-radius:10px;font-size:13px;
+}inset:0;background:rgba(60,30,20,.42);z-index:1200;display:flex;align-items:center;justify-content:center;padding:16px;opacity:0;pointer-events:none;transition:opacity .2s;}
 .cal-modal-bg.show{opacity:1;pointer-events:auto;}
 .cal-modal{background:#fff;border-radius:18px;max-width:420px;width:100%;padding:0;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.3);transform:translateY(10px);transition:transform .2s;}
 .cal-modal-bg.show .cal-modal{transform:translateY(0);}
@@ -689,6 +704,7 @@ button{font-family:inherit;}
       <button class="sidebar-item" data-tab="procedimentos_fin" onclick="switchTab('procedimentos_fin')"><i class="ti ti-list-check"></i><span>Procedimentos</span></button>
       <button class="sidebar-item" data-tab="materiais_fin" onclick="switchTab('materiais_fin')"><i class="ti ti-box"></i><span>Materiais</span></button>
       <button class="sidebar-item" data-tab="estoque_fin" onclick="switchTab('estoque_fin')"><i class="ti ti-package"></i><span>Estoque</span></button>
+      <button class="sidebar-item" data-tab="venda_rapida" onclick="switchTab('venda_rapida')"><i class="ti ti-shopping-cart"></i><span>Venda Rápida</span></button>
       <button class="sidebar-item" data-tab="vendas_fin" onclick="switchTab('vendas_fin')"><i class="ti ti-receipt"></i><span>Vendas</span></button>
       <div class="sidebar-divider"></div>
       <div class="sidebar-divider"></div>
@@ -1200,6 +1216,118 @@ button{font-family:inherit;}
     </div>
 
     <!-- ══════════════════════════════════════════════════
+         VENDA RÁPIDA
+    ══════════════════════════════════════════════════ -->
+    <div id="tab-venda_rapida" class="content" style="display:none;">
+      <div style="display:grid;grid-template-columns:1fr 380px;gap:16px;height:calc(100vh - 120px);min-height:500px;">
+
+        <!-- COLUNA ESQUERDA: busca e lista de procedimentos -->
+        <div class="card" style="display:flex;flex-direction:column;overflow:hidden;">
+          <div class="section-header"><h2><i class="ti ti-shopping-cart"></i> Venda Rápida</h2></div>
+
+          <!-- Busca -->
+          <div style="padding:0 0 12px;">
+            <input type="text" id="vr-search" placeholder="🔍 Buscar procedimento..." oninput="vrFiltrar()"
+              style="width:100%;padding:10px 14px;border:1.5px solid var(--rose-light);border-radius:10px;font-size:14px;color:var(--rose-dark);"/>
+          </div>
+
+          <!-- Filtro categoria -->
+          <div id="vr-cats" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;"></div>
+
+          <!-- Lista de procedimentos -->
+          <div id="vr-lista" style="flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:8px;"></div>
+        </div>
+
+        <!-- COLUNA DIREITA: carrinho + pagamento -->
+        <div style="display:flex;flex-direction:column;gap:12px;overflow-y:auto;">
+
+          <!-- Carrinho -->
+          <div class="card" style="flex:1;min-height:0;display:flex;flex-direction:column;">
+            <h3 style="font-size:13px;font-weight:700;color:var(--rose-dark);margin-bottom:12px;display:flex;align-items:center;gap:6px;">
+              <i class="ti ti-list-check"></i> Carrinho
+              <span id="vr-count" style="background:var(--rose);color:#fff;border-radius:20px;padding:1px 8px;font-size:11px;margin-left:auto;">0</span>
+            </h3>
+            <div id="vr-carrinho" style="flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:8px;min-height:60px;">
+              <div style="text-align:center;color:var(--rose-light);font-size:13px;padding:20px 0;">Nenhum item adicionado</div>
+            </div>
+          </div>
+
+          <!-- Desconto + Pagamento -->
+          <div class="card">
+            <h3 style="font-size:13px;font-weight:700;color:var(--rose-dark);margin-bottom:12px;"><i class="ti ti-cash"></i> Pagamento</h3>
+
+            <!-- Paciente (opcional) -->
+            <div style="margin-bottom:10px;">
+              <label style="font-size:12px;color:var(--rose-text);font-weight:600;">Paciente (opcional)</label>
+              <select id="vr-paciente" style="width:100%;margin-top:4px;padding:8px 10px;border:1.5px solid var(--rose-light);border-radius:8px;font-size:13px;color:var(--rose-dark);">
+                <option value="">— Sem vínculo —</option>
+              </select>
+            </div>
+
+            <!-- Profissional -->
+            <div style="margin-bottom:10px;">
+              <label style="font-size:12px;color:var(--rose-text);font-weight:600;">Quem atendeu</label>
+              <select id="vr-prof" style="width:100%;margin-top:4px;padding:8px 10px;border:1.5px solid var(--rose-light);border-radius:8px;font-size:13px;color:var(--rose-dark);">
+                <option value="">— Selecionar —</option>
+              </select>
+            </div>
+
+            <!-- Desconto -->
+            <div style="margin-bottom:10px;">
+              <label style="font-size:12px;color:var(--rose-text);font-weight:600;">Desconto</label>
+              <div style="display:flex;gap:8px;margin-top:4px;">
+                <select id="vr-desc-tipo" onchange="vrCalcTotal()" style="padding:8px;border:1.5px solid var(--rose-light);border-radius:8px;font-size:13px;color:var(--rose-dark);">
+                  <option value="nenhum">Sem desconto</option>
+                  <option value="pct">% Percentual</option>
+                  <option value="fixo">R$ Valor fixo</option>
+                </select>
+                <input type="number" id="vr-desc-val" value="0" min="0" oninput="vrCalcTotal()"
+                  style="width:90px;padding:8px;border:1.5px solid var(--rose-light);border-radius:8px;font-size:13px;color:var(--rose-dark);"/>
+              </div>
+            </div>
+
+            <!-- Forma de pagamento -->
+            <div style="margin-bottom:14px;">
+              <label style="font-size:12px;color:var(--rose-text);font-weight:600;">Forma de pagamento</label>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px;">
+                <button class="vr-pag-btn active" onclick="vrSelPag(this,'pix')">💠 Pix</button>
+                <button class="vr-pag-btn" onclick="vrSelPag(this,'dinheiro')">💵 Dinheiro</button>
+                <button class="vr-pag-btn" onclick="vrSelPag(this,'debito')">💳 Débito</button>
+                <button class="vr-pag-btn" onclick="vrSelPag(this,'credito')">💳 Crédito</button>
+              </div>
+              <div id="vr-parcelas-wrap" style="display:none;margin-top:8px;">
+                <label style="font-size:12px;color:var(--rose-text);">Parcelas</label>
+                <select id="vr-parcelas" onchange="vrCalcTotal()" style="width:100%;margin-top:4px;padding:8px;border:1.5px solid var(--rose-light);border-radius:8px;font-size:13px;color:var(--rose-dark);">
+                  ${[1,2,3,4,5,6,7,8,9,10,11,12].map(p=>`<option value="${p}">${p}x</option>`).join('')}
+                </select>
+              </div>
+            </div>
+
+            <!-- Totais -->
+            <div style="background:var(--rose-lighter);border-radius:10px;padding:12px 14px;margin-bottom:14px;display:flex;flex-direction:column;gap:6px;">
+              <div style="display:flex;justify-content:space-between;font-size:13px;color:var(--rose-text);">
+                <span>Subtotal</span><span id="vr-subtotal">R$ 0,00</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;font-size:13px;color:var(--rose-text);">
+                <span>Desconto</span><span id="vr-desconto-txt" style="color:#c0392b;">— R$ 0,00</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;font-size:13px;color:var(--rose-text);">
+                <span>Taxa máquina</span><span id="vr-taxa-txt" style="color:#c0392b;">— R$ 0,00</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;font-size:15px;font-weight:800;color:var(--rose-dark);border-top:1px solid var(--rose-light);padding-top:8px;margin-top:2px;">
+                <span>Total líquido</span><span id="vr-total">R$ 0,00</span>
+              </div>
+            </div>
+
+            <button class="btn-primary" style="width:100%;justify-content:center;padding:14px;font-size:15px;" onclick="vrFinalizar()">
+              <i class="ti ti-check"></i> Finalizar venda
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════
          FINANCEIRO — VENDAS
     ══════════════════════════════════════════════════ -->
     <div id="tab-vendas_fin" class="content" style="display:none;">
@@ -1555,6 +1683,15 @@ button{font-family:inherit;}
           </div>
           <div style="display:flex;justify-content:flex-end;margin-top:14px;">
             <button class="btn-primary" onclick="salvarPrecificacao()"><i class="ti ti-check"></i> Salvar precificação</button>
+          </div>
+
+          <hr style="border-color:var(--rose-light);margin:24px 0;"/>
+          <h2 style="font-size:13px;font-weight:700;color:var(--rose-dark);margin-bottom:8px;display:flex;align-items:center;gap:8px;text-transform:uppercase;letter-spacing:.5px;"><i class="ti ti-database-export"></i> Backup do Estoque</h2>
+          <p style="font-size:12px;color:var(--rose-text);margin-bottom:14px;">Exporte o estoque atual para um arquivo JSON e guarde no PC. Se perder os dados, importe o arquivo para restaurar tudo.</p>
+          <div style="display:flex;gap:12px;flex-wrap:wrap;">
+            <button class="btn-secondary" onclick="exportarEstoque()"><i class="ti ti-download"></i> Exportar estoque</button>
+            <button class="btn-secondary" onclick="document.getElementById('import-estoque-input').click()"><i class="ti ti-upload"></i> Importar estoque</button>
+            <input type="file" id="import-estoque-input" accept=".json" style="display:none" onchange="importarEstoque(this)">
           </div>
 
           <hr style="border-color:var(--rose-light);margin:24px 0;"/>
@@ -1925,6 +2062,7 @@ function switchTab(tab){
         if(tab==='materiais_fin') renderMats();
         if(tab==='estoque_fin') renderEstoque();
         if(tab==='vendas_fin') renderVendas();
+        if(tab==='venda_rapida') vrInit();
       });
       return;
     }
@@ -1935,6 +2073,7 @@ function switchTab(tab){
       if(tab==='materiais_fin') renderMats();
       if(tab==='estoque_fin') renderEstoque();
       if(tab==='vendas_fin') renderVendas();
+      if(tab==='venda_rapida') vrInit();
     });
   }
   window.scrollTo(0,0);
@@ -2320,25 +2459,6 @@ function selectPatient(id){ selectedPatientId=id; renderPatientDetail(); }
 function renderPatientDetail(abaAtiva){
   abaAtiva = abaAtiva || 'info';
   const panel=document.getElementById('painel-paciente');
-  try{
-    renderPatientDetailInner(abaAtiva, panel);
-  }catch(err){
-    // Antes, um erro em qualquer parte do template gigante desta função
-    // deixava o painel do paciente inteiro em branco, sem nenhuma mensagem —
-    // dava a impressão de que a navegação "não tinha ido" para lugar nenhum.
-    console.error('Erro ao renderizar dados do paciente:', err);
-    if(panel){
-      panel.style.display='';
-      panel.innerHTML = `<div class="card" style="text-align:center;color:#a00;padding:30px;">
-        <i class="ti ti-alert-triangle" style="font-size:28px;"></i>
-        <p style="margin-top:10px;font-weight:700;">Houve um erro ao abrir esta tela do paciente.</p>
-        <p style="font-size:12px;color:var(--rose-text);margin-top:6px;">${escapeHtml(err?.message||'Erro desconhecido')}</p>
-        <button class="btn-secondary" style="margin-top:14px;" onclick="renderPatientDetail('${abaAtiva}')">Tentar novamente</button>
-      </div>`;
-    }
-  }
-}
-function renderPatientDetailInner(abaAtiva, panel){
   const p=pacientes.find(pt=>pt.id===selectedPatientId);
   if(!p){ panel.style.display='none'; return; }
   panel.style.display='';
@@ -5119,30 +5239,17 @@ async function saveFinanceiro(){
     combos       : JSON.stringify(combos),
     desc_cfg     : JSON.stringify(descCfg)
   };
-  // Timeout de segurança: em redes móveis mais lentas/instáveis o request pode
-  // nunca resolver (nem sucesso nem erro), o que travava showLoading(true) pra
-  // sempre e dava a impressão de "tela em branco" sem nenhum aviso ao usuário.
-  const comTimeout = (promessa, ms=15000) => Promise.race([
-    promessa,
-    new Promise((_,rej)=>setTimeout(()=>rej(new Error('Tempo esgotado ao salvar. Verifique sua conexão e tente novamente.')), ms))
-  ]);
-  try{
-    // Upsert
-    const { data: existing } = await comTimeout(_sb.from('financeiro_config').select('id').eq('clinica_id',clinicaId).single());
-    let saveError;
-    if(existing){
-      const { error } = await comTimeout(_sb.from('financeiro_config').update(payload).eq('clinica_id',clinicaId));
-      saveError = error;
-    } else {
-      const { error } = await comTimeout(_sb.from('financeiro_config').insert([payload]));
-      saveError = error;
-    }
-    if(saveError){ console.error('saveFinanceiro ERRO:', saveError.message); showToast('Erro ao salvar: '+saveError.message,'error'); throw saveError; }
-  }catch(err){
-    console.error('saveFinanceiro EXCEÇÃO:', err);
-    showToast('Erro ao salvar: '+(err?.message||'tente novamente.'),'error');
-    throw err;
+  // Upsert
+  const { data: existing } = await _sb.from('financeiro_config').select('id').eq('clinica_id',clinicaId).single();
+  let saveError;
+  if(existing){
+    const { error } = await _sb.from('financeiro_config').update(payload).eq('clinica_id',clinicaId);
+    saveError = error;
+  } else {
+    const { error } = await _sb.from('financeiro_config').insert([payload]);
+    saveError = error;
   }
+  if(saveError){ console.error('saveFinanceiro ERRO:', saveError.message); showToast('Erro ao salvar: '+saveError.message,'error'); }
 }
 
 // ── Helpers de cálculo ──
@@ -6450,8 +6557,201 @@ const DEFAULT_COMBOS_FIN = []; // Cada clínica cria seus próprios combos
 
 
 // ══════════════════════════════════════════════════════
-// PLANO — MÚLTIPLOS DENTES + SYNC VALOR
+// VENDA RÁPIDA
 // ══════════════════════════════════════════════════════
+let vrCarrinho = []; // [{procId, nome, preco, qtd}]
+let vrPagamento = 'pix';
+let vrCatAtiva = '';
+
+function vrInit(){
+  // Popula select de pacientes
+  const selPac = document.getElementById('vr-paciente');
+  if(selPac){
+    selPac.innerHTML = '<option value="">— Sem vínculo —</option>' +
+      pacientes.map(p=>`<option value="${p.id}">${escapeHtml(p.nome)}</option>`).join('');
+  }
+  // Popula select de profissionais
+  const selProf = document.getElementById('vr-prof');
+  if(selProf){
+    selProf.innerHTML = '<option value="">— Selecionar —</option>' +
+      profissionais.map(p=>`<option value="${p.id}">${escapeHtml(p.nome)}</option>`).join('');
+  }
+  vrRenderCats();
+  vrFiltrar();
+  vrRenderCarrinho();
+}
+
+function vrRenderCats(){
+  const cats = [...new Set(procs.map(p=>p.cat||p.categoria||'Geral'))].sort();
+  const wrap = document.getElementById('vr-cats'); if(!wrap) return;
+  wrap.innerHTML = `<button class="tag${vrCatAtiva===''?' active':''}" onclick="vrSetCat('')" style="cursor:pointer;">Todos</button>` +
+    cats.map(c=>`<button class="tag${vrCatAtiva===c?' active':''}" onclick="vrSetCat('${escapeHtml(c)}')" style="cursor:pointer;">${escapeHtml(c)}</button>`).join('');
+}
+
+function vrSetCat(cat){ vrCatAtiva = cat; vrRenderCats(); vrFiltrar(); }
+
+function vrFiltrar(){
+  const q = (document.getElementById('vr-search')?.value||'').toLowerCase();
+  const lista = document.getElementById('vr-lista'); if(!lista) return;
+  const filtrados = procs.filter(p=>{
+    const cat = p.cat||p.categoria||'Geral';
+    const matchCat = vrCatAtiva==='' || cat===vrCatAtiva;
+    const matchQ   = !q || p.nome.toLowerCase().includes(q);
+    return matchCat && matchQ;
+  });
+  if(!filtrados.length){
+    lista.innerHTML = '<div style="text-align:center;color:var(--rose-light);font-size:13px;padding:20px 0;">Nenhum procedimento encontrado</div>';
+    return;
+  }
+  lista.innerHTML = filtrados.map(p=>{
+    const preco = parseFloat(p.precoFinal||p.preco||0);
+    return `<div class="vr-proc-item" onclick="vrAddItem(${p.id})">
+      <div style="flex:1;">
+        <div style="font-size:14px;font-weight:600;color:var(--rose-dark);">${escapeHtml(p.nome)}</div>
+        <div style="font-size:11px;color:var(--rose-text);margin-top:2px;">${escapeHtml(p.cat||p.categoria||'Geral')}</div>
+      </div>
+      <div style="font-size:15px;font-weight:800;color:var(--rose);white-space:nowrap;">${fmtBRL(preco)}</div>
+      <div style="color:var(--rose);font-size:20px;">+</div>
+    </div>`;
+  }).join('');
+}
+
+function vrAddItem(procId){
+  const proc = procs.find(p=>p.id===procId); if(!proc) return;
+  const preco = parseFloat(proc.precoFinal||proc.preco||0);
+  const exist = vrCarrinho.find(i=>i.procId===procId);
+  if(exist){ exist.qtd++; }
+  else { vrCarrinho.push({procId, nome:proc.nome, preco, qtd:1}); }
+  vrRenderCarrinho();
+  vrCalcTotal();
+}
+
+function vrRemItem(procId){
+  vrCarrinho = vrCarrinho.filter(i=>i.procId!==procId);
+  vrRenderCarrinho();
+  vrCalcTotal();
+}
+
+function vrSetQtd(procId, val){
+  const item = vrCarrinho.find(i=>i.procId===procId); if(!item) return;
+  const n = parseInt(val)||1;
+  if(n<=0){ vrRemItem(procId); return; }
+  item.qtd = n;
+  vrCalcTotal();
+}
+
+function vrRenderCarrinho(){
+  const wrap = document.getElementById('vr-carrinho'); if(!wrap) return;
+  const cnt  = document.getElementById('vr-count');
+  if(cnt) cnt.textContent = vrCarrinho.reduce((a,i)=>a+i.qtd,0);
+  if(!vrCarrinho.length){
+    wrap.innerHTML='<div style="text-align:center;color:var(--rose-light);font-size:13px;padding:20px 0;">Nenhum item adicionado</div>';
+    return;
+  }
+  wrap.innerHTML = vrCarrinho.map(item=>`
+    <div class="vr-cart-item">
+      <div style="flex:1;font-weight:600;color:var(--rose-dark);font-size:13px;">${escapeHtml(item.nome)}</div>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <input type="number" value="${item.qtd}" min="1" style="width:46px;padding:4px;border:1px solid var(--rose-light);border-radius:6px;text-align:center;font-size:13px;"
+          onchange="vrSetQtd(${item.procId},this.value)"/>
+        <span style="font-size:13px;font-weight:700;color:var(--rose);min-width:64px;text-align:right;">${fmtBRL(item.preco*item.qtd)}</span>
+        <button onclick="vrRemItem(${item.procId})" style="border:none;background:none;color:#c0392b;cursor:pointer;font-size:16px;padding:0;">×</button>
+      </div>
+    </div>`).join('');
+}
+
+function vrSelPag(btn, forma){
+  document.querySelectorAll('.vr-pag-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  vrPagamento = forma;
+  const pw = document.getElementById('vr-parcelas-wrap');
+  if(pw) pw.style.display = forma==='credito' ? '' : 'none';
+  vrCalcTotal();
+}
+
+function vrCalcTotal(){
+  const subtotal = vrCarrinho.reduce((a,i)=>a+i.preco*i.qtd,0);
+  const descTipo = document.getElementById('vr-desc-tipo')?.value||'nenhum';
+  const descVal  = parseFloat(document.getElementById('vr-desc-val')?.value)||0;
+  let descAmt = 0;
+  if(descTipo==='pct')  descAmt = subtotal * (descVal/100);
+  if(descTipo==='fixo') descAmt = Math.min(descVal, subtotal);
+  const aposDesc = subtotal - descAmt;
+  const parcelas = parseInt(document.getElementById('vr-parcelas')?.value)||1;
+  const taxaPct  = calcValorLiquido ? (aposDesc - calcValorLiquido(aposDesc, vrPagamento, parcelas)) : 0;
+  const total    = aposDesc - taxaPct;
+  document.getElementById('vr-subtotal').textContent    = fmtBRL(subtotal);
+  document.getElementById('vr-desconto-txt').textContent = '— '+fmtBRL(descAmt);
+  document.getElementById('vr-taxa-txt').textContent     = '— '+fmtBRL(taxaPct);
+  document.getElementById('vr-total').textContent        = fmtBRL(total);
+}
+
+async function vrFinalizar(){
+  if(!vrCarrinho.length){ showToast('Adicione pelo menos um procedimento.','warn'); return; }
+  const parcelas = parseInt(document.getElementById('vr-parcelas')?.value)||1;
+  const descTipo = document.getElementById('vr-desc-tipo')?.value||'nenhum';
+  const descVal  = parseFloat(document.getElementById('vr-desc-val')?.value)||0;
+  const subtotal = vrCarrinho.reduce((a,i)=>a+i.preco*i.qtd,0);
+  let descAmt = 0;
+  if(descTipo==='pct')  descAmt = subtotal*(descVal/100);
+  if(descTipo==='fixo') descAmt = Math.min(descVal,subtotal);
+  const total = calcValorLiquido ? calcValorLiquido(subtotal-descAmt, vrPagamento, parcelas) : subtotal-descAmt;
+  const pacId   = document.getElementById('vr-paciente')?.value||'';
+  const pac     = pacId ? pacientes.find(p=>p.id==pacId) : null;
+  const profId  = document.getElementById('vr-prof')?.value||'';
+  const profNome = profId ? (profissionais.find(p=>p.id==profId)?.nome||'') : '';
+
+  if(!confirm(`Finalizar venda de ${fmtBRL(total)} via ${vrPagamento}?`)) return;
+  showLoading(true);
+
+  const venda = {
+    id: nextVendaId++,
+    status: 'finalizada',
+    formaPagamento: vrPagamento,
+    parcelas: vrPagamento==='credito' ? parcelas : 1,
+    pacienteId: pacId||null,
+    pacienteNome: pac?.nome||'Avulso',
+    itens: vrCarrinho.map(i=>({procId:i.procId,qtd:i.qtd,nome:i.nome,precoUnit:i.preco,dente:'',descDente:''})),
+    subtotal: parseFloat(subtotal.toFixed(2)),
+    desconto: parseFloat(descAmt.toFixed(2)),
+    total: parseFloat(total.toFixed(2)),
+    profissional_id: profId||null,
+    profissional_nome: profNome,
+    data: new Date().toISOString(),
+    dataFinal: new Date().toISOString(),
+  };
+  vendas.push(venda);
+
+  // Baixa estoque
+  const consumo = computeConsumo(vrCarrinho.map(i=>({procId:i.procId,qtd:i.qtd})));
+  aplicarBaixaEstoque(consumo);
+
+  // Registra no histórico se tem paciente
+  if(pacId){
+    const descProcs = vrCarrinho.map(i=>`${i.nome}${i.qtd>1?' (×'+i.qtd+')':''}`).join(', ');
+    await _sb.from('atendimentos_odonto').insert([{
+      clinica_id:clinicaId, paciente_id:pacId,
+      data:hoje(), procedimentos:descProcs, obs:'Venda rápida',
+      profissional_id:profId||null, profissional_nome:profNome,
+      dentes_tratados:'[]'
+    }]);
+  }
+
+  await saveFinanceiro();
+  showLoading(false);
+
+  // Limpa carrinho
+  vrCarrinho = [];
+  vrRenderCarrinho();
+  vrCalcTotal();
+  document.getElementById('vr-desc-val').value = 0;
+  document.getElementById('vr-search').value = '';
+  vrFiltrar();
+
+  showToast('Venda finalizada!');
+}
+
+
 let pacPlanDentesSel = []; // dentes selecionados no form do plano
 
 function pacPlanAddDente(val){
@@ -6696,21 +6996,11 @@ async function pacAprovarOrcamentoPlano(pacId){
     vendas.push(venda);
     await saveFinanceiro();
 
-    // A venda já foi criada e salva com sucesso neste ponto — qualquer falha
-    // daqui em diante é só de exibição/navegação, então isolamos numa segunda
-    // tentativa para nunca deixar a tela "em branco" sem explicação, e para
-    // não perder o orçamento que já foi salvo no banco.
-    try{
-      pacRenderPlanoResumo();
-      pacRenderPlanoLista();
-      showToast('Orçamento aprovado!');
-      renderPatientDetail('orcamentos');
-    }catch(renderErr){
-      console.error('Erro ao exibir a tela de Orçamentos (orçamento já foi salvo):', renderErr);
-      showToast('Orçamento salvo, mas houve um erro ao abrir a tela. Toque na aba "Orçamentos" para ver.','warn');
-    }
+    pacRenderPlanoResumo();
+    pacRenderPlanoLista();
+    showToast('Orçamento aprovado!');
+    renderPatientDetail('orcamentos');
   }catch(err){
-    console.error('Erro ao aprovar orçamento:', err);
     showToast('Erro ao aprovar orçamento: '+(err?.message||'tente novamente.'),'error');
   }finally{
     showLoading(false);
@@ -7380,21 +7670,6 @@ function pacOrcSetDesconto(vendaId, tipo, valor){
 
 function pacRenderOrcamentos(pacId){
   const c = document.getElementById('pac-orc-lista'); if(!c) return;
-  try{
-    pacRenderOrcamentosInner(pacId, c);
-  }catch(err){
-    // Antes, qualquer erro aqui deixava a aba "Orçamentos" completamente em
-    // branco e silenciosa (sem nenhuma mensagem), o que parecia que o
-    // orçamento tinha sumido — mesmo quando ele continuava salvo no banco.
-    console.error('Erro ao renderizar Orçamentos:', err);
-    c.innerHTML = `<div style="text-align:center;color:#a00;font-size:13px;padding:20px;border:1px solid #f5c6cb;border-radius:10px;background:#f8d7da;">
-      <i class="ti ti-alert-triangle"></i> Houve um erro ao exibir os orçamentos.<br>
-      <small>${escapeHtml(err?.message||'Erro desconhecido')}</small><br><br>
-      <button class="btn-secondary" onclick="pacRenderOrcamentos(${pacId})">Tentar novamente</button>
-    </div>`;
-  }
-}
-function pacRenderOrcamentosInner(pacId, c){
   const pacVendas = vendas.filter(v=>v.pacienteId===pacId).slice().reverse();
 
   // Botão voltar ao plano sempre no topo
@@ -8416,6 +8691,39 @@ async function salvarConfiguracoes(){
   if(el) el.textContent = nome_cli;
   updateSidebarAvatar();
   showToast('Configurações salvas!');
+}
+
+function exportarEstoque(){
+  if(!estoque || Object.keys(estoque).length === 0){
+    showToast('Estoque vazio, nada para exportar.','warn'); return;
+  }
+  const dados = { estoque, exportadoEm: new Date().toISOString(), versao: 1 };
+  const blob = new Blob([JSON.stringify(dados, null, 2)], { type: 'application/json' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = 'estoque_rhaiza_' + hoje() + '.json';
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('Estoque exportado!');
+}
+
+async function importarEstoque(input){
+  const file = input.files[0]; if(!file) return;
+  const texto = await file.text();
+  let dados;
+  try { dados = JSON.parse(texto); } catch(e){ showToast('Arquivo inválido.','error'); return; }
+  const novoEstoque = dados.estoque || dados;
+  if(typeof novoEstoque !== 'object' || Array.isArray(novoEstoque)){
+    showToast('Formato de estoque inválido.','error'); return;
+  }
+  if(!confirm('Importar estoque do arquivo? Os valores atuais serão substituídos.')) return;
+  estoque = novoEstoque;
+  showLoading(true);
+  await saveFinanceiro();
+  showLoading(false);
+  input.value = '';
+  showToast('Estoque importado e salvo com sucesso!');
 }
 
 async function alterarSenha(){
