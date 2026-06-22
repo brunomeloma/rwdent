@@ -8474,38 +8474,36 @@ async function filtrarResgate(meses){
     b.className = m===meses ? 'btn-primary' : 'btn-secondary';
   });
 
-  // Busca últimos atendimentos de cada paciente
+  // Busca TODOS os últimos atendimentos de uma vez (1 query só)
   const hoje = new Date();
-  const limite = new Date(hoje);
-  limite.setMonth(limite.getMonth() - meses);
-  const limiteISO = toLocalISO(limite);
+  const { data: todosAtends } = await _sb.from('atendimentos_odonto')
+    .select('paciente_id, data, procedimentos')
+    .eq('clinica_id', clinicaId)
+    .order('data', {ascending: false});
 
-  // Para cada paciente, pega o último atendimento
+  // Monta mapa: pacienteId → último atendimento
+  const mapaAtend = {};
+  for(const a of (todosAtends||[])){
+    if(!mapaAtend[a.paciente_id]) mapaAtend[a.paciente_id] = a;
+  }
+
+  // Para cada paciente, usa o mapa (sem query extra)
   const pacResgate = [];
   for(const pac of pacientes){
-    // Busca atendimentos do paciente
-    const { data: atends } = await _sb.from('atendimentos_odonto')
-      .select('data,procedimentos')
-      .eq('clinica_id', clinicaId)
-      .eq('paciente_id', pac.id)
-      .order('data', {ascending:false})
-      .limit(1);
-
-    // Também verifica agendamentos
+    const atend = mapaAtend[pac.id];
     const agsPac = agendamentos.filter(a=>a.paciente_id===pac.id);
     let ultimaData = null, ultimoProc = 'Não informado';
 
-    if(atends && atends.length){
-      ultimaData = atends[0].data;
-      ultimoProc = atends[0].procedimentos || 'Não informado';
+    if(atend){
+      ultimaData = atend.data;
+      ultimoProc = atend.procedimentos || 'Não informado';
     } else if(agsPac.length){
       const ag = agsPac.sort((a,b)=>b.data.localeCompare(a.data))[0];
       ultimaData = ag.data;
       ultimoProc = ag.procedimento || 'Consulta';
     }
 
-    if(!ultimaData) {
-      // Paciente sem nenhum registro — inclui na lista "Nunca veio"
+    if(!ultimaData){
       pacResgate.push({ pac, ultimaData: null, ultimoProc: 'Sem registro', dias: 9999, mesesAusencia: 999 });
       continue;
     }
@@ -8513,7 +8511,6 @@ async function filtrarResgate(meses){
     const dias = Math.floor((hoje - new Date(ultimaData)) / (1000*60*60*24));
     const mesesAusencia = dias/30;
 
-    // Filtra: ausente há pelo menos X meses
     if(meses === 5){
       if(mesesAusencia < 5) continue;
     } else {
