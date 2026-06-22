@@ -6671,6 +6671,7 @@ function vrSetQtd(procId, val){
   const n = parseInt(val)||1;
   if(n<=0){ vrRemItem(procId); return; }
   item.qtd = n;
+  vrRenderCarrinho();
   vrCalcTotal();
 }
 
