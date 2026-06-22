@@ -1298,7 +1298,10 @@ button{font-family:inherit;}
               <div id="vr-parcelas-wrap" style="display:none;margin-top:8px;">
                 <label style="font-size:12px;color:var(--rose-text);">Parcelas</label>
                 <select id="vr-parcelas" onchange="vrCalcTotal()" style="width:100%;margin-top:4px;padding:8px;border:1.5px solid var(--rose-light);border-radius:8px;font-size:13px;color:var(--rose-dark);">
-                  ${[1,2,3,4,5,6,7,8,9,10,11,12].map(p=>`<option value="${p}">${p}x</option>`).join('')}
+                  <option value="1">1x</option><option value="2">2x</option><option value="3">3x</option>
+                  <option value="4">4x</option><option value="5">5x</option><option value="6">6x</option>
+                  <option value="7">7x</option><option value="8">8x</option><option value="9">9x</option>
+                  <option value="10">10x</option><option value="11">11x</option><option value="12">12x</option>
                 </select>
               </div>
             </div>
