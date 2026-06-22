@@ -2467,24 +2467,46 @@ function renderPatients(){
   const filtrados=pacientes.filter(p=>p.nome.toLowerCase().includes(busca)||(p.cpf||'').includes(busca)||(p.telefone||'').includes(busca));
   if(!filtrados.length){ c.innerHTML='<div class="empty"><i class="ti ti-user" style="font-size:32px;display:block;margin-bottom:10px;opacity:.35"></i>Nenhum paciente encontrado.</div>'; return; }
   c.innerHTML=filtrados.map(p=>`
-    <div class="patient-card" onclick="selectPatient(${p.id})">
-      <div class="patient-avatar" style="background:#${hashColor(p.nome)}">${initials(p.nome)}</div>
-      <div class="patient-info">
-        <div class="name">${escapeHtml(p.nome)}</div>
-        <div class="meta">${escapeHtml(p.plano||'Paciente odontológico')} · ${escapeHtml(p.telefone||'Sem telefone')}</div>
+    <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:#fff;border:1px solid var(--rose-light);border-radius:12px;cursor:pointer;transition:box-shadow .18s;" onclick="abrirPacienteDetalhe(${p.id})" onmouseover="this.style.boxShadow='0 4px 16px rgba(0,0,0,.07)'" onmouseout="this.style.boxShadow=''">
+      <div style="width:36px;height:36px;border-radius:10px;background:#${hashColor(p.nome)};display:grid;place-items:center;color:#fff;font-weight:800;font-size:13px;flex-shrink:0;">${initials(p.nome)}</div>
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:13px;font-weight:700;color:var(--rose-dark);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(p.nome)}</div>
+        <div style="font-size:11px;color:var(--rose-text);">${escapeHtml(p.telefone||'Sem telefone')}</div>
       </div>
-      <button class="btn-secondary" onclick="event.stopPropagation();selectPatient(${p.id})">Abrir</button>
+      <i class="ti ti-chevron-right" style="color:var(--rose-light);font-size:16px;flex-shrink:0;"></i>
     </div>
   `).join('');
 }
 
-function selectPatient(id){ selectedPatientId=id; renderPatientDetail(); }
+function abrirPacienteDetalhe(id){
+  selectedPatientId = id;
+  // Esconde lista, mostra só o detalhe
+  document.getElementById('lista-pacientes').style.display = 'none';
+  document.querySelector('#busca-paciente')?.closest('div')?.style && (document.querySelector('#busca-paciente').style.display='none');
+  document.getElementById('btn-novo-paciente') && (document.getElementById('btn-novo-paciente').style.display='none');
+  renderPatientDetail();
+}
+
+function voltarListaPacientes(){
+  selectedPatientId = null;
+  document.getElementById('painel-paciente').style.display = 'none';
+  document.getElementById('lista-pacientes').style.display = '';
+  const busca = document.getElementById('busca-paciente');
+  if(busca) busca.style.display = '';
+  renderPatients();
+}
+
+function selectPatient(id){ abrirPacienteDetalhe(id); }
 
 function renderPatientDetail(abaAtiva){
   abaAtiva = abaAtiva || 'info';
   const panel=document.getElementById('painel-paciente');
   const p=pacientes.find(pt=>pt.id===selectedPatientId);
   if(!p){ panel.style.display='none'; return; }
+  // Esconde lista, mostra detalhe em tela cheia
+  document.getElementById('lista-pacientes').style.display='none';
+  const busca=document.getElementById('busca-paciente');
+  if(busca) busca.style.display='none';
   panel.style.display='';
   panel.innerHTML=`
     <div class="card">
@@ -2496,7 +2518,7 @@ function renderPatientDetail(abaAtiva){
         </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
           <button class="btn-secondary" onclick="editPatient(${p.id})"><i class="ti ti-pencil"></i> Editar</button>
-          <button class="btn-secondary" onclick="selectedPatientId=null;document.getElementById('painel-paciente').style.display='none'"><i class="ti ti-x"></i></button>
+          <button class="btn-secondary" onclick="voltarListaPacientes()"><i class="ti ti-arrow-left"></i> Voltar</button>
         </div>
       </div>
 
