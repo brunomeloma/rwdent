@@ -583,6 +583,15 @@ button{font-family:inherit;}
   .cal-toolbar{flex-direction:column;align-items:stretch;}
   .cal-nav{justify-content:space-between;}
 
+  /* Venda Rápida: coluna única no mobile */
+  #tab-venda_rapida > div { grid-template-columns: 1fr !important; height:auto !important; }
+  #tab-venda_rapida .main > div { grid-template-columns: 1fr !important; }
+  #vr-lista { max-height: 45vh; }
+  #vr-carrinho { max-height: 30vh; }
+
+  /* Paciente: abre direto nos dados sem rolar */
+  #painel-paciente { scroll-margin-top: 0; }
+
   /* Tabelas financeiras */
   .fin-table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;}
   table{min-width:480px;}
@@ -1738,14 +1747,15 @@ button{font-family:inherit;}
   <nav class="mobile-bottom-nav">
     <div class="mobile-nav-items">
       <button class="mobile-nav-item active" data-tab="home" onclick="switchTab('home')"><i class="ti ti-home"></i>Início</button>
+      <button class="mobile-nav-item" data-tab="venda_rapida" onclick="switchTab('venda_rapida')"><i class="ti ti-shopping-cart"></i>Venda</button>
+      <button class="mobile-nav-item" data-tab="pacientes" onclick="switchTab('pacientes')"><i class="ti ti-users"></i>Pacientes</button>
       <button class="mobile-nav-item" data-tab="agendar" onclick="switchTab('agendar')"><i class="ti ti-calendar-plus"></i>Agendar</button>
       <button class="mobile-nav-item" data-tab="lista" onclick="switchTab('lista')"><i class="ti ti-calendar-event"></i>Agenda</button>
       <button class="mobile-nav-item" data-tab="calendario" onclick="switchTab('calendario')"><i class="ti ti-calendar-month"></i>Calendário</button>
-      <button class="mobile-nav-item" data-tab="pacientes" onclick="switchTab('pacientes')"><i class="ti ti-users"></i>Pacientes</button>
-      <button class="mobile-nav-item" data-tab="profissionais" onclick="switchTab('profissionais')"><i class="ti ti-stethoscope"></i>Profissionais</button>
-      <button class="mobile-nav-item" data-tab="financeiro" onclick="switchTab('financeiro')"><i class="ti ti-chart-bar"></i>Financeiro</button>
-      <button class="mobile-nav-item" data-tab="invisalign_apresentacao" onclick="switchTab('invisalign_apresentacao')"><i class="ti ti-align-box-left-stretch"></i>Invisalign</button>
       <button class="mobile-nav-item" data-tab="resgate" onclick="switchTab('resgate')"><i class="ti ti-heart-handshake"></i>Resgate</button>
+      <button class="mobile-nav-item" data-tab="financeiro" onclick="switchTab('financeiro')"><i class="ti ti-chart-bar"></i>Financeiro</button>
+      <button class="mobile-nav-item" data-tab="profissionais" onclick="switchTab('profissionais')"><i class="ti ti-stethoscope"></i>Profissionais</button>
+      <button class="mobile-nav-item" data-tab="invisalign_apresentacao" onclick="switchTab('invisalign_apresentacao')"><i class="ti ti-align-box-left-stretch"></i>Invisalign</button>
       <button class="mobile-nav-item" data-tab="configuracoes" onclick="switchTab('configuracoes')"><i class="ti ti-settings"></i>Config.</button>
       <button class="mobile-nav-item" onclick="doLogout()" style="color:#b33;"><i class="ti ti-logout"></i>Sair</button>
     </div>
@@ -2508,6 +2518,7 @@ function renderPatientDetail(abaAtiva){
   const busca=document.getElementById('busca-paciente');
   if(busca) busca.style.display='none';
   panel.style.display='';
+  window.scrollTo({top:0, behavior:'instant'});
   panel.innerHTML=`
     <div class="card">
       <!-- HEADER -->
