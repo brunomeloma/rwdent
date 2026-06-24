@@ -114,6 +114,9 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#fdf6f3;color:#3a2020;mi
 .home-btn-ver:hover{background:var(--rose-dark);}
 .home-empty{color:var(--rose-text);font-size:13px;text-align:center;padding:20px 0;opacity:.7;}
 
+/* ── GOOGLE AGENDA BANNER ── */
+@keyframes gcalSlideUp{from{opacity:0;transform:translateX(-50%) translateY(16px);}to{opacity:1;transform:translateX(-50%) translateY(0);}}
+
 /* ── LOGIN SCREEN ── */
 #login-screen{
   display:flex;align-items:center;justify-content:center;
@@ -2267,6 +2270,66 @@ function renderSelectProf(){
   if(calSel) calSel.innerHTML='<option value="">Todos</option>'+profissionais.map(p=>`<option value="${p.id}">${escapeHtml(p.nome)}</option>`).join('');
 }
 
+function buildGoogleCalendarUrl(nome, data, horario, procedimento, profNome, obs){
+  // Monta URL do Google Agenda com os dados preenchidos
+  // data: 'YYYY-MM-DD', horario: 'HH:MM'
+  const [ano, mes, dia] = data.split('-');
+  const [hh, mm] = horario.split(':');
+  // Formato Google: YYYYMMDDTHHmmss
+  const pad = n => String(n).padStart(2,'0');
+  const dtStart = `${ano}${mes}${dia}T${pad(hh)}${pad(mm)}00`;
+  // Duração padrão: 1 hora
+  const endH = parseInt(hh)+1;
+  const dtEnd = `${ano}${mes}${dia}T${pad(endH)}${pad(mm)}00`;
+  const clinica = (clinicaData?.nome_cli) ? clinicaData.nome_cli : 'Clínica';
+  const title = encodeURIComponent(`${procedimento||'Consulta'} — ${nome}`);
+  const details = encodeURIComponent(`Paciente: ${nome}\nProfissional: ${profNome||''}\n${obs?'Observações: '+obs:''}`);
+  const location = encodeURIComponent(clinica);
+  return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${dtStart}/${dtEnd}&details=${details}&location=${location}`;
+}
+
+function abrirGoogleAgenda(nome, data, horario, procedimento, profNome, obs){
+  const url = buildGoogleCalendarUrl(nome, data, horario, procedimento, profNome, obs);
+  window.open(url, '_blank');
+}
+
+function mostrarBotaoGoogleAgenda(nome, data, horario, procedimento, profNome, obs){
+  // Remove banner anterior se existir
+  const anterior = document.getElementById('gcal-banner');
+  if(anterior) anterior.remove();
+
+  const [ano, mes, dia] = data.split('-');
+  const dataFmt = `${dia}/${mes}/${ano}`;
+  const url = buildGoogleCalendarUrl(nome, data, horario, procedimento, profNome, obs);
+
+  const banner = document.createElement('div');
+  banner.id = 'gcal-banner';
+  banner.innerHTML = `
+    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+      <div style="flex:1;min-width:180px;">
+        <div style="font-size:13px;font-weight:700;color:#1a1a1a;margin-bottom:2px;">✅ Agendamento confirmado!</div>
+        <div style="font-size:12px;color:#555;">${nome} · ${dataFmt} às ${horario}</div>
+      </div>
+      <a href="${url}" target="_blank" style="display:inline-flex;align-items:center;gap:7px;background:#4285f4;color:#fff;border-radius:10px;padding:9px 16px;font-size:13px;font-weight:700;text-decoration:none;white-space:nowrap;box-shadow:0 2px 8px rgba(66,133,244,.35);flex-shrink:0;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="24" height="24" rx="4" fill="white"/><path d="M17.5 7.5h-11A1.5 1.5 0 0 0 5 9v9a1.5 1.5 0 0 0 1.5 1.5h11A1.5 1.5 0 0 0 19 18V9a1.5 1.5 0 0 0-1.5-1.5Z" stroke="#4285f4" stroke-width="1.4"/><path d="M8 7.5V6M16 7.5V6M5 11h14" stroke="#4285f4" stroke-width="1.4" stroke-linecap="round"/><rect x="8" y="13" width="2.5" height="2.5" rx=".5" fill="#ea4335"/></svg>
+        Adicionar ao Google Agenda
+      </a>
+      <button onclick="document.getElementById('gcal-banner').remove()" style="background:none;border:none;color:#999;font-size:20px;cursor:pointer;line-height:1;padding:2px 4px;flex-shrink:0;" title="Fechar">×</button>
+    </div>
+  `;
+  Object.assign(banner.style, {
+    position:'fixed', bottom:'24px', left:'50%', transform:'translateX(-50%)',
+    background:'#fff', borderRadius:'14px', padding:'14px 18px',
+    boxShadow:'0 8px 32px rgba(0,0,0,.18)', zIndex:'9999',
+    maxWidth:'520px', width:'calc(100% - 32px)',
+    border:'1.5px solid #e0e0e0', animation:'gcalSlideUp .3s ease'
+  });
+
+  // Auto-fechar após 12 segundos
+  document.body.appendChild(banner);
+  setTimeout(()=>{ if(document.getElementById('gcal-banner')) banner.remove(); }, 12000);
+}
+
 async function agendarConsulta(){
   const patientId = document.getElementById('schedule-patient').value;
   const paciente = pacientes.find(p=>p.id==patientId);
@@ -2301,6 +2364,8 @@ async function agendarConsulta(){
   showToast('Agendamento salvo!');
   renderLista(); renderHomeStats();
   switchTab('lista');
+  // Botão Google Agenda
+  mostrarBotaoGoogleAgenda(novo.nome, novo.data, novo.horario, novo.procedimento, novo.prof_nome, novo.obs);
 }
 
 function renderLista(){
@@ -9014,6 +9079,8 @@ async function calSaveNewAppt(){
   document.getElementById('cal-new-bg').classList.remove('show');
   renderCalendario(); renderLista(); renderHomeStats();
   showToast('Agendamento salvo!');
+  // Botão Google Agenda
+  mostrarBotaoGoogleAgenda(novo.nome, novo.data, novo.horario, novo.procedimento, novo.prof_nome, novo.obs);
 }
 </script>
 
