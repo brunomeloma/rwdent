@@ -6958,6 +6958,16 @@ function vrRenderCarrinho(){
   vrFiltrar(); // atualiza ícones de check na lista
 }
 
+function vrCalcTaxaAmt(base, forma, parcelas){
+  let taxa = 0;
+  if(forma==='debito') taxa = taxasCfg.debito || 0;
+  else if(forma==='credito'){
+    const idx = (parcelas||1) - 1;
+    taxa = idx>=0 ? (taxasCfg.credito||[])[idx]||0 : 0;
+  }
+  return parseFloat((base * taxa / 100).toFixed(2));
+}
+
 function vrSelPag(btn, forma){
   document.querySelectorAll('.vr-pag-btn').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active');
@@ -6976,11 +6986,12 @@ function vrCalcTotal(){
   if(descTipo==='fixo') descAmt = Math.min(descVal, subtotal);
   const aposDesc = subtotal - descAmt;
   const parcelas = parseInt(document.getElementById('vr-parcelas')?.value)||1;
-  const taxaPct  = calcValorLiquido ? (aposDesc - calcValorLiquido(aposDesc, vrPagamento, parcelas)) : 0;
-  const total    = aposDesc - taxaPct;
+  // Taxa é cobrada do paciente (soma ao total)
+  const taxaAmt  = vrCalcTaxaAmt(aposDesc, vrPagamento, parcelas);
+  const total    = aposDesc + taxaAmt;
   document.getElementById('vr-subtotal').textContent    = fmtBRL(subtotal);
   document.getElementById('vr-desconto-txt').textContent = '— '+fmtBRL(descAmt);
-  document.getElementById('vr-taxa-txt').textContent     = '— '+fmtBRL(taxaPct);
+  document.getElementById('vr-taxa-txt').textContent     = '— '+fmtBRL(taxaAmt);
   document.getElementById('vr-total').textContent        = fmtBRL(total);
 }
 
@@ -6993,7 +7004,7 @@ async function vrFinalizar(){
   let descAmt = 0;
   if(descTipo==='pct')  descAmt = subtotal*(descVal/100);
   if(descTipo==='fixo') descAmt = Math.min(descVal,subtotal);
-  const total = calcValorLiquido ? calcValorLiquido(subtotal-descAmt, vrPagamento, parcelas) : subtotal-descAmt;
+  const total = parseFloat((aposDesc + vrCalcTaxaAmt(aposDesc, vrPagamento, parcelas)).toFixed(2));
   const pacId   = document.getElementById('vr-paciente')?.value||'';
   const pac     = pacId ? pacientes.find(p=>p.id==pacId) : null;
   const profId  = document.getElementById('vr-prof')?.value||'';
