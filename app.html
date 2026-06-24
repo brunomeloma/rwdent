@@ -552,8 +552,11 @@ button{font-family:inherit;}
   .filter-row input,.filter-row select{width:100%;}
 
   /* Home stat cards: 2 colunas em mobile */
-  .home-stat-card{min-width:0;padding:12px 14px;}
-  .home-stat-num{font-size:22px;}
+  #home-stats { grid-template-columns: 1fr 1fr !important; }
+  .home-stat-card { min-width:0; padding:12px 10px; gap:8px; }
+  .home-stat-num { font-size:22px; }
+  .home-stat-label { font-size:10px; white-space:normal; }
+  .home-stat-icon { width:36px; height:36px; font-size:18px; flex-shrink:0; }
 
   /* Appointment items: empilha badge abaixo */
   .appt-item{flex-wrap:wrap;gap:8px;}
@@ -796,7 +799,7 @@ button{font-family:inherit;}
       </div>
 
       <!-- ── STATS CARDS ── -->
-      <div id="home-stats" style="display:flex;flex-wrap:wrap;gap:12px;margin-bottom:18px;"></div>
+      <div id="home-stats" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:18px;"></div>
 
       <!-- ── TABLES ROW ── -->
       <div class="home-tables-row">
