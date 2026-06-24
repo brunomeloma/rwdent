@@ -4683,11 +4683,7 @@ function injetarNovosMatsOrto(){
         laboratorio: dadosFinais.laboratorio || 0,
         margem: dadosFinais.margem || 100,
         precoFinal: dadosFinais.precoFinal>0 ? dadosFinais.precoFinal : (PRECO_MERCADO_FALLBACK[idCanon] || 0),
-        tipo_cobranca: 'global',
-        // Preserva flags de edição manual para proteger do recalcular
-        precoFinalManual: dadosFinais.precoFinal > 0,
-        horaClinManual: dadosFinais.horaClin > 0,
-        tempoManual: dadosFinais.tempo > 0
+        tipo_cobranca: 'global'
       });
       if(melhorReceita && melhorReceita.length) procInsumos[idCanon] = melhorReceita;
       migrou = true;
@@ -5949,9 +5945,7 @@ async function recalcularInsumos(silent){
       p.horaClin=parseFloat(((p.tempo/60)*calcHora()).toFixed(2));
     }
     // Só recalcula precoFinal se chamado manualmente (silent=false) E não foi fixado manualmente
-    // Considera "manual" qualquer proc que já tenha precoFinal > 0 salvo no banco
-    const eManual = p.precoFinalManual || (p.precoFinal > 0);
-    if(!silent && !eManual){
+    if(!silent && !p.precoFinalManual){
       p.precoFinal=calcPrecoFinal(p);
     }
   });
