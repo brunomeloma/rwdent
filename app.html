@@ -2396,6 +2396,7 @@ function renderLista(){
       <button class="btn-secondary" style="padding:6px 10px;background:${status==='compareceu'?'#2e7d32':'#fff'};color:${status==='compareceu'?'#fff':'#2e7d32'};border-color:#2e7d32;" onclick="calMarcarPresenca(${a.id},'compareceu')" title="Marcar que veio"><i class="ti ti-check"></i></button>
       <button class="btn-secondary" style="padding:6px 10px;background:${status==='faltou'?'#dc2626':'#fff'};color:${status==='faltou'?'#fff':'#dc2626'};border-color:#dc2626;" onclick="calMarcarPresenca(${a.id},'faltou')" title="Marcar que não veio"><i class="ti ti-x"></i></button>
       ${a.telefone ? `<button class="btn-secondary" style="padding:6px 10px;background:#25d366;color:#fff;border-color:#25d366;" onclick="enviarConfirmacaoWpp('${escapeHtml(a.telefone)}','${escapeHtml(a.nome)}','${a.data}','${a.horario}','${escapeHtml(a.procedimento||'Consulta')}')" title="Confirmar via WhatsApp"><i class="ti ti-brand-whatsapp"></i></button>` : ''}
+      <a href="${buildGoogleCalendarUrl(a.nome, a.data, a.horario, a.procedimento||'Consulta', a.prof_nome, a.obs||'')}" target="_blank" class="btn-secondary" style="padding:6px 10px;background:#4285f4;color:#fff;border-color:#4285f4;text-decoration:none;display:inline-flex;align-items:center;" title="Adicionar ao Google Agenda"><i class="ti ti-brand-google"></i></a>
       <button class="btn-danger" onclick="removerAgendamento(${a.id})"><i class="ti ti-trash"></i></button>
     </div>
   `;}).join('');
@@ -7008,6 +7009,7 @@ async function vrFinalizar(){
   let descAmt = 0;
   if(descTipo==='pct')  descAmt = subtotal*(descVal/100);
   if(descTipo==='fixo') descAmt = Math.min(descVal,subtotal);
+  const aposDesc = subtotal - descAmt;
   const total = parseFloat((aposDesc + vrCalcTaxaAmt(aposDesc, vrPagamento, parcelas)).toFixed(2));
   const pacId   = document.getElementById('vr-paciente')?.value||'';
   const pac     = pacId ? pacientes.find(p=>p.id==pacId) : null;
