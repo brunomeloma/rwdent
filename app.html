@@ -5924,7 +5924,11 @@ async function saveInsumos(){
   // Recalcula custo do procedimento
   const totalIns=insumosTemp.reduce((acc,item)=>{const m=mats.find(x=>x.id===item.matId);return acc+(m?m.custo*item.qtd:0);},0);
   const pi=procs.findIndex(x=>x.id===insumosEditProcId);
-  if(pi>=0){ procs[pi].insumos=parseFloat(totalIns.toFixed(2)); procs[pi].horaClin=parseFloat(((procs[pi].tempo/60)*calcHora()).toFixed(2)); procs[pi].precoFinal=calcPrecoFinal(procs[pi]); }
+  if(pi>=0){
+    procs[pi].insumos=parseFloat(totalIns.toFixed(2));
+    if(!procs[pi].horaClinManual) procs[pi].horaClin=parseFloat(((procs[pi].tempo/60)*calcHora()).toFixed(2));
+    if(!procs[pi].precoFinalManual) procs[pi].precoFinal=calcPrecoFinal(procs[pi]);
+  }
   showLoading(true); await saveFinanceiro(); showLoading(false);
   closeModal('modal-insumos');
   renderProcs(); renderEstoque();
