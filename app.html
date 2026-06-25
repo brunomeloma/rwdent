@@ -2689,7 +2689,6 @@ function renderPatientDetail(abaAtiva){
   // Esconde lista, mostra detalhe em tela cheia
   document.getElementById('lista-pacientes').style.display='none';
   panel.style.display='';
-  window.scrollTo({top:0, behavior:'instant'});
   panel.innerHTML=`
     <div class="card">
       <!-- HEADER -->
@@ -3286,6 +3285,7 @@ function renderPatientDetail(abaAtiva){
   if(abaAtiva==='historico') histCarregar(p.id);
   if(abaAtiva==='orcamentos') pacRenderOrcamentos(p.id);
   if(abaAtiva==='plano'){ pacCarregarPlano(p.id); }
+  requestAnimationFrame(()=>window.scrollTo({top:0,behavior:'instant'}));
 }
 
 function anamneseToggle(fieldId, radioVal){
@@ -3491,7 +3491,8 @@ function renderCalendario(){
         const events=dayAppts.map(a=>{
           const [hh,mm]=((a.horario||'00:00')+':00').split(':').map(Number);
           const startMin=hh*60+mm, topPct=(startMin-CAL_START_MIN)/((CAL_END_MIN-CAL_START_MIN))*height;
-          return`<div class="cal-event" style="background:${a.prof_cor||'#d4735a'};top:${topPct}px;height:44px;" onclick="calOpenEvent(event,${a.id})">
+          const _st=agGetStatus(a);const _bl=_st==='compareceu'?'3px solid #2e7d32':_st==='faltou'?'3px solid #dc2626':'3px solid rgba(0,0,0,.18)';const _op=_st==='faltou'?'.55':'1';
+          return`<div class="cal-event" style="background:${a.prof_cor||'#d4735a'};top:${topPct}px;height:44px;border-left:${_bl};opacity:${_op};" onclick="calOpenEvent(event,${a.id})">
             <div class="ev-time">${a.horario}</div>
             <div class="ev-name">${escapeHtml(a.nome)}</div>
             <div class="ev-meta">${escapeHtml(a.procedimento||'Consulta')}</div>
@@ -3576,6 +3577,7 @@ function calOpenEvent(e, id){
     <div class="cal-modal-foot">
       <button class="btn-danger" onclick="calRemoveFromModal(${a.id})"><i class="ti ti-trash"></i> Remover</button>
       ${a.telefone ? `<button class="btn-secondary" style="background:#25d366;color:#fff;border-color:#25d366;" onclick="enviarConfirmacaoWpp('${a.telefone}','${a.nome}','${a.data}','${a.horario}','${a.procedimento||'Consulta'}')"><i class="ti ti-brand-whatsapp"></i> Confirmar</button>` : ''}
+      ${a.paciente_id?`<button class="btn-secondary" onclick="document.getElementById('cal-modal-bg').classList.remove('show');verPacienteHome(${a.paciente_id})"><i class="ti ti-user"></i> Prontuário</button>`:''}
       <button class="btn-secondary" onclick="document.getElementById('cal-modal-bg').classList.remove('show')">Fechar</button>
     </div>
   </div>`;
