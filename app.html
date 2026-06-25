@@ -995,7 +995,7 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px soli
           </div>
           <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:14px;">
             <button class="btn-secondary" onclick="toggleFormProf()">Cancelar</button>
-            <button class="btn-primary" onclick="adicionarProfissional()"><i class="ti ti-check"></i> Salvar profissional</button>
+            <button class="btn-primary" id="btn-salvar-prof" onclick="adicionarProfissional()"><i class="ti ti-check"></i> Salvar profissional</button>
           </div>
         </div>
         <div id="lista-profissionais"></div>
@@ -2525,7 +2525,8 @@ function renderProfissionais(){
         <div class="name">${escapeHtml(p.nome)}${p.principal?' <span class="badge-principal">Principal</span>':''}</div>
         <div class="meta">${escapeHtml(p.especialidade)}${p.cro?' · '+escapeHtml(p.cro):''}</div>
       </div>
-      ${p.principal?'':`<button class="btn-danger" onclick="removerProfissional(${p.id})"><i class="ti ti-trash"></i></button>`}
+      <button class="btn-secondary" style="padding:6px 10px;" onclick="editarProfissional(${p.id})" title="Editar"><i class="ti ti-pencil"></i></button>
+      ${p.principal?'':`<button class="btn-danger" style="padding:6px 10px;" onclick="removerProfissional(${p.id})"><i class="ti ti-trash"></i></button>`}
     </div>
   `).join('');
   renderSelectProf();
@@ -2546,6 +2547,40 @@ async function adicionarProfissional(){
   document.getElementById('p-cor').value='#d4735a';
   toggleFormProf(); renderProfissionais();
   showToast('Profissional adicionado.');
+}
+
+function editarProfissional(id){
+  const p = profissionais.find(x=>x.id===id); if(!p) return;
+  document.getElementById('p-nome').value = p.nome||'';
+  document.getElementById('p-esp').value  = p.especialidade||'';
+  document.getElementById('p-cro').value  = p.cro||'';
+  document.getElementById('p-cor').value  = p.cor||'#d4735a';
+  const btn = document.getElementById('btn-salvar-prof');
+  if(btn){ btn.innerHTML='<i class="ti ti-device-floppy"></i> Salvar alterações'; btn.onclick=()=>salvarEdicaoProfissional(id); }
+  const form = document.getElementById('form-prof');
+  form.style.display='';
+  form.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+
+async function salvarEdicaoProfissional(id){
+  const nome = document.getElementById('p-nome').value.trim();
+  const esp  = document.getElementById('p-esp').value.trim();
+  const cro  = document.getElementById('p-cro').value.trim();
+  const cor  = document.getElementById('p-cor').value;
+  if(!nome||!esp){ showToast('Preencha nome e especialidade.','warn'); return; }
+  showLoading(true);
+  const { error } = await _sb.from('profissionais').update({nome, especialidade:esp, cro, cor}).eq('id',id);
+  showLoading(false);
+  if(error){ showToast('Erro: '+error.message,'error'); return; }
+  profissionais = profissionais.map(p=> p.id===id ? {...p,nome,especialidade:esp,cro,cor} : p);
+  // Reset form para modo "adicionar"
+  ['p-nome','p-esp','p-cro'].forEach(fid=>{ const el=document.getElementById(fid); if(el) el.value=''; });
+  document.getElementById('p-cor').value='#d4735a';
+  const btn = document.getElementById('btn-salvar-prof');
+  if(btn){ btn.innerHTML='<i class="ti ti-check"></i> Salvar profissional'; btn.onclick=adicionarProfissional; }
+  document.getElementById('form-prof').style.display='none';
+  renderProfissionais(); renderSelectProf();
+  showToast('Profissional atualizado!');
 }
 
 async function removerProfissional(id){
