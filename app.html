@@ -412,7 +412,8 @@ button{font-family:inherit;}
 .vr-cart-item{
   display:flex;align-items:center;gap:10px;padding:10px 12px;
   background:#fff;border:1.5px solid var(--rose-light);border-radius:12px;
-}inset:0;background:rgba(60,30,20,.42);z-index:1200;display:flex;align-items:center;justify-content:center;padding:16px;opacity:0;pointer-events:none;transition:opacity .2s;}
+}
+.cal-modal-bg{position:fixed;inset:0;background:rgba(60,30,20,.42);z-index:1200;display:flex;align-items:center;justify-content:center;padding:16px;opacity:0;pointer-events:none;transition:opacity .2s;}
 .cal-modal-bg.show{opacity:1;pointer-events:auto;}
 .cal-modal{background:#fff;border-radius:18px;max-width:420px;width:100%;padding:0;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.3);transform:translateY(10px);transition:transform .2s;}
 .cal-modal-bg.show .cal-modal{transform:translateY(0);}
@@ -619,6 +620,11 @@ button{font-family:inherit;}
   /* Resgate / Invisalign: textos menores */
   .content h2{font-size:16px;}
 }
+/* ── FOCO VISÍVEL (acessibilidade) ── */
+:focus-visible{outline:2px solid var(--rose);outline-offset:2px;}
+button:focus-visible{outline:2px solid var(--rose);outline-offset:2px;}
+input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--rose);outline-offset:1px;}
+
 /* ── FULLSCREEN ── */
 #cal-card:fullscreen,
 #cal-card:-webkit-full-screen,
@@ -716,30 +722,29 @@ button{font-family:inherit;}
     <div class="sidebar-avatar-name" id="sidebar-avatar-name">Minha Clínica</div>
     <nav class="sidebar-menu">
       <div class="sidebar-label">Clínica</div>
-      <button class="sidebar-item active" data-tab="home" onclick="switchTab('home')"><i class="ti ti-home"></i><span>Início</span></button>
-      <button class="sidebar-item" data-tab="venda_rapida" onclick="switchTab('venda_rapida')"><i class="ti ti-shopping-cart"></i><span>Venda Rápida</span></button>
-      <button class="sidebar-item" data-tab="agendar" onclick="switchTab('agendar')"><i class="ti ti-calendar-plus"></i><span>Agendar</span></button>
-      <button class="sidebar-item" data-tab="lista" onclick="switchTab('lista')"><i class="ti ti-calendar-event"></i><span>Agenda</span></button>
-      <button class="sidebar-item" data-tab="calendario" onclick="switchTab('calendario')"><i class="ti ti-calendar-month"></i><span>Calendário</span></button>
+      <button class="sidebar-item active" data-tab="home" onclick="switchTab('home')" aria-label="Início"><i class="ti ti-home"></i><span>Início</span></button>
+      <button class="sidebar-item" data-tab="venda_rapida" onclick="switchTab('venda_rapida')" aria-label="Venda Rápida"><i class="ti ti-shopping-cart"></i><span>Venda Rápida</span></button>
+      <button class="sidebar-item" data-tab="agendar" onclick="switchTab('agendar')" aria-label="Agendar"><i class="ti ti-calendar-plus"></i><span>Agendar</span></button>
+      <button class="sidebar-item" data-tab="lista" onclick="switchTab('lista')" aria-label="Agenda"><i class="ti ti-calendar-event"></i><span>Agenda</span></button>
+      <button class="sidebar-item" data-tab="calendario" onclick="switchTab('calendario')" aria-label="Calendário"><i class="ti ti-calendar-month"></i><span>Calendário</span></button>
       <div class="sidebar-divider"></div>
       <div class="sidebar-label">Pacientes</div>
-      <button class="sidebar-item" data-tab="pacientes" onclick="switchTab('pacientes')"><i class="ti ti-users"></i><span>Pacientes</span></button>
-      <button class="sidebar-item" data-tab="profissionais" onclick="switchTab('profissionais')"><i class="ti ti-briefcase"></i><span>Profissionais</span></button>
+      <button class="sidebar-item" data-tab="pacientes" onclick="switchTab('pacientes')" aria-label="Pacientes"><i class="ti ti-users"></i><span>Pacientes</span></button>
+      <button class="sidebar-item" data-tab="profissionais" onclick="switchTab('profissionais')" aria-label="Profissionais"><i class="ti ti-briefcase"></i><span>Profissionais</span></button>
       <div class="sidebar-divider"></div>
       <div class="sidebar-label">Financeiro</div>
-      <button class="sidebar-item" data-tab="financeiro" onclick="switchTab('financeiro')"><i class="ti ti-chart-bar"></i><span>Painel</span></button>
-      <button class="sidebar-item" data-tab="procedimentos_fin" onclick="switchTab('procedimentos_fin')"><i class="ti ti-list-check"></i><span>Procedimentos</span></button>
-      <button class="sidebar-item" data-tab="materiais_fin" onclick="switchTab('materiais_fin')"><i class="ti ti-box"></i><span>Materiais</span></button>
-      <button class="sidebar-item" data-tab="estoque_fin" onclick="switchTab('estoque_fin')"><i class="ti ti-package"></i><span>Estoque</span></button>
-      <button class="sidebar-item" data-tab="vendas_fin" onclick="switchTab('vendas_fin')"><i class="ti ti-receipt"></i><span>Vendas</span></button>
+      <button class="sidebar-item" data-tab="financeiro" onclick="switchTab('financeiro')" aria-label="Painel Financeiro"><i class="ti ti-chart-bar"></i><span>Painel</span></button>
+      <button class="sidebar-item" data-tab="procedimentos_fin" onclick="switchTab('procedimentos_fin')" aria-label="Procedimentos"><i class="ti ti-list-check"></i><span>Procedimentos</span></button>
+      <button class="sidebar-item" data-tab="materiais_fin" onclick="switchTab('materiais_fin')" aria-label="Materiais"><i class="ti ti-box"></i><span>Materiais</span></button>
+      <button class="sidebar-item" data-tab="estoque_fin" onclick="switchTab('estoque_fin')" aria-label="Estoque"><i class="ti ti-package"></i><span>Estoque</span></button>
+      <button class="sidebar-item" data-tab="vendas_fin" onclick="switchTab('vendas_fin')" aria-label="Vendas"><i class="ti ti-receipt"></i><span>Vendas</span></button>
       <div class="sidebar-divider"></div>
-      <div class="sidebar-divider"></div>
-      <button class="sidebar-item" data-tab="invisalign_apresentacao" onclick="switchTab('invisalign_apresentacao')"><i class="ti ti-align-box-left-stretch"></i><span>Invisalign</span></button>
-      <button class="sidebar-item" data-tab="resgate" onclick="switchTab('resgate')"><i class="ti ti-heart-handshake"></i><span>Resgate</span></button>
-      <button class="sidebar-item" data-tab="configuracoes" onclick="switchTab('configuracoes')"><i class="ti ti-settings"></i><span>Configurações</span></button>
+      <button class="sidebar-item" data-tab="invisalign_apresentacao" onclick="switchTab('invisalign_apresentacao')" aria-label="Invisalign"><i class="ti ti-align-box-left-stretch"></i><span>Invisalign</span></button>
+      <button class="sidebar-item" data-tab="resgate" onclick="switchTab('resgate')" aria-label="Resgate"><i class="ti ti-heart-handshake"></i><span>Resgate</span></button>
+      <button class="sidebar-item" data-tab="configuracoes" onclick="switchTab('configuracoes')" aria-label="Configurações"><i class="ti ti-settings"></i><span>Configurações</span></button>
     </nav>
     <div class="sidebar-bottom">
-      <button class="btn-logout" onclick="doLogout()">
+      <button class="btn-logout" onclick="doLogout()" aria-label="Sair da conta">
         <div class="logout-avatar" id="logout-avatar">RW</div>
         <span id="logout-name">Sair</span>
       </button>
@@ -749,12 +754,11 @@ button{font-family:inherit;}
   <!-- Header -->
   <div class="header">
 <svg width="36" height="36" viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg">
-  <line x1="18" y1="14" x2="54" y2="14" stroke="#fff" stroke-width="3" stroke-linecap="round"/>
-  <line x1="22" y1="14" x2="22" y2="62" stroke="#fff" stroke-width="3" stroke-linecap="round"/>
-  <line x1="33" y1="14" x2="33" y2="62" stroke="#fff" stroke-width="3" stroke-linecap="round"/>
-  <path d="M33 14 Q58 14 58 33 Q58 51 33 51" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
-  <line x1="33" y1="51" x2="56" y2="62" stroke="#fff" stroke-width="3" stroke-linecap="round"/>
-</svg>
+  <line x1="18" y1="14" x2="54" y2="14" stroke="#d4735a" stroke-width="3" stroke-linecap="round"/>
+  <line x1="22" y1="14" x2="22" y2="62" stroke="#d4735a" stroke-width="3" stroke-linecap="round"/>
+  <line x1="33" y1="14" x2="33" y2="62" stroke="#d4735a" stroke-width="3" stroke-linecap="round"/>
+  <path d="M33 14 Q58 14 58 33 Q58 51 33 51" fill="none" stroke="#d4735a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <line x1="33" y1="51" x2="56" y2="62" stroke="#d4735a" stroke-width="3" stroke-linecap="round"/>
 </svg>
     <div class="header-text">
       <h1 id="header-clinica">RWDent</h1>
@@ -805,8 +809,8 @@ button{font-family:inherit;}
             <p>Controle o inventário da sua clínica, alertas de estoque mínimo e histórico de movimentações.</p>
           </div>
         </div>
-        <button class="hc-arrow hc-prev" onclick="hcPrev()">&#8249;</button>
-        <button class="hc-arrow hc-next" onclick="hcNext()">&#8250;</button>
+        <button class="hc-arrow hc-prev" onclick="hcPrev();hcResetTimer();" aria-label="Slide anterior">&#8249;</button>
+        <button class="hc-arrow hc-next" onclick="hcNext();hcResetTimer();" aria-label="Próximo slide">&#8250;</button>
         <div class="hc-dots" id="hc-dots"></div>
       </div>
 
@@ -1807,17 +1811,17 @@ button{font-family:inherit;}
   <!-- Mobile bottom nav -->
   <nav class="mobile-bottom-nav">
     <div class="mobile-nav-items">
-      <button class="mobile-nav-item active" data-tab="home" onclick="switchTab('home')"><i class="ti ti-home"></i>Início</button>
-      <button class="mobile-nav-item" data-tab="venda_rapida" onclick="switchTab('venda_rapida')"><i class="ti ti-shopping-cart"></i>Venda</button>
-      <button class="mobile-nav-item" data-tab="pacientes" onclick="switchTab('pacientes')"><i class="ti ti-users"></i>Pacientes</button>
-      <button class="mobile-nav-item" data-tab="agendar" onclick="switchTab('agendar')"><i class="ti ti-calendar-plus"></i>Agendar</button>
-      <button class="mobile-nav-item" data-tab="lista" onclick="switchTab('lista')"><i class="ti ti-calendar-event"></i>Agenda</button>
-      <button class="mobile-nav-item" data-tab="calendario" onclick="switchTab('calendario')"><i class="ti ti-calendar-month"></i>Calendário</button>
-      <button class="mobile-nav-item" data-tab="resgate" onclick="switchTab('resgate')"><i class="ti ti-heart-handshake"></i>Resgate</button>
-      <button class="mobile-nav-item" data-tab="financeiro" onclick="switchTab('financeiro')"><i class="ti ti-chart-bar"></i>Financeiro</button>
-      <button class="mobile-nav-item" data-tab="profissionais" onclick="switchTab('profissionais')"><i class="ti ti-stethoscope"></i>Profissionais</button>
-      <button class="mobile-nav-item" data-tab="invisalign_apresentacao" onclick="switchTab('invisalign_apresentacao')"><i class="ti ti-align-box-left-stretch"></i>Invisalign</button>
-      <button class="mobile-nav-item" data-tab="configuracoes" onclick="switchTab('configuracoes')"><i class="ti ti-settings"></i>Config.</button>
+      <button class="mobile-nav-item active" data-tab="home" onclick="switchTab('home')" aria-label="Início"><i class="ti ti-home"></i>Início</button>
+      <button class="mobile-nav-item" data-tab="venda_rapida" onclick="switchTab('venda_rapida')" aria-label="Venda Rápida"><i class="ti ti-shopping-cart"></i>Venda</button>
+      <button class="mobile-nav-item" data-tab="pacientes" onclick="switchTab('pacientes')" aria-label="Pacientes"><i class="ti ti-users"></i>Pacientes</button>
+      <button class="mobile-nav-item" data-tab="agendar" onclick="switchTab('agendar')" aria-label="Agendar"><i class="ti ti-calendar-plus"></i>Agendar</button>
+      <button class="mobile-nav-item" data-tab="lista" onclick="switchTab('lista')" aria-label="Agenda"><i class="ti ti-calendar-event"></i>Agenda</button>
+      <button class="mobile-nav-item" data-tab="calendario" onclick="switchTab('calendario')" aria-label="Calendário"><i class="ti ti-calendar-month"></i>Calendário</button>
+      <button class="mobile-nav-item" data-tab="resgate" onclick="switchTab('resgate')" aria-label="Resgate"><i class="ti ti-heart-handshake"></i>Resgate</button>
+      <button class="mobile-nav-item" data-tab="financeiro" onclick="switchTab('financeiro')" aria-label="Painel Financeiro"><i class="ti ti-chart-bar"></i>Financeiro</button>
+      <button class="mobile-nav-item" data-tab="profissionais" onclick="switchTab('profissionais')" aria-label="Profissionais"><i class="ti ti-stethoscope"></i>Profissionais</button>
+      <button class="mobile-nav-item" data-tab="invisalign_apresentacao" onclick="switchTab('invisalign_apresentacao')" aria-label="Invisalign"><i class="ti ti-align-box-left-stretch"></i>Invisalign</button>
+      <button class="mobile-nav-item" data-tab="configuracoes" onclick="switchTab('configuracoes')" aria-label="Configurações"><i class="ti ti-settings"></i>Config.</button>
       <button class="mobile-nav-item" onclick="doLogout()" style="color:#b33;"><i class="ti ti-logout"></i>Sair</button>
     </div>
   </nav>
@@ -2034,9 +2038,18 @@ function initHomeCarousel(){
     d.onclick = ()=>hcGo(i);
     dotsEl.appendChild(d);
   }
+  hcStartTimer();
+  const carousel = document.getElementById('home-carousel');
+  if(carousel){
+    carousel.addEventListener('mouseenter', ()=>{ clearInterval(_hcTimer); _hcTimer=null; });
+    carousel.addEventListener('mouseleave', ()=>hcStartTimer());
+  }
+}
+function hcStartTimer(){
   clearInterval(_hcTimer);
   _hcTimer = setInterval(()=>hcNext(), 4500);
 }
+function hcResetTimer(){ hcStartTimer(); }
 
 function hcGo(i){
   const slides = document.querySelectorAll('.hc-slide');
