@@ -8095,6 +8095,7 @@ async function pacOrcSetFormaPag(vendaId, valor, pacId){
   const v = vendas.find(x=>x.id===vendaId); if(!v) return;
   v.formaPagamento = valor;
   showLoading(true); await saveFinanceiro(); showLoading(false);
+  pacRenderOrcamentos(pacId);
 }
 
 // Estado dos checkboxes e desconto por venda (em memória)
