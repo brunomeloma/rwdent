@@ -3147,6 +3147,32 @@ function renderPatientDetail(abaAtiva){
 
           <!-- AÇÃO DO ORÇAMENTO -->
           <div style="margin-top:16px;">
+            <!-- Desconto pré-aprovação -->
+            <div style="background:var(--rose-lighter);border-radius:10px;padding:12px;margin-bottom:10px;">
+              <div style="font-size:11px;font-weight:700;color:var(--rose-text);text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px;"><i class="ti ti-tag"></i> Desconto</div>
+              <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+                <select id="plano-desc-tipo" onchange="pacPlanoAtualizarPreview()" style="padding:6px 8px;border:1px solid var(--rose-light);border-radius:8px;font-size:13px;background:#fff;">
+                  <option value="pct">%</option>
+                  <option value="brl">R$</option>
+                </select>
+                <input type="number" id="plano-desc-val" min="0" step="0.01" value="0"
+                  oninput="pacPlanoAtualizarPreview()"
+                  style="width:90px;padding:6px 8px;border:1px solid var(--rose-light);border-radius:8px;font-size:13px;text-align:right;" />
+                <span id="plano-desc-preview" style="font-size:12px;color:#2e7d32;font-weight:700;"></span>
+              </div>
+            </div>
+            <!-- Validade -->
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap;">
+              <span style="font-size:11px;font-weight:700;color:var(--rose-text);text-transform:uppercase;letter-spacing:.4px;white-space:nowrap;"><i class="ti ti-calendar-time"></i> Validade:</span>
+              <select id="plano-validade" onchange="pacPlanoAtualizarPreview()" style="padding:6px 8px;border:1px solid var(--rose-light);border-radius:8px;font-size:13px;background:#fff;">
+                <option value="30">30 dias</option>
+                <option value="60">60 dias</option>
+                <option value="90">90 dias</option>
+                <option value="0">Sem prazo</option>
+              </select>
+            </div>
+            <!-- Simulação de parcelas -->
+            <div id="plano-parc-sim" style="border:1px solid var(--rose-light);border-radius:10px;padding:12px;margin-bottom:10px;font-size:12px;display:none;"></div>
             <button class="btn-primary" style="width:100%;justify-content:center;padding:12px;" onclick="pacAprovarOrcamentoPlano(${p.id})">
               <i class="ti ti-circle-check"></i> Aprovar Orçamento
             </button>
@@ -3943,10 +3969,13 @@ async function pacAlterarStatusPlano(id, status){
   }
 
   showLoading(true);
-  const { error } = await _sb.from('plano_tratamento').update({ status }).eq('id',id);
+  const statusExtra = {};
+  if(status === 'aprovado') statusExtra.data_aprovado = new Date().toISOString();
+  if(status === 'realizado') statusExtra.data_realizado = new Date().toISOString();
+  const { error } = await _sb.from('plano_tratamento').update({ status, ...statusExtra }).eq('id',id);
   showLoading(false);
   if(error){ showToast('Erro: '+error.message,'error'); return; }
-  pacPlanoList = pacPlanoList.map(i=> i.id===id ? {...i,status} : i);
+  pacPlanoList = pacPlanoList.map(i=> i.id===id ? {...i,status,...statusExtra} : i);
 
   // Se aprovado, cria venda/orçamento automaticamente
   // Se realizado, marca venda correspondente como finalizada e registra no Histórico
@@ -7360,6 +7389,7 @@ function pacRenderPlanoLista(){
         </span>
       </div>
       ${item.descricao?`<div style="font-size:12px;color:var(--rose-text);margin-top:5px;">${escapeHtml(item.descricao)}</div>`:''}
+      <div style="font-size:11px;color:var(--rose-text);margin-top:4px;opacity:.75;">${item.created_at?`📅 Adicionado: ${new Date(item.created_at).toLocaleDateString('pt-BR')}`:''} ${item.data_aprovado&&!item.data_realizado?`· ✔️ Aprovado: ${new Date(item.data_aprovado).toLocaleDateString('pt-BR')}`:''} ${item.data_realizado?`· ✅ Realizado: ${new Date(item.data_realizado).toLocaleDateString('pt-BR')}`:''}</div>
       <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;flex-wrap:wrap;gap:6px;">
         <div style="display:flex;align-items:center;gap:6px;">
           <span style="font-size:13px;color:var(--rose-text);">R$</span>
@@ -7419,13 +7449,23 @@ async function pacAprovarOrcamentoPlano(pacId){
     });
     const subtotal = itensVenda.reduce((a,it)=>a+it.precoUnit*it.qtd,0);
 
+    // Lê desconto e validade configurados antes de aprovar
+    const _descTipo = document.getElementById('plano-desc-tipo')?.value||'pct';
+    const _descVal  = parseFloat(document.getElementById('plano-desc-val')?.value||0)||0;
+    const _validDias = parseInt(document.getElementById('plano-validade')?.value||'30')||0;
+    const _descAmt  = _descTipo==='pct' ? subtotal*_descVal/100 : Math.min(_descVal,subtotal);
+    const _totalFinal = Math.max(0, subtotal - _descAmt);
+    const _validade = _validDias > 0 ? new Date(Date.now()+_validDias*86400000).toISOString() : null;
+
     const venda = {
       id: nextVendaId++, status:'orcamento', formaPagamento:'',
       pacienteId: pacId, pacienteNome: pac?.nome||'',
       itens: itensVenda,
       subtotal: parseFloat(subtotal.toFixed(2)),
-      desconto: 0, total: parseFloat(subtotal.toFixed(2)),
+      desconto: parseFloat(_descAmt.toFixed(2)),
+      total: parseFloat(_totalFinal.toFixed(2)),
       planoIds: pendentes.map(i=>i.id),
+      validade: _validade,
       data: new Date().toISOString()
     };
     vendas.push(venda);
@@ -8202,16 +8242,24 @@ function pacRenderOrcamentos(pacId){
         <div>
           <div style="font-size:14px;font-weight:700;color:var(--rose-dark);">${escapeHtml(v.pacienteNome||'—')}</div>
           <div style="font-size:12px;color:var(--rose-text);">📅 ${dt}</div>
+          ${v.validade ? `<div style="font-size:11px;color:#856404;margin-top:2px;">⏱️ Válido até: ${new Date(v.validade).toLocaleDateString('pt-BR')}</div>` : ''}
           <span class="fin-badge ${si.cls}" style="margin-top:4px;">${si.lbl}</span>
         </div>
         <strong style="font-size:18px;color:var(--rose-dark);">${fmtBRL(isOrc?totalSel:totalGeral)}</strong>
       </div>
+      <!-- Selecionar todos / nenhum (só orçamentos abertos com 2+ itens) -->
+      ${isOrc && (v.itens||[]).length > 1 ? `<div style="display:flex;gap:6px;margin-bottom:8px;align-items:center;"><span style="font-size:11px;color:var(--rose-text);flex:1;">${sel.size} de ${(v.itens||[]).length} item(ns) selecionado(s)</span><button class="btn-secondary" style="font-size:11px;padding:4px 9px;" onclick="pacOrcSelectAll(${v.id},${pacId})"><i class="ti ti-checkbox"></i> Todos</button><button class="btn-secondary" style="font-size:11px;padding:4px 9px;" onclick="pacOrcDeselectAll(${v.id},${pacId})"><i class="ti ti-square"></i> Nenhum</button></div>` : ''}
       <!-- Itens detalhados -->
       <div style="margin-bottom:10px;">${itensHtml||'<div style="font-size:13px;color:var(--rose-text);">Sem itens detalhados</div>'}</div>
       ${descontoHtml}
       ${formaPagHtml}
       ${resumoHtml}
       ${avisoHtml}
+      <!-- Observações do orçamento -->
+      ${isOrc ? `<div style="margin-bottom:10px;"><textarea placeholder="Observações (ex: inclui anestesia, requer 2 sessões...)" rows="2" id="orc-obs-${v.id}" oninput="pacOrcSetObs(${v.id},this.value)" style="width:100%;padding:8px 10px;border:1.5px solid var(--rose-light);border-radius:8px;font-size:12px;resize:vertical;box-sizing:border-box;">${escapeHtml(v.obs||'')}</textarea></div>` : (v.obs ? `<div style="font-size:12px;color:var(--rose-text);margin-bottom:10px;padding:8px 10px;background:var(--rose-lighter);border-radius:8px;"><i class="ti ti-notes"></i> ${escapeHtml(v.obs)}</div>` : '')}
+      <!-- Adicionar item ao orçamento (só abertos) -->
+      ${isOrc ? `<div style="margin-bottom:10px;"><button class="btn-secondary" style="width:100%;justify-content:center;font-size:12px;" onclick="pacOrcToggleAddItem(${v.id})"><i class="ti ti-plus"></i> Adicionar procedimento ao orçamento</button><div id="orc-add-${v.id}" style="display:none;margin-top:8px;border:1.5px solid var(--rose-light);border-radius:10px;padding:10px;"><div style="position:relative;margin-bottom:6px;"><input type="text" id="orc-add-search-${v.id}" placeholder="🔍 Pesquisar procedimento..." oninput="pacOrcSearchItem(${v.id},this.value)" onfocus="pacOrcSearchItem(${v.id},this.value)" onblur="setTimeout(()=>{const d=document.getElementById('orc-add-opts-${v.id}');if(d)d.style.display='none'},300)" style="width:100%;padding:8px 12px;border:1.5px solid var(--rose-light);border-radius:8px;font-size:13px;box-sizing:border-box;" /><div id="orc-add-opts-${v.id}" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:1.5px solid var(--rose-light);border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,.12);z-index:400;max-height:200px;overflow-y:auto;margin-top:2px;"></div></div><input type="hidden" id="orc-add-proc-${v.id}" /><div style="display:flex;gap:6px;align-items:center;"><span id="orc-add-nome-${v.id}" style="flex:1;font-size:12px;color:var(--rose-dark);font-weight:600;min-height:18px;"></span><button class="btn-primary" style="font-size:11px;" onclick="pacOrcConfirmAddItem(${v.id},${pacId})"><i class="ti ti-plus"></i> Adicionar</button></div></div></div>` : ''}
+      <!-- Quem atendeu -->
       ${isOrc?`<div style="margin-bottom:10px;">
         <select id="venda-prof-${v.id}" style="width:100%;font-size:12px;padding:6px 8px;border:1px solid var(--rose-light);border-radius:8px;color:#3a2020;">
           <option value="">Quem atendeu?</option>
@@ -8226,12 +8274,19 @@ function pacRenderOrcamentos(pacId){
           </button>`:''
         }
         ${v.status==='finalizada'?`<button class="btn-secondary" style="font-size:12px;" onclick="cancelarVenda(${v.id});setTimeout(()=>pacRenderOrcamentos(${pacId}),300)"><i class="ti ti-arrow-back-up"></i> Cancelar</button>`:''}
+        <button class="btn-secondary" style="font-size:12px;padding:8px 12px;" onclick="gerarPdfOrcamento(${v.id},${pacId})"><i class="ti ti-file-type-pdf"></i> PDF</button>
         <button class="btn-danger" style="padding:8px 12px;" onclick="excluirVenda(${v.id});setTimeout(()=>pacRenderOrcamentos(${pacId}),300)"><i class="ti ti-trash"></i></button>
       </div>
     </div>`;
   }).join('');
 
-  c.innerHTML = btnVoltar + cards;
+  // Botão consolidar (aparece quando há 2+ orçamentos abertos)
+  const _orcAbertos = pacVendas.filter(x=>x.status==='orcamento');
+  const btnConsolidar = _orcAbertos.length > 1
+    ? `<button class="btn-secondary" style="width:100%;justify-content:center;margin-bottom:10px;background:#fff8e1;border-color:#ffe082;color:#7a5c00;" onclick="pacOrcConsolidar(${pacId})"><i class="ti ti-git-merge"></i> Consolidar ${_orcAbertos.length} orçamentos abertos em um só</button>`
+    : '';
+
+  c.innerHTML = btnVoltar + btnConsolidar + cards;
 }
 
 async function pacFinalizarVendaLista(vendaId, pacId){
@@ -8396,6 +8451,260 @@ async function pacFinalizarItensSelecionados(vendaId, pacId){
   pacRenderOrcamentos(pacId);
   renderPatientDetail('procs');
   setTimeout(()=>{ showToast('Colete as assinaturas do procedimento realizado.','warn'); },800);
+}
+
+// ══════════════════════════════════════════════════════
+// MELHORIAS DE ORÇAMENTO
+// ══════════════════════════════════════════════════════
+
+// ── Selecionar todos / nenhum no orçamento ──
+function pacOrcSelectAll(vendaId, pacId){
+  const v = vendas.find(x=>x.id===vendaId); if(!v) return;
+  _orcSel[vendaId] = new Set((v.itens||[]).map((_,i)=>i));
+  pacRenderOrcamentos(pacId);
+}
+function pacOrcDeselectAll(vendaId, pacId){
+  const v = vendas.find(x=>x.id===vendaId); if(!v) return;
+  _orcSel[vendaId] = new Set();
+  pacRenderOrcamentos(pacId);
+}
+
+// ── Observações do orçamento ──
+async function pacOrcSetObs(vendaId, obs){
+  const v = vendas.find(x=>x.id===vendaId); if(!v) return;
+  v.obs = obs;
+  await saveFinanceiro();
+}
+
+// ── Validade do orçamento (editável no card) ──
+async function pacOrcSetValidade(vendaId, val, pacId){
+  const v = vendas.find(x=>x.id===vendaId); if(!v) return;
+  v.validade = val || null;
+  await saveFinanceiro();
+}
+
+// ── Adicionar item direto ao orçamento ──
+function pacOrcToggleAddItem(vendaId){
+  const panel = document.getElementById('orc-add-'+vendaId);
+  if(!panel) return;
+  panel.style.display = panel.style.display==='none' ? '' : 'none';
+  if(panel.style.display!=='none'){
+    const inp = document.getElementById('orc-add-search-'+vendaId);
+    if(inp){ inp.value=''; inp.focus(); }
+    document.getElementById('orc-add-proc-'+vendaId).value='';
+    const nome = document.getElementById('orc-add-nome-'+vendaId);
+    if(nome) nome.textContent='';
+  }
+}
+function pacOrcSearchItem(vendaId, q){
+  const opts = document.getElementById('orc-add-opts-'+vendaId);
+  if(!opts) return;
+  const term = (q||'').toLowerCase().trim();
+  const resultados = procs.filter(p=>p.nome.toLowerCase().includes(term)||
+    (p.grupo||'').toLowerCase().includes(term)).slice(0,12);
+  if(!resultados.length||!term){ opts.style.display='none'; return; }
+  opts.style.display='';
+  opts.innerHTML = resultados.map(p=>`
+    <div style="padding:8px 12px;cursor:pointer;font-size:13px;border-bottom:1px solid var(--rose-lighter);"
+      onmousedown="pacOrcSelectItemAdd(${vendaId},${p.id},'${escapeHtml(p.nome).replace(/'/g,'\'')}')"
+      onmouseover="this.style.background='var(--rose-lighter)'"
+      onmouseout="this.style.background=''"
+    >
+      <div style="font-weight:600;">${escapeHtml(p.nome)}</div>
+      <div style="font-size:11px;color:var(--rose-text);">${escapeHtml(p.grupo||'')} · ${fmtBRL(p.precoFinal||0)}</div>
+    </div>`).join('');
+}
+function pacOrcSelectItemAdd(vendaId, procId, procNome){
+  const inp  = document.getElementById('orc-add-search-'+vendaId);
+  const hid  = document.getElementById('orc-add-proc-'+vendaId);
+  const nome = document.getElementById('orc-add-nome-'+vendaId);
+  const opts = document.getElementById('orc-add-opts-'+vendaId);
+  if(inp)  inp.value  = procNome;
+  if(hid)  hid.value  = procId;
+  if(nome) nome.textContent = '';
+  if(opts) opts.style.display='none';
+}
+async function pacOrcConfirmAddItem(vendaId, pacId){
+  const v = vendas.find(x=>x.id===vendaId); if(!v) return;
+  const procId = parseInt(document.getElementById('orc-add-proc-'+vendaId)?.value||0);
+  if(!procId){ showToast('Selecione um procedimento antes de adicionar.','warn'); return; }
+  const proc = procs.find(p=>p.id===procId);
+  if(!proc){ showToast('Procedimento não encontrado.','error'); return; }
+  const novoItem = { procId: proc.id, qtd:1, nome:proc.nome, dente:'', descDente:'', precoUnit: proc.precoFinal||0 };
+  v.itens = [...(v.itens||[]), novoItem];
+  const novo = (v.itens.length)-1;
+  if(!_orcSel[vendaId]) _orcSel[vendaId] = new Set();
+  _orcSel[vendaId].add(novo);
+  v.subtotal = v.itens.reduce((a,it)=>a+(it.precoUnit||0)*(it.qtd||1),0);
+  v.total = v.subtotal - (v.desconto||0);
+  await saveFinanceiro();
+  showToast(`${proc.nome} adicionado ao orçamento!`);
+  pacRenderOrcamentos(pacId);
+}
+
+// ── Consolidar múltiplos orçamentos em um ──
+async function pacOrcConsolidar(pacId){
+  const abertos = vendas.filter(v=>v.pacienteId===pacId&&v.status==='orcamento');
+  if(abertos.length<2){ showToast('Você precisa ter ao menos 2 orçamentos abertos para consolidar.','warn'); return; }
+  if(!confirm(`Consolidar ${abertos.length} orçamentos em um único? Os originais serão removidos.`)) return;
+
+  showLoading(true);
+  // Junta todos os itens
+  const todosItens = abertos.flatMap(v=>v.itens||[]);
+  const todosSub   = abertos.reduce((a,v)=>a+(v.subtotal||0),0);
+  const pac = pacientes.find(p=>p.id===pacId);
+  const novaVenda = {
+    id: nextVendaId++, status:'orcamento', formaPagamento:'',
+    pacienteId: pacId, pacienteNome: pac?.nome||'',
+    itens: todosItens, subtotal: todosSub, desconto:0, total:todosSub,
+    planoIds: abertos.flatMap(v=>v.planoIds||[]),
+    data: new Date().toISOString(), obs: abertos.map(v=>v.obs||'').filter(Boolean).join(' | ')||''
+  };
+
+  // Remove os antigos
+  const idsRemover = new Set(abertos.map(v=>v.id));
+  vendas = vendas.filter(v=>!idsRemover.has(v.id));
+  vendas.push(novaVenda);
+  await saveFinanceiro();
+  showLoading(false);
+  showToast('Orçamentos consolidados com sucesso!');
+  pacRenderOrcamentos(pacId);
+}
+
+// ── Preview de desconto e simulação de parcelas na aba Plano ──
+function pacPlanoAtualizarPreview(){
+  const ativos = pacPlanoList.filter(i=>i.status!=='cancelado');
+  const total  = ativos.reduce((acc,i)=>acc+parseFloat((i.valor||'0').replace(',','.')),0);
+  const tipo   = document.getElementById('plano-desc-tipo')?.value||'pct';
+  const val    = parseFloat(document.getElementById('plano-desc-val')?.value||0)||0;
+  const descAmt = tipo==='pct' ? total*val/100 : Math.min(val,total);
+  const totalFinal = Math.max(0, total-descAmt);
+  const preview = document.getElementById('plano-desc-preview');
+  if(preview) preview.textContent = val>0 ? `Total com desconto: ${fmtBRL(totalFinal)} (− ${fmtBRL(descAmt)})` : '';
+  pacPlanoRenderParcelamento(totalFinal||total);
+}
+
+function pacPlanoRenderParcelamento(total){
+  const c = document.getElementById('plano-parc-sim');
+  if(!c) return;
+  if(!total||total<=0){ c.style.display='none'; c.innerHTML=''; return; }
+  c.style.display='';
+  const rows = [];
+  for(let n=1;n<=6;n++){
+    const taxa = n===1 ? 0 : ((taxasCfg.credito||[])[n-1]||0);
+    const totalComTaxa = total*(1+taxa/100);
+    const parcela = totalComTaxa/n;
+    rows.push(`<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--rose-lighter);gap:8px;">
+      <span style="font-weight:700;min-width:30px;">${n}x</span>
+      <span style="font-weight:800;color:var(--rose-dark);flex:1;">${fmtBRL(parcela)}</span>
+      ${taxa>0?`<span style="font-size:10px;color:var(--rose-text);">Taxa ${taxa}% · Total ${fmtBRL(totalComTaxa)}</span>`:`<span style="font-size:10px;color:#2e7d32;font-weight:600;">sem juros</span>`}
+    </div>`);
+  }
+  c.innerHTML = `<div style="font-size:11px;font-weight:700;color:var(--rose-text);text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px;"><i class="ti ti-calculator"></i> Simulação de parcelas</div>${rows.join('')}`;
+}
+
+// ── Geração de PDF do orçamento (jsPDF) ──
+function gerarPdfOrcamento(vendaId, pacId){
+  const v = vendas.find(x=>x.id===vendaId);
+  if(!v){ showToast('Orçamento não encontrado.','error'); return; }
+  if(!window.jspdf){ showToast('jsPDF não carregado.','error'); return; }
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  const pac = pacientes.find(p=>p.id===pacId);
+  const clinicaNome = document.getElementById('header-clinica')?.textContent||'Clínica';
+  const dt = new Date(v.data).toLocaleDateString('pt-BR');
+  const sel = _orcGetSel(v);
+  const {subtotalSel, descAmt, total:totalFinal, taxa, taxaAmt} = _orcCalcTotais(v);
+  const itensSel = (v.itens||[]).filter((_,i)=>sel.has(i));
+
+  // Cores
+  const rose = [212,115,90];
+  const dark = [122,48,32];
+  const text = [58,32,32];
+
+  // Cabeçalho
+  doc.setFillColor(...rose);
+  doc.rect(0,0,210,32,'F');
+  doc.setFontSize(18); doc.setTextColor(255,255,255); doc.setFont(undefined,'bold');
+  doc.text(clinicaNome,105,14,{align:'center'});
+  doc.setFontSize(10); doc.setFont(undefined,'normal');
+  doc.text('ORÇAMENTO DE TRATAMENTO ODONTOLÓGICO',105,22,{align:'center'});
+
+  // Info do paciente
+  let y = 42;
+  doc.setTextColor(...text); doc.setFontSize(10); doc.setFont(undefined,'bold');
+  doc.text('Paciente:',14,y); doc.setFont(undefined,'normal'); doc.text(pac?.nome||'—',46,y); y+=7;
+  doc.setFont(undefined,'bold'); doc.text('Data:',14,y); doc.setFont(undefined,'normal'); doc.text(dt,46,y);
+  if(v.validade){
+    const dtVal = new Date(v.validade).toLocaleDateString('pt-BR');
+    doc.setFont(undefined,'bold'); doc.text('Válido até:',100,y); doc.setFont(undefined,'normal'); doc.text(dtVal,128,y);
+  }
+  y += 10;
+
+  // Linha separadora
+  doc.setDrawColor(...rose); doc.setLineWidth(0.5); doc.line(14,y,196,y); y+=6;
+
+  // Cabeçalho tabela
+  doc.setFillColor(253,240,235); doc.rect(14,y,182,7,'F');
+  doc.setFontSize(9); doc.setFont(undefined,'bold'); doc.setTextColor(...dark);
+  doc.text('PROCEDIMENTO',16,y+5);
+  doc.text('DENTE',120,y+5);
+  doc.text('QTD',148,y+5);
+  doc.text('VALOR',170,y+5,{align:'right'});
+  y+=9;
+
+  // Itens
+  doc.setFont(undefined,'normal'); doc.setTextColor(...text); doc.setFontSize(9);
+  itensSel.forEach((it)=>{
+    if(y>270){ doc.addPage(); y=20; }
+    const valor = (it.precoUnit||0)*(it.qtd||1);
+    const nomeStr = it.nome?.length>48 ? it.nome.substring(0,48)+'…' : (it.nome||'—');
+    doc.text(nomeStr,16,y);
+    doc.text(it.dente||'—',120,y);
+    doc.text(String(it.qtd||1),148,y);
+    doc.text(fmtBRL(valor),196,y,{align:'right'});
+    y+=6;
+    doc.setDrawColor(240,230,225); doc.line(14,y-1,196,y-1);
+  });
+  y+=4;
+
+  // Totais
+  doc.setDrawColor(...rose); doc.setLineWidth(0.5); doc.line(120,y,196,y); y+=5;
+  doc.setFontSize(10);
+  if(descAmt>0){
+    doc.setTextColor(...text); doc.text('Subtotal:',120,y); doc.text(fmtBRL(subtotalSel),196,y,{align:'right'}); y+=6;
+    doc.setTextColor(46,109,50); doc.text('Desconto:',120,y); doc.text('− '+fmtBRL(descAmt),196,y,{align:'right'}); y+=6;
+    doc.setTextColor(...text);
+  }
+  if(taxaAmt>0){
+    doc.setTextColor(133,100,0); doc.text(`Taxa (${taxa}%):`,120,y); doc.text('+ '+fmtBRL(taxaAmt),196,y,{align:'right'}); y+=6;
+    doc.setTextColor(...text);
+  }
+  doc.setFont(undefined,'bold'); doc.setFontSize(12); doc.setTextColor(...dark);
+  doc.text('TOTAL:',120,y); doc.text(fmtBRL(totalFinal),196,y,{align:'right'}); y+=8;
+  doc.setFont(undefined,'normal'); doc.setTextColor(...text); doc.setFontSize(10);
+
+  if(v.formaPagamento){
+    doc.text(`Forma de pagamento: ${formaPagamentoLabel(v.formaPagamento)}`,14,y); y+=7;
+  }
+  if(v.obs){
+    const obsLines = doc.splitTextToSize('Obs: '+v.obs,180);
+    obsLines.forEach(l=>{ if(y>275){doc.addPage();y=20;} doc.text(l,14,y); y+=5; });
+    y+=2;
+  }
+
+  // Assinaturas
+  y = Math.max(y+20,230);
+  if(y>265){ doc.addPage(); y=30; }
+  doc.setDrawColor(...rose); doc.setLineWidth(0.4);
+  doc.line(14,y,90,y); doc.line(116,y,196,y);
+  doc.setFontSize(8); doc.setTextColor(...dark);
+  doc.text('Assinatura do Paciente',14,y+5);
+  doc.text('Responsável pela Clínica',116,y+5);
+
+  const nomePac = (pac?.nome||'paciente').replace(/[^a-zA-Z0-9]/g,'_');
+  doc.save(`Orcamento_${nomePac}_${dt.replace(/\//g,'-')}.pdf`);
+  showToast('PDF gerado com sucesso!');
 }
 
 // ══════════════════════════════════════════════════════
