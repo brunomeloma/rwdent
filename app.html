@@ -676,12 +676,19 @@ button{font-family:inherit;}
 <!-- ══════════════ LOGIN ══════════════ -->
 <div id="login-screen">
   <div class="login-card">
-    <div class="login-logo"><svg width="80" height="80" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-  <rect width="100" height="100" rx="22" fill="#d4735a"/>
-  <text x="50" y="62" text-anchor="middle" font-family="Arial Black,sans-serif" font-size="52" font-weight="900" fill="#fff">R</text>
-  <circle cx="72" cy="28" r="12" fill="#fff" opacity="0.2"/>
-  <circle cx="72" cy="28" r="6" fill="#fff" opacity="0.4"/>
-</svg></div>
+    <div class="login-logo"><svg width="80" height="80" viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg">
+  <!-- Barra horizontal superior -->
+  <line x1="18" y1="14" x2="54" y2="14" stroke="#d4735a" stroke-width="3" stroke-linecap="round"/>
+  <!-- Haste esquerda vertical -->
+  <line x1="22" y1="14" x2="22" y2="62" stroke="#d4735a" stroke-width="3" stroke-linecap="round"/>
+  <!-- Haste interna vertical (segundo traço do R) -->
+  <line x1="33" y1="14" x2="33" y2="62" stroke="#d4735a" stroke-width="3" stroke-linecap="round"/>
+  <!-- Curva do R (semiarco superior direito) -->
+  <path d="M33 14 Q58 14 58 33 Q58 51 33 51" fill="none" stroke="#d4735a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Perna diagonal do R -->
+  <line x1="33" y1="51" x2="56" y2="62" stroke="#d4735a" stroke-width="3" stroke-linecap="round"/>
+</svg>
+</div>
     <div class="login-title" id="login-title">RW<span style="color:var(--rose);">Dent</span></div>
     <div class="login-sub" id="login-sub">Gestão Odontológica Inteligente</div>
     <div style="font-size:12px;text-align:center;margin-bottom:14px;"><a href="index.html" style="color:var(--rose-text);text-decoration:none;">← Página inicial</a></div>
@@ -741,11 +748,13 @@ button{font-family:inherit;}
 
   <!-- Header -->
   <div class="header">
-<svg width="36" height="36" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-  <rect width="100" height="100" rx="22" fill="var(--rose)"/>
-  <text x="50" y="58" text-anchor="middle" font-family="Arial Black,sans-serif" font-size="42" font-weight="900" fill="#fff">R</text>
-  <circle cx="72" cy="28" r="12" fill="#fff" opacity="0.25"/>
-  <circle cx="72" cy="28" r="6" fill="#fff" opacity="0.5"/>
+<svg width="36" height="36" viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg">
+  <line x1="18" y1="14" x2="54" y2="14" stroke="#fff" stroke-width="3" stroke-linecap="round"/>
+  <line x1="22" y1="14" x2="22" y2="62" stroke="#fff" stroke-width="3" stroke-linecap="round"/>
+  <line x1="33" y1="14" x2="33" y2="62" stroke="#fff" stroke-width="3" stroke-linecap="round"/>
+  <path d="M33 14 Q58 14 58 33 Q58 51 33 51" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <line x1="33" y1="51" x2="56" y2="62" stroke="#fff" stroke-width="3" stroke-linecap="round"/>
+</svg>
 </svg>
     <div class="header-text">
       <h1 id="header-clinica">RWDent</h1>
@@ -936,8 +945,17 @@ button{font-family:inherit;}
             <button class="btn-primary" id="save-patient-btn" onclick="adicionarPaciente()"><i class="ti ti-check"></i> Salvar paciente</button>
           </div>
         </div>
-        <input type="text" id="busca-paciente" placeholder="🔍  Buscar paciente..." style="margin-bottom:14px;" oninput="renderPatients()" />
-        <div class="patient-list" id="lista-pacientes"></div>
+        <div style="position:relative;">
+          <i class="ti ti-search" style="position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--rose-text);font-size:17px;pointer-events:none;"></i>
+          <input type="text" id="busca-paciente" placeholder="Buscar paciente por nome, CPF ou telefone..."
+            style="padding-left:42px;font-size:14px;width:100%;box-sizing:border-box;"
+            oninput="renderPatientDropdown()"
+            onfocus="renderPatientDropdown()"
+            onblur="setTimeout(()=>{const d=document.getElementById('pac-dropdown');if(d)d.style.display='none'},200)"
+            autocomplete="off" />
+          <div id="pac-dropdown" style="display:none;position:absolute;top:calc(100% + 4px);left:0;right:0;background:#fff;border:1.5px solid var(--rose-light);border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.10);z-index:200;max-height:340px;overflow-y:auto;"></div>
+        </div>
+        <div class="patient-list" id="lista-pacientes" style="display:none;"></div>
       </div>
       <div id="painel-paciente" style="display:none;"></div>
     </div>
@@ -2577,28 +2595,50 @@ async function adicionarPaciente(){
   showToast('Paciente adicionado.');
 }
 
-function renderPatients(){
-  const c=document.getElementById('lista-pacientes');
-  const busca=(document.getElementById('busca-paciente')?.value||'').toLowerCase();
-  const filtrados=pacientes.filter(p=>p.nome.toLowerCase().includes(busca)||(p.cpf||'').includes(busca)||(p.telefone||'').includes(busca));
-  if(!filtrados.length){ c.innerHTML='<div class="empty"><i class="ti ti-user" style="font-size:32px;display:block;margin-bottom:10px;opacity:.35"></i>Nenhum paciente encontrado.</div>'; return; }
-  c.innerHTML=filtrados.map(p=>`
-    <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:#fff;border:1px solid var(--rose-light);border-radius:12px;cursor:pointer;transition:box-shadow .18s;" onclick="abrirPacienteDetalhe(${p.id})" onmouseover="this.style.boxShadow='0 4px 16px rgba(0,0,0,.07)'" onmouseout="this.style.boxShadow=''">
+function renderPatientDropdown(){
+  const input = document.getElementById('busca-paciente');
+  const dropdown = document.getElementById('pac-dropdown');
+  if(!input || !dropdown) return;
+  const busca = input.value.toLowerCase().trim();
+  if(!busca){ dropdown.style.display='none'; return; }
+  const filtrados = pacientes.filter(p =>
+    p.nome.toLowerCase().includes(busca) ||
+    (p.cpf||'').includes(busca) ||
+    (p.telefone||'').includes(busca)
+  ).slice(0,10);
+  if(!filtrados.length){
+    dropdown.innerHTML = `<div style="padding:14px;text-align:center;font-size:13px;color:var(--rose-text);"><i class="ti ti-user-off"></i> Nenhum paciente encontrado.</div>`;
+    dropdown.style.display='block'; return;
+  }
+  dropdown.innerHTML = filtrados.map(p=>`
+    <div onmousedown="abrirPacienteDetalhe(${p.id})"
+      style="display:flex;align-items:center;gap:10px;padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--rose-light);transition:background .15s;"
+      onmouseover="this.style.background='#fdf0ec'" onmouseout="this.style.background=''">
       <div style="width:36px;height:36px;border-radius:10px;background:#${hashColor(p.nome)};display:grid;place-items:center;color:#fff;font-weight:800;font-size:13px;flex-shrink:0;">${initials(p.nome)}</div>
       <div style="flex:1;min-width:0;">
         <div style="font-size:13px;font-weight:700;color:var(--rose-dark);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(p.nome)}</div>
-        <div style="font-size:11px;color:var(--rose-text);">${escapeHtml(p.telefone||'Sem telefone')}</div>
+        <div style="font-size:11px;color:var(--rose-text);">${escapeHtml(p.telefone||'Sem telefone')}${p.cpf?' · '+escapeHtml(p.cpf):''}</div>
       </div>
-      <i class="ti ti-chevron-right" style="color:var(--rose-light);font-size:16px;flex-shrink:0;"></i>
+      <i class="ti ti-chevron-right" style="color:var(--rose-light);font-size:15px;flex-shrink:0;"></i>
     </div>
   `).join('');
+  // remove última borda
+  const items = dropdown.querySelectorAll('div[onmousedown]');
+  if(items.length) items[items.length-1].style.borderBottom='none';
+  dropdown.style.display='block';
 }
+
+function renderPatients(){
+  // mantida para compatibilidade com outras chamadas internas
+  renderPatientDropdown();
+}
+
 
 function abrirPacienteDetalhe(id){
   selectedPatientId = id;
-  // Esconde lista, mostra só o detalhe
+  const dropdown = document.getElementById('pac-dropdown');
+  if(dropdown) dropdown.style.display='none';
   document.getElementById('lista-pacientes').style.display = 'none';
-  document.querySelector('#busca-paciente')?.closest('div')?.style && (document.querySelector('#busca-paciente').style.display='none');
   document.getElementById('btn-novo-paciente') && (document.getElementById('btn-novo-paciente').style.display='none');
   renderPatientDetail();
 }
@@ -2606,10 +2646,11 @@ function abrirPacienteDetalhe(id){
 function voltarListaPacientes(){
   selectedPatientId = null;
   document.getElementById('painel-paciente').style.display = 'none';
-  document.getElementById('lista-pacientes').style.display = '';
+  document.getElementById('lista-pacientes').style.display = 'none';
   const busca = document.getElementById('busca-paciente');
-  if(busca) busca.style.display = '';
-  renderPatients();
+  if(busca){ busca.value=''; busca.style.display=''; }
+  const dropdown = document.getElementById('pac-dropdown');
+  if(dropdown) dropdown.style.display='none';
 }
 
 function selectPatient(id){ abrirPacienteDetalhe(id); }
@@ -2621,8 +2662,6 @@ function renderPatientDetail(abaAtiva){
   if(!p){ panel.style.display='none'; return; }
   // Esconde lista, mostra detalhe em tela cheia
   document.getElementById('lista-pacientes').style.display='none';
-  const busca=document.getElementById('busca-paciente');
-  if(busca) busca.style.display='none';
   panel.style.display='';
   window.scrollTo({top:0, behavior:'instant'});
   panel.innerHTML=`
@@ -6824,22 +6863,58 @@ async function vrFinalizarMobile(){
   const subtotal=vrCarrinho.reduce((a,i)=>a+i.preco*i.qtd,0);
   if(!confirm(`Finalizar venda de ${fmtBRL(subtotal)} via ${vrPagamentoMobile}?`)) return;
   showLoading(true);
-  const venda={id:nextVendaId++,status:'finalizada',formaPagamento:vrPagamentoMobile,parcelas:1,
-    pacienteId:pacId||null,pacienteNome:pac?.nome||'Avulso',
+
+  // Garante nextVendaId sempre correto
+  nextVendaId = vendas.length ? Math.max(...vendas.map(v=>Number(v.id)||0)) + 1 : 1;
+
+  const consumo = computeConsumo(vrCarrinho.map(i=>({procId:i.procId,qtd:i.qtd})));
+  const consumoAplicado = aplicarBaixaEstoque(consumo);
+
+  const venda={
+    id:nextVendaId++, status:'finalizada', formaPagamento:vrPagamentoMobile, parcelas:1,
+    pacienteId:pacId||null, pacienteNome:pac?.nome||'Avulso',
     itens:vrCarrinho.map(i=>({procId:i.procId,qtd:i.qtd,nome:i.nome,precoUnit:i.preco,dente:'',descDente:''})),
-    subtotal:parseFloat(subtotal.toFixed(2)),desconto:0,total:parseFloat(subtotal.toFixed(2)),
-    profissional_id:profId||null,profissional_nome:profNome,
-    data:new Date().toISOString(),dataFinal:new Date().toISOString()};
+    subtotal:parseFloat(subtotal.toFixed(2)), desconto:0, total:parseFloat(subtotal.toFixed(2)),
+    profissional_id:profId||null, profissional_nome:profNome,
+    data:new Date().toISOString(), dataFinal:new Date().toISOString(),
+    consumo:consumoAplicado,
+  };
   vendas.push(venda);
-  aplicarBaixaEstoque(computeConsumo(vrCarrinho.map(i=>({procId:i.procId,qtd:i.qtd}))));
+
   if(pacId){
-    await _sb.from('atendimentos_odonto').insert([{clinica_id:clinicaId,paciente_id:pacId,data:hoje(),
-      procedimentos:vrCarrinho.map(i=>`${i.nome}${i.qtd>1?' (×'+i.qtd+')':''}`).join(', '),obs:'Venda rápida',
-      profissional_id:profId||null,profissional_nome:profNome,dentes_tratados:'[]'}]);
+    const descProcs = vrCarrinho.map(i=>`${i.nome}${i.qtd>1?' (×'+i.qtd+')':''}`).join(', ');
+    const { error: errAt } = await _sb.from('atendimentos_odonto').insert([{
+      clinica_id:clinicaId, paciente_id:pacId, data:hoje(),
+      procedimentos:descProcs, obs:'Venda rápida',
+      profissional_id:profId||null, profissional_nome:profNome, dentes_tratados:'[]'
+    }]);
+    if(errAt) console.warn('Aviso atendimento:', errAt.message);
   }
-  await saveFinanceiro(); showLoading(false);
+
+  const { data: existing } = await _sb.from('financeiro_config').select('id').eq('clinica_id',clinicaId).single();
+  const payload = {
+    clinica_id:clinicaId, procs:JSON.stringify(procs), mats:JSON.stringify(mats),
+    estoque:JSON.stringify(estoque), proc_insumos:JSON.stringify(procInsumos),
+    vendas:JSON.stringify(vendas), cfg:JSON.stringify(cfg),
+    taxas_cfg:JSON.stringify(taxasCfg), updated_at:new Date().toISOString(),
+    combos:JSON.stringify(combos), desc_cfg:JSON.stringify(descCfg)
+  };
+  const { error: saveErr } = existing
+    ? await _sb.from('financeiro_config').update(payload).eq('clinica_id',clinicaId)
+    : await _sb.from('financeiro_config').insert([payload]);
+
+  if(saveErr){
+    vendas.pop();
+    devolverEstoque(consumoAplicado);
+    nextVendaId--;
+    showLoading(false);
+    showToast('Erro ao finalizar venda: '+saveErr.message,'error');
+    return;
+  }
+
+  showLoading(false);
   vrCarrinho=[]; vrRenderCarrinhoMobile(); vrCalcTotalMobile();
-  showToast('Venda finalizada!');
+  showToast('✅ Venda finalizada e salva!');
 }
 
 function vrInitMobile(){
@@ -7019,6 +7094,12 @@ async function vrFinalizar(){
   if(!confirm(`Finalizar venda de ${fmtBRL(total)} via ${vrPagamento}?`)) return;
   showLoading(true);
 
+  // Garante nextVendaId sempre correto antes de usar
+  nextVendaId = vendas.length ? Math.max(...vendas.map(v=>Number(v.id)||0)) + 1 : 1;
+
+  const consumo = computeConsumo(vrCarrinho.map(i=>({procId:i.procId,qtd:i.qtd})));
+  const consumoAplicado = aplicarBaixaEstoque(consumo); // desconta memória
+
   const venda = {
     id: nextVendaId++,
     status: 'finalizada',
@@ -7034,36 +7115,62 @@ async function vrFinalizar(){
     profissional_nome: profNome,
     data: new Date().toISOString(),
     dataFinal: new Date().toISOString(),
+    consumo: consumoAplicado,
   };
   vendas.push(venda);
 
-  // Baixa estoque
-  const consumo = computeConsumo(vrCarrinho.map(i=>({procId:i.procId,qtd:i.qtd})));
-  aplicarBaixaEstoque(consumo);
-
-  // Registra no histórico se tem paciente
+  // Registra atendimento no histórico do paciente (se vinculado)
   if(pacId){
     const descProcs = vrCarrinho.map(i=>`${i.nome}${i.qtd>1?' (×'+i.qtd+')':''}`).join(', ');
-    await _sb.from('atendimentos_odonto').insert([{
+    const { error: errAt } = await _sb.from('atendimentos_odonto').insert([{
       clinica_id:clinicaId, paciente_id:pacId,
       data:hoje(), procedimentos:descProcs, obs:'Venda rápida',
       profissional_id:profId||null, profissional_nome:profNome,
       dentes_tratados:'[]'
     }]);
+    if(errAt) console.warn('Aviso: não foi possível registrar atendimento:', errAt.message);
   }
 
-  await saveFinanceiro();
+  // Salva tudo (estoque + venda) atomicamente
+  const { data: existing } = await _sb.from('financeiro_config').select('id').eq('clinica_id',clinicaId).single();
+  const payload = {
+    clinica_id   : clinicaId,
+    procs        : JSON.stringify(procs),
+    mats         : JSON.stringify(mats),
+    estoque      : JSON.stringify(estoque),
+    proc_insumos : JSON.stringify(procInsumos),
+    vendas       : JSON.stringify(vendas),
+    cfg          : JSON.stringify(cfg),
+    taxas_cfg    : JSON.stringify(taxasCfg),
+    updated_at   : new Date().toISOString(),
+    combos       : JSON.stringify(combos),
+    desc_cfg     : JSON.stringify(descCfg)
+  };
+  const { error: saveErr } = existing
+    ? await _sb.from('financeiro_config').update(payload).eq('clinica_id',clinicaId)
+    : await _sb.from('financeiro_config').insert([payload]);
+
+  if(saveErr){
+    // ROLLBACK: desfaz venda e estoque na memória para não ficar inconsistente
+    vendas.pop();
+    devolverEstoque(consumoAplicado);
+    nextVendaId--;
+    showLoading(false);
+    showToast('Erro ao finalizar venda: '+saveErr.message,'error');
+    return;
+  }
+
   showLoading(false);
 
-  // Limpa carrinho
+  // Limpa carrinho só após salvar com sucesso
   vrCarrinho = [];
   vrRenderCarrinho();
   vrCalcTotal();
-  document.getElementById('vr-desc-val').value = 0;
-  document.getElementById('vr-search').value = '';
+  if(document.getElementById('vr-desc-val')) document.getElementById('vr-desc-val').value = 0;
+  if(document.getElementById('vr-search')) document.getElementById('vr-search').value = '';
   vrFiltrar();
 
-  showToast('Venda finalizada!');
+  showToast('✅ Venda finalizada e salva com sucesso!');
 }
 
 
