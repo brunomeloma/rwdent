@@ -2791,16 +2791,15 @@ function renderHomeStats(){
   }
   const _heroGreeting = document.getElementById('home-hero-greeting');
   if(_heroGreeting){
-    const _clinicaNome = document.getElementById('header-clinica');
-    const _nome = (_clinicaNome ? _clinicaNome.textContent : 'RWDent').replace(/rwdent/i,'').trim() || 'Dra. Rhaiza';
     const _hr = new Date().getHours();
     const _saudacao = _hr < 12 ? 'Bom dia' : _hr < 18 ? 'Boa tarde' : 'Boa noite';
-    _heroGreeting.textContent = _saudacao + ', ' + (document.getElementById('header-clinica') ? document.getElementById('header-clinica').textContent : 'RWDent') + '! 👋';
+    const _nomeResp = (clinicaData?.nome_resp || '').trim() || (clinicaData?.nome_cli || '').trim() || 'Dra. Rhaiza';
+    _heroGreeting.textContent = _saudacao + ', ' + _nomeResp + '! 👋';
   }
   const hoje_count = agendamentos.filter(a=>a.data===hoje_str).length;
   const semana_end = new Date(); semana_end.setDate(semana_end.getDate()+7);
   const semana_count = agendamentos.filter(a=>a.data>=hoje_str && a.data<=toLocalISO(semana_end)).length;
-  const confirmadas = agendamentos.filter(a=>a.data===hoje_str && (agGetStatus(a)||'').toLowerCase()==='confirmado').length;
+  const confirmadas = agendamentos.filter(a=>a.data===hoje_str && (agGetStatus(a)||'').toLowerCase()==='compareceu').length;
 
   const _mesStat = hoje_str.slice(0,7);
   const _fatMes = vendas.filter(v=>v.status==='finalizada'&&(v.data||v.dataFinal||'').slice(0,7)===_mesStat).reduce((a,v)=>a+(Number(v.total)||0),0);
