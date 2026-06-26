@@ -11113,7 +11113,10 @@ function pagPacRender(pacId){
           <div class="fin-pac-cob-titulo"><i class="ti ti-tooth"></i> ${escapeHtml(vendaDesc(v))}</div>
           <div style="font-size:11px;color:var(--rose-text);margin-top:2px;">${new Date(v.dataFinal||v.data||'').toLocaleDateString('pt-BR')}</div>
         </div>
-        <span class="fin-pac-badge ${isQuitado?'quitado':'aberto'}">${isQuitado?'Quitado':'Em aberto'}</span>
+        <div style="display:flex;gap:6px;align-items:center;">
+          <span class="fin-pac-badge ${isQuitado?'quitado':'aberto'}">${isQuitado?'Quitado':'Em aberto'}</span>
+          <button style="border:none;background:none;cursor:pointer;color:#ccc;font-size:16px;" onclick="pagPacDelVenda(${v.id},${pacId})" title="Excluir"><i class="ti ti-trash"></i></button>
+        </div>
       </div>
       <div class="fin-pac-valores">
         <div><strong>Total</strong>${fmtBRL(v.total||0)}</div>
@@ -11234,6 +11237,14 @@ async function pagPacDelPag(vendaId, pagId, pacId){
   v.pagamentos = (v.pagamentos||[]).filter(p=>p.id!==pagId);
   showLoading(true); await saveFinanceiro(); showLoading(false);
   showToast('Pagamento removido.');
+  pagPacRender(pacId);
+}
+
+async function pagPacDelVenda(vendaId, pacId){
+  if(!confirm('Excluir esta venda e todos os pagamentos registrados?')) return;
+  vendas = vendas.filter(x=>x.id!==vendaId);
+  showLoading(true); await saveFinanceiro(); showLoading(false);
+  showToast('Venda excluída.');
   pagPacRender(pacId);
 }
 
