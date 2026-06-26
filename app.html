@@ -2326,6 +2326,7 @@ select, textarea {
             <div class="form-group"><label>Tributos/impostos (%)</label><input type="number" id="cfg-trib" step="0.1" min="0" oninput="cfgAtualizarPreviewHora()"/></div>
             <div class="form-group"><label>Desperdício/imprevistos (%)</label><input type="number" id="cfg-desperd" step="0.1" min="0" oninput="cfgAtualizarPreviewHora()"/></div>
             <div class="form-group"><label>Margem de lucro padrão (%)</label><input type="number" id="cfg-margem" step="1" min="0" oninput="cfgAtualizarPreviewHora()"/></div>
+            <div class="form-group"><label>Manutenção ortodôntica (% do aparelho instalado)</label><input type="number" id="cfg-pct-manut" step="1" min="0" max="100" placeholder="15" title="Ex: 15 = manutenção vale 15% do valor cobrado na instalação do aparelho"/></div>
           </div>
           <div style="background:var(--rose-lighter);border-radius:10px;padding:12px 16px;margin-top:10px;font-size:13px;color:var(--rose-dark);">
             <i class="ti ti-info-circle"></i> Hora clínica resultante: <strong id="cfg-hora-preview">—</strong>
@@ -5333,7 +5334,7 @@ let combos      = [];   // combos promocionais
 let estoque     = {};   // { matId: { atual, min, compra } }
 let procInsumos = {};   // { procId: [{matId, qtd}] }
 let vendas      = [];   // histórico de vendas/orçamentos
-let cfg         = { salario:3000, horas:132, trib:0, desperd:5, margem:100, colabPct:50 };
+let cfg         = { salario:3000, horas:132, trib:0, desperd:5, margem:100, colabPct:50, pct_manut:15, migr_manut_v2:false };
 let taxasCfg    = { debito:1.5, credito:[2.49,5.1,6.12,7.15,8.19,9.24,10.3,11.36,12.44,13.52,14.61,15.71] };
 let descCfg     = { val:0, tipo:'pct', maxPar:6 };
 
@@ -5706,6 +5707,35 @@ async function injetarNovosMatsOrto(){
   // Custo de laboratório (alinhador Invisalign é fabricado fora — não é "insumo" de estoque
   // consumido na consulta, é encomendado por caso, então entra como laboratório).
   const LABORATORIO_POR_PROC = { 207: 4500 };
+
+  // ── MIGRAÇÃO v2: corrige insumos de manutenção que possam ter recebido kits de instalação por engano
+  if(!cfg.migr_manut_v2){
+    const _MANUT_INSUMOS_CORRETOS = {
+      208: [{matId:77,qtd:1},{matId:75,qtd:0.027},{matId:8,qtd:1},{matId:34,qtd:1},{matId:35,qtd:1}],
+      209: [{matId:77,qtd:1},{matId:75,qtd:0.027},{matId:8,qtd:1},{matId:34,qtd:1},{matId:35,qtd:1}],
+      210: [{matId:77,qtd:1},{matId:75,qtd:0.027},{matId:8,qtd:1},{matId:34,qtd:1},{matId:35,qtd:1}],
+      211: [{matId:77,qtd:1},{matId:8,qtd:1},{matId:34,qtd:1},{matId:35,qtd:1}],
+      212: [{matId:78,qtd:1},{matId:75,qtd:0.027},{matId:8,qtd:1},{matId:34,qtd:1},{matId:35,qtd:1}],
+      213: [{matId:78,qtd:1},{matId:8,qtd:1},{matId:34,qtd:1},{matId:35,qtd:1}],
+      214: [{matId:171,qtd:1},{matId:8,qtd:1},{matId:34,qtd:1},{matId:35,qtd:1}],
+      38:  [{matId:77,qtd:1},{matId:75,qtd:0.027},{matId:8,qtd:1},{matId:34,qtd:1},{matId:35,qtd:1}],
+    };
+    Object.entries(_MANUT_INSUMOS_CORRETOS).forEach(([id,receita])=>{
+      procInsumos[Number(id)] = JSON.parse(JSON.stringify(receita));
+    });
+    cfg.migr_manut_v2 = true;
+    migrou = true;
+    // Recalcula preços de manutenção como % da instalação
+    const _INST_MANUT_V2 = {44:208, 202:209, 203:210, 204:211, 43:212, 51:213, 207:214, 37:38};
+    const _pct_v2 = cfg.pct_manut || 15;
+    Object.entries(_INST_MANUT_V2).forEach(([instId, manutId])=>{
+      const _inst  = procs.find(p=>p.id===Number(instId));
+      const _manut = procs.find(p=>p.id===manutId);
+      if(_inst && _manut && _pct_v2 > 0 && _inst.precoFinal > 0){
+        _manut.precoFinal = parseFloat((_inst.precoFinal * _pct_v2 / 100).toFixed(2));
+      }
+    });
+  }
 
   let alterou = migrou;
   NOVOS_MATS.forEach(nm=>{
@@ -6557,6 +6587,16 @@ async function saveProc(){
   } else {
     procs.push({ id: nextProcId++, ...obj });
   }
+  // Se editou uma instalação de aparelho, atualiza o preço de manutenção correspondente
+  const _INST_MANUT_LINK = {44:208, 202:209, 203:210, 204:211, 43:212, 51:213, 207:214, 37:38};
+  if(editProcId && _INST_MANUT_LINK[editProcId]){
+    const _manutId = _INST_MANUT_LINK[editProcId];
+    const _manutP  = procs.find(x=>x.id===_manutId);
+    const _pct     = cfg.pct_manut || 15;
+    if(_manutP && _pct > 0 && !_manutP.precoFinalManual){
+      _manutP.precoFinal = parseFloat((preco * _pct / 100).toFixed(2));
+    }
+  }
   showLoading(true);
   await saveFinanceiro();
   showLoading(false);
@@ -6612,6 +6652,9 @@ function renderProcs(){
       : '<span style="font-size:9px;background:#e3f2fd;color:#1565c0;border-radius:4px;padding:1px 5px;font-weight:600;">🦷 Dente</span>';
     const _recolagBadge = PROC_IDS_RECOLAGEM.has(p.id)||/recolagem/i.test(p.nome)
       ? '<span class="fin-badge ok" style="font-size:9px;">RECOLAGEM</span>' : '';
+    const _IDS_MANUT_BADGE = new Set([208,209,210,211,212,213,214,38]);
+    const _manutBadge = _IDS_MANUT_BADGE.has(p.id)
+      ? `<span style="font-size:9px;background:#e8f5e9;color:#1b5e20;border-radius:4px;padding:1px 5px;font-weight:600;">🔗 ${cfg.pct_manut||15}% instalação</span>` : '';
     // Contagem de insumos no botão flask
     const _insCount = _ins.length;
     const _flaskColor = _insCount>0 ? 'color:#2e7d32;border-color:#a5d6a7;' : '';
@@ -6619,7 +6662,7 @@ function renderProcs(){
       ? `<span style="position:absolute;top:-5px;right:-5px;background:#2e7d32;color:#fff;border-radius:50%;width:14px;height:14px;font-size:9px;display:flex;align-items:center;justify-content:center;font-weight:700;line-height:1;">${_insCount}</span>`
       : '';
     return `<tr style="border-bottom:1px solid var(--rose-light);">
-      <td style="padding:10px;"><div style="font-weight:500;">${escapeHtml(p.nome)}</div><div style="margin-top:3px;display:flex;gap:4px;flex-wrap:wrap;">${_recolagBadge}${_tipoBadge}</div></td>
+      <td style="padding:10px;"><div style="font-weight:500;">${escapeHtml(p.nome)}</div><div style="margin-top:3px;display:flex;gap:4px;flex-wrap:wrap;">${_recolagBadge}${_tipoBadge}${_manutBadge}</div></td>
       <td style="padding:10px;"><span style="background:var(--rose-lighter);color:var(--rose-dark);border-radius:6px;padding:2px 8px;font-size:11px;">${escapeHtml(p.grupo||'—')}</span></td>
       <td style="padding:10px;text-align:right;">${p.tempo||0} min</td>
       <td style="padding:10px;text-align:right;">${fmtBRL(_insValReal)}</td>
@@ -7016,7 +7059,11 @@ async function saveInsumos(){
   if(pi>=0){
     procs[pi].insumos=parseFloat(totalIns.toFixed(2));
     if(!procs[pi].horaClinManual) procs[pi].horaClin=parseFloat(((procs[pi].tempo/60)*calcHora()).toFixed(2));
-    if(!procs[pi].precoFinalManual) procs[pi].precoFinal=calcPrecoFinal(procs[pi]);
+    // Manutenção ortodôntica: preço é % da instalação, não baseado em insumos
+    const _IDS_MANUT_ORTO = new Set([208,209,210,211,212,213,214,38]);
+    if(!procs[pi].precoFinalManual && !_IDS_MANUT_ORTO.has(procs[pi].id)){
+      procs[pi].precoFinal=calcPrecoFinal(procs[pi]);
+    }
   }
   showLoading(true); await saveFinanceiro(); showLoading(false);
   closeModal('modal-insumos');
@@ -10594,6 +10641,7 @@ async function renderConfiguracoes(){
   document.getElementById('cfg-trib').value     = cfg.trib     ?? 0;
   document.getElementById('cfg-desperd').value  = cfg.desperd  ?? 5;
   document.getElementById('cfg-margem').value   = cfg.margem   ?? 100;
+  document.getElementById('cfg-pct-manut').value = cfg.pct_manut ?? 15;
   cfgAtualizarPreviewHora();
 }
 
@@ -10612,6 +10660,16 @@ async function salvarPrecificacao(){
   cfg.trib     = Number(document.getElementById('cfg-trib')?.value)||0;
   cfg.desperd  = Number(document.getElementById('cfg-desperd')?.value)||0;
   cfg.margem   = Number(document.getElementById('cfg-margem')?.value)||100;
+  cfg.pct_manut = Number(document.getElementById('cfg-pct-manut')?.value)||15;
+  // Recalcula preços de manutenção baseado no % da instalação
+  const _INST_MANUT_MAP = {44:208, 202:209, 203:210, 204:211, 43:212, 51:213, 207:214, 37:38};
+  Object.entries(_INST_MANUT_MAP).forEach(([instId, manutId])=>{
+    const _inst = procs.find(p=>p.id===Number(instId));
+    const _manut = procs.find(p=>p.id===manutId);
+    if(_inst && _manut && cfg.pct_manut > 0){
+      _manut.precoFinal = parseFloat((_inst.precoFinal * cfg.pct_manut / 100).toFixed(2));
+    }
+  });
   showLoading(true);
   // A hora clínica mudou — atualiza horaClin de todos os procedimentos (sem mexer no
   // preço final, que pode ter sido ajustado manualmente; use "Recalcular custos" na
