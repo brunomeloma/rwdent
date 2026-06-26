@@ -6926,8 +6926,7 @@ async function saveInsumos(){
   const pi=procs.findIndex(x=>x.id===insumosEditProcId);
   if(pi>=0){
     procs[pi].insumos=parseFloat(totalIns.toFixed(2));
-    if(!procs[pi].horaClinManual) procs[pi].horaClin=parseFloat(((procs[pi].tempo/60)*calcHora()).toFixed(2));
-    // Manutenção ortodôntica: preço = % da instalação correspondente (nunca por insumos)
+    procs[pi].horaClin=parseFloat(((procs[pi].tempo/60)*calcHora()).toFixed(2));
     const _IDS_MANUT_ORTO = new Set([208,209,210,211,212,213,214,38]);
     const _MANUT_TO_INST = {208:44, 209:202, 210:203, 211:204, 212:43, 213:51, 214:207, 38:37};
     if(_IDS_MANUT_ORTO.has(procs[pi].id)){
@@ -6937,8 +6936,7 @@ async function saveInsumos(){
       if(_instProc && _instProc.precoFinal > 0 && _pct > 0){
         procs[pi].precoFinal = parseFloat((_instProc.precoFinal * _pct / 100).toFixed(2));
       }
-      // Se não encontrou instalação com preço, mantém o precoFinal atual (não zera)
-    } else if(!procs[pi].precoFinalManual){
+    } else {
       procs[pi].precoFinal=calcPrecoFinal(procs[pi]);
     }
   }
@@ -6957,14 +6955,9 @@ async function recalcularInsumos(silent){
       const novo=parseFloat(ins.reduce((acc,item)=>{const m=mats.find(x=>x.id===item.matId);return acc+(m?m.custo*item.qtd:0);},0).toFixed(2));
       if(novo!==p.insumos){p.insumos=novo;atualizados++;}
     }
-    // Só recalcula horaClin se NÃO foi editado manualmente
-    if(!p.horaClinManual){
-      p.horaClin=parseFloat(((p.tempo/60)*calcHora()).toFixed(2));
-    }
-    // Só recalcula precoFinal se chamado manualmente (silent=false) E não foi fixado manualmente
-    // NUNCA recalcula para manutenção ortodôntica — o preço é % da instalação
+    p.horaClin=parseFloat(((p.tempo/60)*calcHora()).toFixed(2));
     const _IDS_MANUT_RECALC = new Set([208,209,210,211,212,213,214,38]);
-    if(!silent && !p.precoFinalManual && !_IDS_MANUT_RECALC.has(p.id)){
+    if(!silent && !_IDS_MANUT_RECALC.has(p.id)){
       p.precoFinal=calcPrecoFinal(p);
     }
   });
