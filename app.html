@@ -1710,7 +1710,10 @@ select, textarea {
       <div class="card">
         <div class="section-header">
           <h2><i class="ti ti-list-check"></i> Procedimentos e Precificação</h2>
-          <button class="btn-primary" onclick="openAddProc()"><i class="ti ti-plus"></i> Novo</button>
+          <div style="display:flex;gap:8px;">
+            <button class="btn-secondary" onclick="exportarTabelaPrecos()"><i class="ti ti-file-type-pdf"></i> Exportar PDF</button>
+            <button class="btn-primary" onclick="openAddProc()"><i class="ti ti-plus"></i> Novo</button>
+          </div>
         </div>
         <div style="background:var(--rose-lighter);border-radius:8px;padding:8px 12px;font-size:12px;color:var(--rose-dark);margin-bottom:12px;">
           <i class="ti ti-info-circle"></i> A hora clínica e a margem de lucro padrão usadas para calcular os preços ficam em <strong>Configurações → Precificação</strong>. A margem de cada procedimento pode ser ajustada individualmente clicando no lápis (editar) e depois em "Usar calculado".
@@ -1726,6 +1729,9 @@ select, textarea {
           </select>
           <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--rose-dark);white-space:nowrap;cursor:pointer;background:var(--rose-lighter);padding:8px 12px;border-radius:8px;">
             <input type="checkbox" id="proc-so-recolagem" onchange="filterProcs()"/> Mostrar só Recolagem
+          </label>
+          <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--rose-dark);white-space:nowrap;cursor:pointer;background:var(--rose-lighter);padding:8px 12px;border-radius:8px;">
+            <input type="checkbox" id="proc-mostrar-inativos" onchange="filterProcs()"/> Mostrar inativos
           </label>
           <button class="btn-secondary" onclick="recalcularInsumos(false)"><i class="ti ti-refresh"></i> Recalcular custos</button>
         </div>
@@ -5309,7 +5315,7 @@ function pacDenteFiltrarProcs(){
     loadFinanceiro().then(()=>pacDenteFiltrarProcs());
     return;
   }
-  const lista = q ? procs.filter(p=>p.nome.toLowerCase().includes(q)) : procs;
+  const lista = (q ? procs.filter(p=>p.nome.toLowerCase().includes(q)) : procs).filter(p=>p.ativo!==false);
   if(!lista.length){ opts.innerHTML="<div style='padding:12px;color:var(--rose-text);text-align:center;font-size:13px;'>Nenhum encontrado</div>"; return; }
   const grupos = [...new Set(lista.map(p=>p.grupo).filter(Boolean))].sort();
   let html = '';
@@ -6692,6 +6698,56 @@ async function deleteProc(id){
   renderProcs();
   showToast('Removido.');
 }
+async function toggleAtivoProc(id){
+  const p = procs.find(x=>x.id===id); if(!p) return;
+  p.ativo = p.ativo===false ? true : false;
+  showLoading(true);
+  await saveFinanceiro();
+  showLoading(false);
+  renderProcs();
+  showToast(p.ativo!==false ? 'Procedimento ativado!' : 'Procedimento desativado. Não aparecerá na venda rápida.');
+}
+function exportarTabelaPrecos(){
+  const ativos = procs.filter(p=>p.ativo!==false);
+  const grupos = [...new Set(ativos.map(p=>p.grupo||'Geral'))].sort();
+  const clinica = clinicaData?.nome_cli || 'Clínica';
+  const data = new Date().toLocaleDateString('pt-BR');
+  let rows = '';
+  grupos.forEach(g=>{
+    rows += `<tr><td colspan="3" style="background:#f5ddd5;font-weight:700;color:#7a3020;padding:8px 12px;font-size:13px;">${g}</td></tr>`;
+    ativos.filter(p=>(p.grupo||'Geral')===g).forEach(p=>{
+      rows += `<tr><td style="padding:7px 12px;border-bottom:1px solid #eee;font-size:13px;">${p.nome}</td><td style="padding:7px 12px;border-bottom:1px solid #eee;font-size:12px;color:#888;text-align:center;">${p.tempo||0} min</td><td style="padding:7px 12px;border-bottom:1px solid #eee;text-align:right;font-weight:700;font-size:13px;color:#7a3020;">R$ ${(p.precoFinal||0).toFixed(2).replace('.',',')}</td></tr>`;
+    });
+  });
+  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Tabela de Preços - ${clinica}</title>
+<style>*{margin:0;padding:0;box-sizing:border-box;}body{font-family:'Segoe UI',Arial,sans-serif;padding:30px;color:#3a2020;}
+.header{text-align:center;margin-bottom:24px;padding-bottom:16px;border-bottom:2px solid #d4735a;}
+.header h1{font-size:20px;color:#7a3020;}.header p{font-size:12px;color:#a05040;margin-top:4px;}
+table{width:100%;border-collapse:collapse;margin-top:10px;}
+.footer{text-align:center;margin-top:24px;font-size:11px;color:#b08070;border-top:1px solid #f0cfc4;padding-top:12px;}
+@media print{body{padding:15px;}}</style></head><body>
+<div class="header"><h1>${clinica}</h1><p>Tabela de Procedimentos e Valores — ${data}</p></div>
+<table><thead><tr style="background:#7a3020;color:#fff;"><th style="padding:8px 12px;text-align:left;font-size:12px;">Procedimento</th><th style="padding:8px 12px;text-align:center;font-size:12px;">Tempo</th><th style="padding:8px 12px;text-align:right;font-size:12px;">Valor</th></tr></thead><tbody>${rows}</tbody></table>
+<div class="footer">${clinica} · ${data} · ${ativos.length} procedimentos</div>
+<script>window.onload=()=>{window.print();}</script></body></html>`;
+  const w = window.open('','_blank');
+  if(w){ w.document.write(html); w.document.close(); }
+  else { showToast('Permita pop-ups para gerar o PDF.','warn'); }
+}
+async function duplicarProc(id){
+  const orig = procs.find(x=>x.id===id); if(!orig) return;
+  const novoId = nextProcId++;
+  const copia = { ...JSON.parse(JSON.stringify(orig)), id: novoId, nome: orig.nome + ' (Cópia)' };
+  procs.push(copia);
+  if(procInsumos[id]?.length){
+    procInsumos[novoId] = JSON.parse(JSON.stringify(procInsumos[id]));
+  }
+  showLoading(true);
+  await saveFinanceiro();
+  showLoading(false);
+  renderProcs();
+  showToast('Procedimento duplicado!');
+}
 function filterProcs(){ renderProcs(); }
 function renderProcs(){
   const q     = (document.getElementById('proc-search')||{value:''}).value.toLowerCase();
@@ -6704,7 +6760,8 @@ function renderProcs(){
     const gs  = [...new Set(procs.map(p=>p.grupo).filter(Boolean))].sort();
     gsel.innerHTML = '<option value="">Todos os grupos</option>' + gs.map(g=>`<option value="${g}"${g===cur?' selected':''}>${g}</option>`).join('');
   }
-  let list = procs.filter(p=>(!q||_norm(p.nome).includes(_norm(q)))&&(!grupo||p.grupo===grupo));
+  const mostrarInativos = document.getElementById('proc-mostrar-inativos')?.checked;
+  let list = procs.filter(p=>(!q||_norm(p.nome).includes(_norm(q)))&&(!grupo||p.grupo===grupo)&&(mostrarInativos||p.ativo!==false));
   const soRecolagem = document.getElementById('proc-so-recolagem')?.checked;
   if(soRecolagem) list = list.filter(p=>PROC_IDS_RECOLAGEM.has(p.id)||/recolagem/i.test(p.nome));
   if(ordem==='az') list=[...list].sort((a,b)=>a.nome.localeCompare(b.nome,'pt-BR'));
@@ -6737,8 +6794,9 @@ function renderProcs(){
     const _flaskBadge = _insCount>0
       ? `<span style="position:absolute;top:-5px;right:-5px;background:#2e7d32;color:#fff;border-radius:50%;width:14px;height:14px;font-size:9px;display:flex;align-items:center;justify-content:center;font-weight:700;line-height:1;">${_insCount}</span>`
       : '';
-    return `<tr style="border-bottom:1px solid var(--rose-light);">
-      <td style="padding:10px;"><div style="font-weight:500;">${escapeHtml(p.nome)}</div><div style="margin-top:3px;display:flex;gap:4px;flex-wrap:wrap;">${_recolagBadge}${_tipoBadge}${_manutBadge}</div></td>
+    const _inativo = p.ativo===false;
+    return `<tr style="border-bottom:1px solid var(--rose-light);${_inativo?'opacity:.5;':''}">
+      <td style="padding:10px;"><div style="font-weight:500;">${escapeHtml(p.nome)}${_inativo?' <span style="font-size:9px;background:#eee;color:#999;border-radius:4px;padding:1px 6px;font-weight:600;">INATIVO</span>':''}</div><div style="margin-top:3px;display:flex;gap:4px;flex-wrap:wrap;">${_recolagBadge}${_tipoBadge}${_manutBadge}</div></td>
       <td style="padding:10px;"><span style="background:var(--rose-lighter);color:var(--rose-dark);border-radius:6px;padding:2px 8px;font-size:11px;">${escapeHtml(p.grupo||'—')}</span></td>
       <td style="padding:10px;text-align:right;">${p.tempo||0} min</td>
       <td style="padding:10px;text-align:right;">${fmtBRL(_insValReal)}</td>
@@ -6749,6 +6807,8 @@ function renderProcs(){
       <td style="padding:10px;">
         <div style="display:flex;gap:6px;justify-content:flex-end;align-items:center;">
           <button class="btn-secondary" style="padding:4px 8px;font-size:11px;position:relative;${_flaskColor}" onclick="openInsumos(${p.id})" title="${_insCount>0?_insCount+' insumo(s) configurado(s)':'Adicionar insumos'}">${_flaskBadge}<i class="ti ti-flask"></i></button>
+          <button class="btn-secondary" style="padding:4px 8px;font-size:11px;" onclick="toggleAtivoProc(${p.id})" title="${_inativo?'Ativar':'Desativar'}"><i class="ti ti-${_inativo?'player-play':'player-pause'}"></i></button>
+          <button class="btn-secondary" style="padding:4px 8px;font-size:11px;" onclick="duplicarProc(${p.id})" title="Duplicar"><i class="ti ti-copy"></i></button>
           <button class="btn-secondary" style="padding:4px 8px;font-size:11px;" onclick="openEditProc(${p.id})"><i class="ti ti-pencil"></i></button>
           <button class="btn-danger" style="padding:4px 8px;font-size:11px;" onclick="deleteProc(${p.id})"><i class="ti ti-trash"></i></button>
         </div>
@@ -7367,7 +7427,7 @@ function renderSimSelectPac(){
   }
   // Procedimentos
   if(g!=='__combo__'){
-    let list = procs.filter(p=>(!q||p.nome.toLowerCase().includes(q))&&(!g||g==='__combo__'||p.grupo===g));
+    let list = procs.filter(p=>p.ativo!==false&&(!q||p.nome.toLowerCase().includes(q))&&(!g||g==='__combo__'||p.grupo===g));
     if(list.length) html2 += (g===''?'<optgroup label="Procedimentos">':'') + list.map(p=>`<option value="proc:${p.id}">${escapeHtml(p.nome)} — ${fmtBRL(p.precoFinal)}</option>`).join('') + (g===''?'</optgroup>':'');
   }
   sel.innerHTML = html2 || '<option value="">Nenhum item encontrado</option>';
@@ -7904,7 +7964,7 @@ function vrFiltrarMobile(){
   const drop=document.getElementById('vr-dropdown'); if(!drop) return;
   if(!q){ drop.style.display='none'; return; }
   drop.style.display='flex';
-  const filtrados=procs.filter(p=>_norm(p.nome).includes(_norm(q))).slice(0,8);
+  const filtrados=procs.filter(p=>p.ativo!==false&&_norm(p.nome).includes(_norm(q))).slice(0,8);
   if(!filtrados.length){ drop.innerHTML='<div style="padding:14px;text-align:center;color:var(--rose-light);font-size:13px;">Nenhum resultado</div>'; return; }
   drop.innerHTML=filtrados.map(p=>{
     const preco=parseFloat(p.precoFinal||p.preco||0);
@@ -8075,7 +8135,7 @@ function vrInit(){
 }
 
 function vrRenderCats(){
-  const cats = [...new Set(procs.map(p=>p.grupo||p.cat||p.categoria||'Geral'))].sort();
+  const cats = [...new Set(procs.filter(p=>p.ativo!==false).map(p=>p.grupo||p.cat||p.categoria||'Geral'))].sort();
   const wrap = document.getElementById('vr-cats'); if(!wrap) return;
   wrap.innerHTML = `<button class="vr-cat-btn${vrCatAtiva===''?' active':''}" onclick="vrSetCat('')">Todos</button>` +
     cats.map(c=>`<button class="vr-cat-btn${vrCatAtiva===c?' active':''}" onclick="vrSetCat('${escapeHtml(c)}')">${escapeHtml(c)}</button>`).join('');
@@ -8087,6 +8147,7 @@ function vrFiltrar(){
   const q = (document.getElementById('vr-search')?.value||'').toLowerCase();
   const lista = document.getElementById('vr-lista'); if(!lista) return;
   const filtrados = procs.filter(p=>{
+    if(p.ativo===false) return false;
     const cat = p.grupo||p.cat||p.categoria||'Geral';
     const matchCat = vrCatAtiva==='' || cat===vrCatAtiva;
     const matchQ   = !q || _norm(p.nome).includes(_norm(q));
