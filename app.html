@@ -10589,12 +10589,8 @@ async function salvarPrecificacao(){
     if(ins.length){
       p.insumos = parseFloat(ins.reduce((acc,item)=>{const m=mats.find(x=>x.id===item.matId);return acc+(m?m.custo*item.qtd:0);},0).toFixed(2));
     }
-    if(!p.horaClinManual){
-      p.horaClin = parseFloat(((p.tempo/60)*calcHora()).toFixed(2));
-    }
-    if(!p.precoFinalManual){
-      p.precoFinal = calcPrecoFinal(p);
-    }
+    p.horaClin = parseFloat(((p.tempo/60)*calcHora()).toFixed(2));
+    p.precoFinal = calcPrecoFinal(p);
   });
 
   const _INST_MANUT_MAP = {44:208, 202:209, 203:210, 204:211, 43:212, 51:213, 207:214, 37:38};
