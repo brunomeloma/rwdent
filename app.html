@@ -575,114 +575,149 @@ button{font-family:inherit;}
 /* ── MOBILE BOTTOM NAV ── */
 .mobile-bottom-nav{
   display:none;position:fixed;bottom:0;left:0;right:0;
-  background:#fff;border-top:1.5px solid var(--rose-light);
-  padding:8px 4px;z-index:200;
-  box-shadow:0 -4px 20px rgba(212,115,90,.1);
+  background:rgba(255,255,255,0.97);border-top:1px solid rgba(212,115,90,.12);
+  padding:6px 8px calc(6px + env(safe-area-inset-bottom));z-index:200;
+  box-shadow:0 -8px 32px rgba(122,48,32,.10);
+  backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
 }
-.mobile-nav-items{display:flex;align-items:center;overflow-x:auto;gap:2px;padding:0 4px;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
+.mobile-nav-items{display:flex;align-items:center;gap:0;padding:0;-webkit-overflow-scrolling:touch;scrollbar-width:none;justify-content:space-around;}
 .mobile-nav-items::-webkit-scrollbar{display:none;}
 .mobile-nav-item{
-  display:flex;flex-direction:column;align-items:center;gap:3px;
-  background:none;border:none;color:var(--rose-text);cursor:pointer;
-  padding:6px 10px;border-radius:12px;transition:background .18s,color .18s;
-  font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;
-  min-width:56px;flex-shrink:0;touch-action:manipulation;
+  display:flex;flex-direction:column;align-items:center;gap:1px;
+  background:none;border:none;color:#b08070;cursor:pointer;
+  padding:4px 6px;border-radius:14px;transition:all .18s cubic-bezier(.4,0,.2,1);
+  font-size:9px;font-weight:600;letter-spacing:.1px;
+  min-width:48px;flex:1;flex-shrink:0;touch-action:manipulation;
 }
-.mobile-nav-item.active{color:var(--rose-dark);background:var(--rose-lighter);}
-.mobile-nav-item i{font-size:20px;}
+.mobile-nav-item.active{ color:var(--rose-dark); }
+.mobile-nav-item i{
+  font-size:22px;
+  width:42px;height:30px;
+  display:flex;align-items:center;justify-content:center;
+  border-radius:12px;
+  transition:background .18s,transform .12s;
+}
+.mobile-nav-item.active i{ background:var(--rose-lighter); }
+.mobile-nav-item:active i{transform:scale(.86);}
 
 /* ── RESPONSIVE ── */
 @media(max-width:768px){
-  :root{--sidebar-w:0px;--header-h:58px;}
+  :root{--sidebar-w:0px;--header-h:54px;}
   .sidebar{display:none!important;}
-  .header{left:0!important;padding:0 16px;}
-  .page-content{margin-left:0!important;width:100%!important;padding-bottom:80px;}
-  .content{padding:12px;}
+  .header{left:0!important;padding:0 14px;}
+  .page-content{margin-left:0!important;width:100%!important;padding-bottom:90px;}
+  .content{padding:14px 12px;}
   .mobile-bottom-nav{display:block;}
 
   /* Toast abaixo do header no mobile */
-  .toast{top:66px;right:10px;left:10px;max-width:100%;font-size:12px;}
+  .toast{top:62px;right:10px;left:10px;max-width:100%;font-size:12px;border-radius:10px;}
 
-  /* Modal não corta em telas pequenas */
-  .modal-overlay{padding:16px 10px;align-items:flex-start;}
-  .modal-box{padding:18px 14px;max-width:100%;}
+  /* Modal: ocupa mais tela no mobile */
+  .modal-overlay{padding:12px 8px;align-items:flex-end;}
+  .modal-box{
+    padding:20px 16px;max-width:100%;width:100%;
+    border-radius:20px 20px 0 0;
+    box-shadow:0 -8px 40px rgba(0,0,0,.18);
+  }
+  .modal-footer{gap:8px;}
+  .modal-footer .btn-primary,.modal-footer .btn-secondary{flex:1;justify-content:center;}
 
-  /* Cards com padding menor */
-  .card{padding:14px 12px;border-radius:12px;}
-  .card h2{font-size:12px;}
+  /* Cards com visual mais polido */
+  .card{padding:16px 14px;border-radius:16px;margin-bottom:12px;}
+  .card h2{font-size:12px;margin-bottom:12px;}
 
   /* Section header empilha em telas muito estreitas */
-  .section-header{flex-direction:column;align-items:flex-start;gap:8px;}
-  .section-header button{width:100%;}
+  .section-header{flex-direction:column;align-items:stretch;gap:8px;}
+  .section-header>div{display:flex;gap:6px;flex-wrap:wrap;}
+  .section-header button{flex:1;min-width:120px;justify-content:center;}
 
   /* Filter row empilha */
   .filter-row{flex-direction:column;gap:8px;}
   .filter-row input,.filter-row select{width:100%;}
 
-  /* Home stat cards: 2 colunas em mobile */
-  #home-stats { grid-template-columns: 1fr 1fr !important; }
-  .home-stat-card { min-width:0; padding:12px 10px; gap:8px; }
-  .home-stat-num { font-size:22px; }
-  .home-stat-label { font-size:10px; white-space:normal; }
-  .home-stat-icon { width:36px; height:36px; font-size:18px; flex-shrink:0; }
+  /* Home stat cards: 2 colunas no mobile */
+  #home-stats { grid-template-columns: 1fr 1fr !important; gap:10px!important; }
+  .home-stat-card { min-width:0; padding:14px 12px; gap:10px; border-radius:14px!important; }
+  .home-stat-num { font-size:24px; }
+  .home-stat-label { font-size:10px; white-space:normal; line-height:1.3; }
+  .home-stat-icon { width:40px; height:40px; font-size:20px; border-radius:11px; flex-shrink:0; }
 
-  /* Appointment items: empilha badge abaixo */
-  .appt-item{flex-wrap:wrap;gap:8px;}
+  /* Appointment items */
+  .appt-item{flex-wrap:wrap;gap:8px;padding:10px 12px;}
   .appt-badge{align-self:flex-start;margin-left:auto;}
-  .appt-time{min-width:70px;padding:7px 9px;font-size:12px;}
+  .appt-time{min-width:68px;padding:7px 9px;font-size:12px;}
   .appt-info .name{font-size:14px;}
 
-  /* Buttons menores */
-  .btn-primary,.btn-secondary,.btn-danger{padding:9px 13px;font-size:12px;}
+  /* Botões com toque mais fácil */
+  .btn-primary,.btn-secondary,.btn-danger{padding:10px 14px;font-size:13px;border-radius:10px!important;}
   .btn-danger span{display:none;}
+  .btn-primary i,.btn-secondary i{font-size:15px;}
 
   /* Calendário */
   .cal-tools{gap:6px;}
   .cal-range{font-size:13px;}
-  .cal-btn{padding:7px 9px;font-size:12px;}
+  .cal-btn{padding:8px 10px;font-size:12px;}
   .cal-views{display:none;}
   #cal-view-mobile{display:inline-block!important;}
   .cal-card{padding:10px;}
   .cal-toolbar{gap:6px;}
-  .cal-body{border-radius:10px;}
-  .cal-month .cal-cell{min-height:52px;padding:3px;}
-  .cal-month .cal-pill{font-size:9px;padding:1px 3px;}
-  .cal-month .cell-num{font-size:11px;}
-  /* Select profissional no calendário ocupa full em mobile */
+  .cal-body{border-radius:12px;}
+  .cal-month .cal-cell{min-height:54px;padding:4px;}
+  .cal-month .cal-pill{font-size:9px;padding:2px 4px;border-radius:4px;}
+  .cal-month .cell-num{font-size:12px;font-weight:600;}
   .cal-select{min-width:0;flex:1;}
   .cal-tools{width:100%;}
   .cal-toolbar{flex-direction:column;align-items:stretch;}
   .cal-nav{justify-content:space-between;}
 
-  /* Venda Rápida: mobile só mostra versão mobile */
+  /* Venda Rápida */
   .vr-desktop { display:none !important; }
   .vr-mobile  { display:flex !important; }
 
-  /* Paciente: abre direto nos dados sem rolar */
+  /* Paciente */
   #painel-paciente { scroll-margin-top: 0; }
 
   /* Tabelas financeiras */
-  .fin-table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+  .fin-table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;border-radius:10px;}
   table{min-width:480px;}
 
-  /* Paciente: abas com scroll */
-  .pac-tabs{gap:2px;}
-  .pac-tab{font-size:10px;padding:7px 8px;}
-  #painel-paciente .card{padding:12px 10px;}
+  /* Paciente: abas */
+  .pac-tabs{gap:2px;overflow-x:auto;flex-wrap:nowrap;padding-bottom:2px;}
+  .pac-tab{font-size:11px;padding:8px 10px;white-space:nowrap;flex-shrink:0;}
+  #painel-paciente .card{padding:14px 12px;}
   .form-row-2{grid-template-columns:1fr!important;}
 
   /* Formulários: coluna única */
   .form-grid{grid-template-columns:1fr;}
   .an-grid-2{grid-template-columns:1fr!important;}
 
-  /* Odontograma: scroll horizontal */
+  /* Inputs maiores para toque */
+  input,select,textarea{font-size:16px!important;} /* evita zoom no iOS */
+  .form-group label{font-size:12px;font-weight:600;}
+
+  /* Odontograma */
   .odonto-arcada{overflow-x:auto;}
 
   /* Sim orçamento */
-  .sim-orcamento-item{font-size:12px;}
+  .sim-orcamento-item{font-size:13px;}
 
-  /* Resgate / Invisalign: textos menores */
-  .content h2{font-size:16px;}
+  /* Resgate / Invisalign */
+  .content h2{font-size:17px;}
+
+  /* Home tables side by side vira coluna única */
+  .home-tables-row{grid-template-columns:1fr!important;}
+
+  /* Section headers menores */
+  .home-table-title{font-size:13px;}
+  .home-table-row{font-size:12px;padding:8px 0;}
+
+  /* Hero banner */
+  .home-hero-greeting{font-size:17px!important;margin-bottom:12px!important;}
+  .home-hero-stats{gap:8px!important;}
+  .home-hero-stat{padding:9px 12px!important;min-width:0!important;flex:1!important;}
+  .home-hero-stat-val{font-size:17px!important;}
+  .home-hero-stat-lbl{font-size:9px!important;}
+  .home-hero-banner{padding:16px!important;border-radius:14px!important;margin-bottom:14px!important;}
 }
 /* ── FOCO VISÍVEL (acessibilidade) ── */
 :focus-visible{outline:2px solid var(--rose);outline-offset:2px;}
@@ -745,13 +780,10 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px soli
   .topnav-links { display: none !important; }
   .topnav-right { display: none !important; }
   .topnav-brand { margin-right: 0 !important; }
-  .header { justify-content: center !important; }
-  /* hero banner menor no mobile */
-  .home-hero-banner { padding: 14px 16px 16px !important; border-radius: 12px !important; }
-  .home-hero-greeting { font-size: 16px !important; margin-bottom: 10px !important; }
-  .home-hero-stat-val { font-size: 16px !important; }
-  .home-hero-stat-lbl { font-size: 9px !important; }
-  .home-hero-stat { padding: 8px 10px !important; min-width: 80px !important; }
+  .header { justify-content: center !important; height: 54px !important; }
+  .topnav-brand-name { font-size: 14px !important; }
+  .topnav-brand-sub { display: none !important; }
+  .topnav-brand-icon { width: 32px !important; height: 32px !important; }
 }
 :root { --sidebar-w: 0px !important; --header-h: 54px !important; }
 .sidebar { display: none !important; }
@@ -849,8 +881,8 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px soli
 /* Cards com sombra mais suave e bordas mais modernas */
 .card {
   border-radius: 14px !important;
-  box-shadow: 0 1px 12px rgba(122,48,32,.06) !important;
-  border: 1px solid var(--rose-light) !important;
+  box-shadow: 0 2px 16px rgba(122,48,32,.07) !important;
+  border: 1px solid rgba(212,115,90,.18) !important;
 }
 
 /* Botões primários mais limpos */
@@ -937,6 +969,112 @@ select, textarea {
 .tn-dropdown-item.active { background: #fdf0eb; color: #d4735a; font-weight: 600; }
 .tn-dropdown-item i { font-size: 15px; color: #d4735a; width: 18px; text-align: center; }
 .tn-dropdown-sep { height: 1px; background: #f0e0da; margin: 4px 6px; }
+
+
+/* ══ MOBILE POLISH EXTRA ══ */
+@media(max-width:768px){
+
+  /* Página de agendamento: botões de ação empilhados */
+  .appt-actions{flex-wrap:wrap;gap:6px;}
+  .appt-actions button{flex:1;min-width:80px;}
+
+  /* Modal slide-up do bottom no mobile */
+  .modal-overlay{
+    align-items:flex-end !important;
+    padding:0 !important;
+    background:rgba(0,0,0,.45);
+  }
+  .modal-box{
+    border-radius:22px 22px 0 0 !important;
+    max-height:90vh;
+    overflow-y:auto;
+    -webkit-overflow-scrolling:touch;
+    padding:20px 16px 28px !important;
+    width:100% !important;
+    max-width:100% !important;
+  }
+  /* Handle drag indicator no modal */
+  .modal-box::before{
+    content:'';display:block;
+    width:40px;height:4px;border-radius:2px;
+    background:rgba(0,0,0,.12);
+    margin:0 auto 16px;
+  }
+  /* Mas não aplica em overlays full (sign, etc) */
+  .sign-overlay .sign-box::before{display:none;}
+
+  /* Seção header com linha divisória */
+  .section-header{
+    padding-bottom:10px;
+    border-bottom:1px solid var(--rose-lighter);
+    margin-bottom:14px;
+  }
+
+  /* Inputs e selects: altura confortável para toque */
+  input:not([type=checkbox]):not([type=radio]),
+  select,
+  textarea{
+    min-height:44px;
+    padding:10px 12px !important;
+  }
+  textarea{min-height:80px;}
+
+  /* Formulário: label com margem certa */
+  .form-group{margin-bottom:12px;}
+  .form-group label{margin-bottom:5px;display:block;}
+
+  /* Tabela com gradiente pra indicar scroll */
+  .fin-table-wrap,.table-wrapper{
+    position:relative;
+  }
+
+  /* Pac tabs: barra mais fina, scroll suave */
+  .pac-tabs{
+    border-bottom:2px solid var(--rose-lighter);
+    margin-bottom:14px;
+  }
+  .pac-tab.active{
+    border-bottom-width:2px;
+  }
+
+  /* Section header botões em linha */
+  .section-header .qbar-section{flex-direction:row;flex-wrap:wrap;}
+
+  /* Orçamento: itens empilhados */
+  .orc-item-row{flex-wrap:wrap;gap:6px;}
+
+  /* Home: cards de stats com animação suave */
+  .home-stat-card{
+    transition:transform .12s;
+  }
+  .home-stat-card:active{transform:scale(.97);}
+
+  /* Appointment item: mais polido */
+  .appt-item{border-radius:12px;}
+
+  /* Cal pill mais legível */
+  .cal-month .cal-pill{
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    max-width:100%;
+  }
+
+  /* Floating action area */
+  .page-content{padding-bottom:96px;}
+}
+
+/* Safe area para iPhone com notch/Dynamic Island */
+@supports (padding-bottom: env(safe-area-inset-bottom)){
+  @media(max-width:768px){
+    .mobile-bottom-nav{
+      padding-bottom:calc(8px + env(safe-area-inset-bottom));
+    }
+    .page-content{
+      padding-bottom:calc(90px + env(safe-area-inset-bottom));
+    }
+  }
+}
 
 </style>
 </head>
