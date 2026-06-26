@@ -897,11 +897,44 @@ select, textarea {
   font-size: 12px; padding: 7px 14px;
 }
 
-/* Scrollbar mais sutil nas tabelas e listas */
-::-webkit-scrollbar { width: 5px; height: 5px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--rose-light); border-radius: 4px; }
-::-webkit-scrollbar-thumb:hover { background: var(--rose); }
+/* Scrollbar: usando padrão do navegador */
+
+
+/* ── TOPNAV DROPDOWNS ── */
+.tn-group { position: relative; }
+.tn-group-btn {
+  padding: 6px 11px; border-radius: 8px; font-size: 12px;
+  color: rgba(255,255,255,.84); cursor: pointer;
+  background: none; border: none; font-family: inherit;
+  white-space: nowrap; transition: background .15s, color .15s;
+  display: flex; align-items: center; gap: 5px;
+}
+.tn-group-btn:hover, .tn-group.open .tn-group-btn {
+  background: rgba(255,255,255,.18); color: #fff;
+}
+.tn-group-btn.has-active { background: rgba(255,255,255,.22); color: #fff; font-weight: 600; }
+.tn-group-btn i { font-size: 14px; }
+.tn-group-btn .tn-caret { font-size: 10px; margin-left: 1px; transition: transform .2s; }
+.tn-group.open .tn-caret { transform: rotate(180deg); }
+.tn-dropdown {
+  display: none; position: absolute; top: calc(100% + 8px); left: 0;
+  background: #fff; border-radius: 12px; min-width: 190px;
+  box-shadow: 0 8px 28px rgba(122,48,32,.18); z-index: 500;
+  padding: 6px; border: 1px solid rgba(212,115,90,.12);
+  overflow: hidden;
+}
+.tn-group.open .tn-dropdown { display: block; }
+.tn-dropdown-item {
+  display: flex; align-items: center; gap: 9px;
+  padding: 9px 12px; border-radius: 8px; font-size: 13px;
+  color: #3a2020; cursor: pointer; background: none;
+  border: none; font-family: inherit; width: 100%; text-align: left;
+  transition: background .12s;
+}
+.tn-dropdown-item:hover { background: #fdf0eb; color: #a05040; }
+.tn-dropdown-item.active { background: #fdf0eb; color: #d4735a; font-weight: 600; }
+.tn-dropdown-item i { font-size: 15px; color: #d4735a; width: 18px; text-align: center; }
+.tn-dropdown-sep { height: 1px; background: #f0e0da; margin: 4px 6px; }
 
 </style>
 </head>
@@ -1025,20 +1058,48 @@ select, textarea {
       </div>
     </div>
     <div class="topnav-links">
-      <button class="topnav-item active" data-tab="home" onclick="switchTab('home')"><i class="ti ti-home"></i> Início</button>
-      <button class="topnav-item" data-tab="venda_rapida" onclick="switchTab('venda_rapida')"><i class="ti ti-shopping-cart"></i> Venda</button>
-      <button class="topnav-item" data-tab="agendar" onclick="switchTab('agendar')"><i class="ti ti-calendar-plus"></i> Agendar</button>
-      <button class="topnav-item" data-tab="lista" onclick="switchTab('lista')"><i class="ti ti-calendar-event"></i> Agenda</button>
-      <button class="topnav-item" data-tab="calendario" onclick="switchTab('calendario')"><i class="ti ti-calendar-month"></i> Calendário</button>
+      <!-- Início -->
+      <button class="topnav-item" data-tab="home" onclick="switchTab('home')"><i class="ti ti-home"></i> Início</button>
+      <!-- Venda Rápida -->
+      <button class="topnav-item" data-tab="venda_rapida" onclick="switchTab('venda_rapida')"><i class="ti ti-shopping-cart"></i> Venda Rápida</button>
+      <!-- Pacientes -->
       <button class="topnav-item" data-tab="pacientes" onclick="switchTab('pacientes')"><i class="ti ti-users"></i> Pacientes</button>
-      <button class="topnav-item" data-tab="financeiro" onclick="switchTab('financeiro')"><i class="ti ti-chart-bar"></i> Financeiro</button>
-      <button class="topnav-item" data-tab="estoque_fin" onclick="switchTab('estoque_fin')"><i class="ti ti-package"></i> Estoque</button>
-      <button class="topnav-item" data-tab="procedimentos_fin" onclick="switchTab('procedimentos_fin')"><i class="ti ti-list-check"></i> Procedimentos</button>
-      <button class="topnav-item" data-tab="materiais_fin" onclick="switchTab('materiais_fin')"><i class="ti ti-box"></i> Materiais</button>
-      <button class="topnav-item" data-tab="vendas_fin" onclick="switchTab('vendas_fin')"><i class="ti ti-receipt"></i> Vendas</button>
-      <button class="topnav-item" data-tab="profissionais" onclick="switchTab('profissionais')"><i class="ti ti-briefcase"></i> Profissionais</button>
-      <button class="topnav-item" data-tab="resgate" onclick="switchTab('resgate')"><i class="ti ti-heart-handshake"></i> Resgate</button>
-      <button class="topnav-item" data-tab="invisalign_apresentacao" onclick="switchTab('invisalign_apresentacao')"><i class="ti ti-align-box-left-stretch"></i> Invisalign</button>
+      <!-- Agenda (dropdown) -->
+      <div class="tn-group" id="tng-agenda">
+        <button class="tn-group-btn" onclick="tnToggle('tng-agenda')">
+          <i class="ti ti-calendar-event"></i> Agenda <i class="ti ti-chevron-down tn-caret"></i>
+        </button>
+        <div class="tn-dropdown">
+          <button class="tn-dropdown-item" data-tab="agendar" onclick="switchTab('agendar');tnClose()"><i class="ti ti-calendar-plus"></i> Novo Agendamento</button>
+          <button class="tn-dropdown-item" data-tab="lista" onclick="switchTab('lista');tnClose()"><i class="ti ti-calendar-event"></i> Agenda do Dia</button>
+          <button class="tn-dropdown-item" data-tab="calendario" onclick="switchTab('calendario');tnClose()"><i class="ti ti-calendar-month"></i> Calendário</button>
+        </div>
+      </div>
+      <!-- Financeiro (dropdown) -->
+      <div class="tn-group" id="tng-fin">
+        <button class="tn-group-btn" onclick="tnToggle('tng-fin')">
+          <i class="ti ti-chart-bar"></i> Financeiro <i class="ti ti-chevron-down tn-caret"></i>
+        </button>
+        <div class="tn-dropdown">
+          <button class="tn-dropdown-item" data-tab="financeiro" onclick="switchTab('financeiro');tnClose()"><i class="ti ti-chart-bar"></i> Painel Financeiro</button>
+          <button class="tn-dropdown-item" data-tab="vendas_fin" onclick="switchTab('vendas_fin');tnClose()"><i class="ti ti-receipt"></i> Vendas</button>
+          <div class="tn-dropdown-sep"></div>
+          <button class="tn-dropdown-item" data-tab="procedimentos_fin" onclick="switchTab('procedimentos_fin');tnClose()"><i class="ti ti-list-check"></i> Procedimentos</button>
+          <button class="tn-dropdown-item" data-tab="materiais_fin" onclick="switchTab('materiais_fin');tnClose()"><i class="ti ti-box"></i> Materiais</button>
+          <button class="tn-dropdown-item" data-tab="estoque_fin" onclick="switchTab('estoque_fin');tnClose()"><i class="ti ti-package"></i> Estoque</button>
+        </div>
+      </div>
+      <!-- Mais (dropdown) -->
+      <div class="tn-group" id="tng-mais">
+        <button class="tn-group-btn" onclick="tnToggle('tng-mais')">
+          <i class="ti ti-dots"></i> Mais <i class="ti ti-chevron-down tn-caret"></i>
+        </button>
+        <div class="tn-dropdown">
+          <button class="tn-dropdown-item" data-tab="profissionais" onclick="switchTab('profissionais');tnClose()"><i class="ti ti-briefcase"></i> Profissionais</button>
+          <button class="tn-dropdown-item" data-tab="resgate" onclick="switchTab('resgate');tnClose()"><i class="ti ti-heart-handshake"></i> Resgate de Pacientes</button>
+          <button class="tn-dropdown-item" data-tab="invisalign_apresentacao" onclick="switchTab('invisalign_apresentacao');tnClose()"><i class="ti ti-align-box-left-stretch"></i> Invisalign</button>
+        </div>
+      </div>
     </div>
     <div class="topnav-right">
       <button class="topnav-item" data-tab="configuracoes" onclick="switchTab('configuracoes')" title="Configurações" style="padding:6px 8px;"><i class="ti ti-settings" style="font-size:17px;"></i></button>
@@ -2436,11 +2497,44 @@ function toggleFaq(i){
   ico.style.transform=open?'rotate(180deg)':'';
 }
 
+
+// ── TOPNAV DROPDOWNS ──
+function tnToggle(id){
+  const grp = document.getElementById(id);
+  const isOpen = grp.classList.contains('open');
+  tnClose();
+  if(!isOpen) grp.classList.add('open');
+}
+function tnClose(){
+  document.querySelectorAll('.tn-group.open').forEach(g=>g.classList.remove('open'));
+}
+// Fechar ao clicar fora
+document.addEventListener('click', e=>{
+  if(!e.target.closest('.tn-group')) tnClose();
+});
+// Destacar grupo quando tab ativa é filha
+function tnUpdateActive(tab){
+  const agendaTabs = ['agendar','lista','calendario'];
+  const finTabs = ['financeiro','vendas_fin','procedimentos_fin','materiais_fin','estoque_fin'];
+  const maisTabs = ['profissionais','resgate','invisalign_apresentacao'];
+  const grpAgenda = document.getElementById('tng-agenda');
+  const grpFin = document.getElementById('tng-fin');
+  const grpMais = document.getElementById('tng-mais');
+  if(grpAgenda) grpAgenda.querySelector('.tn-group-btn').classList.toggle('has-active', agendaTabs.includes(tab));
+  if(grpFin) grpFin.querySelector('.tn-group-btn').classList.toggle('has-active', finTabs.includes(tab));
+  if(grpMais) grpMais.querySelector('.tn-group-btn').classList.toggle('has-active', maisTabs.includes(tab));
+  // atualizar itens dentro dos dropdowns
+  document.querySelectorAll('.tn-dropdown-item').forEach(b=>{
+    b.classList.toggle('active', b.dataset.tab===tab);
+  });
+}
+
 function switchTab(tab){
   ['home','agendar','lista','calendario','pacientes','profissionais','configuracoes','financeiro','procedimentos_fin','materiais_fin','estoque_fin','vendas_fin','venda_rapida','resgate','invisalign_apresentacao'].forEach(t=>{
     const el=document.getElementById('tab-'+t);
     if(el) el.style.display = t===tab?'':'none';
   });
+  tnUpdateActive(tab);
   document.querySelectorAll('.sidebar-item,.mobile-nav-item,.topnav-item').forEach(b=>{
     b.classList.toggle('active', b.dataset.tab===tab);
   });
