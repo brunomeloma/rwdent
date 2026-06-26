@@ -1124,7 +1124,16 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px soli
     ══════════════════════════════════════════════════ -->
     <div id="tab-financeiro" class="content" style="display:none;">
       <div class="card">
-        <div class="section-header"><h2><i class="ti ti-chart-bar"></i> Painel Financeiro</h2></div>
+        <div class="section-header">
+          <h2><i class="ti ti-chart-bar"></i> Painel Financeiro</h2>
+          <button class="btn-secondary" onclick="abrirRelatorioMensal()" style="font-size:12px;"><i class="ti ti-file-analytics"></i> Relatório Mensal</button>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;margin-bottom:14px;flex-wrap:wrap;">
+          <span style="font-size:12px;color:var(--rose-text);font-weight:600;">Período:</span>
+          <select id="fin-mes" onchange="renderFinanceiroDash()" style="padding:6px 10px;border:1px solid var(--rose-light);border-radius:8px;font-size:13px;"></select>
+          <select id="fin-ano" onchange="renderFinanceiroDash()" style="padding:6px 10px;border:1px solid var(--rose-light);border-radius:8px;font-size:13px;"></select>
+          <button class="btn-secondary" style="font-size:12px;padding:5px 12px;" onclick="finSetPeriodo('tudo')">Todo o histórico</button>
+        </div>
         <div id="fin-metrics" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:20px;"></div>
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;">
           <div>
@@ -1447,14 +1456,17 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px soli
       <div class="card">
         <div class="section-header"><h2><i class="ti ti-receipt"></i> Vendas e Orçamentos</h2></div>
         <div id="vendas-metrics" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:16px;"></div>
-        <div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;">
+        <div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;align-items:center;">
           <input type="text" id="venda-search" placeholder="Buscar venda..." oninput="renderVendas()" style="flex:1;min-width:150px;"/>
           <select id="venda-status" onchange="renderVendas()">
-            <option value="">Todos</option>
+            <option value="">Todos os status</option>
             <option value="orcamento">Orçamento</option>
             <option value="finalizada">Finalizada</option>
             <option value="cancelada">Cancelada</option>
           </select>
+          <select id="venda-mes" onchange="renderVendas()" style="padding:6px 10px;border:1px solid var(--rose-light);border-radius:8px;font-size:13px;"></select>
+          <select id="venda-ano" onchange="renderVendas()" style="padding:6px 10px;border:1px solid var(--rose-light);border-radius:8px;font-size:13px;"></select>
+          <button class="btn-secondary" style="font-size:12px;padding:5px 12px;" onclick="vendaSetPeriodo('tudo')">Todo o histórico</button>
         </div>
         <div style="overflow-x:auto;">
           <table style="width:100%;border-collapse:collapse;font-size:13px;">
@@ -2181,7 +2193,7 @@ function switchTab(tab){
       loadFinanceiro().then(()=>{
         showLoading(false);
         if(tab==='financeiro') renderFinanceiroDash();
-        if(tab==='procedimentos_fin') renderProcs();
+        if(tab==='procedimentos_fin'){ recalcularInsumos(true); renderProcs(); }
         if(tab==='materiais_fin') renderMats();
         if(tab==='estoque_fin') renderEstoque();
         if(tab==='vendas_fin') renderVendas();
@@ -2191,7 +2203,7 @@ function switchTab(tab){
     }
     requestAnimationFrame(()=>{
       if(tab==='financeiro') renderFinanceiroDash();
-      if(tab==='procedimentos_fin') renderProcs();
+      if(tab==='procedimentos_fin'){ recalcularInsumos(true); renderProcs(); }
       if(tab==='materiais_fin') renderMats();
       if(tab==='estoque_fin') renderEstoque();
       if(tab==='vendas_fin') renderVendas();
@@ -2211,17 +2223,24 @@ function renderHomeStats(){
   const semana_count = agendamentos.filter(a=>a.data>=hoje_str && a.data<=toLocalISO(semana_end)).length;
   const confirmadas = agendamentos.filter(a=>a.data===hoje_str && (agGetStatus(a)||'').toLowerCase()==='confirmado').length;
 
+  const _mesStat = hoje_str.slice(0,7);
+  const _fatMes = vendas.filter(v=>v.status==='finalizada'&&(v.data||v.dataFinal||'').slice(0,7)===_mesStat).reduce((a,v)=>a+(Number(v.total)||0),0);
+  const _mesLabel = new Date(_mesStat+'-02').toLocaleDateString('pt-BR',{month:'long',year:'numeric'});
   document.getElementById('home-stats').innerHTML = `
     <div class="home-stat-card">
       <div class="home-stat-icon" style="background:#fdf0eb;color:#d4735a;"><i class="ti ti-users"></i></div>
       <div><div class="home-stat-num">${pacientes.length}</div><div class="home-stat-label">Total de Pacientes</div></div>
     </div>
     <div class="home-stat-card">
+      <div class="home-stat-icon" style="background:#e8f5e9;color:#2e7d32;"><i class="ti ti-currency-dollar"></i></div>
+      <div><div class="home-stat-num" style="font-size:16px;">${fmtBRL(_fatMes)}</div><div class="home-stat-label">Faturamento ${_mesLabel}</div></div>
+    </div>
+    <div class="home-stat-card">
       <div class="home-stat-icon" style="background:#fff4e5;color:#e08a20;"><i class="ti ti-calendar"></i></div>
       <div><div class="home-stat-num">${semana_count}</div><div class="home-stat-label">Consultas na semana</div></div>
     </div>
     <div class="home-stat-card">
-      <div class="home-stat-icon" style="background:#e8f5e9;color:#2e7d32;"><i class="ti ti-clock"></i></div>
+      <div class="home-stat-icon" style="background:#e3f2fd;color:#1565c0;"><i class="ti ti-clock"></i></div>
       <div><div class="home-stat-num">${hoje_count}</div><div class="home-stat-label">Consultas hoje</div></div>
     </div>
     <div class="home-stat-card">
@@ -5127,6 +5146,75 @@ function injetarNovosMatsOrto(){
 }
 
 
+
+// ── RELATÓRIO MENSAL ──
+function abrirRelatorioMensal(){
+  openModal('modal-relatorio');
+  const anos = [...new Set(vendas.map(v=>(v.data||v.dataFinal||'').slice(0,4)).filter(Boolean))].sort().reverse();
+  const anoAtual = new Date().getFullYear().toString();
+  if(!anos.includes(anoAtual)) anos.unshift(anoAtual);
+  const mesAtual = (new Date().getMonth()+1).toString().padStart(2,'0');
+  const meses=[['01','Janeiro'],['02','Fevereiro'],['03','Março'],['04','Abril'],['05','Maio'],['06','Junho'],['07','Julho'],['08','Agosto'],['09','Setembro'],['10','Outubro'],['11','Novembro'],['12','Dezembro']];
+  const sm=document.getElementById('rel-mes');
+  const sa=document.getElementById('rel-ano');
+  if(sm) sm.innerHTML=meses.map(([v,l])=>`<option value="${v}"${v===mesAtual?' selected':''}>${l}</option>`).join('');
+  if(sa) sa.innerHTML=anos.map(a=>`<option value="${a}"${a===anoAtual?' selected':''}>${a}</option>`).join('');
+  renderRelatorio();
+}
+
+function renderRelatorio(){
+  const mes=document.getElementById('rel-mes')?.value||'';
+  const ano=document.getElementById('rel-ano')?.value||'';
+  const mesesNome={'01':'Janeiro','02':'Fevereiro','03':'Março','04':'Abril','05':'Maio','06':'Junho','07':'Julho','08':'Agosto','09':'Setembro','10':'Outubro','11':'Novembro','12':'Dezembro'};
+  const tituloMes=(mes&&ano)?`${mesesNome[mes]||mes} de ${ano}`:ano||'Todos os períodos';
+  const filtrarDt=v=>{const dt=(v.data||v.dataFinal||'').slice(0,10);if(ano&&!dt.startsWith(ano))return false;if(mes&&dt.slice(5,7)!==mes)return false;return true;};
+  const filtrarAg=a=>{if(ano&&!a.data.startsWith(ano))return false;if(mes&&a.data.slice(5,7)!==mes)return false;return true;};
+  const vendasPer=vendas.filter(filtrarDt);
+  const finPer=vendasPer.filter(v=>v.status==='finalizada');
+  const fat=finPer.reduce((a,v)=>a+(Number(v.total)||0),0);
+  const ticket=finPer.length?fat/finPer.length:0;
+  const agsPer=agendamentos.filter(filtrarAg);
+  const compareceu=agsPer.filter(a=>(agGetStatus(a)||'').toLowerCase()==='compareceu').length;
+  const faltou=agsPer.filter(a=>(agGetStatus(a)||'').toLowerCase()==='faltou').length;
+  const taxaComp=agsPer.length?Math.round(compareceu/agsPer.length*100):0;
+  const contProc={};
+  finPer.forEach(v=>(v.itens||[]).forEach(i=>{const n=i.nome||'—';contProc[n]=(contProc[n]||0)+(Number(i.qtd)||1);}));
+  const topProcs=Object.entries(contProc).sort((a,b)=>b[1]-a[1]).slice(0,5);
+  const fatProf={};
+  finPer.forEach(v=>{const n=v.profNome||v.prof_nome||'—';fatProf[n]=(fatProf[n]||0)+(Number(v.total)||0);});
+  const topProf=Object.entries(fatProf).sort((a,b)=>b[1]-a[1]);
+  const novosPacs=pacientes.filter(p=>{const dt=(p.created_at||'').slice(0,10);if(ano&&!dt.startsWith(ano))return false;if(mes&&dt.slice(5,7)!==mes)return false;return true;}).length;
+  const card=(titulo,valor,cor,icon)=>`<div style="background:var(--rose-lighter);border:1px solid var(--rose-light);border-radius:12px;padding:14px 16px;"><div style="font-size:11px;color:var(--rose-text);margin-bottom:4px;"><i class="ti ${icon}"></i> ${titulo}</div><div style="font-size:20px;font-weight:800;color:${cor};">${valor}</div></div>`;
+  const barMax=topProcs[0]?.[1]||1;
+  const barProcs=topProcs.length?topProcs.map(([nome,qtd])=>`<div style="margin-bottom:10px;"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px;"><span style="font-weight:500;color:#3a2020;max-width:75%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escapeHtml(nome)}">${escapeHtml(nome)}</span><span style="color:var(--rose-dark);font-weight:700;">${qtd}×</span></div><div style="background:var(--rose-light);border-radius:4px;height:6px;"><div style="background:var(--rose);border-radius:4px;height:6px;width:${Math.round(qtd/barMax*100)}%;"></div></div></div>`).join(''):'<div style="color:var(--rose-text);font-size:13px;">Sem procedimentos no período.</div>';
+  const listProf=topProf.length?topProf.map(([nome,fat])=>`<div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--rose-light);font-size:13px;"><span>${escapeHtml(nome)}</span><strong style="color:var(--rose-dark);">${fmtBRL(fat)}</strong></div>`).join(''):'<div style="color:var(--rose-text);font-size:13px;">Sem dados.</div>';
+  const corTaxa=taxaComp>=70?'#2e7d32':taxaComp>=50?'#e08a20':'#dc2626';
+  document.getElementById('rel-content').innerHTML=`
+    <div style="font-size:14px;font-weight:700;color:var(--rose-dark);margin-bottom:14px;padding-bottom:8px;border-bottom:1px solid var(--rose-light);"><i class="ti ti-calendar-stats"></i> ${tituloMes}</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:20px;">
+      ${card('Faturamento',fmtBRL(fat),'var(--rose-dark)','ti-currency-dollar')}
+      ${card('Ticket Médio',fmtBRL(ticket),'#1565c0','ti-receipt')}
+      ${card('Vendas finalizadas',finPer.length,'#2e7d32','ti-circle-check')}
+      ${card('Novos pacientes',novosPacs,'#7b1fa2','ti-user-plus')}
+      ${card('Agendamentos',agsPer.length,'#e08a20','ti-calendar')}
+      ${card('Compareceram',compareceu,'#2e7d32','ti-user-check')}
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;">
+      <div><div style="font-size:13px;font-weight:700;color:var(--rose-dark);margin-bottom:10px;"><i class="ti ti-list-numbers"></i> Top procedimentos</div>${barProcs}</div>
+      <div><div style="font-size:13px;font-weight:700;color:var(--rose-dark);margin-bottom:10px;"><i class="ti ti-user-dollar"></i> Por profissional</div>${listProf}</div>
+    </div>
+    <div style="background:var(--rose-lighter);border-radius:12px;padding:14px 16px;">
+      <div style="font-size:13px;font-weight:700;color:var(--rose-dark);margin-bottom:6px;"><i class="ti ti-chart-line"></i> Taxa de comparecimento</div>
+      <div style="display:flex;justify-content:space-between;font-size:13px;color:var(--rose-text);flex-wrap:wrap;gap:6px;">
+        <span>Compareceram: <strong style="color:#2e7d32;">${compareceu}</strong></span>
+        <span>Faltaram: <strong style="color:#dc2626;">${faltou}</strong></span>
+        <span>Total agendamentos: <strong>${agsPer.length}</strong></span>
+        <span style="font-weight:800;color:${corTaxa};">${taxaComp}%</span>
+      </div>
+      <div style="background:var(--rose-light);border-radius:8px;height:12px;margin-top:8px;"><div style="background:${corTaxa};border-radius:8px;height:12px;width:${taxaComp}%;"></div></div>
+    </div>`;
+}
+
 let fioCallback = null;
 
 function abrirSeletorFio(callback){
@@ -5658,18 +5746,81 @@ function calcPrecoFinal(p){
 }
 
 // ── PAINEL FINANCEIRO ──
-function renderFinanceiroDash(){
-  const fin = vendas.filter(v=>v.status==='finalizada');
-  const orc = vendas.filter(v=>v.status==='orcamento');
-  const fat = fin.reduce((a,v)=>a+(Number(v.total)||0),0);
-  const criticos = mats.filter(m=>getEstStatus(m.id)==='danger').length;
+// ── HELPERS DE PERÍODO ──
+function _periodoPopularSelects(mesId, anoId, prefixo){
+  const anos = [...new Set(vendas.map(v=>(v.data||v.dataFinal||'').slice(0,4)).filter(Boolean))].sort().reverse();
+  const anoAtual = new Date().getFullYear().toString();
+  if(!anos.includes(anoAtual)) anos.unshift(anoAtual);
+  const mesAtual = (new Date().getMonth()+1).toString().padStart(2,'0');
+  const meses = [
+    ['01','Janeiro'],['02','Fevereiro'],['03','Março'],['04','Abril'],
+    ['05','Maio'],['06','Junho'],['07','Julho'],['08','Agosto'],
+    ['09','Setembro'],['10','Outubro'],['11','Novembro'],['12','Dezembro']
+  ];
+  const selMes = document.getElementById(mesId);
+  const selAno = document.getElementById(anoId);
+  if(!selMes || !selAno) return;
+  const curMes = selMes.value || mesAtual;
+  const curAno = selAno.value || anoAtual;
+  selMes.innerHTML = '<option value="">Todos os meses</option>' + meses.map(([v,l])=>`<option value="${v}"${v===curMes?' selected':''}>${l}</option>`).join('');
+  selAno.innerHTML = '<option value="">Todos os anos</option>' + anos.map(a=>`<option value="${a}"${a===curAno?' selected':''}>${a}</option>`).join('');
+  if(!selMes.value) selMes.value = mesAtual;
+  if(!selAno.value) selAno.value = curAno;
+}
+function finSetPeriodo(modo){
+  const sm = document.getElementById('fin-mes');
+  const sa = document.getElementById('fin-ano');
+  if(!sm||!sa) return;
+  if(modo==='tudo'){ sm.value=''; sa.value=''; }
+  renderFinanceiroDash();
+}
+function vendaSetPeriodo(modo){
+  const sm = document.getElementById('venda-mes');
+  const sa = document.getElementById('venda-ano');
+  if(!sm||!sa) return;
+  if(modo==='tudo'){ sm.value=''; sa.value=''; }
+  renderVendas();
+}
+function _filtrarVendasPorPeriodo(lista, mesId, anoId){
+  const mes = document.getElementById(mesId)?.value||'';
+  const ano = document.getElementById(anoId)?.value||'';
+  if(!mes && !ano) return lista;
+  return lista.filter(v=>{
+    const dt = (v.data||v.dataFinal||'').slice(0,10);
+    if(ano && !dt.startsWith(ano)) return false;
+    if(mes && dt.slice(5,7)!==mes) return false;
+    return true;
+  });
+}
+function _labelPeriodo(mesId, anoId){
+  const mes = document.getElementById(mesId)?.value||'';
+  const ano = document.getElementById(anoId)?.value||'';
+  const meses = {
+    '01':'Jan','02':'Fev','03':'Mar','04':'Abr','05':'Mai','06':'Jun',
+    '07':'Jul','08':'Ago','09':'Set','10':'Out','11':'Nov','12':'Dez'
+  };
+  if(!mes && !ano) return 'todo o histórico';
+  if(mes && ano) return `${meses[mes]||mes}/${ano}`;
+  if(ano) return `${ano}`;
+  return meses[mes]||mes;
+}
 
+function renderFinanceiroDash(){
   // Auto-carrega se vazio (não precisa mais de botão)
   if(procs.length === 0){ carregarPadroes(false); return; }
 
+  _periodoPopularSelects('fin-mes','fin-ano','fin');
+  const _periodo = _labelPeriodo('fin-mes','fin-ano');
+  const fin = _filtrarVendasPorPeriodo(vendas.filter(v=>v.status==='finalizada'), 'fin-mes','fin-ano');
+  const orc = vendas.filter(v=>v.status==='orcamento');
+  const fat = fin.reduce((a,v)=>a+(Number(v.total)||0),0);
+  const ticket = fin.length ? fat/fin.length : 0;
+  const criticos = mats.filter(m=>getEstStatus(m.id)==='danger').length;
+
   document.getElementById('fin-metrics').innerHTML = [
-    {lbl:'Faturamento',val:fmtBRL(fat),cor:'var(--rose-dark)'},
+    {lbl:'Faturamento ('+_periodo+')',val:fmtBRL(fat),cor:'var(--rose-dark)'},
     {lbl:'Vendas finalizadas',val:fin.length,cor:'#2e7d32'},
+    {lbl:'Ticket médio',val:fmtBRL(ticket),cor:'#1565c0'},
     {lbl:'Orçamentos abertos',val:orc.length,cor:'#856404'},
     {lbl:'Estoque crítico',val:criticos,cor:'#dc2626'},
   ].map(s=>`<div style="background:var(--rose-lighter);border:1px solid var(--rose-light);border-radius:12px;padding:14px 18px;">
@@ -5677,14 +5828,14 @@ function renderFinanceiroDash(){
     <div style="font-size:22px;font-weight:800;color:${s.cor};">${s.val}</div>
   </div>`).join('');
 
-  // Vendas recentes
-  const recentes = [...vendas].reverse().slice(0,5);
+  // Vendas recentes do período
+  const recentes = fin.slice().reverse().slice(0,5);
   document.getElementById('fin-vendas-recentes').innerHTML = recentes.length
     ? recentes.map(v=>`<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--rose-light);font-size:13px;">
         <span>${escapeHtml(v.pacienteNome||'—')}</span>
         <span>${fmtBRL(v.total)} <span class="fin-badge ${v.status}">${v.status}</span></span>
       </div>`).join('')
-    : '<div style="color:var(--rose-text);font-size:13px;">Nenhuma venda ainda.</div>';
+    : '<div style="color:var(--rose-text);font-size:13px;">Nenhuma venda no período.</div>';
 
   // Estoque crítico
   const crit = mats.filter(m=>getEstStatus(m.id)==='danger').slice(0,5);
@@ -5720,11 +5871,21 @@ function openEditProc(id){
   document.getElementById('mp-nome').value      = p.nome;
   document.getElementById('mp-grupo').value     = p.grupo||'';
   document.getElementById('mp-tempo').value     = p.tempo||0;
-  document.getElementById('mp-insumos').value   = p.insumos||0;
+  // Se insumos==0 mas existe receita cadastrada, calcula o custo real dos materiais
+  let _insumosVal = p.insumos||0;
+  if(!_insumosVal && procInsumos[id]?.length){
+    _insumosVal = parseFloat(
+      procInsumos[id].reduce((acc,item)=>{
+        const m=mats.find(x=>x.id===item.matId);
+        return acc+(m?m.custo*item.qtd:0);
+      },0).toFixed(2)
+    );
+  }
+  document.getElementById('mp-insumos').value   = _insumosVal;
   document.getElementById('mp-laboratorio').value = p.laboratorio||0;
   document.getElementById('mp-margem').value    = p.margem || cfg.margem || 100;
   document.getElementById('mp-preco').value     = p.precoFinal||0;
-  calcProcPreview(true);
+  calcProcPreview(false); // não sobrescreve preço final — mantém o valor salvo
   openModal('modal-proc');
 }
 let mpPrecoEditadoManualmente = false;
@@ -5787,7 +5948,9 @@ async function saveProc(){
   showToast('Procedimento salvo!');
 }
 async function deleteProc(id){
-  if(!confirm('Excluir este procedimento?')) return;
+  const _pDel = procs.find(x=>x.id===id);
+  const _nomeDel = _pDel?.nome||'este procedimento';
+  if(!confirm('Excluir "'+_nomeDel+'"?\n\nAtenção: procedimentos já usados em planos ou orçamentos continuarão nos registros históricos, mas não poderão ser recalculados.')) return;
   procs = procs.filter(x=>x.id!==id);
   delete procInsumos[id];
   showLoading(true);
@@ -5817,23 +5980,45 @@ function renderProcs(){
   const tb = document.getElementById('proc-tbody');
   if(!tb) return;
   if(!list.length){ tb.innerHTML='<tr><td colspan="9" style="text-align:center;color:var(--rose-text);padding:20px;">Nenhum procedimento encontrado.</td></tr>'; return; }
-  tb.innerHTML = list.map(p=>`<tr style="border-bottom:1px solid var(--rose-light);">
-    <td style="padding:10px;">${escapeHtml(p.nome)} ${PROC_IDS_RECOLAGEM.has(p.id)||/recolagem/i.test(p.nome)?'<span class="fin-badge ok" style="font-size:9px;">RECOLAGEM</span>':''}</td>
-    <td style="padding:10px;"><span style="background:var(--rose-lighter);color:var(--rose-dark);border-radius:6px;padding:2px 8px;font-size:11px;">${escapeHtml(p.grupo||'—')}</span></td>
-    <td style="padding:10px;text-align:right;">${p.tempo||0} min</td>
-    <td style="padding:10px;text-align:right;">${fmtBRL(p.insumos||0)}</td>
-    <td style="padding:10px;text-align:right;">${fmtBRL(p.horaClin||0)}</td>
-    <td style="padding:10px;text-align:right;">${fmtBRL(custoProc(p))}</td>
-    <td style="padding:10px;text-align:right;">${p.margem||cfg.margem||100}%</td>
-    <td style="padding:10px;text-align:right;font-weight:700;color:var(--rose-dark);">${fmtBRL(p.precoFinal||0)}</td>
-    <td style="padding:10px;">
-      <div style="display:flex;gap:6px;justify-content:flex-end;">
-        <button class="btn-secondary" style="padding:4px 8px;font-size:11px;" onclick="openInsumos(${p.id})" title="Insumos"><i class="ti ti-flask"></i></button>
-        <button class="btn-secondary" style="padding:4px 8px;font-size:11px;" onclick="openEditProc(${p.id})"><i class="ti ti-pencil"></i></button>
-        <button class="btn-danger" style="padding:4px 8px;font-size:11px;" onclick="deleteProc(${p.id})"><i class="ti ti-trash"></i></button>
-      </div>
-    </td>
-  </tr>`).join('');
+  tb.innerHTML = list.map(p=>{
+    // Calcula insumos na hora (não depende de p.insumos salvo, que pode estar desatualizado)
+    const _ins = procInsumos[p.id]||[];
+    const _insValReal = _ins.length
+      ? parseFloat(_ins.reduce((acc,item)=>{ const m=mats.find(x=>x.id===item.matId); return acc+(m?m.custo*item.qtd:0); },0).toFixed(2))
+      : (p.insumos||0);
+    const _hc = parseFloat(((p.tempo||0)/60*calcHora()).toFixed(2));
+    const _custo = parseFloat((_insValReal + _hc + (p.laboratorio||0)).toFixed(2));
+    // Badge de tipo de cobrança
+    const _global = (p.tipo_cobranca==='global') || PROCS_GLOBAL_KEYWORDS.some(k=>(p.nome||'').toLowerCase().includes(k));
+    const _tipoBadge = _global
+      ? '<span style="font-size:9px;background:#e8f5e9;color:#2e7d32;border-radius:4px;padding:1px 5px;font-weight:600;">🌍 Global</span>'
+      : '<span style="font-size:9px;background:#e3f2fd;color:#1565c0;border-radius:4px;padding:1px 5px;font-weight:600;">🦷 Dente</span>';
+    const _recolagBadge = PROC_IDS_RECOLAGEM.has(p.id)||/recolagem/i.test(p.nome)
+      ? '<span class="fin-badge ok" style="font-size:9px;">RECOLAGEM</span>' : '';
+    // Contagem de insumos no botão flask
+    const _insCount = _ins.length;
+    const _flaskColor = _insCount>0 ? 'color:#2e7d32;border-color:#a5d6a7;' : '';
+    const _flaskBadge = _insCount>0
+      ? `<span style="position:absolute;top:-5px;right:-5px;background:#2e7d32;color:#fff;border-radius:50%;width:14px;height:14px;font-size:9px;display:flex;align-items:center;justify-content:center;font-weight:700;line-height:1;">${_insCount}</span>`
+      : '';
+    return `<tr style="border-bottom:1px solid var(--rose-light);">
+      <td style="padding:10px;"><div style="font-weight:500;">${escapeHtml(p.nome)}</div><div style="margin-top:3px;display:flex;gap:4px;flex-wrap:wrap;">${_recolagBadge}${_tipoBadge}</div></td>
+      <td style="padding:10px;"><span style="background:var(--rose-lighter);color:var(--rose-dark);border-radius:6px;padding:2px 8px;font-size:11px;">${escapeHtml(p.grupo||'—')}</span></td>
+      <td style="padding:10px;text-align:right;">${p.tempo||0} min</td>
+      <td style="padding:10px;text-align:right;">${fmtBRL(_insValReal)}</td>
+      <td style="padding:10px;text-align:right;">${fmtBRL(_hc)}</td>
+      <td style="padding:10px;text-align:right;">${fmtBRL(_custo)}</td>
+      <td style="padding:10px;text-align:right;">${p.margem||cfg.margem||100}%</td>
+      <td style="padding:10px;text-align:right;font-weight:700;color:var(--rose-dark);">${fmtBRL(p.precoFinal||0)}</td>
+      <td style="padding:10px;">
+        <div style="display:flex;gap:6px;justify-content:flex-end;align-items:center;">
+          <button class="btn-secondary" style="padding:4px 8px;font-size:11px;position:relative;${_flaskColor}" onclick="openInsumos(${p.id})" title="${_insCount>0?_insCount+' insumo(s) configurado(s)':'Adicionar insumos'}">${_flaskBadge}<i class="ti ti-flask"></i></button>
+          <button class="btn-secondary" style="padding:4px 8px;font-size:11px;" onclick="openEditProc(${p.id})"><i class="ti ti-pencil"></i></button>
+          <button class="btn-danger" style="padding:4px 8px;font-size:11px;" onclick="deleteProc(${p.id})"><i class="ti ti-trash"></i></button>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
 }
 
 // ── MATERIAIS ──
@@ -6282,21 +6467,24 @@ function devolverEstoque(consumo){
   });
 }
 function renderVendas(){
+  _periodoPopularSelects('venda-mes','venda-ano','venda');
   const q  = (document.getElementById('venda-search')||{value:''}).value.toLowerCase();
   const sf = (document.getElementById('venda-status')||{value:''}).value;
-  let list = vendas.filter(v=>{
+  let list = _filtrarVendasPorPeriodo(vendas, 'venda-mes','venda-ano').filter(v=>{
     const txt=((v.pacienteNome||'')+' '+(v.itens||[]).map(i=>i.nome||'').join(' ')).toLowerCase();
     return(!q||txt.includes(q))&&(!sf||v.status===sf);
   }).slice().reverse();
-  const fin     = vendas.filter(v=>v.status==='finalizada');
+  const _periodo = _labelPeriodo('venda-mes','venda-ano');
+  const fin     = _filtrarVendasPorPeriodo(vendas.filter(v=>v.status==='finalizada'), 'venda-mes','venda-ano');
   const fat     = fin.reduce((a,v)=>a+(Number(v.total||v.total)||0),0);
+  const ticket  = fin.length ? fat/fin.length : 0;
   const orcAbertos = vendas.filter(v=>v.status==='orcamento').length;
   const vm = document.getElementById('vendas-metrics');
   if(vm) vm.innerHTML=[
+    {lbl:'Faturamento ('+_periodo+')',val:fmtBRL(fat),cor:'var(--rose-dark)'},
     {lbl:'Vendas finalizadas',val:fin.length,cor:'#2e7d32'},
-    {lbl:'Faturamento',val:fmtBRL(fat),cor:'var(--rose-dark)'},
+    {lbl:'Ticket médio',val:fmtBRL(ticket),cor:'#1565c0'},
     {lbl:'Orçamentos abertos',val:orcAbertos,cor:'#856404'},
-    {lbl:'Total registros',val:vendas.length,cor:'var(--rose-text)'},
   ].map(s=>`<div style="background:var(--rose-lighter);border:1px solid var(--rose-light);border-radius:12px;padding:12px 16px;">
     <div style="font-size:11px;color:var(--rose-text);">${s.lbl}</div>
     <div style="font-size:20px;font-weight:800;color:${s.cor};">${s.val}</div>
@@ -7122,7 +7310,7 @@ function vrInit(){
 }
 
 function vrRenderCats(){
-  const cats = [...new Set(procs.map(p=>p.cat||p.categoria||'Geral'))].sort();
+  const cats = [...new Set(procs.map(p=>p.grupo||p.cat||p.categoria||'Geral'))].sort();
   const wrap = document.getElementById('vr-cats'); if(!wrap) return;
   wrap.innerHTML = `<button class="vr-cat-btn${vrCatAtiva===''?' active':''}" onclick="vrSetCat('')">Todos</button>` +
     cats.map(c=>`<button class="vr-cat-btn${vrCatAtiva===c?' active':''}" onclick="vrSetCat('${escapeHtml(c)}')">${escapeHtml(c)}</button>`).join('');
@@ -7134,7 +7322,7 @@ function vrFiltrar(){
   const q = (document.getElementById('vr-search')?.value||'').toLowerCase();
   const lista = document.getElementById('vr-lista'); if(!lista) return;
   const filtrados = procs.filter(p=>{
-    const cat = p.cat||p.categoria||'Geral';
+    const cat = p.grupo||p.cat||p.categoria||'Geral';
     const matchCat = vrCatAtiva==='' || cat===vrCatAtiva;
     const matchQ   = !q || p.nome.toLowerCase().includes(q);
     return matchCat && matchQ;
@@ -7488,11 +7676,114 @@ async function pacEditarPlano(id){
 }
 
 // Atualiza renderPlanoLista para mostrar múltiplos dentes
+
+// ══════════════════════════════════════════════════════
+// DETECÇÃO DE APARELHO ORTODÔNTICO ATIVO
+// Vincula manutenção/recolagem ao tipo de aparelho do paciente
+// ══════════════════════════════════════════════════════
+const MAPA_APARELHO_ORTO = [
+  // Ordem importa: autoligado antes do genérico metálico/estético
+  { re: /instalação aparelho metálico autoligado/i,  nome: 'Metálico Autoligado',  manutId: 213, recolagId: 217 },
+  { re: /instalação aparelho metálico/i,             nome: 'Metálico Tradicional', manutId: 212, recolagId: 215 },
+  { re: /instalação aparelho estético cerâmico/i,    nome: 'Estético Cerâmico',    manutId: 208, recolagId: 216 },
+  { re: /instalação aparelho estético porcelana/i,   nome: 'Estético Porcelana',   manutId: 209, recolagId: 218 },
+  { re: /instalação aparelho estético safira/i,      nome: 'Estético Safira',      manutId: 210, recolagId: 219 },
+  { re: /instalação aparelho estético autoligado/i,  nome: 'Estético Autoligado',  manutId: 211, recolagId: 220 },
+  { re: /invisalign/i,                               nome: 'Invisalign',           manutId: 214, recolagId: null },
+];
+
+// Retorna o aparelho ativo do paciente (aprovado ou realizado no plano)
+function detectarAparelhoAtivo(){
+  for(const mapa of MAPA_APARELHO_ORTO){
+    const found = pacPlanoList.find(i=>
+      mapa.re.test(i.procedimento||'') &&
+      (i.status==='aprovado'||i.status==='realizado')
+    );
+    if(found) return {...mapa, planoItem: found};
+  }
+  return null;
+}
+
+// Adiciona manutenção ou recolagem ao plano com base no aparelho detectado
+async function _adicionarProcOrtoPlano(pacId, procId){
+  const p = procs.find(x=>x.id===procId);
+  if(!p){ showToast('Procedimento não encontrado.','error'); return; }
+  const valor = p.precoFinal ? p.precoFinal.toFixed(2).replace('.',',') : '0,00';
+  showLoading(true);
+  const { data: novo, error } = await _sb.from('plano_tratamento').insert([{
+    clinica_id: clinicaId, paciente_id: pacId,
+    dente: '–', face: '–',
+    procedimento: p.nome, valor, descricao: '', status: 'pendente'
+  }]).select().single();
+  showLoading(false);
+  if(error){ showToast('Erro: '+error.message,'error'); return; }
+  if(novo){
+    pacPlanoList.unshift(novo);
+  } else {
+    // fallback local se select() não retornar
+    pacPlanoList.unshift({id:Date.now(),dente:'–',face:'–',procedimento:p.nome,valor,descricao:'',status:'pendente'});
+  }
+  pacRenderPlanoResumo();
+  pacRenderPlanoLista();
+  showToast('✅ '+p.nome+' adicionado ao plano!');
+}
+
+async function adicionarManutencaoOrtod(pacId){
+  const ap = detectarAparelhoAtivo();
+  if(ap){
+    await _adicionarProcOrtoPlano(pacId, ap.manutId);
+  } else {
+    // Nenhum aparelho detectado — mostrar seletor
+    _modalSelecionarOrto(pacId, 'manut');
+  }
+}
+
+async function adicionarRecolagemOrtod(pacId){
+  const ap = detectarAparelhoAtivo();
+  if(ap){
+    if(!ap.recolagId){
+      showToast('Invisalign não usa braquetes — não há recolagem. Adicione refinamento manualmente.','warn');
+      return;
+    }
+    await _adicionarProcOrtoPlano(pacId, ap.recolagId);
+  } else {
+    _modalSelecionarOrto(pacId, 'recolag');
+  }
+}
+
+// Modal de seleção manual quando o aparelho não está detectado
+function _modalSelecionarOrto(pacId, tipo){
+  const opcoes = tipo==='manut'
+    ? [{id:212,label:'Metálico Tradicional — R$ 90,00'},{id:213,label:'Metálico Autoligado — R$ 115,00'},{id:208,label:'Estético Cerâmico — R$ 130,00'},{id:209,label:'Estético Porcelana — R$ 160,00'},{id:211,label:'Estético Autoligado — R$ 190,00'},{id:210,label:'Estético Safira — R$ 220,00'},{id:214,label:'Invisalign (refinamento) — R$ 300,00'}]
+    : [{id:215,label:'Metálico Tradicional'},{id:217,label:'Metálico Autoligado'},{id:216,label:'Cerâmico'},{id:218,label:'Porcelana'},{id:219,label:'Safira'},{id:220,label:'Autoligado Estético'}];
+  const titulo = tipo==='manut' ? 'Qual tipo de aparelho para Manutenção?' : 'Qual tipo de aparelho para Recolagem?';
+  const modal = document.createElement('div');
+  modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:10000;display:flex;align-items:center;justify-content:center;';
+  modal.innerHTML=`<div style="background:#fff;border-radius:16px;padding:24px;max-width:380px;width:90%;box-shadow:0 8px 40px rgba(0,0,0,.2);">
+    <div style="font-size:15px;font-weight:700;color:var(--rose-dark);margin-bottom:16px;"><i class="ti ti-tooth"></i> ${titulo}</div>
+    <div style="display:flex;flex-direction:column;gap:8px;" id="_orto_opts">
+      ${opcoes.map(o=>`<button class="btn-secondary" style="justify-content:flex-start;font-size:13px;" onclick="document.body.removeChild(this.closest('[style*=position]'));_adicionarProcOrtoPlano(${pacId},${o.id});">${o.label}</button>`).join('')}
+    </div>
+    <button class="btn-secondary" style="width:100%;margin-top:12px;justify-content:center;color:#666;" onclick="document.body.removeChild(this.closest('[style*=position]'))">Cancelar</button>
+  </div>`;
+  document.body.appendChild(modal);
+}
+
 function pacRenderPlanoLista(){
   const c = document.getElementById('pac-plano-lista');
   if(!c) return;
+  // Banner de aparelho ativo com botões inteligentes de manutenção/recolagem
+  const _apAtivo = detectarAparelhoAtivo();
+  const _smartBar = _apAtivo ? `<div style="background:linear-gradient(135deg,#e8f5e9,#f1f8e9);border:1px solid #a5d6a7;border-radius:10px;padding:10px 14px;margin-bottom:10px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+    <div style="flex:1;min-width:150px;">
+      <div style="font-size:11px;color:#2e7d32;font-weight:700;text-transform:uppercase;letter-spacing:.4px;"><i class="ti ti-device-heart-monitor"></i> Aparelho ativo detectado</div>
+      <div style="font-size:13px;color:#1b5e20;font-weight:600;margin-top:2px;">🦷 ${_apAtivo.nome}</div>
+    </div>
+    <button class="btn-secondary" style="font-size:12px;padding:6px 12px;color:#2e7d32;border-color:#a5d6a7;background:#fff;" onclick="adicionarManutencaoOrtod(${selectedPatientId})"><i class="ti ti-refresh"></i> + Manutenção</button>
+    ${_apAtivo.recolagId ? `<button class="btn-secondary" style="font-size:12px;padding:6px 12px;color:#7a5c00;border-color:#ffe082;background:#fff;" onclick="adicionarRecolagemOrtod(${selectedPatientId})"><i class="ti ti-tool"></i> + Recolagem</button>` : ''}
+  </div>` : '';
   if(!pacPlanoList.length){
-    c.innerHTML='<div style="text-align:center;color:var(--rose-text);font-size:13px;padding:16px;">Nenhum procedimento planejado ainda.</div>';
+    c.innerHTML=_smartBar+'<div style="text-align:center;color:var(--rose-text);font-size:13px;padding:16px;">Nenhum procedimento planejado ainda.</div>';
     return;
   }
   const STATUS_CORES = {
@@ -7501,7 +7792,7 @@ function pacRenderPlanoLista(){
     realizado: {bg:'#D4EDDA',txt:'#155724',dot:'#28A745'},
     cancelado: {bg:'#F8D7DA',txt:'#721C24',dot:'#DC3545'},
   };
-  c.innerHTML = pacPlanoList.map(item => {
+  const _listaHtml = pacPlanoList.map(item => {
     const sc = STATUS_CORES[item.status] || STATUS_CORES.pendente;
     const statusLabel = {pendente:'Pendente',aprovado:'Aprovado',realizado:'Realizado',cancelado:'Cancelado'}[item.status]||item.status;
     const dentes = (item.dente||'').split(',').filter(Boolean);
@@ -7541,6 +7832,7 @@ function pacRenderPlanoLista(){
       </div>
     </div>`;
   }).join('');
+  c.innerHTML = _smartBar + _listaHtml;
 }
 
 // ══════════════════════════════════════════════════════
@@ -9819,6 +10111,21 @@ async function calSaveNewAppt(){
   mostrarBotaoGoogleAgenda(novo.nome, novo.data, novo.horario, novo.procedimento, novo.prof_nome, novo.obs);
 }
 </script>
+
+<!-- ══ MODAL RELATÓRIO MENSAL ══ -->
+<div class="modal-overlay" id="modal-relatorio" onclick="if(event.target===this)closeModal('modal-relatorio')" style="align-items:flex-start;padding-top:40px;overflow-y:auto;">
+  <div class="modal-box" style="max-width:680px;width:95%;">
+    <h2 class="modal-title"><i class="ti ti-file-analytics"></i> Relatório Mensal</h2>
+    <div style="display:flex;gap:8px;margin-bottom:16px;align-items:center;flex-wrap:wrap;">
+      <select id="rel-mes" onchange="renderRelatorio()" style="padding:6px 10px;border:1px solid var(--rose-light);border-radius:8px;font-size:13px;"></select>
+      <select id="rel-ano" onchange="renderRelatorio()" style="padding:6px 10px;border:1px solid var(--rose-light);border-radius:8px;font-size:13px;"></select>
+    </div>
+    <div id="rel-content"></div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="closeModal('modal-relatorio')">Fechar</button>
+    </div>
+  </div>
+</div>
 
 <!-- ══ MODAIS FINANCEIRO ══ -->
 <!-- Modal Procedimento -->
