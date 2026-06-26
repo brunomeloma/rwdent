@@ -2322,10 +2322,8 @@ async function checkClinicaApproval(){
 document.addEventListener('keydown', e=>{ if(e.key==='Enter'&&document.getElementById('login-screen').style.display!=='none') doLogin(); });
 
 async function doLogout(){
-  // Salva dados financeiros E estoque antes de sair
-  try { 
-    await saveFinanceiro();
-    showToast('Dados salvos!');
+  try {
+    if(_financeiroCarregado) { await saveFinanceiro(); showToast('Dados salvos!'); }
   } catch(e){ console.error('Erro ao salvar:', e); }
   await _sb.auth.signOut();
   currentUser=null; agendamentos=[]; profissionais=[]; pacientes=[];
@@ -2392,6 +2390,7 @@ async function loadAll(){
         }));
       }
     } catch(e){ /* tabela pode não existir ainda, usa anamnese do próprio paciente */ }
+    await loadFinanceiro();
     initApp();
   } catch(e){
     showToast('Erro ao carregar dados: '+e.message,'error');
@@ -6108,6 +6107,8 @@ async function loadFinanceiro(){
 
   recalcularInsumos(true);
 
+  _financeiroCarregado = true;
+
   // Salva padrões sem sobrescrever estoque
   if(precisaSalvar){
     // Salva padrões mantendo o estoque atual intacto
@@ -6131,12 +6132,15 @@ async function loadFinanceiro(){
     }
   }
 
-  _financeiroCarregado = true;
   await injetarNovosMatsOrto();
 }
 
 async function saveFinanceiro(){
   if(!clinicaId) return;
+  if(!_financeiroCarregado){
+    console.warn('saveFinanceiro bloqueado: dados ainda não carregados do banco');
+    return;
+  }
   cfg._pagPac = pagPac;
   const payload = {
     clinica_id   : clinicaId,
