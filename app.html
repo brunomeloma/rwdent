@@ -1076,6 +1076,55 @@ select, textarea {
   }
 }
 
+
+/* ══ MELHORIAS MOBILE UX ══ */
+@media(max-width:768px){
+  /* Agenda do dia - itens maiores para toque */
+  .appt-item { padding: 14px 12px !important; gap: 10px !important; }
+  .appt-time { font-size: 16px !important; font-weight: 800 !important; }
+  .appt-item .name { font-size: 15px !important; font-weight: 700 !important; }
+  .appt-item .detail { font-size: 12px !important; }
+  /* Botões de check/X maiores para toque */
+  .appt-item button { min-width: 44px !important; min-height: 44px !important; padding: 10px !important; border-radius: 10px !important; }
+  /* Cards da home maiores */
+  .home-stat-card { padding: 16px !important; }
+  .home-stat-num { font-size: 26px !important; }
+  .home-table-row { padding: 12px 0 !important; }
+  /* Formulários - inputs maiores */
+  input[type=text], input[type=email], input[type=tel], input[type=date], input[type=number], select, textarea {
+    font-size: 16px !important; /* evita zoom no iOS */
+    min-height: 44px !important;
+  }
+  /* Botões primários/secundários maiores no mobile */
+  .btn-primary, .btn-secondary { min-height: 44px !important; font-size: 14px !important; }
+  /* Hero banner mobile */
+  .home-hero-banner { padding: 18px 16px !important; }
+  .home-hero-stat { padding: 10px 12px !important; }
+  .home-hero-stat-val { font-size: 18px !important; }
+  /* Nav bottom maior */
+  .mobile-bottom-nav { height: 62px !important; }
+  .mobile-nav-item { font-size: 10px !important; gap: 3px !important; }
+  .mobile-nav-item i { font-size: 22px !important; }
+  /* Modal mais acessível no mobile */
+  .modal-box { margin: 8px !important; max-height: 92vh !important; }
+}
+
+
+/* ══ LISTA DE PACIENTES MOBILE ══ */
+@media(max-width:768px){
+  .pac-card { padding: 14px !important; border-radius: 14px !important; }
+  .pac-name { font-size: 16px !important; }
+  /* Calendario mobile */
+  .cal-grid-cell { min-height: 52px !important; font-size: 13px !important; }
+  /* Insumos modal mobile */
+  #modal-insumos .modal-box { padding: 16px !important; }
+  /* Venda rápida mobile - carrinho items */
+  #vr-carrinho-m > div { border-radius: 12px !important; }
+  /* Tabelas financeiro mobile - scroll horizontal claro */
+  table { font-size: 12px !important; }
+  th, td { padding: 8px 6px !important; }
+}
+
 </style>
 </head>
 <body>
@@ -1348,6 +1397,7 @@ select, textarea {
           <button class="btn-secondary" style="font-size:12px;" onclick="lembrarTodosAmanha()"><i class="ti ti-brand-whatsapp"></i> Lembretes amanhã</button>
         </div>
         <div class="filter-row">
+          <button class="btn-secondary" onclick="document.getElementById('filtro-data').value=hoje();renderLista();" style="padding:6px 12px;font-size:12px;flex-shrink:0;" id="btn-hoje-lista"><i class="ti ti-calendar-today"></i> Hoje</button>
           <input type="date" id="filtro-data" onchange="renderLista()" />
           <select id="filtro-prof" onchange="renderLista()"><option value="">Todos os profissionais</option></select>
         </div>
@@ -2688,13 +2738,21 @@ function switchTab(tab){
   const _subEl = document.getElementById('header-subtitulo');
   if(_subEl) _subEl.textContent = _tituloAba[tab] || 'Agendamentos e Prontuários Odontológicos';
   if(tab==='agendar') renderScheduleOptions();
-  if(tab==='lista') renderLista();
+  if(tab==='lista'){
+    const _fdEl = document.getElementById('filtro-data');
+    if(_fdEl && !_fdEl.value) _fdEl.value = hoje();
+    renderLista();
+  }
   if(tab==='calendario') renderCalendario();
   if(tab==='pacientes') renderPatients();
   if(tab==='profissionais') renderProfissionais();
   if(tab==='home') renderHomeStats();
   if(tab==='configuracoes') renderConfiguracoes();
   if(tab==='resgate') renderResgate();
+  if(tab==='venda_rapida'){
+    // No mobile, foca busca automaticamente
+    setTimeout(()=>{ const _s=document.getElementById('vr-search-m'); if(_s&&window.innerWidth<=768) _s.focus(); },200);
+  }
   if(tab==='venda_rapida'||tab==='financeiro'||tab==='procedimentos_fin'||tab==='materiais_fin'||tab==='estoque_fin'||tab==='vendas_fin'){
     if(!_financeiroCarregado){
       showLoading(true);
@@ -2818,7 +2876,7 @@ function renderHomeStats(){
         return `<div class="home-table-row">
           <div class="home-table-name">${escapeHtml(p.nome)}</div>
           <div class="home-table-sub">${dt}</div>
-          <button class="home-btn-ver" onclick="verPacienteHome('${p.id}')">Ver</button>
+          <button class="home-btn-ver" onclick="verPacienteHome('${p.id}')" style="min-height:36px;padding:6px 14px;border-radius:8px;">Ver</button>
         </div>`;
       }).join('');
     }
@@ -3030,9 +3088,9 @@ function renderLista(){
       : '';
     return `
     <div class="appt-item">
-      <div class="appt-time">${a.horario||'--:--'}<small>${formatDate(a.data)}</small></div>
-      <div class="appt-info">
-        <div class="name">${escapeHtml(a.nome)} ${statusBadge}</div>
+      <div class="appt-time">${(a.horario||'--:--').slice(0,5)}<small>${formatDate(a.data)}</small></div>
+      <div class="appt-info" ${a.paciente_id?'onclick="verPacienteHome('+a.paciente_id+')" style="cursor:pointer;"':''}>
+        <div class="name">${escapeHtml(a.nome)} ${statusBadge}${a.paciente_id?'<i class="ti ti-chevron-right" style="font-size:10px;opacity:.4;margin-left:3px;"></i>':''}</div>
         <div class="detail">${escapeHtml(a.procedimento||'Consulta')} · ${escapeHtml(a.prof_nome)} · ${escapeHtml(a.telefone||'Sem telefone')}</div>
       </div>
       <span class="appt-badge badge-main">${escapeHtml((a.prof_nome||'').split(' ')[0])}</span>
@@ -3262,7 +3320,7 @@ function renderPatientDropdown(){
   const busca = input.value.toLowerCase().trim();
   if(!busca){ dropdown.style.display='none'; return; }
   const filtrados = pacientes.filter(p =>
-    p.nome.toLowerCase().includes(busca) ||
+    _norm(p.nome).includes(_norm(busca)) ||
     (p.cpf||'').includes(busca) ||
     (p.telefone||'').includes(busca)
   ).slice(0,10);
@@ -4660,9 +4718,16 @@ async function pacAlterarStatusPlano(id, status){
         (v.pacienteId===selectedPatientId && v.status==='orcamento' &&
          v.itens?.some(it=>it.nome===item.procedimento)));
       if(vendaIdx>=0){
-        vendas[vendaIdx].status='finalizada';
-        vendas[vendaIdx].dataFinal=new Date().toISOString();
-        saveFinanceiro();
+        const _v = vendas[vendaIdx];
+        // Desconta estoque dos materiais (bug fix: estava faltando aqui)
+        const _itensProc = (_v.itens||[]).filter(i=>i.procId).map(i=>({procId:i.procId,qtd:i.qtd||1}));
+        const _consumo = computeConsumo(_itensProc);
+        const _aplicado = aplicarBaixaEstoque(_consumo);
+        _v.status='finalizada';
+        _v.dataFinal=new Date().toISOString();
+        _v.consumo=_aplicado;
+        await saveFinanceiro(); // bug fix: estava sem await
+        renderEstoque();
       }
 
       const dentesArr = (item.dente||'').split(',').filter(Boolean).map(d=>({dente:parseInt(d)||d,procedimento:item.procedimento}));
@@ -5247,6 +5312,9 @@ function pacDenteRemoveProc(idx){
 // Lógica portada do Pétala e adaptada para RWDent + Supabase
 // ══════════════════════════════════════════════════════
 const fmtBRL = v => isNaN(v)?'—':Number(v).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+// ── Helper de busca sem acento ──
+function _norm(s){ return String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,''); }
+
 const fmtN2  = v => isNaN(v)?'—':Number(v).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
 
 // ── Estado financeiro (salvo no Supabase por clínica) ──
@@ -6506,7 +6574,7 @@ function renderProcs(){
     const gs  = [...new Set(procs.map(p=>p.grupo).filter(Boolean))].sort();
     gsel.innerHTML = '<option value="">Todos os grupos</option>' + gs.map(g=>`<option value="${g}"${g===cur?' selected':''}>${g}</option>`).join('');
   }
-  let list = procs.filter(p=>(!q||p.nome.toLowerCase().includes(q))&&(!grupo||p.grupo===grupo));
+  let list = procs.filter(p=>(!q||_norm(p.nome).includes(_norm(q)))&&(!grupo||p.grupo===grupo));
   const soRecolagem = document.getElementById('proc-so-recolagem')?.checked;
   if(soRecolagem) list = list.filter(p=>PROC_IDS_RECOLAGEM.has(p.id)||/recolagem/i.test(p.nome));
   if(ordem==='az') list=[...list].sort((a,b)=>a.nome.localeCompare(b.nome,'pt-BR'));
@@ -6655,7 +6723,7 @@ function renderMats(){
     const cur=matCatSel.value;
     matCatSel.innerHTML='<option value="">Todas as categorias</option>'+cats.map(c=>`<option value="${c}"${c===cur?' selected':''}>${c}</option>`).join('');
   }
-  let list = mats.filter(m=>(!activeCat||m.cat===activeCat)&&(!catF||m.cat===catF)&&(!q||m.nome.toLowerCase().includes(q)));
+  let list = mats.filter(m=>(!activeCat||m.cat===activeCat)&&(!catF||m.cat===catF)&&(!q||_norm(m.nome).includes(_norm(q))));
   if(ordem==='az') list=[...list].sort((a,b)=>a.nome.localeCompare(b.nome,'pt-BR'));
   else if(ordem==='za') list=[...list].sort((a,b)=>b.nome.localeCompare(a.nome,'pt-BR'));
   else if(ordem==='cat') list=[...list].sort((a,b)=>(a.cat||'').localeCompare(b.cat||'','pt-BR')||a.nome.localeCompare(b.nome,'pt-BR'));
@@ -6734,7 +6802,7 @@ function renderEstoque(){
   const q   = (document.getElementById('est-search')||{value:''}).value.toLowerCase();
   const sf  = (document.getElementById('est-status-filter')||{value:''}).value;
   const ordemEst = (document.getElementById('est-ordem')||{value:'az'}).value;
-  let list  = mats.filter(m=>(!q||m.nome.toLowerCase().includes(q))&&(!sf||getEstStatus(m.id)===sf));
+  let list  = mats.filter(m=>(!q||_norm(m.nome).includes(_norm(q)))&&(!sf||getEstStatus(m.id)===sf));
   if(ordemEst==='az') list=[...list].sort((a,b)=>a.nome.localeCompare(b.nome,'pt-BR'));
   else if(ordemEst==='za') list=[...list].sort((a,b)=>b.nome.localeCompare(a.nome,'pt-BR'));
   else if(ordemEst==='cat') list=[...list].sort((a,b)=>(a.cat||'').localeCompare(b.cat||'','pt-BR')||a.nome.localeCompare(b.nome,'pt-BR'));
@@ -7006,8 +7074,8 @@ function renderVendas(){
   const q  = (document.getElementById('venda-search')||{value:''}).value.toLowerCase();
   const sf = (document.getElementById('venda-status')||{value:''}).value;
   let list = _filtrarVendasPorPeriodo(vendas, 'venda-mes','venda-ano').filter(v=>{
-    const txt=((v.pacienteNome||'')+' '+(v.itens||[]).map(i=>i.nome||'').join(' ')).toLowerCase();
-    return(!q||txt.includes(q))&&(!sf||v.status===sf);
+    const txt=_norm((v.pacienteNome||'')+' '+(v.itens||[]).map(i=>i.nome||'').join(' '));
+    return(!q||txt.includes(_norm(q)))&&(!sf||v.status===sf);
   }).slice().reverse();
   const _periodo = _labelPeriodo('venda-mes','venda-ano');
   const fin     = _filtrarVendasPorPeriodo(vendas.filter(v=>v.status==='finalizada'), 'venda-mes','venda-ano');
@@ -7688,7 +7756,7 @@ function vrFiltrarMobile(){
   const drop=document.getElementById('vr-dropdown'); if(!drop) return;
   if(!q){ drop.style.display='none'; return; }
   drop.style.display='flex';
-  const filtrados=procs.filter(p=>p.nome.toLowerCase().includes(q)).slice(0,8);
+  const filtrados=procs.filter(p=>_norm(p.nome).includes(_norm(q))).slice(0,8);
   if(!filtrados.length){ drop.innerHTML='<div style="padding:14px;text-align:center;color:var(--rose-light);font-size:13px;">Nenhum resultado</div>'; return; }
   drop.innerHTML=filtrados.map(p=>{
     const preco=parseFloat(p.precoFinal||p.preco||0);
@@ -7746,13 +7814,18 @@ function vrRenderCarrinhoMobile(){
 
 function vrCalcTotalMobile(){
   const sub=vrCarrinho.reduce((a,i)=>a+i.preco*i.qtd,0);
+  let taxa=0, total=sub;
+  if(vrPagamentoMobile==='debito') taxa=taxasCfg.debito||0;
+  else if(vrPagamentoMobile==='credito') taxa=(taxasCfg.credito||[])[0]||0;
+  if(taxa>0) total=parseFloat((sub/(1-taxa/100)).toFixed(2));
   const e1=document.getElementById('vr-sub-m'); if(e1) e1.textContent=fmtBRL(sub);
-  const e2=document.getElementById('vr-tot-m'); if(e2) e2.textContent=fmtBRL(sub);
+  const e2=document.getElementById('vr-tot-m'); if(e2) e2.textContent=fmtBRL(total)+(taxa>0?' (+'+taxa+'%)':'');
 }
 
 function vrSelPagMobile(btn,forma){
   document.querySelectorAll('.vr-pag-btn').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active'); vrPagamentoMobile=forma;
+  vrCalcTotalMobile(); // atualiza total com taxa ao trocar forma de pagamento
 }
 
 async function vrFinalizarMobile(){
@@ -7762,7 +7835,16 @@ async function vrFinalizarMobile(){
   const profId=document.getElementById('vr-prof-m')?.value||'';
   const profNome=profId?(profissionais.find(p=>p.id==profId)?.nome||''):'';
   const subtotal=vrCarrinho.reduce((a,i)=>a+i.preco*i.qtd,0);
-  if(!confirm(`Finalizar venda de ${fmtBRL(subtotal)} via ${vrPagamentoMobile}?`)) return;
+  // Aplica taxa da maquininha (igual ao desktop)
+  let _taxaMob = 0, _totalMob = subtotal;
+  if(vrPagamentoMobile==='debito'){
+    _taxaMob = taxasCfg.debito || 0;
+    _totalMob = _taxaMob > 0 ? parseFloat((subtotal / (1 - _taxaMob/100)).toFixed(2)) : subtotal;
+  } else if(vrPagamentoMobile==='credito'){
+    _taxaMob = (taxasCfg.credito||[])[0] || 0;
+    _totalMob = _taxaMob > 0 ? parseFloat((subtotal / (1 - _taxaMob/100)).toFixed(2)) : subtotal;
+  }
+  if(!confirm(`Finalizar venda de ${fmtBRL(_totalMob)}${_taxaMob>0?' (inclui taxa '+_taxaMob+'%)':''} via ${vrPagamentoMobile}?`)) return;
   showLoading(true);
 
   // Garante nextVendaId sempre correto
@@ -7775,7 +7857,7 @@ async function vrFinalizarMobile(){
     id:nextVendaId++, status:'finalizada', formaPagamento:vrPagamentoMobile, parcelas:1,
     pacienteId:pacId||null, pacienteNome:pac?.nome||'Avulso',
     itens:vrCarrinho.map(i=>({procId:i.procId,qtd:i.qtd,nome:i.nome,precoUnit:i.preco,dente:'',descDente:''})),
-    subtotal:parseFloat(subtotal.toFixed(2)), desconto:0, total:parseFloat(subtotal.toFixed(2)),
+    subtotal:parseFloat(subtotal.toFixed(2)), desconto:0, total:parseFloat(_totalMob.toFixed(2)),
     profissional_id:profId||null, profissional_nome:profNome,
     data:new Date().toISOString(), dataFinal:new Date().toISOString(),
     consumo:consumoAplicado,
@@ -7859,7 +7941,7 @@ function vrFiltrar(){
   const filtrados = procs.filter(p=>{
     const cat = p.grupo||p.cat||p.categoria||'Geral';
     const matchCat = vrCatAtiva==='' || cat===vrCatAtiva;
-    const matchQ   = !q || p.nome.toLowerCase().includes(q);
+    const matchQ   = !q || _norm(p.nome).includes(_norm(q));
     return matchCat && matchQ;
   });
   if(!filtrados.length){
