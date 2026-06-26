@@ -9720,7 +9720,8 @@ async function pacFinalizarItensSelecionados(vendaId, pacId){
 
   const {subtotalSel, descAmt, total: totalFinal} = _orcCalcTotais(v);
 
-  const entradaVal = parseFloat(document.getElementById('orc-entrada-'+vendaId)?.value)||0;
+  let entradaVal = parseFloat(document.getElementById('orc-entrada-'+vendaId)?.value)||0;
+  if(entradaVal>totalFinal){ showToast('Entrada não pode ser maior que o total.','error'); return; }
   const formaPag = v.formaPagamento||'';
   const temEntrada = entradaVal>0 && entradaVal<totalFinal;
 
