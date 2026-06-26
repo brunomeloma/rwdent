@@ -5129,6 +5129,10 @@ let cfg         = { salario:3000, horas:132, trib:0, desperd:5, margem:100, cola
 let taxasCfg    = { debito:1.5, credito:[2.49,5.1,6.12,7.15,8.19,9.24,10.3,11.36,12.44,13.52,14.61,15.71] };
 let descCfg     = { val:0, tipo:'pct', maxPar:6 };
 
+// Mapeamento manutenção → instalação (para calcular preço como % da instalação)
+const _MANUT_TO_INST = {208:44, 209:202, 210:203, 211:204, 212:43, 213:51, 214:207, 38:37};
+const _IDS_MANUT = new Set(Object.keys(_MANUT_TO_INST).map(Number));
+
 // IDs locais
 let nextProcId  = 1;
 let _financeiroCarregado = false;  // evita duplo carregamento
@@ -6190,6 +6194,15 @@ function calcPrecoFinal(p){
   return parseFloat(raw.toFixed(2));
 }
 
+function calcPrecoManut(manutId){
+  const instId = _MANUT_TO_INST[manutId];
+  if(!instId) return null;
+  const inst = procs.find(x=>x.id===instId);
+  if(!inst || !inst.precoFinal) return null;
+  const pct = Number(cfg.pct_manut)||15;
+  return parseFloat((inst.precoFinal * pct / 100).toFixed(2));
+}
+
 // ── PAINEL FINANCEIRO ──
 // ── HELPERS DE PERÍODO ──
 function _periodoPopularSelects(mesId, anoId, prefixo){
@@ -6371,11 +6384,13 @@ async function saveProc(){
   const lab    = Number(document.getElementById('mp-laboratorio')?.value)||0;
   const margem = Number(document.getElementById('mp-margem')?.value)||100;
   const hc     = parseFloat(((tempo/60)*hora).toFixed(2));
-  const preco  = calcPrecoFinal({tempo,insumos,laboratorio:lab,margem});
+  let preco  = calcPrecoFinal({tempo,insumos,laboratorio:lab,margem});
   const obj    = { nome, grupo:document.getElementById('mp-grupo')?.value||'Geral', tempo, insumos, laboratorio:lab, margem, horaClin:hc, precoFinal:preco };
   if(editProcId){
     const i = procs.findIndex(x=>x.id===editProcId);
     procs[i] = { ...procs[i], ...obj };
+    const pm = calcPrecoManut(editProcId);
+    if(pm !== null) procs[i].precoFinal = pm;
   } else {
     procs.push({ id: nextProcId++, ...obj });
   }
@@ -6405,6 +6420,7 @@ async function recalcularProc(id){
   cfg.trib     = Number(document.getElementById('cfg-trib')?.value)||cfg.trib||0;
   cfg.desperd  = Number(document.getElementById('cfg-desperd')?.value)||cfg.desperd||0;
   cfg.margem   = Number(document.getElementById('cfg-margem')?.value)||cfg.margem||100;
+  cfg.pct_manut = Number(document.getElementById('cfg-pct-manut')?.value)||cfg.pct_manut||15;
   const ins = procInsumos[p.id]||[];
   if(ins.length){
     p.insumos = parseFloat(ins.reduce((acc,item)=>{const m=mats.find(x=>x.id===item.matId);return acc+(m?m.custo*item.qtd:0);},0).toFixed(2));
@@ -6412,12 +6428,14 @@ async function recalcularProc(id){
   p.margem = cfg.margem;
   p.horaClin = parseFloat(((p.tempo/60)*calcHora()).toFixed(2));
   const antes = p.precoFinal;
-  p.precoFinal = calcPrecoFinal(p);
+  const pm = calcPrecoManut(p.id);
+  p.precoFinal = pm !== null ? pm : calcPrecoFinal(p);
   showLoading(true);
   await saveFinanceiro();
   showLoading(false);
   renderProcs();
-  showToast(`${p.nome}: ${fmtBRL(antes)} → ${fmtBRL(p.precoFinal)} (margem ${p.margem}%, custo ${fmtBRL(custoProc(p))})`);
+  const info = pm !== null ? `${cfg.pct_manut}% da instalação` : `margem ${p.margem}%, custo ${fmtBRL(custoProc(p))}`;
+  showToast(`${p.nome}: ${fmtBRL(antes)} → ${fmtBRL(p.precoFinal)} (${info})`);
 }
 async function toggleAtivoProc(id){
   const p = procs.find(x=>x.id===id); if(!p) return;
@@ -6942,14 +6960,19 @@ async function recalcularInsumos(silent){
       p.precoFinal=calcPrecoFinal(p);
     }
   });
+  if(!silent){
+    // Manutenção: preço = % da instalação correspondente
+    procs.forEach(p=>{
+      const pm = calcPrecoManut(p.id);
+      if(pm !== null) p.precoFinal = pm;
+    });
+  }
   renderProcs();
   if(!silent){
     showLoading(true);
     await saveFinanceiro();
     showLoading(false);
-    const _dbg = procs.find(p=>p.id===212);
-    const _dbgInfo = _dbg ? ` Metálico: ${fmtBRL(_dbg.precoFinal)}` : '';
-    showToast(`${atualizados} procedimento(s) atualizados. Margem: ${cfg.margem}%.${_dbgInfo}`);
+    showToast(`${atualizados} procedimento(s) atualizados. Margem: ${cfg.margem}%.`);
   }
 }
 
@@ -10568,13 +10591,16 @@ async function salvarPrecificacao(){
     p.horaClin = parseFloat(((p.tempo/60)*_hora).toFixed(2));
     p.precoFinal = calcPrecoFinal(p);
   });
+  // Manutenção: preço = % da instalação correspondente
+  procs.forEach(p=>{
+    const pm = calcPrecoManut(p.id);
+    if(pm !== null) p.precoFinal = pm;
+  });
 
   await saveFinanceiro();
   showLoading(false);
   renderProcs();
-  const _dbg = procs.find(p=>p.id===212);
-  const _dbgInfo = _dbg ? ` | Metálico: margem=${_dbg.margem}% custo=${fmtBRL(custoProc(_dbg))} preço=${fmtBRL(_dbg.precoFinal)}` : '';
-  showToast('Precificação salva! Margem global: '+cfg.margem+'%. Hora clínica: '+fmtBRL(calcHora())+'.'+_dbgInfo);
+  showToast('Precificação salva! Margem global: '+cfg.margem+'%. Hora clínica: '+fmtBRL(calcHora())+'.');
 }
 
 async function salvarTaxas(){
