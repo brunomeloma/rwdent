@@ -572,6 +572,34 @@ button{font-family:inherit;}
 .sign-preview{border:1.5px solid var(--rose-light);border-radius:10px;padding:10px;text-align:center;min-height:80px;display:flex;align-items:center;justify-content:center;}
 .sign-preview img{max-height:70px;max-width:100%;}
 
+/* ── GALERIA DE FOTOS ── */
+.galeria-upload{border:2px dashed var(--rose-light);border-radius:14px;padding:24px 16px;text-align:center;cursor:pointer;transition:border-color .2s,background .2s;background:var(--rose-lighter);}
+.galeria-upload:hover,.galeria-upload.drag{border-color:var(--rose);background:#fff;}
+.galeria-upload i{font-size:32px;color:var(--rose);display:block;margin-bottom:6px;}
+.galeria-upload span{font-size:13px;color:var(--rose-text);font-weight:600;}
+.galeria-upload small{display:block;font-size:11px;color:#b08070;margin-top:4px;}
+.galeria-filtros{display:flex;gap:6px;margin:14px 0;flex-wrap:wrap;}
+.galeria-filtro{background:#fff;border:1.5px solid var(--rose-light);border-radius:8px;padding:6px 12px;font-size:11px;font-weight:700;color:var(--rose-text);cursor:pointer;font-family:inherit;transition:all .18s;}
+.galeria-filtro.active,.galeria-filtro:hover{background:var(--rose);color:#fff;border-color:var(--rose);}
+.galeria-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px;}
+.galeria-item{position:relative;border-radius:10px;overflow:hidden;aspect-ratio:1;cursor:pointer;border:1.5px solid var(--rose-light);background:#f9f3f0;}
+.galeria-item img{width:100%;height:100%;object-fit:cover;transition:transform .2s;}
+.galeria-item:hover img{transform:scale(1.05);}
+.galeria-item .galeria-tag{position:absolute;top:6px;left:6px;background:rgba(0,0,0,.55);color:#fff;font-size:9px;font-weight:700;padding:2px 7px;border-radius:6px;text-transform:uppercase;}
+.galeria-item .galeria-del{position:absolute;top:5px;right:5px;background:rgba(180,30,30,.8);color:#fff;border:none;border-radius:50%;width:24px;height:24px;font-size:14px;cursor:pointer;display:none;align-items:center;justify-content:center;line-height:1;}
+.galeria-item:hover .galeria-del{display:flex;}
+.galeria-item .galeria-data{position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(0,0,0,.6));color:#fff;font-size:10px;padding:12px 8px 5px;text-align:center;}
+.galeria-vazia{text-align:center;padding:32px 16px;color:var(--rose-text);font-size:13px;}
+.galeria-vazia i{font-size:36px;display:block;margin-bottom:8px;opacity:.35;}
+.galeria-lightbox{display:none;position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:2500;align-items:center;justify-content:center;flex-direction:column;padding:16px;}
+.galeria-lightbox.open{display:flex;}
+.galeria-lightbox img{max-width:92vw;max-height:78vh;border-radius:10px;object-fit:contain;}
+.galeria-lightbox .lb-info{color:#fff;font-size:13px;margin-top:10px;text-align:center;}
+.galeria-lightbox .lb-close{position:absolute;top:14px;right:14px;background:rgba(255,255,255,.15);border:none;color:#fff;font-size:22px;width:40px;height:40px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+.galeria-lightbox .lb-nav{position:absolute;top:50%;transform:translateY(-50%);background:rgba(255,255,255,.15);border:none;color:#fff;font-size:24px;width:44px;height:44px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+.galeria-lightbox .lb-prev{left:12px;}
+.galeria-lightbox .lb-next{right:12px;}
+
 /* ── MOBILE BOTTOM NAV ── */
 .mobile-bottom-nav{
   display:none;position:fixed;bottom:0;left:0;right:0;
@@ -2381,6 +2409,15 @@ select, textarea {
   </nav>
 </div><!-- end app -->
 
+<!-- Galeria Lightbox -->
+<div class="galeria-lightbox" id="galeria-lightbox">
+  <button class="lb-close" onclick="galeriaLbClose()"><i class="ti ti-x"></i></button>
+  <button class="lb-nav lb-prev" onclick="galeriaLbNav(-1)"><i class="ti ti-chevron-left"></i></button>
+  <button class="lb-nav lb-next" onclick="galeriaLbNav(1)"><i class="ti ti-chevron-right"></i></button>
+  <img id="galeria-lb-img" src="" alt=""/>
+  <div class="lb-info" id="galeria-lb-info"></div>
+</div>
+
 <!-- Loading -->
 <div class="loading-overlay" id="loading" style="display:none;">
   <div class="spinner"></div>
@@ -3408,6 +3445,7 @@ function renderPatientDetail(abaAtiva){
         <button class="pac-tab ${abaAtiva==='orcamentos'?'active':''}" onclick="renderPatientDetail('orcamentos')"><i class="ti ti-receipt"></i> Orçamentos</button>
         <button class="pac-tab ${abaAtiva==='procs'?'active':''}" onclick="renderPatientDetail('procs')"><i class="ti ti-check"></i> Realizados</button>
         <button class="pac-tab ${abaAtiva==='termo'?'active':''}" onclick="renderPatientDetail('termo')"><i class="ti ti-file-signature"></i> Termo</button>
+        <button class="pac-tab ${abaAtiva==='galeria'?'active':''}" onclick="renderPatientDetail('galeria')"><i class="ti ti-photo"></i> Galeria</button>
       </div>
 
       <!-- ABA: DADOS -->
@@ -3991,6 +4029,25 @@ function renderPatientDetail(abaAtiva){
         </div>
       </div>
 
+      <!-- ABA: GALERIA -->
+      <div id="pac-aba-galeria" style="display:${abaAtiva==='galeria'?'':'none'};">
+        <div style="margin-top:14px;">
+          <div class="galeria-upload" id="galeria-dropzone" onclick="document.getElementById('galeria-input').click()">
+            <i class="ti ti-camera-plus"></i>
+            <span>Toque para adicionar foto ou radiografia</span>
+            <small>JPG, PNG — máx. 10 MB cada</small>
+            <input type="file" id="galeria-input" accept="image/*" multiple style="display:none;" onchange="galeriaUpload(this.files, ${p.id})"/>
+          </div>
+          <div class="galeria-filtros">
+            <button class="galeria-filtro active" onclick="galeriaFiltrar('todos',this)">Todas</button>
+            <button class="galeria-filtro" onclick="galeriaFiltrar('foto',this)">Fotos</button>
+            <button class="galeria-filtro" onclick="galeriaFiltrar('radiografia',this)">Radiografias</button>
+            <button class="galeria-filtro" onclick="galeriaFiltrar('antes_depois',this)">Antes/Depois</button>
+          </div>
+          <div id="galeria-grid" class="galeria-grid"></div>
+        </div>
+      </div>
+
     </div>
   `;
 
@@ -4000,6 +4057,7 @@ function renderPatientDetail(abaAtiva){
   if(abaAtiva==='historico') histCarregar(p.id);
   if(abaAtiva==='orcamentos') pacRenderOrcamentos(p.id);
   if(abaAtiva==='plano'){ pacCarregarPlano(p.id); }
+  if(abaAtiva==='galeria') galeriaCarregar(p.id);
   requestAnimationFrame(()=>window.scrollTo({top:0,behavior:'instant'}));
 }
 
@@ -10830,6 +10888,214 @@ async function calSaveNewAppt(){
   // Botão Google Agenda
   mostrarBotaoGoogleAgenda(novo.nome, novo.data, novo.horario, novo.procedimento, novo.prof_nome, novo.obs);
 }
+
+// ══════════════════════════════════════════════════════
+// GALERIA DE FOTOS / RADIOGRAFIAS
+// ══════════════════════════════════════════════════════
+let _galeriaFotos = [];
+let _galeriaFiltro = 'todos';
+let _galeriaLbIdx = 0;
+let _galeriaPacId = null;
+
+const GALERIA_BUCKET = 'galeria';
+
+async function _galeriaEnsureBucket(){
+  try {
+    const { data } = await _sb.storage.getBucket(GALERIA_BUCKET);
+    if(data) return true;
+  } catch(e){}
+  try {
+    const { error } = await _sb.storage.createBucket(GALERIA_BUCKET, { public: true, fileSizeLimit: 10485760 });
+    if(error && !error.message?.includes('already exists')){ showToast('Erro ao criar bucket: '+error.message,'error'); return false; }
+  } catch(e){ showToast('Erro storage: '+e.message,'error'); return false; }
+  return true;
+}
+
+function _galeriaPath(pacId, filename){
+  return `${clinicaId}/${pacId}/${filename}`;
+}
+
+async function galeriaCarregar(pacId){
+  _galeriaPacId = pacId;
+  const grid = document.getElementById('galeria-grid');
+  if(!grid) return;
+  grid.innerHTML = '<div class="galeria-vazia"><div class="spinner"></div>Carregando...</div>';
+
+  const ok = await _galeriaEnsureBucket();
+  if(!ok){ grid.innerHTML='<div class="galeria-vazia"><i class="ti ti-alert-triangle"></i>Não foi possível acessar o storage.</div>'; return; }
+
+  const prefix = `${clinicaId}/${pacId}/`;
+  const { data, error } = await _sb.storage.from(GALERIA_BUCKET).list(prefix.slice(0,-1).split('/').pop(), {
+    prefix: `${clinicaId}/`,
+    limit: 200,
+    sortBy: { column: 'created_at', order: 'desc' }
+  });
+
+  const { data: files, error: err2 } = await _sb.storage.from(GALERIA_BUCKET).list(`${clinicaId}/${pacId}`, {
+    limit: 200,
+    sortBy: { column: 'created_at', order: 'desc' }
+  });
+
+  if(err2){ grid.innerHTML=`<div class="galeria-vazia"><i class="ti ti-alert-triangle"></i>${err2.message}</div>`; return; }
+
+  _galeriaFotos = (files||[]).filter(f=>f.name && !f.name.endsWith('/')).map(f=>{
+    const parts = f.name.split('__');
+    const cat = parts.length>=2 ? parts[0] : 'foto';
+    const { data: urlData } = _sb.storage.from(GALERIA_BUCKET).getPublicUrl(`${clinicaId}/${pacId}/${f.name}`);
+    return {
+      name: f.name,
+      categoria: cat,
+      url: urlData.publicUrl,
+      created: f.created_at || f.updated_at || '',
+      size: f.metadata?.size || 0
+    };
+  });
+
+  _galeriaRenderGrid();
+}
+
+function _galeriaRenderGrid(){
+  const grid = document.getElementById('galeria-grid');
+  if(!grid) return;
+  const lista = _galeriaFiltro==='todos' ? _galeriaFotos : _galeriaFotos.filter(f=>f.categoria===_galeriaFiltro);
+  if(!lista.length){
+    grid.innerHTML = `<div class="galeria-vazia" style="grid-column:1/-1;"><i class="ti ti-photo-off"></i>${_galeriaFotos.length ? 'Nenhuma imagem nesta categoria.' : 'Nenhuma imagem ainda.<br>Toque acima para adicionar.'}</div>`;
+    return;
+  }
+  const catLabel = {foto:'Foto',radiografia:'RX',antes_depois:'A/D'};
+  grid.innerHTML = lista.map((f,i)=>{
+    const dt = f.created ? new Date(f.created).toLocaleDateString('pt-BR') : '';
+    return `<div class="galeria-item" onclick="galeriaLbOpen(${i})">
+      <img src="${f.url}" alt="" loading="lazy"/>
+      <span class="galeria-tag">${catLabel[f.categoria]||f.categoria}</span>
+      <button class="galeria-del" onclick="event.stopPropagation();galeriaDel('${escapeHtml(f.name)}')" title="Excluir"><i class="ti ti-trash"></i></button>
+      ${dt?`<span class="galeria-data">${dt}</span>`:''}
+    </div>`;
+  }).join('');
+}
+
+function galeriaFiltrar(cat, btn){
+  _galeriaFiltro = cat;
+  document.querySelectorAll('.galeria-filtro').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  _galeriaRenderGrid();
+}
+
+async function galeriaUpload(fileList, pacId){
+  if(!fileList || !fileList.length) return;
+
+  const ok = await _galeriaEnsureBucket();
+  if(!ok) return;
+
+  const cats = ['foto','radiografia','antes_depois'];
+  const catLabels = ['Foto clínica','Radiografia','Antes/Depois'];
+  const cat = await new Promise(resolve=>{
+    const modal = document.createElement('div');
+    modal.className = 'modal-overlay';
+    modal.style.cssText = 'display:flex;align-items:center;justify-content:center;padding:20px;';
+    modal.innerHTML = `<div class="modal-box" style="max-width:340px;padding:24px;">
+      <h3 style="font-size:15px;font-weight:800;color:var(--rose-dark);margin-bottom:16px;"><i class="ti ti-tag"></i> Categoria das imagens</h3>
+      ${cats.map((c,i)=>`<button class="btn-secondary" style="width:100%;margin-bottom:8px;text-align:left;padding:12px 16px;" onclick="this.closest('.modal-overlay')._resolve('${c}');this.closest('.modal-overlay').remove()"><i class="ti ti-${c==='foto'?'camera':c==='radiografia'?'bone':'arrows-exchange'}"></i> ${catLabels[i]}</button>`).join('')}
+      <button class="btn-secondary" style="width:100%;margin-top:4px;color:#999;" onclick="this.closest('.modal-overlay')._resolve(null);this.closest('.modal-overlay').remove()">Cancelar</button>
+    </div>`;
+    modal._resolve = resolve;
+    document.body.appendChild(modal);
+  });
+
+  if(!cat) return;
+
+  showLoading(true);
+  let uploaded = 0;
+  for(const file of fileList){
+    if(!file.type.startsWith('image/')){ continue; }
+    if(file.size > 10*1024*1024){ showToast(`${file.name} excede 10 MB.`,'error'); continue; }
+
+    try {
+      const compressed = await _galeriaCompress(file, 1600);
+      const ts = Date.now();
+      const ext = file.name.split('.').pop().toLowerCase() || 'jpg';
+      const fname = `${cat}__${ts}_${Math.random().toString(36).slice(2,6)}.${ext}`;
+      const path = _galeriaPath(pacId, fname);
+
+      const { error } = await _sb.storage.from(GALERIA_BUCKET).upload(path, compressed, {
+        contentType: compressed.type || 'image/jpeg',
+        upsert: false
+      });
+      if(error){ showToast('Erro upload: '+error.message,'error'); }
+      else { uploaded++; }
+    } catch(e){ showToast('Erro: '+e.message,'error'); }
+  }
+  showLoading(false);
+  if(uploaded){ showToast(`${uploaded} imagen${uploaded>1?'s':''} adicionada${uploaded>1?'s':''}!`); }
+  document.getElementById('galeria-input').value = '';
+  galeriaCarregar(pacId);
+}
+
+function _galeriaCompress(file, maxDim){
+  return new Promise((resolve)=>{
+    if(file.size < 500*1024){ resolve(file); return; }
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = ()=>{
+      URL.revokeObjectURL(url);
+      let w=img.width, h=img.height;
+      if(w>maxDim || h>maxDim){
+        const r = Math.min(maxDim/w, maxDim/h);
+        w=Math.round(w*r); h=Math.round(h*r);
+      }
+      const c=document.createElement('canvas');
+      c.width=w; c.height=h;
+      c.getContext('2d').drawImage(img,0,0,w,h);
+      c.toBlob(blob=>{ resolve(blob||file); },'image/jpeg',0.82);
+    };
+    img.onerror = ()=>{ resolve(file); };
+    img.src = url;
+  });
+}
+
+async function galeriaDel(filename){
+  if(!confirm('Excluir esta imagem?')) return;
+  const path = _galeriaPath(_galeriaPacId, filename);
+  showLoading(true);
+  const { error } = await _sb.storage.from(GALERIA_BUCKET).remove([path]);
+  showLoading(false);
+  if(error){ showToast('Erro ao excluir: '+error.message,'error'); return; }
+  showToast('Imagem excluída.');
+  galeriaCarregar(_galeriaPacId);
+}
+
+function galeriaLbOpen(idx){
+  const lista = _galeriaFiltro==='todos' ? _galeriaFotos : _galeriaFotos.filter(f=>f.categoria===_galeriaFiltro);
+  if(!lista[idx]) return;
+  _galeriaLbIdx = idx;
+  const lb = document.getElementById('galeria-lightbox');
+  document.getElementById('galeria-lb-img').src = lista[idx].url;
+  const catLabel = {foto:'Foto clínica',radiografia:'Radiografia',antes_depois:'Antes/Depois'};
+  const dt = lista[idx].created ? new Date(lista[idx].created).toLocaleDateString('pt-BR') : '';
+  document.getElementById('galeria-lb-info').textContent = (catLabel[lista[idx].categoria]||'') + (dt?' · '+dt:'');
+  lb.classList.add('open');
+}
+
+function galeriaLbClose(){
+  document.getElementById('galeria-lightbox').classList.remove('open');
+}
+
+function galeriaLbNav(dir){
+  const lista = _galeriaFiltro==='todos' ? _galeriaFotos : _galeriaFotos.filter(f=>f.categoria===_galeriaFiltro);
+  _galeriaLbIdx = (_galeriaLbIdx + dir + lista.length) % lista.length;
+  if(!lista[_galeriaLbIdx]) return;
+  document.getElementById('galeria-lb-img').src = lista[_galeriaLbIdx].url;
+  const catLabel = {foto:'Foto clínica',radiografia:'Radiografia',antes_depois:'Antes/Depois'};
+  const dt = lista[_galeriaLbIdx].created ? new Date(lista[_galeriaLbIdx].created).toLocaleDateString('pt-BR') : '';
+  document.getElementById('galeria-lb-info').textContent = (catLabel[lista[_galeriaLbIdx].categoria]||'') + (dt?' · '+dt:'');
+}
+
+document.addEventListener('keydown', e=>{
+  if(!document.getElementById('galeria-lightbox')?.classList.contains('open')) return;
+  if(e.key==='Escape') galeriaLbClose();
+  if(e.key==='ArrowLeft') galeriaLbNav(-1);
+  if(e.key==='ArrowRight') galeriaLbNav(1);
+});
 </script>
 
 <!-- ══ MODAL RELATÓRIO MENSAL ══ -->
