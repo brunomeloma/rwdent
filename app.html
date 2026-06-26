@@ -6194,11 +6194,21 @@ function calcPrecoFinal(p){
   return parseFloat(raw.toFixed(2));
 }
 
-function calcPrecoManut(manutId){
+function calcPrecoManut(manutId, recalcInst){
   const instId = _MANUT_TO_INST[manutId];
   if(!instId) return null;
   const inst = procs.find(x=>x.id===instId);
-  if(!inst || !inst.precoFinal) return null;
+  if(!inst) return null;
+  if(recalcInst){
+    const ins = procInsumos[inst.id]||[];
+    if(ins.length){
+      inst.insumos = parseFloat(ins.reduce((acc,item)=>{const m=mats.find(x=>x.id===item.matId);return acc+(m?m.custo*item.qtd:0);},0).toFixed(2));
+    }
+    inst.margem = cfg.margem;
+    inst.horaClin = parseFloat(((inst.tempo/60)*calcHora()).toFixed(2));
+    inst.precoFinal = calcPrecoFinal(inst);
+  }
+  if(!inst.precoFinal) return null;
   const pct = Number(cfg.pct_manut)||15;
   return parseFloat((inst.precoFinal * pct / 100).toFixed(2));
 }
@@ -6389,7 +6399,7 @@ async function saveProc(){
   if(editProcId){
     const i = procs.findIndex(x=>x.id===editProcId);
     procs[i] = { ...procs[i], ...obj };
-    const pm = calcPrecoManut(editProcId);
+    const pm = calcPrecoManut(editProcId, true);
     if(pm !== null) procs[i].precoFinal = pm;
   } else {
     procs.push({ id: nextProcId++, ...obj });
@@ -6428,13 +6438,15 @@ async function recalcularProc(id){
   p.margem = cfg.margem;
   p.horaClin = parseFloat(((p.tempo/60)*calcHora()).toFixed(2));
   const antes = p.precoFinal;
-  const pm = calcPrecoManut(p.id);
+  const pm = calcPrecoManut(p.id, true);
   p.precoFinal = pm !== null ? pm : calcPrecoFinal(p);
   showLoading(true);
   await saveFinanceiro();
   showLoading(false);
   renderProcs();
-  const info = pm !== null ? `${cfg.pct_manut}% da instalação` : `margem ${p.margem}%, custo ${fmtBRL(custoProc(p))}`;
+  const info = pm !== null
+    ? `${cfg.pct_manut}% da instalação (${fmtBRL(procs.find(x=>x.id===_MANUT_TO_INST[p.id])?.precoFinal||0)})`
+    : `margem ${p.margem}%, custo ${fmtBRL(custoProc(p))}`;
   showToast(`${p.nome}: ${fmtBRL(antes)} → ${fmtBRL(p.precoFinal)} (${info})`);
 }
 async function toggleAtivoProc(id){
