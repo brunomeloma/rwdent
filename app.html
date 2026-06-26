@@ -587,7 +587,7 @@ button{font-family:inherit;}
   background:none;border:none;color:#b08070;cursor:pointer;
   padding:4px 6px;border-radius:14px;transition:all .18s cubic-bezier(.4,0,.2,1);
   font-size:9px;font-weight:600;letter-spacing:.1px;
-  min-width:48px;flex:1;flex-shrink:0;touch-action:manipulation;
+  min-width:62px;flex:0 0 auto;touch-action:manipulation;
 }
 .mobile-nav-item.active{ color:var(--rose-dark); }
 .mobile-nav-item i{
@@ -1102,8 +1102,9 @@ select, textarea {
   .home-hero-stat { padding: 10px 12px !important; }
   .home-hero-stat-val { font-size: 18px !important; }
   /* Nav bottom maior */
-  .mobile-bottom-nav { height: 62px !important; }
-  .mobile-nav-item { font-size: 10px !important; gap: 3px !important; }
+  .mobile-bottom-nav { min-height: 62px !important; height: auto !important; }
+  .mobile-nav-items { overflow-x: auto !important; justify-content: flex-start !important; gap: 2px !important; }
+  .mobile-nav-item { font-size: 10px !important; gap: 3px !important; min-width: 62px !important; flex: 0 0 auto !important; }
   .mobile-nav-item i { font-size: 22px !important; }
   /* Modal mais acessível no mobile */
   .modal-box { margin: 8px !important; max-height: 92vh !important; }
