@@ -576,18 +576,19 @@ button{font-family:inherit;}
 .mobile-bottom-nav{
   display:none;position:fixed;bottom:0;left:0;right:0;
   background:rgba(255,255,255,0.97);border-top:1px solid rgba(212,115,90,.12);
-  padding:6px 8px calc(6px + env(safe-area-inset-bottom));z-index:200;
+  padding:6px 0 calc(6px + env(safe-area-inset-bottom));z-index:200;
   box-shadow:0 -8px 32px rgba(122,48,32,.10);
   backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+  overflow:hidden;
 }
-.mobile-nav-items{display:flex;align-items:center;gap:0;padding:0;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
+.mobile-nav-items{display:flex;align-items:center;gap:0;padding:0 8px;overflow-x:scroll;-webkit-overflow-scrolling:touch;scrollbar-width:none;flex-wrap:nowrap;}
 .mobile-nav-items::-webkit-scrollbar{display:none;}
 .mobile-nav-item{
   display:flex;flex-direction:column;align-items:center;gap:1px;
   background:none;border:none;color:#b08070;cursor:pointer;
   padding:4px 6px;border-radius:14px;transition:all .18s cubic-bezier(.4,0,.2,1);
   font-size:9px;font-weight:600;letter-spacing:.1px;
-  min-width:62px;flex:0 0 auto;touch-action:manipulation;
+  min-width:62px;flex:0 0 auto;touch-action:pan-x;
 }
 .mobile-nav-item.active{ color:var(--rose-dark); }
 .mobile-nav-item i{
@@ -1102,9 +1103,9 @@ select, textarea {
   .home-hero-stat { padding: 10px 12px !important; }
   .home-hero-stat-val { font-size: 18px !important; }
   /* Nav bottom maior */
-  .mobile-bottom-nav { min-height: 62px !important; height: auto !important; }
-  .mobile-nav-items { overflow-x: auto !important; justify-content: flex-start !important; gap: 2px !important; }
-  .mobile-nav-item { font-size: 10px !important; gap: 3px !important; min-width: 62px !important; flex: 0 0 auto !important; }
+  .mobile-bottom-nav { min-height: 62px !important; height: auto !important; overflow: hidden !important; }
+  .mobile-nav-items { overflow-x: scroll !important; -webkit-overflow-scrolling: touch !important; flex-wrap: nowrap !important; justify-content: flex-start !important; gap: 2px !important; }
+  .mobile-nav-item { font-size: 10px !important; gap: 3px !important; min-width: 64px !important; flex: 0 0 auto !important; touch-action: pan-x !important; }
   .mobile-nav-item i { font-size: 22px !important; }
   /* Modal mais acessível no mobile */
   .modal-box { margin: 8px !important; max-height: 92vh !important; }
