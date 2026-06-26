@@ -4427,7 +4427,7 @@ function calOpenEvent(e, id){
     </div>
     <div class="cal-modal-foot">
       <button class="btn-danger" onclick="calRemoveFromModal(${a.id})"><i class="ti ti-trash"></i> Remover</button>
-      ${a.telefone ? `<button class="btn-secondary" style="background:#25d366;color:#fff;border-color:#25d366;" onclick="enviarConfirmacaoWpp('${a.telefone}','${a.nome}','${a.data}','${a.horario}','${a.procedimento||'Consulta'}')"><i class="ti ti-brand-whatsapp"></i> Confirmar</button>` : ''}
+      ${a.telefone ? `<button class="btn-secondary" style="background:#25d366;color:#fff;border-color:#25d366;" onclick="enviarConfirmacaoWpp('${escapeHtml(a.telefone).replace(/'/g,'&#39;')}','${escapeHtml(a.nome).replace(/'/g,'&#39;')}','${escapeHtml(a.data).replace(/'/g,'&#39;')}','${escapeHtml(a.horario).replace(/'/g,'&#39;')}','${escapeHtml(a.procedimento||'Consulta').replace(/'/g,'&#39;')}')"><i class="ti ti-brand-whatsapp"></i> Confirmar</button>` : ''}
       ${a.paciente_id?`<button class="btn-secondary" onclick="document.getElementById('cal-modal-bg').classList.remove('show');verPacienteHome(${a.paciente_id})"><i class="ti ti-user"></i> Prontuário</button>`:''}
       <button class="btn-secondary" onclick="document.getElementById('cal-modal-bg').classList.remove('show')">Fechar</button>
     </div>
@@ -7041,7 +7041,7 @@ function openEstEdit(id){
   document.getElementById('me-min').value    = e.min??0;
   document.getElementById('me-compra').value = e.compra??0;
   document.getElementById('me-unid').value   = m.unid||'';
-  openModal('modal-est'); openModal('modal-est');
+  openModal('modal-est');
   // guarda id para o save
   document.getElementById('modal-est').dataset.matId = id;
 }
@@ -9148,7 +9148,7 @@ function renderSignArea(pacId, atendId, nomeAtend, profNome, profCro, sigExist){
         <div class="sign-preview" style="min-height:60px;">
           ${pacSig ? `<img src="${pacSig}" style="max-height:55px;"/>` : '<span style="font-size:11px;color:var(--rose-text);">Sem assinatura</span>'}
         </div>
-        <button class="btn-secondary" style="width:100%;margin-top:6px;font-size:11px;" onclick="abrirAssinaturaPaciente(${pacId},${atendId},'${escapeHtml(nomeAtend)}')">
+        <button class="btn-secondary" style="width:100%;margin-top:6px;font-size:11px;" onclick="abrirAssinaturaPaciente(${pacId},${atendId},'${escapeHtml(nomeAtend).replace(/'/g,"&#39;")}')">
           <i class="ti ti-signature"></i> ${pacSig ? 'Reassinar' : 'Assinar'}
         </button>
       </div>
@@ -9157,7 +9157,7 @@ function renderSignArea(pacId, atendId, nomeAtend, profNome, profCro, sigExist){
         <div class="sign-preview" style="min-height:60px;">
           ${profSig ? `<img src="${profSig}" style="max-height:55px;"/>` : '<span style="font-size:11px;color:var(--rose-text);">Sem assinatura</span>'}
         </div>
-        <button class="btn-secondary" style="width:100%;margin-top:6px;font-size:11px;" onclick="abrirAssinaturaProfissional(${pacId},${atendId},'${escapeHtml(nomeAtend)}')">
+        <button class="btn-secondary" style="width:100%;margin-top:6px;font-size:11px;" onclick="abrirAssinaturaProfissional(${pacId},${atendId},'${escapeHtml(nomeAtend).replace(/'/g,"&#39;")}')">
           <i class="ti ti-signature"></i> ${profSig ? 'Reassinar' : 'Assinar'}
         </button>
         ${profNome ? `<div style="font-size:10px;color:var(--rose-text);margin-top:4px;text-align:center;">${escapeHtml(profNome)}${profCro?' · '+escapeHtml(profCro):''}</div>` : ''}
@@ -9229,7 +9229,7 @@ function renderAnamneseSignArea(pacId, nomePaciente, profNome, profCro, sigExist
         <div class="sign-preview" style="min-height:60px;">
           ${pacSig ? `<img src="${pacSig}" style="max-height:55px;"/>` : '<span style="font-size:11px;color:var(--rose-text);">Sem assinatura</span>'}
         </div>
-        <button class="btn-secondary" style="width:100%;margin-top:6px;font-size:11px;" onclick="abrirAssinaturaPacienteAnamnese(${pacId},'${escapeHtml(nomePaciente)}')">
+        <button class="btn-secondary" style="width:100%;margin-top:6px;font-size:11px;" onclick="abrirAssinaturaPacienteAnamnese(${pacId},'${escapeHtml(nomePaciente).replace(/'/g,"&#39;")}')">
           <i class="ti ti-signature"></i> ${pacSig ? 'Reassinar' : 'Assinar'}
         </button>
       </div>
@@ -9238,7 +9238,7 @@ function renderAnamneseSignArea(pacId, nomePaciente, profNome, profCro, sigExist
         <div class="sign-preview" style="min-height:60px;">
           ${profSig ? `<img src="${profSig}" style="max-height:55px;"/>` : '<span style="font-size:11px;color:var(--rose-text);">Sem assinatura</span>'}
         </div>
-        <button class="btn-secondary" style="width:100%;margin-top:6px;font-size:11px;" onclick="abrirAssinaturaProfissionalAnamnese(${pacId},'${escapeHtml(nomePaciente)}')">
+        <button class="btn-secondary" style="width:100%;margin-top:6px;font-size:11px;" onclick="abrirAssinaturaProfissionalAnamnese(${pacId},'${escapeHtml(nomePaciente).replace(/'/g,"&#39;")}')">
           <i class="ti ti-signature"></i> ${profSig ? 'Reassinar' : 'Assinar'}
         </button>
         ${profNome ? `<div style="font-size:10px;color:var(--rose-text);margin-top:4px;text-align:center;">${escapeHtml(profNome)}${profCro?' · '+escapeHtml(profCro):''}</div>` : ''}
@@ -9306,7 +9306,7 @@ function renderTermoSignArea(pacId, nomePaciente, profNome, profCro, sigExist){
         <div class="sign-preview" style="min-height:60px;">
           ${pacSig ? `<img src="${pacSig}" style="max-height:55px;"/>` : '<span style="font-size:11px;color:var(--rose-text);">Sem assinatura</span>'}
         </div>
-        <button class="btn-secondary" style="width:100%;margin-top:6px;font-size:11px;" onclick="abrirAssinaturaPacienteTermo(${pacId},'${escapeHtml(nomePaciente)}')">
+        <button class="btn-secondary" style="width:100%;margin-top:6px;font-size:11px;" onclick="abrirAssinaturaPacienteTermo(${pacId},'${escapeHtml(nomePaciente).replace(/'/g,"&#39;")}')">
           <i class="ti ti-signature"></i> ${pacSig ? 'Reassinar' : 'Assinar'}
         </button>
       </div>
@@ -9315,7 +9315,7 @@ function renderTermoSignArea(pacId, nomePaciente, profNome, profCro, sigExist){
         <div class="sign-preview" style="min-height:60px;">
           ${profSig ? `<img src="${profSig}" style="max-height:55px;"/>` : '<span style="font-size:11px;color:var(--rose-text);">Sem assinatura</span>'}
         </div>
-        <button class="btn-secondary" style="width:100%;margin-top:6px;font-size:11px;" onclick="abrirAssinaturaProfissionalTermo(${pacId},'${escapeHtml(nomePaciente)}')">
+        <button class="btn-secondary" style="width:100%;margin-top:6px;font-size:11px;" onclick="abrirAssinaturaProfissionalTermo(${pacId},'${escapeHtml(nomePaciente).replace(/'/g,"&#39;")}')">
           <i class="ti ti-signature"></i> ${profSig ? 'Reassinar' : 'Assinar'}
         </button>
         ${profNome ? `<div style="font-size:10px;color:var(--rose-text);margin-top:4px;text-align:center;">${escapeHtml(profNome)}${profCro?' · '+escapeHtml(profCro):''}</div>` : ''}
@@ -9654,13 +9654,13 @@ async function pacFinalizarVendaLista(vendaId, pacId){
     pacPlanoList = pacPlanoList.map(i=>i.id===v.planoItemId?{...i,status:'realizado'}:i);
   } else if(v.itens?.length){
     // Tenta achar pelo nome do procedimento
-    v.itens.forEach(async it=>{
+    for(const it of v.itens){
       const planoItem = pacPlanoList.find(p=>p.procedimento===it.nome&&p.status==='aprovado');
       if(planoItem){
         await _sb.from('plano_tratamento').update({status:'realizado'}).eq('id',planoItem.id);
         pacPlanoList = pacPlanoList.map(i=>i.id===planoItem.id?{...i,status:'realizado'}:i);
       }
-    });
+    }
   }
   const itensProc = (v.itens||[]).filter(i=>i.procId).map(i=>({procId:i.procId,qtd:i.qtd||1}));
   const consumo = computeConsumo(itensProc);
@@ -9882,7 +9882,7 @@ function pacOrcSearchItem(vendaId, q){
   opts.style.display='';
   opts.innerHTML = resultados.map(p=>`
     <div style="padding:8px 12px;cursor:pointer;font-size:13px;border-bottom:1px solid var(--rose-lighter);"
-      onmousedown="pacOrcSelectItemAdd(${vendaId},${p.id},'${escapeHtml(p.nome).replace(/'/g,'\'')}')"
+      onmousedown="pacOrcSelectItemAdd(${vendaId},${p.id},'${escapeHtml(p.nome).replace(/'/g,"&#39;")}')"
       onmouseover="this.style.background='var(--rose-lighter)'"
       onmouseout="this.style.background=''"
     >
@@ -10551,7 +10551,7 @@ function histLimparDentes(){
 function histLimpar(){
   histDentesSel=[];
   histProcsLista=[];
-  histToggleDente(-1);
+  document.querySelectorAll('.hist-dente-btn.sel').forEach(b=>b.classList.remove('sel'));
   ['hist-data','hist-dentes','hist-proc','hist-procs-hidden','hist-obs'].forEach(id=>{
     const el=document.getElementById(id); if(el) el.value='';
   });
@@ -10756,7 +10756,7 @@ async function filtrarResgate(meses){
       <td style="padding:10px;text-align:center;">
         ${temTel
           ? `<div style="display:flex;flex-direction:column;align-items:center;gap:3px;">
-              <button onclick="abrirResgateModal('${escapeHtml(pac.nome)}','${escapeHtml(pac.telefone||'')}','${escapeHtml(ultimoProc)}',${Math.round(mesesAusencia)})"
+              <button onclick="abrirResgateModal('${escapeHtml(pac.nome).replace(/'/g,"&#39;")}','${escapeHtml(pac.telefone||'').replace(/'/g,"&#39;")}','${escapeHtml(ultimoProc).replace(/'/g,"&#39;")}',${Math.round(mesesAusencia)})"
                 style="background:#25d366;border:none;border-radius:50%;width:38px;height:38px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(37,211,102,.4);" title="Enviar WhatsApp">
                 <i class="ti ti-brand-whatsapp" style="color:#fff;font-size:18px;"></i>
               </button>
@@ -11260,13 +11260,6 @@ async function galeriaCarregar(pacId){
   const ok = await _galeriaEnsureBucket();
   if(!ok){ grid.innerHTML='<div class="galeria-vazia"><i class="ti ti-alert-triangle"></i>Não foi possível acessar o storage.</div>'; return; }
 
-  const prefix = `${clinicaId}/${pacId}/`;
-  const { data, error } = await _sb.storage.from(GALERIA_BUCKET).list(prefix.slice(0,-1).split('/').pop(), {
-    prefix: `${clinicaId}/`,
-    limit: 200,
-    sortBy: { column: 'created_at', order: 'desc' }
-  });
-
   const { data: files, error: err2 } = await _sb.storage.from(GALERIA_BUCKET).list(`${clinicaId}/${pacId}`, {
     limit: 200,
     sortBy: { column: 'created_at', order: 'desc' }
@@ -11702,7 +11695,7 @@ document.addEventListener('keydown', e=>{
       <div style="display:flex;justify-content:space-between;font-size:13px;">
         <span>Manutenção base</span><span id="manut-val-base">R$ 0,00</span>
       </div>
-      <div id="manut-val-extra-row" style="display:none;display:flex;justify-content:space-between;font-size:13px;color:#dc2626;">
+      <div id="manut-val-extra-row" style="display:none;justify-content:space-between;font-size:13px;color:#dc2626;">
         <span>Extras (quebra/perda)</span><span id="manut-val-extra">R$ 0,00</span>
       </div>
       <div style="display:flex;justify-content:space-between;font-size:15px;font-weight:800;margin-top:8px;border-top:1px solid var(--rose-light);padding-top:8px;">
