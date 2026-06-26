@@ -6532,7 +6532,16 @@ function openEditProc(id){
   document.getElementById('mp-laboratorio').value = p.laboratorio||0;
   document.getElementById('mp-margem').value    = p.margem || cfg.margem || 100;
   document.getElementById('mp-preco').value     = p.precoFinal||0;
-  calcProcPreview(false); // não sobrescreve preço final — mantém o valor salvo
+  // Manutenção: preço é definido por % da instalação — não deixa calcProcPreview sobrescrever
+  const _IDS_MANUT_EDIT = new Set([208,209,210,211,212,213,214,38]);
+  const _isManutEdit = _IDS_MANUT_EDIT.has(id);
+  if(_isManutEdit || p.precoFinalManual){
+    mpPrecoEditadoManualmente = true; // preserva o preço salvo
+  }
+  calcProcPreview(false);
+  // Mostra aviso no modal para procedimentos de manutenção
+  const _manutWarn = document.getElementById('mp-manut-aviso');
+  if(_manutWarn) _manutWarn.style.display = _isManutEdit ? 'block' : 'none';
   openModal('modal-proc');
 }
 let mpPrecoEditadoManualmente = false;
@@ -6589,13 +6598,20 @@ async function saveProc(){
   }
   // Se editou uma instalação de aparelho, atualiza o preço de manutenção correspondente
   const _INST_MANUT_LINK = {44:208, 202:209, 203:210, 204:211, 43:212, 51:213, 207:214, 37:38};
+  const _MANUT_IDS_SET = new Set([208,209,210,211,212,213,214,38]);
   if(editProcId && _INST_MANUT_LINK[editProcId]){
     const _manutId = _INST_MANUT_LINK[editProcId];
     const _manutP  = procs.find(x=>x.id===_manutId);
     const _pct     = cfg.pct_manut || 15;
-    if(_manutP && _pct > 0 && !_manutP.precoFinalManual){
+    if(_manutP && _pct > 0){
       _manutP.precoFinal = parseFloat((preco * _pct / 100).toFixed(2));
     }
+  }
+  // Se editou a manutenção diretamente, salva o preço como está (sem recalcular por insumos)
+  if(editProcId && _MANUT_IDS_SET.has(editProcId)){
+    // precoFinal já foi salvo acima — apenas garante que não seja 0
+    const _manutSelf = procs.find(x=>x.id===editProcId);
+    if(_manutSelf && (preco > 0)) _manutSelf.precoFinal = preco;
   }
   showLoading(true);
   await saveFinanceiro();
@@ -7059,9 +7075,18 @@ async function saveInsumos(){
   if(pi>=0){
     procs[pi].insumos=parseFloat(totalIns.toFixed(2));
     if(!procs[pi].horaClinManual) procs[pi].horaClin=parseFloat(((procs[pi].tempo/60)*calcHora()).toFixed(2));
-    // Manutenção ortodôntica: preço é % da instalação, não baseado em insumos
+    // Manutenção ortodôntica: preço = % da instalação correspondente (nunca por insumos)
     const _IDS_MANUT_ORTO = new Set([208,209,210,211,212,213,214,38]);
-    if(!procs[pi].precoFinalManual && !_IDS_MANUT_ORTO.has(procs[pi].id)){
+    const _MANUT_TO_INST = {208:44, 209:202, 210:203, 211:204, 212:43, 213:51, 214:207, 38:37};
+    if(_IDS_MANUT_ORTO.has(procs[pi].id)){
+      const _instId = _MANUT_TO_INST[procs[pi].id];
+      const _instProc = procs.find(x=>x.id===_instId);
+      const _pct = cfg.pct_manut || 15;
+      if(_instProc && _instProc.precoFinal > 0 && _pct > 0){
+        procs[pi].precoFinal = parseFloat((_instProc.precoFinal * _pct / 100).toFixed(2));
+      }
+      // Se não encontrou instalação com preço, mantém o precoFinal atual (não zera)
+    } else if(!procs[pi].precoFinalManual){
       procs[pi].precoFinal=calcPrecoFinal(procs[pi]);
     }
   }
@@ -7085,7 +7110,9 @@ async function recalcularInsumos(silent){
       p.horaClin=parseFloat(((p.tempo/60)*calcHora()).toFixed(2));
     }
     // Só recalcula precoFinal se chamado manualmente (silent=false) E não foi fixado manualmente
-    if(!silent && !p.precoFinalManual){
+    // NUNCA recalcula para manutenção ortodôntica — o preço é % da instalação
+    const _IDS_MANUT_RECALC = new Set([208,209,210,211,212,213,214,38]);
+    if(!silent && !p.precoFinalManual && !_IDS_MANUT_RECALC.has(p.id)){
       p.precoFinal=calcPrecoFinal(p);
     }
   });
@@ -10836,6 +10863,9 @@ async function calSaveNewAppt(){
       <div>Custo total: <strong id="mp-custo-calc">—</strong></div>
       <div>Lucro: <strong id="mp-lucro-calc">—</strong></div>
       <div>Preço final: <strong id="mp-preco-calc">—</strong></div>
+    </div>
+    <div id="mp-manut-aviso" style="display:none;background:#e8f5e9;border:1px solid #a5d6a7;border-radius:8px;padding:10px 14px;margin-bottom:10px;font-size:12px;color:#1b5e20;">
+      <i class="ti ti-info-circle"></i> <strong>Manutenção ortodôntica</strong> — o preço é calculado como % do aparelho instalado.<br>Para alterar, edite o preço da <em>Instalação</em> correspondente ou mude o % em <strong>Configurações → Precificação</strong>.
     </div>
     <div class="form-group">
       <label>Preço final (R$) — ajuste manual</label>
