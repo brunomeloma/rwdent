@@ -6398,6 +6398,27 @@ async function deleteProc(id){
   renderProcs();
   showToast('Removido.');
 }
+async function recalcularProc(id){
+  const p = procs.find(x=>x.id===id); if(!p) return;
+  cfg.salario  = Number(document.getElementById('cfg-salario')?.value)||cfg.salario||0;
+  cfg.horas    = Number(document.getElementById('cfg-horas')?.value)||cfg.horas||132;
+  cfg.trib     = Number(document.getElementById('cfg-trib')?.value)||cfg.trib||0;
+  cfg.desperd  = Number(document.getElementById('cfg-desperd')?.value)||cfg.desperd||0;
+  cfg.margem   = Number(document.getElementById('cfg-margem')?.value)||cfg.margem||100;
+  const ins = procInsumos[p.id]||[];
+  if(ins.length){
+    p.insumos = parseFloat(ins.reduce((acc,item)=>{const m=mats.find(x=>x.id===item.matId);return acc+(m?m.custo*item.qtd:0);},0).toFixed(2));
+  }
+  p.margem = cfg.margem;
+  p.horaClin = parseFloat(((p.tempo/60)*calcHora()).toFixed(2));
+  const antes = p.precoFinal;
+  p.precoFinal = calcPrecoFinal(p);
+  showLoading(true);
+  await saveFinanceiro();
+  showLoading(false);
+  renderProcs();
+  showToast(`${p.nome}: ${fmtBRL(antes)} → ${fmtBRL(p.precoFinal)} (margem ${p.margem}%, custo ${fmtBRL(custoProc(p))})`);
+}
 async function toggleAtivoProc(id){
   const p = procs.find(x=>x.id===id); if(!p) return;
   p.ativo = p.ativo===false ? true : false;
@@ -6507,6 +6528,7 @@ function renderProcs(){
       <td style="padding:10px;">
         <div style="display:flex;gap:6px;justify-content:flex-end;align-items:center;">
           <button class="btn-secondary" style="padding:4px 8px;font-size:11px;position:relative;${_flaskColor}" onclick="openInsumos(${p.id})" title="${_insCount>0?_insCount+' insumo(s) configurado(s)':'Adicionar insumos'}">${_flaskBadge}<i class="ti ti-flask"></i></button>
+          <button class="btn-secondary" style="padding:4px 8px;font-size:11px;color:#1565c0;border-color:#90caf9;" onclick="recalcularProc(${p.id})" title="Recalcular preço deste procedimento"><i class="ti ti-refresh"></i></button>
           <button class="btn-secondary" style="padding:4px 8px;font-size:11px;" onclick="toggleAtivoProc(${p.id})" title="${_inativo?'Ativar':'Desativar'}"><i class="ti ti-${_inativo?'player-play':'player-pause'}"></i></button>
           <button class="btn-secondary" style="padding:4px 8px;font-size:11px;" onclick="duplicarProc(${p.id})" title="Duplicar"><i class="ti ti-copy"></i></button>
           <button class="btn-secondary" style="padding:4px 8px;font-size:11px;" onclick="openEditProc(${p.id})"><i class="ti ti-pencil"></i></button>
