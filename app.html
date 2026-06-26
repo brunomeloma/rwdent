@@ -6887,20 +6887,12 @@ function updateInsumoQtd(idx,val){ insumosTemp[idx].qtd=parseFloat(val)||0; rend
 function removeInsumo(idx){ insumosTemp.splice(idx,1); renderInsumosList(); }
 async function saveInsumos(){
   if(insumosEditProcId===null) return;
-  cfg.salario  = Number(document.getElementById('cfg-salario')?.value)||cfg.salario||0;
-  cfg.horas    = Number(document.getElementById('cfg-horas')?.value)||cfg.horas||132;
-  cfg.trib     = Number(document.getElementById('cfg-trib')?.value)||cfg.trib||0;
-  cfg.desperd  = Number(document.getElementById('cfg-desperd')?.value)||cfg.desperd||0;
-  cfg.margem   = Number(document.getElementById('cfg-margem')?.value)||cfg.margem||100;
-  cfg.pct_manut = Number(document.getElementById('cfg-pct-manut')?.value)||cfg.pct_manut||15;
   procInsumos[insumosEditProcId]=JSON.parse(JSON.stringify(insumosTemp));
   const totalIns=insumosTemp.reduce((acc,item)=>{const m=mats.find(x=>x.id===item.matId);return acc+(m?m.custo*item.qtd:0);},0);
   const pi=procs.findIndex(x=>x.id===insumosEditProcId);
   if(pi>=0){
     procs[pi].insumos=parseFloat(totalIns.toFixed(2));
-    procs[pi].margem=cfg.margem;
     procs[pi].horaClin=parseFloat(((procs[pi].tempo/60)*calcHora()).toFixed(2));
-    procs[pi].precoFinal=calcPrecoFinal(procs[pi]);
   }
   showLoading(true); await saveFinanceiro(); showLoading(false);
   closeModal('modal-insumos');
