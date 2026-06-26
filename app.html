@@ -6199,6 +6199,8 @@ function calcPrecoManut(manutId, recalcInst){
   if(!instId) return null;
   const inst = procs.find(x=>x.id===instId);
   if(!inst) return null;
+  const manut = procs.find(x=>x.id===manutId);
+  if(!manut) return null;
   if(recalcInst){
     const ins = procInsumos[inst.id]||[];
     if(ins.length){
@@ -6210,7 +6212,9 @@ function calcPrecoManut(manutId, recalcInst){
   }
   if(!inst.precoFinal) return null;
   const pct = Number(cfg.pct_manut)||15;
-  return parseFloat((inst.precoFinal * pct / 100).toFixed(2));
+  const parcelaInst = parseFloat((inst.precoFinal * pct / 100).toFixed(2));
+  const custoManut = custoProc(manut);
+  return parseFloat((custoManut + parcelaInst).toFixed(2));
 }
 
 // ── PAINEL FINANCEIRO ──
@@ -6445,7 +6449,7 @@ async function recalcularProc(id){
   showLoading(false);
   renderProcs();
   const info = pm !== null
-    ? `${cfg.pct_manut}% da instalação (${fmtBRL(procs.find(x=>x.id===_MANUT_TO_INST[p.id])?.precoFinal||0)})`
+    ? `custo ${fmtBRL(custoProc(p))} + ${cfg.pct_manut}% da instalação ${fmtBRL(procs.find(x=>x.id===_MANUT_TO_INST[p.id])?.precoFinal||0)}`
     : `margem ${p.margem}%, custo ${fmtBRL(custoProc(p))}`;
   showToast(`${p.nome}: ${fmtBRL(antes)} → ${fmtBRL(p.precoFinal)} (${info})`);
 }
