@@ -6900,10 +6900,15 @@ async function saveInsumos(){
   showToast('Insumos salvos!');
 }
 async function recalcularInsumos(silent){
-  // Só recalcula insumos e horaClin — NÃO sobrescreve o que foi editado manualmente
+  if(!silent){
+    cfg.salario  = Number(document.getElementById('cfg-salario')?.value)||cfg.salario||0;
+    cfg.horas    = Number(document.getElementById('cfg-horas')?.value)||cfg.horas||132;
+    cfg.trib     = Number(document.getElementById('cfg-trib')?.value)||cfg.trib||0;
+    cfg.desperd  = Number(document.getElementById('cfg-desperd')?.value)||cfg.desperd||0;
+    cfg.margem   = Number(document.getElementById('cfg-margem')?.value)||cfg.margem||100;
+  }
   let atualizados=0;
   procs.forEach(p=>{
-    // Recalcula custo de insumos (sempre — reflete mudança de preço de materiais)
     const ins=procInsumos[p.id]||[];
     if(ins.length){
       const novo=parseFloat(ins.reduce((acc,item)=>{const m=mats.find(x=>x.id===item.matId);return acc+(m?m.custo*item.qtd:0);},0).toFixed(2));
@@ -6911,6 +6916,7 @@ async function recalcularInsumos(silent){
     }
     p.horaClin=parseFloat(((p.tempo/60)*calcHora()).toFixed(2));
     if(!silent){
+      p.margem=cfg.margem;
       p.precoFinal=calcPrecoFinal(p);
     }
   });
@@ -6919,7 +6925,9 @@ async function recalcularInsumos(silent){
     showLoading(true);
     await saveFinanceiro();
     showLoading(false);
-    showToast(atualizados>0?`${atualizados} procedimento(s) atualizados.`:'Custos já atualizados.');
+    const _dbg = procs.find(p=>p.id===212);
+    const _dbgInfo = _dbg ? ` Metálico: ${fmtBRL(_dbg.precoFinal)}` : '';
+    showToast(`${atualizados} procedimento(s) atualizados. Margem: ${cfg.margem}%.${_dbgInfo}`);
   }
 }
 
@@ -10542,7 +10550,9 @@ async function salvarPrecificacao(){
   await saveFinanceiro();
   showLoading(false);
   renderProcs();
-  showToast('Precificação salva! Todos os preços recalculados. Hora clínica: '+fmtBRL(calcHora())+'.');
+  const _dbg = procs.find(p=>p.id===212);
+  const _dbgInfo = _dbg ? ` | Metálico: margem=${_dbg.margem}% custo=${fmtBRL(custoProc(_dbg))} preço=${fmtBRL(_dbg.precoFinal)}` : '';
+  showToast('Precificação salva! Margem global: '+cfg.margem+'%. Hora clínica: '+fmtBRL(calcHora())+'.'+_dbgInfo);
 }
 
 async function salvarTaxas(){
