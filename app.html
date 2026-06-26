@@ -6330,16 +6330,7 @@ function openEditProc(id){
   document.getElementById('mp-laboratorio').value = p.laboratorio||0;
   document.getElementById('mp-margem').value    = p.margem || cfg.margem || 100;
   document.getElementById('mp-preco').value     = p.precoFinal||0;
-  // Manutenção: preço é definido por % da instalação — não deixa calcProcPreview sobrescrever
-  const _IDS_MANUT_EDIT = new Set([208,209,210,211,212,213,214,38]);
-  const _isManutEdit = _IDS_MANUT_EDIT.has(id);
-  if(_isManutEdit || p.precoFinalManual){
-    mpPrecoEditadoManualmente = true; // preserva o preço salvo
-  }
-  calcProcPreview(false);
-  // Mostra aviso no modal para procedimentos de manutenção
-  const _manutWarn = document.getElementById('mp-manut-aviso');
-  if(_manutWarn) _manutWarn.style.display = _isManutEdit ? 'block' : 'none';
+  calcProcPreview(true);
   openModal('modal-proc');
 }
 let mpPrecoEditadoManualmente = false;
@@ -6380,36 +6371,13 @@ async function saveProc(){
   const lab    = Number(document.getElementById('mp-laboratorio')?.value)||0;
   const margem = Number(document.getElementById('mp-margem')?.value)||100;
   const hc     = parseFloat(((tempo/60)*hora).toFixed(2));
-  const precoCampo = document.getElementById('mp-preco')?.value;
-  // Se o usuário não editou manualmente o preço, sempre recalcula pela margem atual
-  // (evita salvar um preço "fantasma" de antes de mudar a margem).
-  const precoManual = mpPrecoEditadoManualmente && precoCampo!=='';
-  const preco  = precoManual
-                  ? Number(precoCampo)
-                  : calcPrecoFinal({tempo,insumos,laboratorio:lab,margem});
-  const obj    = { nome, grupo:document.getElementById('mp-grupo')?.value||'Geral', tempo, insumos, laboratorio:lab, margem, horaClin:hc, precoFinal:preco, tempoManual:true, horaClinManual:true, precoFinalManual:precoManual };
+  const preco  = calcPrecoFinal({tempo,insumos,laboratorio:lab,margem});
+  const obj    = { nome, grupo:document.getElementById('mp-grupo')?.value||'Geral', tempo, insumos, laboratorio:lab, margem, horaClin:hc, precoFinal:preco };
   if(editProcId){
     const i = procs.findIndex(x=>x.id===editProcId);
     procs[i] = { ...procs[i], ...obj };
   } else {
     procs.push({ id: nextProcId++, ...obj });
-  }
-  // Se editou uma instalação de aparelho, atualiza o preço de manutenção correspondente
-  const _INST_MANUT_LINK = {44:208, 202:209, 203:210, 204:211, 43:212, 51:213, 207:214, 37:38};
-  const _MANUT_IDS_SET = new Set([208,209,210,211,212,213,214,38]);
-  if(editProcId && _INST_MANUT_LINK[editProcId]){
-    const _manutId = _INST_MANUT_LINK[editProcId];
-    const _manutP  = procs.find(x=>x.id===_manutId);
-    const _pct     = cfg.pct_manut || 15;
-    if(_manutP && _pct > 0){
-      _manutP.precoFinal = parseFloat((preco * _pct / 100).toFixed(2));
-    }
-  }
-  // Se editou a manutenção diretamente, salva o preço como está (sem recalcular por insumos)
-  if(editProcId && _MANUT_IDS_SET.has(editProcId)){
-    // precoFinal já foi salvo acima — apenas garante que não seja 0
-    const _manutSelf = procs.find(x=>x.id===editProcId);
-    if(_manutSelf && (preco > 0)) _manutSelf.precoFinal = preco;
   }
   showLoading(true);
   await saveFinanceiro();
