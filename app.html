@@ -10579,7 +10579,24 @@ async function salvarPrecificacao(){
   cfg.desperd  = Number(document.getElementById('cfg-desperd')?.value)||0;
   cfg.margem   = Number(document.getElementById('cfg-margem')?.value)||100;
   cfg.pct_manut = Number(document.getElementById('cfg-pct-manut')?.value)||15;
-  // Recalcula preços de manutenção baseado no % da instalação
+
+  showLoading(true);
+
+  const _IDS_MANUT = new Set([208,209,210,211,212,213,214,38]);
+  procs.forEach(p=>{
+    if(_IDS_MANUT.has(p.id)) return;
+    const ins = procInsumos[p.id]||[];
+    if(ins.length){
+      p.insumos = parseFloat(ins.reduce((acc,item)=>{const m=mats.find(x=>x.id===item.matId);return acc+(m?m.custo*item.qtd:0);},0).toFixed(2));
+    }
+    if(!p.horaClinManual){
+      p.horaClin = parseFloat(((p.tempo/60)*calcHora()).toFixed(2));
+    }
+    if(!p.precoFinalManual){
+      p.precoFinal = calcPrecoFinal(p);
+    }
+  });
+
   const _INST_MANUT_MAP = {44:208, 202:209, 203:210, 204:211, 43:212, 51:213, 207:214, 37:38};
   Object.entries(_INST_MANUT_MAP).forEach(([instId, manutId])=>{
     const _inst = procs.find(p=>p.id===Number(instId));
@@ -10588,14 +10605,11 @@ async function salvarPrecificacao(){
       _manut.precoFinal = parseFloat((_inst.precoFinal * cfg.pct_manut / 100).toFixed(2));
     }
   });
-  showLoading(true);
-  // A hora clínica mudou — atualiza horaClin de todos os procedimentos (sem mexer no
-  // preço final, que pode ter sido ajustado manualmente; use "Recalcular custos" na
-  // tela de Procedimentos para também atualizar o preço final pela margem de cada um).
-  recalcularInsumos(true);
+
   await saveFinanceiro();
   showLoading(false);
-  showToast('Precificação salva! Hora clínica atualizada para '+fmtBRL(calcHora())+'.');
+  renderProcs();
+  showToast('Precificação salva! Todos os preços recalculados. Hora clínica: '+fmtBRL(calcHora())+'.');
 }
 
 async function salvarTaxas(){
