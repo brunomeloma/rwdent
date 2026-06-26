@@ -759,11 +759,11 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px soli
 #cal-card:-moz-full-screen{
   background:#fdf6f3;
   padding:16px;
-  overflow:hidden;
-  display:flex;
-  flex-direction:column;
-  height:100vh;
-  width:100vw;
+  overflow:hidden!important;
+  display:flex!important;
+  flex-direction:column!important;
+  height:100%!important;
+  width:100%!important;
   box-sizing:border-box;
   border-radius:0;
 }
@@ -776,14 +776,18 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px soli
 #cal-card:-webkit-full-screen .cal-body,
 #cal-card:-moz-full-screen .cal-body{
   flex:1 1 auto;
-  overflow:auto;
-  min-height:0;
+  overflow-y:auto!important;
+  overflow-x:auto!important;
+  min-height:0!important;
+  -webkit-overflow-scrolling:touch;
 }
 #cal-card:fullscreen .cal-grid,
 #cal-card:-webkit-full-screen .cal-grid,
 #cal-card:-moz-full-screen .cal-grid{
   min-width:auto;
   width:100%;
+  overflow:visible!important;
+  border-radius:0;
 }
 #cal-card:fullscreen .cal-month,
 #cal-card:-webkit-full-screen .cal-month,
@@ -4231,13 +4235,36 @@ function calFullscreen(){
   }
 }
 document.getElementById('cal-card')?.addEventListener('wheel',e=>{
-  if(e.ctrlKey) e.preventDefault();
+  if(e.ctrlKey){ e.preventDefault(); return; }
+  if(document.fullscreenElement){
+    const body=document.getElementById('cal-body');
+    if(body && body.scrollHeight>body.clientHeight){
+      body.scrollTop+=e.deltaY;
+      e.preventDefault();
+    }
+  }
 },{passive:false});
 document.addEventListener('fullscreenchange',()=>{
   const el=document.getElementById('cal-card');
   const icon=el?.querySelector('.cal-full i');
   if(icon) icon.className=document.fullscreenElement?'ti ti-minimize':'ti ti-maximize';
   renderCalendario();
+  if(document.fullscreenElement){
+    const body=document.getElementById('cal-body');
+    if(body){ body.setAttribute('tabindex','0'); body.focus(); }
+  }
+});
+document.addEventListener('keydown',e=>{
+  if(!document.fullscreenElement||document.fullscreenElement.id!=='cal-card') return;
+  const body=document.getElementById('cal-body');
+  if(!body) return;
+  const step=48;
+  if(e.key==='ArrowDown'){ body.scrollTop+=step; e.preventDefault(); }
+  else if(e.key==='ArrowUp'){ body.scrollTop-=step; e.preventDefault(); }
+  else if(e.key==='PageDown'){ body.scrollTop+=body.clientHeight; e.preventDefault(); }
+  else if(e.key==='PageUp'){ body.scrollTop-=body.clientHeight; e.preventDefault(); }
+  else if(e.key==='Home'){ body.scrollTop=0; e.preventDefault(); }
+  else if(e.key==='End'){ body.scrollTop=body.scrollHeight; e.preventDefault(); }
 });
 
 function renderCalendario(){
