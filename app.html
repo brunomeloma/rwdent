@@ -10583,13 +10583,15 @@ async function salvarPrecificacao(){
   showLoading(true);
 
   const _IDS_MANUT = new Set([208,209,210,211,212,213,214,38]);
+  const _hora = calcHora();
   procs.forEach(p=>{
     if(_IDS_MANUT.has(p.id)) return;
     const ins = procInsumos[p.id]||[];
     if(ins.length){
       p.insumos = parseFloat(ins.reduce((acc,item)=>{const m=mats.find(x=>x.id===item.matId);return acc+(m?m.custo*item.qtd:0);},0).toFixed(2));
     }
-    p.horaClin = parseFloat(((p.tempo/60)*calcHora()).toFixed(2));
+    p.margem = cfg.margem;
+    p.horaClin = parseFloat(((p.tempo/60)*_hora).toFixed(2));
     p.precoFinal = calcPrecoFinal(p);
   });
 
