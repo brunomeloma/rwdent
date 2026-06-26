@@ -11088,23 +11088,21 @@ function pagPacRender(pacId){
   const formaLabel = f => f==='pix'?'PIX':f==='credito'?'Cartão Crédito':f==='debito'?'Cartão Débito':'Dinheiro';
 
   const finVendas = vendas.filter(v=>v.pacienteId===pacId && v.status==='finalizada');
-  const pendentes = finVendas.filter(v=>{
-    const pago = (v.pagamentos||[]).reduce((s,p)=>s+p.valor,0);
-    return pago < (v.total||0);
-  });
-  const quitadas = finVendas.filter(v=>{
-    const pago = (v.pagamentos||[]).reduce((s,p)=>s+p.valor,0);
-    return pago >= (v.total||0);
-  });
+  const _vendaPago = v => {
+    if(!v.pagamentos) return v.total||0;
+    return v.pagamentos.reduce((s,p)=>s+p.valor,0);
+  };
+  const pendentes = finVendas.filter(v=> _vendaPago(v) < (v.total||0));
+  const quitadas = finVendas.filter(v=> _vendaPago(v) >= (v.total||0));
 
   const totalGeral = finVendas.reduce((a,v)=>a+(v.total||0),0);
-  const pagoGeral = finVendas.reduce((a,v)=>a+(v.pagamentos||[]).reduce((s,p)=>s+p.valor,0),0);
+  const pagoGeral = finVendas.reduce((a,v)=>a+_vendaPago(v),0);
   const saldoGeral = totalGeral - pagoGeral;
 
   const vendaDesc = v => (v.itens||[]).map(i=>i.nome||'Procedimento').join(', ') || 'Venda #'+v.id;
 
   const renderVendaCard = (v) => {
-    const pago = (v.pagamentos||[]).reduce((s,p)=>s+p.valor,0);
+    const pago = _vendaPago(v);
     const saldo = (v.total||0) - pago;
     const isQuitado = saldo <= 0;
     return `<div class="fin-pac-cob">
