@@ -5468,7 +5468,7 @@ let combos      = [];   // combos promocionais
 let estoque     = {};   // { matId: { atual, min, compra } }
 let procInsumos = {};   // { procId: [{matId, qtd}] }
 let vendas      = [];   // histórico de vendas/orçamentos
-let pagPac      = [];   // cobranças/pagamentos de pacientes
+let pagPac      = [];   // legado — mantido para compatibilidade
 let cfg         = { salario:3000, horas:132, trib:0, desperd:5, margem:100, colabPct:50, pct_manut:15, migr_manut_v2:false };
 let taxasCfg    = { debito:1.5, credito:[2.49,5.1,6.12,7.15,8.19,9.24,10.3,11.36,12.44,13.52,14.61,15.71] };
 let descCfg     = { val:0, tipo:'pct', maxPar:6 };
@@ -9596,6 +9596,11 @@ function pacRenderOrcamentos(pacId){
           ${descontoHtml}
           ${formaPagHtml}
           ${resumoHtml}
+          <div style="margin-bottom:4px;">
+            <label style="display:block;font-size:11px;font-weight:700;color:var(--rose-text);text-transform:uppercase;margin-bottom:4px;">Entrada (R$)</label>
+            <input type="number" id="orc-entrada-${v.id}" step="0.01" min="0" value="0" placeholder="0,00" style="width:100%;padding:7px 8px;border:1.5px solid var(--rose-light);border-radius:8px;font-size:13px;box-sizing:border-box;"/>
+            <div style="font-size:10px;color:var(--rose-text);margin-top:2px;">Deixe 0 se o paciente pagar o total agora</div>
+          </div>
           ${avisoHtml}
           <select id="venda-prof-${v.id}" style="width:100%;font-size:12px;padding:7px 8px;border:1.5px solid var(--rose-light);border-radius:8px;color:#3a2020;"><option value="">Quem atendeu?</option>${profissionais.map(pr=>`<option value="${pr.id}">${escapeHtml(pr.nome)}</option>`).join('')}</select>
           <button class="btn-primary" style="width:100%;justify-content:center;padding:11px;" onclick="pacFinalizarItensSelecionados(${v.id},${pacId})" ${sel.size===0?'disabled':''}><i class="ti ti-circle-check"></i> Finalizar${sel.size<(v.itens||[]).length&&sel.size>0?' selecionados':''}</button>
@@ -9613,6 +9618,15 @@ function pacRenderOrcamentos(pacId){
         ${v.obs?`<div style="font-size:12px;color:var(--rose-text);margin-bottom:10px;padding:8px;background:var(--rose-lighter);border-radius:8px;"><i class="ti ti-notes"></i> ${escapeHtml(v.obs)}</div>`:''}
         ${resumoHtml}
         ${v.formaPagamento?`<div style="font-size:12px;color:var(--rose-text);margin-top:6px;">💳 ${formaPagamentoLabel(v.formaPagamento)}</div>`:''}
+        ${(()=>{
+          if(v.status!=='finalizada'||!v.pagamentos?.length) return '';
+          const pgTotal=(v.pagamentos||[]).reduce((s,p)=>s+p.valor,0);
+          const saldo=(v.total||0)-pgTotal;
+          return `<div style="margin-top:10px;padding:10px;background:${saldo>0?'#fff8e1':'#e8f5e9'};border:1px solid ${saldo>0?'#ffe082':'#a5d6a7'};border-radius:10px;font-size:12px;">
+            <div style="font-weight:700;margin-bottom:6px;color:${saldo>0?'#e65100':'#2e7d32'};"><i class="ti ti-${saldo>0?'alert-circle':'circle-check'}"></i> ${saldo>0?'Pagamento parcial — falta '+fmtBRL(saldo):'Totalmente pago'}</div>
+            ${v.pagamentos.map(pg=>`<div style="display:flex;justify-content:space-between;padding:3px 0;"><span>${new Date(pg.data).toLocaleDateString('pt-BR')} — ${pg.forma==='pix'?'PIX':pg.forma==='credito'?'Cartão Crédito'+(pg.parcelas_cartao>1?' '+pg.parcelas_cartao+'x':''):pg.forma==='debito'?'Cartão Débito':'Dinheiro'}${pg.obs?' ('+escapeHtml(pg.obs)+')':''}</span><strong>${fmtBRL(pg.valor)}</strong></div>`).join('')}
+          </div>`;
+        })()}
         <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;">
           ${v.status==='finalizada'?`<button class="btn-secondary" style="font-size:12px;" onclick="cancelarVenda(${v.id});setTimeout(()=>pacRenderOrcamentos(${pacId}),300)"><i class="ti ti-arrow-back-up"></i> Cancelar</button>`:''}
           <button class="btn-secondary" style="font-size:12px;" onclick="gerarPdfOrcamento(${v.id},${pacId})"><i class="ti ti-file-type-pdf"></i> PDF</button>
@@ -9706,7 +9720,12 @@ async function pacFinalizarItensSelecionados(vendaId, pacId){
 
   const {subtotalSel, descAmt, total: totalFinal} = _orcCalcTotais(v);
 
-  if(!confirm(`Finalizar ${itensSel.length} item(ns) por ${fmtBRL(totalFinal)}?\n${itensRest.length>0?itensRest.length+' item(ns) ficará(ão) pendente(s) para a próxima visita.':''}`)) return;
+  const entradaVal = parseFloat(document.getElementById('orc-entrada-'+vendaId)?.value)||0;
+  const formaPag = v.formaPagamento||'';
+  const temEntrada = entradaVal>0 && entradaVal<totalFinal;
+
+  const msgEntrada = temEntrada ? `\nEntrada: ${fmtBRL(entradaVal)} — Restante: ${fmtBRL(totalFinal-entradaVal)} (vai para aba Financeiro)` : '';
+  if(!confirm(`Finalizar ${itensSel.length} item(ns) por ${fmtBRL(totalFinal)}?${msgEntrada}\n${itensRest.length>0?itensRest.length+' item(ns) ficará(ão) pendente(s) para a próxima visita.':''}`)) return;
 
   showLoading(true);
 
@@ -9727,6 +9746,18 @@ async function pacFinalizarItensSelecionados(vendaId, pacId){
     if(pl) pl.status='realizado';
   }
 
+  // Monta array de pagamentos
+  const _pagamentos = [];
+  const _valorPag = temEntrada ? entradaVal : totalFinal;
+  _pagamentos.push({
+    id: Date.now(),
+    valor: parseFloat(_valorPag.toFixed(2)),
+    forma: formaPag==='debito'?'debito':formaPag.startsWith('credito')?'credito':(formaPag||'dinheiro'),
+    parcelas_cartao: formaPag.startsWith('credito')?(parseInt(formaPag.replace('credito',''))||1):1,
+    data: new Date().toISOString(),
+    obs: temEntrada?'Entrada':''
+  });
+
   if(itensRest.length===0){
     // Finaliza a venda inteira normalmente
     v.status='finalizada';
@@ -9735,6 +9766,7 @@ async function pacFinalizarItensSelecionados(vendaId, pacId){
     v.total=parseFloat(totalFinal.toFixed(2));
     v.consumo=aplicado;
     v.dataFinal=new Date().toISOString();
+    v.pagamentos = (v.pagamentos||[]).concat(_pagamentos);
     delete _orcSel[vendaId];
     delete _orcDesc[vendaId];
   } else {
@@ -9750,7 +9782,8 @@ async function pacFinalizarItensSelecionados(vendaId, pacId){
       planoIds: planoIdsSel,
       consumo: aplicado,
       data: new Date().toISOString(),
-      dataFinal: new Date().toISOString()
+      dataFinal: new Date().toISOString(),
+      pagamentos: _pagamentos
     };
     vendas.push(novaVenda);
 
@@ -11044,249 +11077,163 @@ async function _galeriaEnsureBucket(){
 }
 
 // ── FINANCEIRO PACIENTE ──
-let _pagPacNextId = 1;
-function _pagPacId(){ return _pagPacNextId++; }
+// Reads from vendas (finalized sales with outstanding balance)
 
 function pagPacRender(pacId){
   const container = document.getElementById('pac-fin-container');
   if(!container) return;
-  _pagPacNextId = pagPac.length ? Math.max(...pagPac.map(c=>c.id||0),...pagPac.flatMap(c=>(c.pagamentos||[]).map(p=>p.id||0))) + 1 : 1;
 
-  const cobs = pagPac.filter(c=>c.paciente_id===pacId && c.status!=='cancelado');
-  const totalGeral = cobs.reduce((a,c)=>a+c.valor_total,0);
-  const pagoGeral = cobs.reduce((a,c)=>a+(c.pagamentos||[]).reduce((s,p)=>s+p.valor,0),0);
+  const formaIcon = f => f==='pix'?'ti-brand-cashapp':f==='credito'?'ti-credit-card':f==='debito'?'ti-credit-card':'ti-cash';
+  const formaClass = f => f==='pix'?'pix':(f==='credito'||f==='debito')?'cartao':'dinheiro';
+  const formaLabel = f => f==='pix'?'PIX':f==='credito'?'Cartão Crédito':f==='debito'?'Cartão Débito':'Dinheiro';
+
+  const finVendas = vendas.filter(v=>v.pacienteId===pacId && v.status==='finalizada');
+  const pendentes = finVendas.filter(v=>{
+    const pago = (v.pagamentos||[]).reduce((s,p)=>s+p.valor,0);
+    return pago < (v.total||0);
+  });
+  const quitadas = finVendas.filter(v=>{
+    const pago = (v.pagamentos||[]).reduce((s,p)=>s+p.valor,0);
+    return pago >= (v.total||0);
+  });
+
+  const totalGeral = finVendas.reduce((a,v)=>a+(v.total||0),0);
+  const pagoGeral = finVendas.reduce((a,v)=>a+(v.pagamentos||[]).reduce((s,p)=>s+p.valor,0),0);
   const saldoGeral = totalGeral - pagoGeral;
+
+  const vendaDesc = v => (v.itens||[]).map(i=>i.nome||'Procedimento').join(', ') || 'Venda #'+v.id;
+
+  const renderVendaCard = (v) => {
+    const pago = (v.pagamentos||[]).reduce((s,p)=>s+p.valor,0);
+    const saldo = (v.total||0) - pago;
+    const isQuitado = saldo <= 0;
+    return `<div class="fin-pac-cob">
+      <div class="fin-pac-cob-head">
+        <div>
+          <div class="fin-pac-cob-titulo"><i class="ti ti-tooth"></i> ${escapeHtml(vendaDesc(v))}</div>
+          <div style="font-size:11px;color:var(--rose-text);margin-top:2px;">${new Date(v.dataFinal||v.data||'').toLocaleDateString('pt-BR')}</div>
+        </div>
+        <span class="fin-pac-badge ${isQuitado?'quitado':'aberto'}">${isQuitado?'Quitado':'Em aberto'}</span>
+      </div>
+      <div class="fin-pac-valores">
+        <div><strong>Total</strong>${fmtBRL(v.total||0)}</div>
+        <div><strong>Pago</strong>${fmtBRL(pago)}</div>
+        <div><strong>Saldo</strong><span style="color:${saldo>0?'#dc2626':'#2e7d32'};font-weight:700;">${fmtBRL(Math.max(0,saldo))}</span></div>
+      </div>
+      ${(v.pagamentos||[]).length?`<div style="margin-bottom:8px;">
+        <div style="font-size:10px;font-weight:700;color:var(--rose-text);text-transform:uppercase;margin-bottom:6px;">Pagamentos</div>
+        ${(v.pagamentos||[]).map(pg=>`<div class="fin-pac-pag-item">
+          <div class="pag-icon ${formaClass(pg.forma)}"><i class="ti ${formaIcon(pg.forma)}"></i></div>
+          <div style="flex:1;">
+            <div style="font-weight:600;">${fmtBRL(pg.valor)} <span style="font-weight:400;color:var(--rose-text);">— ${formaLabel(pg.forma)}${pg.parcelas_cartao>1?' '+pg.parcelas_cartao+'x':''}</span></div>
+            <div style="font-size:11px;color:var(--rose-text);">${new Date(pg.data).toLocaleDateString('pt-BR')}${pg.obs?' — '+escapeHtml(pg.obs):''}</div>
+          </div>
+          <button class="pag-del" onclick="pagPacDelPag(${v.id},${pg.id},${pacId})" title="Remover"><i class="ti ti-x"></i></button>
+        </div>`).join('')}
+      </div>`:''}
+      ${saldo>0?`<button class="btn-secondary" style="width:100%;justify-content:center;" onclick="pagPacFormPag(${v.id},${pacId},${saldo})"><i class="ti ti-plus"></i> Registrar pagamento</button>
+      <div id="pac-fin-form-pag-${v.id}"></div>`:''}
+    </div>`;
+  };
+
+  const showQuitadas = quitadas.length > 0;
 
   container.innerHTML = `
     <div class="fin-pac-resumo">
       <div class="fin-pac-resumo-item"><div class="val">${fmtBRL(totalGeral)}</div><div class="lbl">Total</div></div>
       <div class="fin-pac-resumo-item positivo"><div class="val">${fmtBRL(pagoGeral)}</div><div class="lbl">Pago</div></div>
-      <div class="fin-pac-resumo-item ${saldoGeral>0?'negativo':'positivo'}"><div class="val">${fmtBRL(saldoGeral)}</div><div class="lbl">Saldo</div></div>
+      <div class="fin-pac-resumo-item ${saldoGeral>0?'negativo':'positivo'}"><div class="val">${fmtBRL(saldoGeral)}</div><div class="lbl">Saldo devedor</div></div>
     </div>
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
-      <span style="font-size:13px;font-weight:700;color:var(--rose-dark);">Cobranças</span>
-      <button class="btn-secondary" onclick="pagPacFormNova(${pacId})"><i class="ti ti-plus"></i> Nova cobrança</button>
-    </div>
-    <div id="pac-fin-form-nova"></div>
-    <div id="pac-fin-lista">
-      ${cobs.length===0?'<div style="text-align:center;padding:30px;color:var(--rose-text);font-size:13px;"><i class="ti ti-receipt-off" style="font-size:32px;display:block;margin-bottom:8px;opacity:.5;"></i>Nenhuma cobrança registrada.</div>':''}
-      ${cobs.sort((a,b)=>(b.data_criacao||'').localeCompare(a.data_criacao||'')).map(c=>{
-        const pago = (c.pagamentos||[]).reduce((s,p)=>s+p.valor,0);
-        const saldo = c.valor_total - pago;
-        const status = saldo<=0?'quitado':'aberto';
-        const formaIcon = f => f==='pix'?'ti-brand-cashapp':f==='credito'?'ti-credit-card':f==='debito'?'ti-credit-card':'ti-cash';
-        const formaClass = f => f==='pix'?'pix':(f==='credito'||f==='debito')?'cartao':'dinheiro';
-        const formaLabel = f => f==='pix'?'PIX':f==='credito'?'Cartão Crédito':f==='debito'?'Cartão Débito':'Dinheiro';
-        return `<div class="fin-pac-cob">
-          <div class="fin-pac-cob-head">
-            <div>
-              <div class="fin-pac-cob-titulo"><i class="ti ti-tooth"></i> ${escapeHtml(c.descricao)}</div>
-              <div style="font-size:11px;color:var(--rose-text);margin-top:2px;">${new Date(c.data_criacao).toLocaleDateString('pt-BR')}</div>
-            </div>
-            <div style="display:flex;gap:6px;align-items:center;">
-              <span class="fin-pac-badge ${status}">${status==='quitado'?'Quitado':'Em aberto'}</span>
-              <button style="border:none;background:none;cursor:pointer;color:#ccc;font-size:16px;" onclick="pagPacDelCob(${c.id},${pacId})" title="Excluir"><i class="ti ti-trash"></i></button>
-            </div>
-          </div>
-          <div class="fin-pac-valores">
-            <div><strong>Total</strong>${fmtBRL(c.valor_total)}</div>
-            <div><strong>Pago</strong>${fmtBRL(pago)}</div>
-            <div><strong>Saldo</strong><span style="color:${saldo>0?'#dc2626':'#2e7d32'};font-weight:700;">${fmtBRL(saldo)}</span></div>
-          </div>
-          ${(c.pagamentos||[]).length?`<div style="margin-bottom:8px;">
-            <div style="font-size:10px;font-weight:700;color:var(--rose-text);text-transform:uppercase;margin-bottom:6px;">Pagamentos</div>
-            ${(c.pagamentos||[]).map(pg=>`<div class="fin-pac-pag-item">
-              <div class="pag-icon ${formaClass(pg.forma)}"><i class="ti ${formaIcon(pg.forma)}"></i></div>
-              <div style="flex:1;">
-                <div style="font-weight:600;">${fmtBRL(pg.valor)} <span style="font-weight:400;color:var(--rose-text);">— ${formaLabel(pg.forma)}${pg.parcelas_cartao>1?' '+pg.parcelas_cartao+'x':''}</span></div>
-                <div style="font-size:11px;color:var(--rose-text);">${new Date(pg.data).toLocaleDateString('pt-BR')}${pg.obs?' — '+escapeHtml(pg.obs):''}</div>
-              </div>
-              <button class="pag-del" onclick="pagPacDelPag(${c.id},${pg.id},${pacId})" title="Remover"><i class="ti ti-x"></i></button>
-            </div>`).join('')}
-          </div>`:''}
-          ${saldo>0?`<button class="btn-secondary" style="width:100%;justify-content:center;" onclick="pagPacFormPag(${c.id},${pacId},${saldo})"><i class="ti ti-plus"></i> Registrar pagamento</button>
-          <div id="pac-fin-form-pag-${c.id}"></div>`:''}
-        </div>`;
-      }).join('')}
-    </div>`;
+    ${pendentes.length>0?`
+      <div style="font-size:13px;font-weight:700;color:var(--rose-dark);margin-bottom:10px;"><i class="ti ti-alert-circle" style="color:#e65100;"></i> Pendentes (${pendentes.length})</div>
+      ${pendentes.sort((a,b)=>(b.dataFinal||b.data||'').localeCompare(a.dataFinal||a.data||'')).map(renderVendaCard).join('')}
+    `:`
+      <div style="text-align:center;padding:30px;color:var(--rose-text);font-size:13px;">
+        <i class="ti ti-circle-check" style="font-size:32px;display:block;margin-bottom:8px;color:#2e7d32;opacity:.7;"></i>
+        Nenhum pagamento pendente.
+      </div>
+    `}
+    ${showQuitadas?`
+      <details style="margin-top:14px;">
+        <summary style="font-size:13px;font-weight:700;color:var(--rose-dark);cursor:pointer;margin-bottom:10px;"><i class="ti ti-circle-check" style="color:#2e7d32;"></i> Quitados (${quitadas.length})</summary>
+        ${quitadas.sort((a,b)=>(b.dataFinal||b.data||'').localeCompare(a.dataFinal||a.data||'')).map(renderVendaCard).join('')}
+      </details>
+    `:''}`;
 }
 
-function pagPacFormNova(pacId){
-  const f = document.getElementById('pac-fin-form-nova');
-  if(!f) return;
-  if(f.innerHTML.trim()){ f.innerHTML=''; return; }
-  const hoje = new Date().toISOString().slice(0,10);
-  const procOpts = procs.filter(p=>p.ativo!==false).map(p=>`<option value="${p.id}">${escapeHtml(p.nome)} — ${fmtBRL(p.precoFinal||0)}</option>`).join('');
-  f.innerHTML = `<div class="fin-pac-form">
-    <div class="form-grid">
-      <div>
-        <label>Procedimento (opcional)</label>
-        <select id="fpn-proc" onchange="pagPacProcSelect()">
-          <option value="">Personalizado</option>
-          ${procOpts}
-        </select>
-      </div>
-      <div>
-        <label>Valor total (R$)</label>
-        <input type="number" id="fpn-valor" step="0.01" min="0" placeholder="0,00"/>
-      </div>
-      <div style="grid-column:1/-1;">
-        <label>Descrição</label>
-        <input type="text" id="fpn-desc" placeholder="Ex: Prótese Total Superior"/>
-      </div>
-      <div>
-        <label>Entrada (R$)</label>
-        <input type="number" id="fpn-entrada" step="0.01" min="0" value="0" placeholder="0,00"/>
-      </div>
-      <div>
-        <label>Forma pgto. entrada</label>
-        <select id="fpn-forma">
-          <option value="dinheiro">Dinheiro</option>
-          <option value="pix">PIX</option>
-          <option value="credito">Cartão Crédito</option>
-          <option value="debito">Cartão Débito</option>
-        </select>
-      </div>
-    </div>
-    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px;">
-      <button class="btn-secondary" onclick="document.getElementById('pac-fin-form-nova').innerHTML=''">Cancelar</button>
-      <button class="btn-primary" onclick="pagPacCriar(${pacId})"><i class="ti ti-check"></i> Criar cobrança</button>
-    </div>
-  </div>`;
-}
-
-function pagPacProcSelect(){
-  const sel = document.getElementById('fpn-proc');
-  if(!sel) return;
-  const proc = procs.find(p=>p.id===parseInt(sel.value));
-  if(proc){
-    document.getElementById('fpn-desc').value = proc.nome;
-    document.getElementById('fpn-valor').value = (proc.precoFinal||0).toFixed(2);
-  }
-}
-
-async function pagPacCriar(pacId){
-  const desc = document.getElementById('fpn-desc')?.value.trim();
-  const valor = parseFloat(document.getElementById('fpn-valor')?.value)||0;
-  const entrada = parseFloat(document.getElementById('fpn-entrada')?.value)||0;
-  const forma = document.getElementById('fpn-forma')?.value||'dinheiro';
-  if(!desc){ showToast('Informe a descrição.','error'); return; }
-  if(valor<=0){ showToast('Informe o valor total.','error'); return; }
-  if(entrada>valor){ showToast('Entrada não pode ser maior que o total.','error'); return; }
-
-  const pac = pacientes.find(p=>p.id===pacId);
-  const cob = {
-    id: _pagPacId(),
-    paciente_id: pacId,
-    paciente_nome: pac?.nome||'',
-    descricao: desc,
-    valor_total: valor,
-    data_criacao: new Date().toISOString(),
-    status: 'aberto',
-    pagamentos: []
-  };
-  if(entrada>0){
-    cob.pagamentos.push({
-      id: _pagPacId(),
-      valor: entrada,
-      forma: forma,
-      parcelas_cartao: 1,
-      data: new Date().toISOString(),
-      obs: 'Entrada'
-    });
-    if(entrada>=valor) cob.status='quitado';
-  }
-  pagPac.push(cob);
-  showLoading(true); await saveFinanceiro(); showLoading(false);
-  showToast('Cobrança criada!');
-  pagPacRender(pacId);
-}
-
-function pagPacFormPag(cobId, pacId, saldoRestante){
-  const f = document.getElementById('pac-fin-form-pag-'+cobId);
+function pagPacFormPag(vendaId, pacId, saldoRestante){
+  const f = document.getElementById('pac-fin-form-pag-'+vendaId);
   if(!f) return;
   if(f.innerHTML.trim()){ f.innerHTML=''; return; }
   f.innerHTML = `<div class="fin-pac-form" style="margin-top:10px;">
     <div class="form-grid">
       <div>
         <label>Valor (R$)</label>
-        <input type="number" id="fpp-valor-${cobId}" step="0.01" min="0" value="${saldoRestante.toFixed(2)}" placeholder="0,00"/>
+        <input type="number" id="fpp-valor-${vendaId}" step="0.01" min="0" value="${saldoRestante.toFixed(2)}" placeholder="0,00"/>
       </div>
       <div>
         <label>Forma de pagamento</label>
-        <select id="fpp-forma-${cobId}" onchange="document.getElementById('fpp-parc-wrap-${cobId}').style.display=this.value==='credito'?'':'none'">
+        <select id="fpp-forma-${vendaId}" onchange="document.getElementById('fpp-parc-wrap-${vendaId}').style.display=this.value==='credito'?'':'none'">
           <option value="dinheiro">Dinheiro</option>
           <option value="pix">PIX</option>
           <option value="credito">Cartão Crédito</option>
           <option value="debito">Cartão Débito</option>
         </select>
       </div>
-      <div id="fpp-parc-wrap-${cobId}" style="display:none;">
+      <div id="fpp-parc-wrap-${vendaId}" style="display:none;">
         <label>Parcelas no cartão</label>
-        <select id="fpp-parc-${cobId}">
+        <select id="fpp-parc-${vendaId}">
           ${Array.from({length:12},(_,i)=>`<option value="${i+1}">${i+1}x</option>`).join('')}
         </select>
       </div>
       <div>
         <label>Data</label>
-        <input type="date" id="fpp-data-${cobId}" value="${new Date().toISOString().slice(0,10)}"/>
+        <input type="date" id="fpp-data-${vendaId}" value="${new Date().toISOString().slice(0,10)}"/>
       </div>
       <div style="grid-column:1/-1;">
         <label>Observação</label>
-        <input type="text" id="fpp-obs-${cobId}" placeholder="Ex: Restante parcelado"/>
+        <input type="text" id="fpp-obs-${vendaId}" placeholder="Ex: Restante parcelado"/>
       </div>
     </div>
     <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px;">
-      <button class="btn-secondary" onclick="document.getElementById('pac-fin-form-pag-${cobId}').innerHTML=''">Cancelar</button>
-      <button class="btn-primary" onclick="pagPacAddPag(${cobId},${pacId})"><i class="ti ti-check"></i> Confirmar</button>
+      <button class="btn-secondary" onclick="document.getElementById('pac-fin-form-pag-${vendaId}').innerHTML=''">Cancelar</button>
+      <button class="btn-primary" onclick="pagPacAddPag(${vendaId},${pacId})"><i class="ti ti-check"></i> Confirmar</button>
     </div>
   </div>`;
 }
 
-async function pagPacAddPag(cobId, pacId){
-  const cob = pagPac.find(c=>c.id===cobId);
-  if(!cob) return;
-  const valor = parseFloat(document.getElementById('fpp-valor-'+cobId)?.value)||0;
-  const forma = document.getElementById('fpp-forma-'+cobId)?.value||'dinheiro';
-  const parcelas = parseInt(document.getElementById('fpp-parc-'+cobId)?.value)||1;
-  const data = document.getElementById('fpp-data-'+cobId)?.value||new Date().toISOString().slice(0,10);
-  const obs = document.getElementById('fpp-obs-'+cobId)?.value.trim()||'';
+async function pagPacAddPag(vendaId, pacId){
+  const v = vendas.find(x=>x.id===vendaId);
+  if(!v) return;
+  const valor = parseFloat(document.getElementById('fpp-valor-'+vendaId)?.value)||0;
+  const forma = document.getElementById('fpp-forma-'+vendaId)?.value||'dinheiro';
+  const parcelas = parseInt(document.getElementById('fpp-parc-'+vendaId)?.value)||1;
+  const data = document.getElementById('fpp-data-'+vendaId)?.value||new Date().toISOString().slice(0,10);
+  const obs = document.getElementById('fpp-obs-'+vendaId)?.value.trim()||'';
   if(valor<=0){ showToast('Informe o valor.','error'); return; }
 
-  cob.pagamentos = cob.pagamentos||[];
-  cob.pagamentos.push({
-    id: _pagPacId(),
+  v.pagamentos = v.pagamentos||[];
+  v.pagamentos.push({
+    id: Date.now(),
     valor,
     forma,
     parcelas_cartao: forma==='credito'?parcelas:1,
     data: new Date(data+'T12:00:00').toISOString(),
     obs
   });
-  const pago = cob.pagamentos.reduce((s,p)=>s+p.valor,0);
-  if(pago>=cob.valor_total) cob.status='quitado';
 
   showLoading(true); await saveFinanceiro(); showLoading(false);
   showToast('Pagamento registrado!');
   pagPacRender(pacId);
 }
 
-async function pagPacDelPag(cobId, pagId, pacId){
+async function pagPacDelPag(vendaId, pagId, pacId){
   if(!confirm('Remover este pagamento?')) return;
-  const cob = pagPac.find(c=>c.id===cobId);
-  if(!cob) return;
-  cob.pagamentos = (cob.pagamentos||[]).filter(p=>p.id!==pagId);
-  const pago = cob.pagamentos.reduce((s,p)=>s+p.valor,0);
-  cob.status = pago>=cob.valor_total?'quitado':'aberto';
+  const v = vendas.find(x=>x.id===vendaId);
+  if(!v) return;
+  v.pagamentos = (v.pagamentos||[]).filter(p=>p.id!==pagId);
   showLoading(true); await saveFinanceiro(); showLoading(false);
   showToast('Pagamento removido.');
-  pagPacRender(pacId);
-}
-
-async function pagPacDelCob(cobId, pacId){
-  if(!confirm('Excluir esta cobrança e todos os pagamentos?')) return;
-  pagPac = pagPac.filter(c=>c.id!==cobId);
-  showLoading(true); await saveFinanceiro(); showLoading(false);
-  showToast('Cobrança excluída.');
   pagPacRender(pacId);
 }
 
