@@ -740,11 +740,24 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px soli
 }
 
 /* ══ MODELO 2 — TOPNAV REDESIGN ══ */
+/* Mobile: topnav simplificada (navegação fica na bottom nav) */
+@media(max-width:768px){
+  .topnav-links { display: none !important; }
+  .topnav-right { display: none !important; }
+  .topnav-brand { margin-right: 0 !important; }
+  .header { justify-content: center !important; }
+  /* hero banner menor no mobile */
+  .home-hero-banner { padding: 14px 16px 16px !important; border-radius: 12px !important; }
+  .home-hero-greeting { font-size: 16px !important; margin-bottom: 10px !important; }
+  .home-hero-stat-val { font-size: 16px !important; }
+  .home-hero-stat-lbl { font-size: 9px !important; }
+  .home-hero-stat { padding: 8px 10px !important; min-width: 80px !important; }
+}
 :root { --sidebar-w: 0px !important; --header-h: 54px !important; }
 .sidebar { display: none !important; }
 .sidebar.open~.header { left: 0 !important; }
 .sidebar.open~.header~.page-content { margin-left: 0 !important; width: 100% !important; }
-.mobile-bottom-nav { display: none !important; }
+@media(min-width:769px){ .mobile-bottom-nav { display: none !important; } }
 .header {
   left: 0 !important;
   background: #d4735a !important;
