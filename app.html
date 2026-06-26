@@ -8510,7 +8510,42 @@ function pacOdontoToggleOrc(){
 
 function pacOdontoInitOrc(){
   pacOdontoPopularSelect();
+  if(!pacOdontoOrcList.length) pacOdontoAutoPopular();
   pacOdontoRenderOrcLista();
+}
+
+function pacOdontoAutoPopular(){
+  if(!pacDentesMap || !Object.keys(pacDentesMap).length) return;
+  const adicionados = new Map();
+  Object.entries(pacDentesMap).forEach(([dente, info])=>{
+    if(!info || !info.condicao || info.condicao==='higido') return;
+    const cond = info.condicao.toLowerCase();
+    const keywords = COND_PARA_PROC[cond] || [];
+    if(!keywords.length) return;
+    const num = parseInt(dente);
+    const proc = procs.find(p=>{
+      const n = p.nome.toLowerCase();
+      return keywords.some(k=>n.includes(k)) && (p.ativo!==false);
+    });
+    if(!proc) return;
+    const key = proc.id;
+    const tipo = getTipoCobranca(proc.id);
+    if(adicionados.has(key)){
+      const existing = adicionados.get(key);
+      if(tipo!=='global' && !isNaN(num)){
+        const arr = (existing.dentes||'').split(',').map(Number).filter(Boolean);
+        if(!arr.includes(num)){ arr.push(num); arr.sort((a,b)=>a-b); existing.dentes=arr.join(','); existing.qtd=arr.length; existing.total=existing.precoUnit*existing.qtd; }
+      }
+    } else {
+      const preco = proc.precoFinal||0;
+      const dentesStr = tipo!=='global' && !isNaN(num) ? String(num) : '';
+      const qtd = tipo==='global' ? 1 : (dentesStr ? 1 : 1);
+      const item = {procId:proc.id, nome:proc.nome, precoUnit:preco, qtd, dentes:dentesStr, tipo, total:preco*qtd};
+      adicionados.set(key, item);
+      pacOdontoOrcList.push(item);
+    }
+  });
+  if(pacOdontoOrcList.length) showToast(pacOdontoOrcList.length+' procedimento(s) sugerido(s) pelo odontograma');
 }
 
 function pacOdontoPopularSelect(){
@@ -8621,7 +8656,14 @@ function pacOdontoRenderOrcLista(){
     if(isGlobal) card += '<span style="font-size:11px;color:#1565c0;background:#e3f2fd;padding:2px 7px;border-radius:10px;">Global</span>';
     if(dArr.length) card += '<span style="background:var(--rose-lighter);color:var(--rose-dark);border-radius:6px;padding:2px 6px;font-size:11px;">🦷 '+dArr.join(', ')+'</span>';
     if(it.faces) card += '<span style="background:#f3e5f5;color:#6a1b9a;border-radius:6px;padding:2px 6px;font-size:11px;">'+escapeHtml(it.faces)+'</span>';
-    card += '<input type="number" min="0" step="0.01" value="'+it.total.toFixed(2)+'" onchange="pacOdontoOrcList['+i+'].total=parseFloat(this.value)||0;pacOdontoOrcList['+i+'].precoUnit=parseFloat(this.value)||0;pacOdontoRenderOrcLista();" style="width:80px;padding:3px 6px;border:1px solid var(--rose-light);border-radius:6px;font-size:12px;text-align:right;font-weight:700;color:var(--rose-dark);"/>';
+    // Controle de quantidade
+    card += '<div style="display:flex;align-items:center;gap:2px;border:1px solid var(--rose-light);border-radius:6px;overflow:hidden;">';
+    card += '<button type="button" onclick="orcQtdChange('+i+',-1)" style="width:24px;height:24px;border:none;background:var(--rose-lighter);cursor:pointer;font-size:14px;font-weight:700;color:var(--rose-dark);display:flex;align-items:center;justify-content:center;">−</button>';
+    card += '<span style="width:24px;text-align:center;font-size:12px;font-weight:700;color:var(--rose-dark);">'+it.qtd+'</span>';
+    card += '<button type="button" onclick="orcQtdChange('+i+',1)" style="width:24px;height:24px;border:none;background:var(--rose-lighter);cursor:pointer;font-size:14px;font-weight:700;color:var(--rose-dark);display:flex;align-items:center;justify-content:center;">+</button>';
+    card += '</div>';
+    if(it.qtd > 1) card += '<span style="font-size:10px;color:var(--rose-text);">'+it.qtd+'x '+fmtBRL(it.precoUnit)+'</span>';
+    card += '<input type="number" min="0" step="0.01" value="'+it.total.toFixed(2)+'" onchange="pacOdontoOrcList['+i+'].total=parseFloat(this.value)||0;pacOdontoRenderOrcLista();" style="width:80px;padding:3px 6px;border:1px solid var(--rose-light);border-radius:6px;font-size:12px;text-align:right;font-weight:700;color:var(--rose-dark);"/>';
     card += '<button class="btn-danger" style="padding:2px 6px;" onclick="pacOdontoOrcList.splice('+i+',1);pacOdontoRenderOrcLista();"><i class="ti ti-x"></i></button>';
     card += '</div>';
     if(!isGlobal){
@@ -8650,6 +8692,12 @@ function orcDenteToggle(idx,d){
   pacOdontoRenderOrcLista();
 }
 
+function orcQtdChange(idx, delta){
+  const it=pacOdontoOrcList[idx]; if(!it) return;
+  it.qtd = Math.max(1, (it.qtd||1) + delta);
+  it.total = it.precoUnit * it.qtd;
+  pacOdontoRenderOrcLista();
+}
 
 function pacOdontoLimparOrc(){
   pacOdontoOrcList = [];
