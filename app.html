@@ -117,27 +117,78 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#fdf6f3;color:#3a2020;mi
 /* ── GOOGLE AGENDA BANNER ── */
 @keyframes gcalSlideUp{from{opacity:0;transform:translateX(-50%) translateY(16px);}to{opacity:1;transform:translateX(-50%) translateY(0);}}
 
-/* ── LOGIN SCREEN ── */
+/* ── LOGIN SCREEN — Modelo 2 ── */
 #login-screen{
+  display:flex;align-items:stretch;justify-content:center;
+  min-height:100vh;background:#1a0f0a;
+}
+/* Painel esquerdo decorativo */
+.login-panel-left{
+  flex:1;background:linear-gradient(160deg,#7a3020 0%,#d4735a 55%,#c06040 100%);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:48px 40px;position:relative;overflow:hidden;
+}
+.login-panel-left::before{
+  content:'';position:absolute;width:320px;height:320px;border-radius:50%;
+  background:rgba(255,255,255,.06);top:-80px;right:-80px;
+}
+.login-panel-left::after{
+  content:'';position:absolute;width:200px;height:200px;border-radius:50%;
+  background:rgba(255,255,255,.05);bottom:-50px;left:-50px;
+}
+.lpl-logo{
+  width:90px;height:90px;background:rgba(255,255,255,.15);border-radius:24px;
   display:flex;align-items:center;justify-content:center;
-  min-height:100vh;padding:20px;background:linear-gradient(135deg,#fdf6f3 0%,#f5ddd5 100%);
+  margin-bottom:28px;position:relative;z-index:1;
+  box-shadow:0 8px 32px rgba(0,0,0,.18);
 }
-.login-card{
-  background:#fff;border-radius:24px;padding:40px 36px;width:100%;max-width:420px;
-  box-shadow:0 20px 60px rgba(212,115,90,.18);
+.lpl-title{font-size:30px;font-weight:800;color:#fff;text-align:center;margin-bottom:8px;position:relative;z-index:1;letter-spacing:-.5px;}
+.lpl-sub{font-size:14px;color:rgba(255,255,255,.78);text-align:center;margin-bottom:40px;position:relative;z-index:1;line-height:1.5;}
+.lpl-features{display:flex;flex-direction:column;gap:12px;position:relative;z-index:1;width:100%;max-width:300px;}
+.lpl-feature{display:flex;align-items:center;gap:12px;padding:12px 16px;background:rgba(255,255,255,.12);border-radius:12px;backdrop-filter:blur(4px);}
+.lpl-feature-icon{width:32px;height:32px;border-radius:8px;background:rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:16px;}
+.lpl-feature-text{font-size:13px;color:#fff;font-weight:500;}
+/* Painel direito — formulário */
+.login-panel-right{
+  width:460px;flex-shrink:0;background:#fff;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:48px 48px;
 }
-.login-logo{text-align:center;margin-bottom:28px;}
-.login-logo svg{width:80px;height:80px;}
-.login-title{font-size:20px;font-weight:800;color:var(--rose-dark);text-align:center;margin-bottom:4px;}
-.login-sub{font-size:13px;color:var(--rose-text);text-align:center;margin-bottom:28px;}
-.login-card label{font-size:12px;font-weight:700;color:var(--rose-text);text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:6px;}
-.login-card input{width:100%;border:1.5px solid var(--rose-light);border-radius:12px;padding:13px 15px;font-size:15px;color:#3a2020;background:var(--rose-lighter);outline:none;transition:border .2s,box-shadow .2s;margin-bottom:16px;}
-.login-card input:focus{border-color:var(--rose);background:#fff;box-shadow:0 0 0 3px rgba(212,115,90,.14);}
-.btn-login{width:100%;background:var(--rose);color:#fff;border:none;border-radius:12px;padding:14px;font-size:15px;font-weight:700;cursor:pointer;transition:background .2s,transform .15s;margin-top:4px;}
-.btn-login:hover{background:var(--rose-dark);}
+.lpr-back{font-size:12px;color:#a05040;text-decoration:none;display:flex;align-items:center;gap:5px;margin-bottom:32px;align-self:flex-start;}
+.lpr-back:hover{color:#d4735a;}
+.lpr-heading{font-size:24px;font-weight:700;color:#1a0f0a;margin-bottom:4px;}
+.lpr-subheading{font-size:13px;color:#888;margin-bottom:32px;}
+.lpr-form{width:100%;}
+.lpr-form label{font-size:12px;font-weight:600;color:#555;display:block;margin-bottom:6px;}
+.lpr-form input{
+  width:100%;border:1.5px solid #e8d5d0;border-radius:12px;
+  padding:13px 15px;font-size:14px;color:#1a0f0a;background:#fafafa;
+  outline:none;transition:border .2s,box-shadow .2s,background .2s;margin-bottom:18px;
+}
+.lpr-form input:focus{border-color:#d4735a;background:#fff;box-shadow:0 0 0 3px rgba(212,115,90,.12);}
+.btn-login{
+  width:100%;background:linear-gradient(135deg,#d4735a,#a05040);color:#fff;
+  border:none;border-radius:12px;padding:14px;font-size:15px;font-weight:700;
+  cursor:pointer;transition:opacity .2s,transform .15s;margin-top:4px;
+  box-shadow:0 4px 20px rgba(212,115,90,.35);
+}
+.btn-login:hover{opacity:.92;}
 .btn-login:active{transform:scale(.98);}
-.login-err{background:#ffebee;color:#b33;border:1px solid #ffaaaa;border-radius:10px;padding:10px 14px;font-size:13px;margin-top:12px;display:none;}
+.login-divider{display:flex;align-items:center;gap:12px;margin:20px 0;color:#ccc;font-size:12px;}
+.login-divider::before,.login-divider::after{content:'';flex:1;height:1px;background:#f0e0da;}
+.lpr-clinica{font-size:11px;color:#aaa;text-align:center;margin-top:24px;}
+.lpr-clinica strong{color:#d4735a;}
+.login-err{background:#fff0f0;color:#c0392b;border:1.5px solid #ffcdd2;border-radius:10px;padding:10px 14px;font-size:13px;margin-top:12px;display:none;}
 .login-err.show{display:block;}
+/* Responsive — mobile: coluna única */
+@media(max-width:700px){
+  #login-screen{flex-direction:column;background:#fdf0eb;}
+  .login-panel-left{display:none;}
+  .login-panel-right{width:100%;padding:36px 24px;}
+}
+/* Compat: login-card e login-title ainda usados por JS */
+.login-card{display:contents;}
+.login-title,.login-sub,.login-logo{display:none;}
 
 /* ── APP SHELL ── */
 #app{display:none;min-height:100vh;}
@@ -687,6 +738,158 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px soli
   .sidebar-item span{display:none!important;}
   .btn-logout span{display:none!important;}
 }
+
+/* ══ MODELO 2 — TOPNAV REDESIGN ══ */
+:root { --sidebar-w: 0px !important; --header-h: 54px !important; }
+.sidebar { display: none !important; }
+.sidebar.open~.header { left: 0 !important; }
+.sidebar.open~.header~.page-content { margin-left: 0 !important; width: 100% !important; }
+.mobile-bottom-nav { display: none !important; }
+.header {
+  left: 0 !important;
+  background: #d4735a !important;
+  border-bottom: none !important;
+  padding: 0 16px !important;
+  gap: 0 !important;
+  box-shadow: 0 2px 12px rgba(122,48,32,.25) !important;
+}
+.header > svg { display: none !important; }
+.header-text { display: none !important; }
+.page-content {
+  margin-left: 0 !important;
+  width: 100% !important;
+}
+.topnav-brand {
+  display: flex; align-items: center; gap: 9px; margin-right: 18px; flex-shrink: 0;
+}
+.topnav-brand-icon {
+  width: 30px; height: 30px;
+  background: rgba(255,255,255,.22); border-radius: 8px;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.topnav-brand-name {
+  font-size: 13px; font-weight: 700; color: #fff; line-height: 1.2;
+}
+.topnav-brand-sub {
+  font-size: 10px; color: rgba(255,255,255,.72);
+}
+.topnav-links {
+  display: flex; flex: 1; gap: 1px; overflow-x: auto;
+}
+.topnav-links::-webkit-scrollbar { display: none; }
+.topnav-item {
+  padding: 6px 11px; border-radius: 8px; font-size: 12px;
+  color: rgba(255,255,255,.84); cursor: pointer;
+  background: none; border: none; font-family: inherit;
+  white-space: nowrap; transition: background .15s, color .15s;
+  display: flex; align-items: center; gap: 5px;
+}
+.topnav-item:hover { background: rgba(255,255,255,.16); color: #fff; }
+.topnav-item.active { background: rgba(255,255,255,.22); color: #fff; font-weight: 600; }
+.topnav-item i { font-size: 14px; }
+.topnav-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; margin-left: 10px; }
+.topnav-avatar {
+  width: 30px; height: 30px; border-radius: 50%;
+  background: #f0cfc4; display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 700; color: #7a3020;
+  border: 2px solid rgba(255,255,255,.4); flex-shrink: 0; cursor: pointer;
+}
+
+
+/* ── HOME HERO BANNER (Modelo 2) ── */
+.home-hero-banner {
+  background: linear-gradient(135deg, #d4735a 0%, #a05040 100%);
+  border-radius: 16px;
+  padding: 20px 24px 22px;
+  margin-bottom: 16px;
+  position: relative;
+  overflow: hidden;
+}
+.home-hero-banner::after {
+  content: ''; position: absolute; right: -30px; top: -30px;
+  width: 160px; height: 160px; border-radius: 50%;
+  background: rgba(255,255,255,.07); pointer-events: none;
+}
+.home-hero-banner::before {
+  content: ''; position: absolute; right: 80px; bottom: -50px;
+  width: 100px; height: 100px; border-radius: 50%;
+  background: rgba(255,255,255,.05); pointer-events: none;
+}
+.home-hero-date { font-size: 11px; color: rgba(255,255,255,.7); margin-bottom: 4px; }
+.home-hero-greeting { font-size: 20px; font-weight: 700; color: #fff; margin-bottom: 16px; }
+.home-hero-stats { display: flex; gap: 10px; flex-wrap: wrap; position: relative; z-index: 1; }
+.home-hero-stat {
+  background: rgba(255,255,255,.18); backdrop-filter: blur(4px);
+  border-radius: 10px; padding: 10px 16px; flex: 1; min-width: 110px;
+  border: 1px solid rgba(255,255,255,.2);
+}
+.home-hero-stat-val { font-size: 20px; font-weight: 700; color: #fff; }
+.home-hero-stat-lbl { font-size: 10px; color: rgba(255,255,255,.78); margin-top: 2px; }
+/* Ocultar carousel na home do Modelo 2 (substituído pelo hero) */
+.home-carousel { display: none !important; }
+
+
+/* ══ POLISH GERAL — MODELO 2 ══ */
+
+/* Cards com sombra mais suave e bordas mais modernas */
+.card {
+  border-radius: 14px !important;
+  box-shadow: 0 1px 12px rgba(122,48,32,.06) !important;
+  border: 1px solid var(--rose-light) !important;
+}
+
+/* Botões primários mais limpos */
+.btn-primary {
+  border-radius: 10px !important;
+  font-weight: 600 !important;
+}
+.btn-secondary {
+  border-radius: 10px !important;
+}
+
+/* Home stat cards mais modernos */
+.home-stat-card {
+  border-radius: 12px !important;
+  border: 1px solid var(--rose-light) !important;
+  box-shadow: 0 1px 8px rgba(122,48,32,.05) !important;
+  background: #fff !important;
+}
+
+/* Inputs com bordas mais suaves */
+input[type=text], input[type=number], input[type=date],
+input[type=email], input[type=tel], input[type=time],
+select, textarea {
+  border-radius: 10px !important;
+}
+
+/* Tabelas mais limpas */
+.table-wrapper table thead tr th {
+  background: #fdf0eb !important;
+  color: var(--rose-dark) !important;
+}
+
+/* Badges/chips */
+.status-badge, .badge {
+  border-radius: 20px !important;
+  font-size: 10px !important;
+  padding: 2px 8px !important;
+}
+
+/* Quick add bar (barra inferior da home) */
+.qbar-section {
+  display: flex; align-items: center; gap: 10px;
+  padding: 12px 0; margin-bottom: 16px; flex-wrap: wrap;
+}
+.qbar-section .btn-primary, .qbar-section .btn-secondary {
+  font-size: 12px; padding: 7px 14px;
+}
+
+/* Scrollbar mais sutil nas tabelas e listas */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--rose-light); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: var(--rose); }
+
 </style>
 </head>
 <body>
@@ -694,31 +897,58 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px soli
 
 <!-- ══════════════ LOGIN ══════════════ -->
 <div id="login-screen">
-  <div class="login-card">
-    <div class="login-logo"><svg width="80" height="80" viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg">
-  <!-- Barra horizontal superior -->
-  <line x1="18" y1="14" x2="54" y2="14" stroke="#d4735a" stroke-width="3" stroke-linecap="round"/>
-  <!-- Haste esquerda vertical -->
-  <line x1="22" y1="14" x2="22" y2="62" stroke="#d4735a" stroke-width="3" stroke-linecap="round"/>
-  <!-- Haste interna vertical (segundo traço do R) -->
-  <line x1="33" y1="14" x2="33" y2="62" stroke="#d4735a" stroke-width="3" stroke-linecap="round"/>
-  <!-- Curva do R (semiarco superior direito) -->
-  <path d="M33 14 Q58 14 58 33 Q58 51 33 51" fill="none" stroke="#d4735a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
-  <!-- Perna diagonal do R -->
-  <line x1="33" y1="51" x2="56" y2="62" stroke="#d4735a" stroke-width="3" stroke-linecap="round"/>
-</svg>
-</div>
-    <div class="login-title" id="login-title">RW<span style="color:var(--rose);">Dent</span></div>
-    <div class="login-sub" id="login-sub">Gestão Odontológica Inteligente</div>
-    <div style="font-size:12px;text-align:center;margin-bottom:14px;"><a href="index.html" style="color:var(--rose-text);text-decoration:none;">← Página inicial</a></div>
-    <label for="login-email">E-mail</label>
-    <input type="email" id="login-email" placeholder="secretaria@clinica.com" autocomplete="username" />
-    <label for="login-pass">Senha</label>
-    <input type="password" id="login-pass" placeholder="••••••••" autocomplete="current-password" />
-    <button class="btn-login" id="btn-login" onclick="doLogin()">
-      <span id="btn-login-text">Entrar</span>
-    </button>
-    <div class="login-err" id="login-err"></div>
+  <!-- Painel esquerdo decorativo -->
+  <div class="login-panel-left">
+    <div class="lpl-logo">
+      <svg width="52" height="52" viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg">
+        <line x1="18" y1="14" x2="54" y2="14" stroke="#fff" stroke-width="4" stroke-linecap="round"/>
+        <line x1="22" y1="14" x2="22" y2="62" stroke="#fff" stroke-width="4" stroke-linecap="round"/>
+        <line x1="33" y1="14" x2="33" y2="62" stroke="#fff" stroke-width="4" stroke-linecap="round"/>
+        <path d="M33 14 Q58 14 58 33 Q58 51 33 51" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+        <line x1="33" y1="51" x2="56" y2="62" stroke="#fff" stroke-width="4" stroke-linecap="round"/>
+      </svg>
+    </div>
+    <div class="lpl-title" id="login-title">RWDent</div>
+    <div class="lpl-sub" id="login-sub">Gestão Odontológica Inteligente<br>para clínicas modernas</div>
+    <div class="lpl-features">
+      <div class="lpl-feature">
+        <div class="lpl-feature-icon">🗓️</div>
+        <div class="lpl-feature-text">Agenda e agendamentos</div>
+      </div>
+      <div class="lpl-feature">
+        <div class="lpl-feature-icon">🦷</div>
+        <div class="lpl-feature-text">Prontuário e plano de tratamento</div>
+      </div>
+      <div class="lpl-feature">
+        <div class="lpl-feature-icon">💰</div>
+        <div class="lpl-feature-text">Controle financeiro completo</div>
+      </div>
+      <div class="lpl-feature">
+        <div class="lpl-feature-icon">📦</div>
+        <div class="lpl-feature-text">Estoque e materiais</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Painel direito — formulário -->
+  <div class="login-panel-right">
+    <a href="index.html" class="lpr-back"><i class="ti ti-arrow-left"></i> Página inicial</a>
+    <div class="lpr-heading">Bem-vinda de volta! 👋</div>
+    <div class="lpr-subheading">Entre com suas credenciais para acessar a clínica</div>
+    <!-- login-card mantido como wrapper invisível para compatibilidade JS -->
+    <div class="login-card lpr-form">
+      <div class="login-logo" style="display:none"><div id="login-title-compat"></div></div>
+      <div class="login-sub" style="display:none" id="login-sub-compat"></div>
+      <label for="login-email">E-mail</label>
+      <input type="email" id="login-email" placeholder="secretaria@clinica.com" autocomplete="username" />
+      <label for="login-pass">Senha</label>
+      <input type="password" id="login-pass" placeholder="••••••••" autocomplete="current-password" />
+      <button class="btn-login" id="btn-login" onclick="doLogin()">
+        <span id="btn-login-text">Entrar</span>
+      </button>
+      <div class="login-err" id="login-err"></div>
+    </div>
+    <div class="lpr-clinica">Consultório Odontológico <strong>Rhaiza Barroso</strong></div>
   </div>
 </div>
 
@@ -766,16 +996,40 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px soli
 
   <!-- Header -->
   <div class="header">
-<svg width="36" height="36" viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg">
-  <line x1="18" y1="14" x2="54" y2="14" stroke="#d4735a" stroke-width="3" stroke-linecap="round"/>
-  <line x1="22" y1="14" x2="22" y2="62" stroke="#d4735a" stroke-width="3" stroke-linecap="round"/>
-  <line x1="33" y1="14" x2="33" y2="62" stroke="#d4735a" stroke-width="3" stroke-linecap="round"/>
-  <path d="M33 14 Q58 14 58 33 Q58 51 33 51" fill="none" stroke="#d4735a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
-  <line x1="33" y1="51" x2="56" y2="62" stroke="#d4735a" stroke-width="3" stroke-linecap="round"/>
-</svg>
-    <div class="header-text">
-      <h1 id="header-clinica">RWDent</h1>
-      <p id="header-subtitulo">Agendamentos e Prontuários Odontológicos</p>
+    <div class="topnav-brand">
+      <div class="topnav-brand-icon">
+        <svg width="18" height="18" viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg">
+          <line x1="18" y1="14" x2="54" y2="14" stroke="#fff" stroke-width="5" stroke-linecap="round"/>
+          <line x1="22" y1="14" x2="22" y2="62" stroke="#fff" stroke-width="5" stroke-linecap="round"/>
+          <line x1="33" y1="14" x2="33" y2="62" stroke="#fff" stroke-width="5" stroke-linecap="round"/>
+          <path d="M33 14 Q58 14 58 33 Q58 51 33 51" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+          <line x1="33" y1="51" x2="56" y2="62" stroke="#fff" stroke-width="5" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <div>
+        <div class="topnav-brand-name" id="header-clinica">RWDent</div>
+        <div class="topnav-brand-sub" id="header-subtitulo">Agendamentos e Prontuários Odontológicos</div>
+      </div>
+    </div>
+    <div class="topnav-links">
+      <button class="topnav-item active" data-tab="home" onclick="switchTab('home')"><i class="ti ti-home"></i> Início</button>
+      <button class="topnav-item" data-tab="venda_rapida" onclick="switchTab('venda_rapida')"><i class="ti ti-shopping-cart"></i> Venda</button>
+      <button class="topnav-item" data-tab="agendar" onclick="switchTab('agendar')"><i class="ti ti-calendar-plus"></i> Agendar</button>
+      <button class="topnav-item" data-tab="lista" onclick="switchTab('lista')"><i class="ti ti-calendar-event"></i> Agenda</button>
+      <button class="topnav-item" data-tab="calendario" onclick="switchTab('calendario')"><i class="ti ti-calendar-month"></i> Calendário</button>
+      <button class="topnav-item" data-tab="pacientes" onclick="switchTab('pacientes')"><i class="ti ti-users"></i> Pacientes</button>
+      <button class="topnav-item" data-tab="financeiro" onclick="switchTab('financeiro')"><i class="ti ti-chart-bar"></i> Financeiro</button>
+      <button class="topnav-item" data-tab="estoque_fin" onclick="switchTab('estoque_fin')"><i class="ti ti-package"></i> Estoque</button>
+      <button class="topnav-item" data-tab="procedimentos_fin" onclick="switchTab('procedimentos_fin')"><i class="ti ti-list-check"></i> Procedimentos</button>
+      <button class="topnav-item" data-tab="materiais_fin" onclick="switchTab('materiais_fin')"><i class="ti ti-box"></i> Materiais</button>
+      <button class="topnav-item" data-tab="vendas_fin" onclick="switchTab('vendas_fin')"><i class="ti ti-receipt"></i> Vendas</button>
+      <button class="topnav-item" data-tab="profissionais" onclick="switchTab('profissionais')"><i class="ti ti-briefcase"></i> Profissionais</button>
+      <button class="topnav-item" data-tab="resgate" onclick="switchTab('resgate')"><i class="ti ti-heart-handshake"></i> Resgate</button>
+      <button class="topnav-item" data-tab="invisalign_apresentacao" onclick="switchTab('invisalign_apresentacao')"><i class="ti ti-align-box-left-stretch"></i> Invisalign</button>
+      <button class="topnav-item" data-tab="configuracoes" onclick="switchTab('configuracoes')"><i class="ti ti-settings"></i> Config.</button>
+    </div>
+    <div class="topnav-right">
+      <div class="topnav-avatar" id="logout-avatar" onclick="doLogout()" title="Sair">RW</div>
     </div>
   </div>
 
@@ -784,6 +1038,13 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px soli
 
     <!-- HOME -->
     <div id="tab-home" class="content">
+
+      <!-- ── HERO BANNER MODELO 2 ── -->
+      <div class="home-hero-banner" id="home-hero-banner">
+        <div class="home-hero-date" id="home-hero-date"></div>
+        <div class="home-hero-greeting" id="home-hero-greeting">Bem-vinda à sua clínica! 👋</div>
+        <div class="home-hero-stats" id="home-hero-stats"></div>
+      </div>
 
       <!-- ── CAROUSEL ── -->
       <div class="home-carousel" id="home-carousel">
@@ -2167,7 +2428,7 @@ function switchTab(tab){
     const el=document.getElementById('tab-'+t);
     if(el) el.style.display = t===tab?'':'none';
   });
-  document.querySelectorAll('.sidebar-item,.mobile-nav-item').forEach(b=>{
+  document.querySelectorAll('.sidebar-item,.mobile-nav-item,.topnav-item').forEach(b=>{
     b.classList.toggle('active', b.dataset.tab===tab);
   });
   const _tituloAba = {
@@ -2218,6 +2479,19 @@ function switchTab(tab){
 // ══════════════════════════════════════════════════════
 function renderHomeStats(){
   const hoje_str = hoje();
+  // Popula hero banner
+  const _heroDate = document.getElementById('home-hero-date');
+  if(_heroDate){
+    _heroDate.textContent = new Date().toLocaleDateString('pt-BR',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+  }
+  const _heroGreeting = document.getElementById('home-hero-greeting');
+  if(_heroGreeting){
+    const _clinicaNome = document.getElementById('header-clinica');
+    const _nome = (_clinicaNome ? _clinicaNome.textContent : 'RWDent').replace(/rwdent/i,'').trim() || 'Dra. Rhaiza';
+    const _hr = new Date().getHours();
+    const _saudacao = _hr < 12 ? 'Bom dia' : _hr < 18 ? 'Boa tarde' : 'Boa noite';
+    _heroGreeting.textContent = _saudacao + ', ' + (document.getElementById('header-clinica') ? document.getElementById('header-clinica').textContent : 'RWDent') + '! 👋';
+  }
   const hoje_count = agendamentos.filter(a=>a.data===hoje_str).length;
   const semana_end = new Date(); semana_end.setDate(semana_end.getDate()+7);
   const semana_count = agendamentos.filter(a=>a.data>=hoje_str && a.data<=toLocalISO(semana_end)).length;
@@ -2226,6 +2500,12 @@ function renderHomeStats(){
   const _mesStat = hoje_str.slice(0,7);
   const _fatMes = vendas.filter(v=>v.status==='finalizada'&&(v.data||v.dataFinal||'').slice(0,7)===_mesStat).reduce((a,v)=>a+(Number(v.total)||0),0);
   const _mesLabel = new Date(_mesStat+'-02').toLocaleDateString('pt-BR',{month:'long',year:'numeric'});
+  document.getElementById('home-hero-stats').innerHTML = `
+    <div class="home-hero-stat"><div class="home-hero-stat-val">${fmtBRL(_fatMes)}</div><div class="home-hero-stat-lbl">Faturamento do mês</div></div>
+    <div class="home-hero-stat"><div class="home-hero-stat-val">${hoje_count}</div><div class="home-hero-stat-lbl">Consultas hoje</div></div>
+    <div class="home-hero-stat"><div class="home-hero-stat-val">${semana_count}</div><div class="home-hero-stat-lbl">Na semana</div></div>
+    <div class="home-hero-stat"><div class="home-hero-stat-val">${pacientes.length}</div><div class="home-hero-stat-lbl">Pacientes</div></div>
+  `;
   document.getElementById('home-stats').innerHTML = `
     <div class="home-stat-card">
       <div class="home-stat-icon" style="background:#fdf0eb;color:#d4735a;"><i class="ti ti-users"></i></div>
