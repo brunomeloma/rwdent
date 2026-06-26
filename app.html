@@ -4534,6 +4534,8 @@ async function pacAlterarStatusPlano(id, status){
       const pac = pacientes.find(p=>p.id===pacId);
       const proc = procs.find(p=>p.nome===item.procedimento);
       const total = parseFloat((item.valor||'0').replace(',','.'));
+      const qtd = item.quantidade_dentes||1;
+      const precoUnit = qtd > 0 ? total / qtd : total;
       const venda = {
         id: nextVendaId++,
         status: 'orcamento',
@@ -4541,7 +4543,8 @@ async function pacAlterarStatusPlano(id, status){
         pacienteNome: pac?.nome||'',
         itens: [{
           procId: proc?.id||null,
-          qtd: item.quantidade_dentes||1,
+          qtd: qtd,
+          precoUnit: precoUnit,
           nome: item.procedimento,
           dente: item.dente||'',
           descDente: item.descricao||''
