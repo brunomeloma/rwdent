@@ -572,6 +572,40 @@ button{font-family:inherit;}
 .sign-preview{border:1.5px solid var(--rose-light);border-radius:10px;padding:10px;text-align:center;min-height:80px;display:flex;align-items:center;justify-content:center;}
 .sign-preview img{max-height:70px;max-width:100%;}
 
+/* ── FINANCEIRO PACIENTE ── */
+.fin-pac-resumo{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px;}
+.fin-pac-resumo-item{background:var(--rose-lighter);border-radius:12px;padding:12px;text-align:center;}
+.fin-pac-resumo-item .val{font-size:18px;font-weight:800;color:var(--rose-dark);}
+.fin-pac-resumo-item .lbl{font-size:10px;font-weight:600;color:var(--rose-text);text-transform:uppercase;letter-spacing:.5px;margin-top:2px;}
+.fin-pac-resumo-item.positivo .val{color:#2e7d32;}
+.fin-pac-resumo-item.negativo .val{color:#dc2626;}
+.fin-pac-cob{border:1.5px solid var(--rose-light);border-radius:14px;padding:16px;margin-bottom:12px;background:#fff;transition:box-shadow .2s;}
+.fin-pac-cob:hover{box-shadow:0 4px 16px rgba(212,115,90,.12);}
+.fin-pac-cob-head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:10px;}
+.fin-pac-cob-titulo{font-size:14px;font-weight:700;color:var(--rose-dark);}
+.fin-pac-badge{display:inline-block;font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px;text-transform:uppercase;letter-spacing:.5px;}
+.fin-pac-badge.aberto{background:#fff3e0;color:#e65100;}
+.fin-pac-badge.quitado{background:#e8f5e9;color:#2e7d32;}
+.fin-pac-badge.cancelado{background:#ffebee;color:#b33;}
+.fin-pac-valores{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;font-size:12px;margin-bottom:12px;padding:10px;background:var(--rose-lighter);border-radius:10px;}
+.fin-pac-valores strong{display:block;font-size:10px;color:var(--rose-text);text-transform:uppercase;margin-bottom:2px;}
+.fin-pac-pag-item{display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:10px;font-size:12px;margin-bottom:4px;background:#fdfaf9;border:1px solid #f3e3dc;}
+.fin-pac-pag-item .pag-icon{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;}
+.fin-pac-pag-item .pag-icon.dinheiro{background:#e8f5e9;color:#2e7d32;}
+.fin-pac-pag-item .pag-icon.cartao{background:#e3f2fd;color:#1565c0;}
+.fin-pac-pag-item .pag-icon.pix{background:#e0f2f1;color:#00695c;}
+.fin-pac-pag-item .pag-del{margin-left:auto;background:none;border:none;color:#ccc;cursor:pointer;font-size:14px;padding:4px;}
+.fin-pac-pag-item .pag-del:hover{color:#dc2626;}
+.fin-pac-form{border:1.5px solid var(--rose-light);border-radius:12px;padding:14px;margin-top:10px;background:#fdfaf9;}
+.fin-pac-form .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.fin-pac-form label{font-size:10px;font-weight:700;color:var(--rose-text);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px;}
+.fin-pac-form input,.fin-pac-form select,.fin-pac-form textarea{width:100%;padding:8px 10px;border:1.5px solid var(--rose-light);border-radius:8px;font-size:13px;color:var(--rose-dark);box-sizing:border-box;}
+@media(max-width:600px){
+  .fin-pac-resumo{grid-template-columns:1fr;}
+  .fin-pac-valores{grid-template-columns:1fr;}
+  .fin-pac-form .form-grid{grid-template-columns:1fr;}
+}
+
 /* ── GALERIA DE FOTOS ── */
 .galeria-upload{border:2px dashed var(--rose-light);border-radius:14px;padding:24px 16px;text-align:center;cursor:pointer;transition:border-color .2s,background .2s;background:var(--rose-lighter);}
 .galeria-upload:hover,.galeria-upload.drag{border-color:var(--rose);background:#fff;}
@@ -3454,6 +3488,7 @@ function renderPatientDetail(abaAtiva){
         <button class="pac-tab ${abaAtiva==='plano'?'active':''}" onclick="renderPatientDetail('plano')"><i class="ti ti-clipboard-list"></i> Plano</button>
         <button class="pac-tab ${abaAtiva==='orcamentos'?'active':''}" onclick="renderPatientDetail('orcamentos')"><i class="ti ti-receipt"></i> Orçamentos</button>
         <button class="pac-tab ${abaAtiva==='procs'?'active':''}" onclick="renderPatientDetail('procs')"><i class="ti ti-check"></i> Realizados</button>
+        <button class="pac-tab ${abaAtiva==='financeiro'?'active':''}" onclick="renderPatientDetail('financeiro')"><i class="ti ti-cash"></i> Financeiro</button>
         <button class="pac-tab ${abaAtiva==='termo'?'active':''}" onclick="renderPatientDetail('termo')"><i class="ti ti-file-signature"></i> Termo</button>
         <button class="pac-tab ${abaAtiva==='galeria'?'active':''}" onclick="renderPatientDetail('galeria')"><i class="ti ti-photo"></i> Galeria</button>
       </div>
@@ -4004,6 +4039,11 @@ function renderPatientDetail(abaAtiva){
         </div>
       </div>
 
+      <!-- ABA: FINANCEIRO -->
+      <div id="pac-aba-financeiro" style="display:${abaAtiva==='financeiro'?'':'none'};">
+        <div style="margin-top:14px;" id="pac-fin-container"></div>
+      </div>
+
       <!-- ABA: TERMO DE CONSENTIMENTO -->
       <div id="pac-aba-termo" style="display:${abaAtiva==='termo'?'':'none'};">
         <div style="margin-top:14px;">
@@ -4068,6 +4108,7 @@ function renderPatientDetail(abaAtiva){
   if(abaAtiva==='orcamentos') pacRenderOrcamentos(p.id);
   if(abaAtiva==='plano'){ pacCarregarPlano(p.id); }
   if(abaAtiva==='galeria') galeriaCarregar(p.id);
+  if(abaAtiva==='financeiro') pagPacRender(p.id);
   requestAnimationFrame(()=>window.scrollTo({top:0,behavior:'instant'}));
 }
 
@@ -5427,6 +5468,7 @@ let combos      = [];   // combos promocionais
 let estoque     = {};   // { matId: { atual, min, compra } }
 let procInsumos = {};   // { procId: [{matId, qtd}] }
 let vendas      = [];   // histórico de vendas/orçamentos
+let pagPac      = [];   // cobranças/pagamentos de pacientes
 let cfg         = { salario:3000, horas:132, trib:0, desperd:5, margem:100, colabPct:50, pct_manut:15, migr_manut_v2:false };
 let taxasCfg    = { debito:1.5, credito:[2.49,5.1,6.12,7.15,8.19,9.24,10.3,11.36,12.44,13.52,14.61,15.71] };
 let descCfg     = { val:0, tipo:'pct', maxPar:6 };
@@ -6375,6 +6417,7 @@ async function loadFinanceiro(){
     vendas      = safe(data.vendas,      []);
     combos      = safe(data.combos,      []);
     cfg         = safe(data.cfg,         cfg);
+    pagPac      = Array.isArray(cfg._pagPac) ? cfg._pagPac : [];
     taxasCfg    = safe(data.taxas_cfg,   taxasCfg);
     descCfg     = safe(data.desc_cfg,    descCfg);
   }
@@ -6437,6 +6480,7 @@ async function loadFinanceiro(){
 
 async function saveFinanceiro(){
   if(!clinicaId) return;
+  cfg._pagPac = pagPac;
   const payload = {
     clinica_id   : clinicaId,
     procs        : JSON.stringify(procs),
@@ -10997,6 +11041,253 @@ async function _galeriaEnsureBucket(){
     if(error && !error.message?.includes('already exists')){ showToast('Erro ao criar bucket: '+error.message,'error'); return false; }
   } catch(e){ showToast('Erro storage: '+e.message,'error'); return false; }
   return true;
+}
+
+// ── FINANCEIRO PACIENTE ──
+let _pagPacNextId = 1;
+function _pagPacId(){ return _pagPacNextId++; }
+
+function pagPacRender(pacId){
+  const container = document.getElementById('pac-fin-container');
+  if(!container) return;
+  _pagPacNextId = pagPac.length ? Math.max(...pagPac.map(c=>c.id||0),...pagPac.flatMap(c=>(c.pagamentos||[]).map(p=>p.id||0))) + 1 : 1;
+
+  const cobs = pagPac.filter(c=>c.paciente_id===pacId && c.status!=='cancelado');
+  const totalGeral = cobs.reduce((a,c)=>a+c.valor_total,0);
+  const pagoGeral = cobs.reduce((a,c)=>a+(c.pagamentos||[]).reduce((s,p)=>s+p.valor,0),0);
+  const saldoGeral = totalGeral - pagoGeral;
+
+  container.innerHTML = `
+    <div class="fin-pac-resumo">
+      <div class="fin-pac-resumo-item"><div class="val">${fmtBRL(totalGeral)}</div><div class="lbl">Total</div></div>
+      <div class="fin-pac-resumo-item positivo"><div class="val">${fmtBRL(pagoGeral)}</div><div class="lbl">Pago</div></div>
+      <div class="fin-pac-resumo-item ${saldoGeral>0?'negativo':'positivo'}"><div class="val">${fmtBRL(saldoGeral)}</div><div class="lbl">Saldo</div></div>
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+      <span style="font-size:13px;font-weight:700;color:var(--rose-dark);">Cobranças</span>
+      <button class="btn-secondary" onclick="pagPacFormNova(${pacId})"><i class="ti ti-plus"></i> Nova cobrança</button>
+    </div>
+    <div id="pac-fin-form-nova"></div>
+    <div id="pac-fin-lista">
+      ${cobs.length===0?'<div style="text-align:center;padding:30px;color:var(--rose-text);font-size:13px;"><i class="ti ti-receipt-off" style="font-size:32px;display:block;margin-bottom:8px;opacity:.5;"></i>Nenhuma cobrança registrada.</div>':''}
+      ${cobs.sort((a,b)=>(b.data_criacao||'').localeCompare(a.data_criacao||'')).map(c=>{
+        const pago = (c.pagamentos||[]).reduce((s,p)=>s+p.valor,0);
+        const saldo = c.valor_total - pago;
+        const status = saldo<=0?'quitado':'aberto';
+        const formaIcon = f => f==='pix'?'ti-brand-cashapp':f==='credito'?'ti-credit-card':f==='debito'?'ti-credit-card':'ti-cash';
+        const formaClass = f => f==='pix'?'pix':(f==='credito'||f==='debito')?'cartao':'dinheiro';
+        const formaLabel = f => f==='pix'?'PIX':f==='credito'?'Cartão Crédito':f==='debito'?'Cartão Débito':'Dinheiro';
+        return `<div class="fin-pac-cob">
+          <div class="fin-pac-cob-head">
+            <div>
+              <div class="fin-pac-cob-titulo"><i class="ti ti-tooth"></i> ${escapeHtml(c.descricao)}</div>
+              <div style="font-size:11px;color:var(--rose-text);margin-top:2px;">${new Date(c.data_criacao).toLocaleDateString('pt-BR')}</div>
+            </div>
+            <div style="display:flex;gap:6px;align-items:center;">
+              <span class="fin-pac-badge ${status}">${status==='quitado'?'Quitado':'Em aberto'}</span>
+              <button style="border:none;background:none;cursor:pointer;color:#ccc;font-size:16px;" onclick="pagPacDelCob(${c.id},${pacId})" title="Excluir"><i class="ti ti-trash"></i></button>
+            </div>
+          </div>
+          <div class="fin-pac-valores">
+            <div><strong>Total</strong>${fmtBRL(c.valor_total)}</div>
+            <div><strong>Pago</strong>${fmtBRL(pago)}</div>
+            <div><strong>Saldo</strong><span style="color:${saldo>0?'#dc2626':'#2e7d32'};font-weight:700;">${fmtBRL(saldo)}</span></div>
+          </div>
+          ${(c.pagamentos||[]).length?`<div style="margin-bottom:8px;">
+            <div style="font-size:10px;font-weight:700;color:var(--rose-text);text-transform:uppercase;margin-bottom:6px;">Pagamentos</div>
+            ${(c.pagamentos||[]).map(pg=>`<div class="fin-pac-pag-item">
+              <div class="pag-icon ${formaClass(pg.forma)}"><i class="ti ${formaIcon(pg.forma)}"></i></div>
+              <div style="flex:1;">
+                <div style="font-weight:600;">${fmtBRL(pg.valor)} <span style="font-weight:400;color:var(--rose-text);">— ${formaLabel(pg.forma)}${pg.parcelas_cartao>1?' '+pg.parcelas_cartao+'x':''}</span></div>
+                <div style="font-size:11px;color:var(--rose-text);">${new Date(pg.data).toLocaleDateString('pt-BR')}${pg.obs?' — '+escapeHtml(pg.obs):''}</div>
+              </div>
+              <button class="pag-del" onclick="pagPacDelPag(${c.id},${pg.id},${pacId})" title="Remover"><i class="ti ti-x"></i></button>
+            </div>`).join('')}
+          </div>`:''}
+          ${saldo>0?`<button class="btn-secondary" style="width:100%;justify-content:center;" onclick="pagPacFormPag(${c.id},${pacId},${saldo})"><i class="ti ti-plus"></i> Registrar pagamento</button>
+          <div id="pac-fin-form-pag-${c.id}"></div>`:''}
+        </div>`;
+      }).join('')}
+    </div>`;
+}
+
+function pagPacFormNova(pacId){
+  const f = document.getElementById('pac-fin-form-nova');
+  if(!f) return;
+  if(f.innerHTML.trim()){ f.innerHTML=''; return; }
+  const hoje = new Date().toISOString().slice(0,10);
+  const procOpts = procs.filter(p=>p.ativo!==false).map(p=>`<option value="${p.id}">${escapeHtml(p.nome)} — ${fmtBRL(p.precoFinal||0)}</option>`).join('');
+  f.innerHTML = `<div class="fin-pac-form">
+    <div class="form-grid">
+      <div>
+        <label>Procedimento (opcional)</label>
+        <select id="fpn-proc" onchange="pagPacProcSelect()">
+          <option value="">Personalizado</option>
+          ${procOpts}
+        </select>
+      </div>
+      <div>
+        <label>Valor total (R$)</label>
+        <input type="number" id="fpn-valor" step="0.01" min="0" placeholder="0,00"/>
+      </div>
+      <div style="grid-column:1/-1;">
+        <label>Descrição</label>
+        <input type="text" id="fpn-desc" placeholder="Ex: Prótese Total Superior"/>
+      </div>
+      <div>
+        <label>Entrada (R$)</label>
+        <input type="number" id="fpn-entrada" step="0.01" min="0" value="0" placeholder="0,00"/>
+      </div>
+      <div>
+        <label>Forma pgto. entrada</label>
+        <select id="fpn-forma">
+          <option value="dinheiro">Dinheiro</option>
+          <option value="pix">PIX</option>
+          <option value="credito">Cartão Crédito</option>
+          <option value="debito">Cartão Débito</option>
+        </select>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px;">
+      <button class="btn-secondary" onclick="document.getElementById('pac-fin-form-nova').innerHTML=''">Cancelar</button>
+      <button class="btn-primary" onclick="pagPacCriar(${pacId})"><i class="ti ti-check"></i> Criar cobrança</button>
+    </div>
+  </div>`;
+}
+
+function pagPacProcSelect(){
+  const sel = document.getElementById('fpn-proc');
+  if(!sel) return;
+  const proc = procs.find(p=>p.id===parseInt(sel.value));
+  if(proc){
+    document.getElementById('fpn-desc').value = proc.nome;
+    document.getElementById('fpn-valor').value = (proc.precoFinal||0).toFixed(2);
+  }
+}
+
+async function pagPacCriar(pacId){
+  const desc = document.getElementById('fpn-desc')?.value.trim();
+  const valor = parseFloat(document.getElementById('fpn-valor')?.value)||0;
+  const entrada = parseFloat(document.getElementById('fpn-entrada')?.value)||0;
+  const forma = document.getElementById('fpn-forma')?.value||'dinheiro';
+  if(!desc){ showToast('Informe a descrição.','error'); return; }
+  if(valor<=0){ showToast('Informe o valor total.','error'); return; }
+  if(entrada>valor){ showToast('Entrada não pode ser maior que o total.','error'); return; }
+
+  const pac = pacientes.find(p=>p.id===pacId);
+  const cob = {
+    id: _pagPacId(),
+    paciente_id: pacId,
+    paciente_nome: pac?.nome||'',
+    descricao: desc,
+    valor_total: valor,
+    data_criacao: new Date().toISOString(),
+    status: 'aberto',
+    pagamentos: []
+  };
+  if(entrada>0){
+    cob.pagamentos.push({
+      id: _pagPacId(),
+      valor: entrada,
+      forma: forma,
+      parcelas_cartao: 1,
+      data: new Date().toISOString(),
+      obs: 'Entrada'
+    });
+    if(entrada>=valor) cob.status='quitado';
+  }
+  pagPac.push(cob);
+  showLoading(true); await saveFinanceiro(); showLoading(false);
+  showToast('Cobrança criada!');
+  pagPacRender(pacId);
+}
+
+function pagPacFormPag(cobId, pacId, saldoRestante){
+  const f = document.getElementById('pac-fin-form-pag-'+cobId);
+  if(!f) return;
+  if(f.innerHTML.trim()){ f.innerHTML=''; return; }
+  f.innerHTML = `<div class="fin-pac-form" style="margin-top:10px;">
+    <div class="form-grid">
+      <div>
+        <label>Valor (R$)</label>
+        <input type="number" id="fpp-valor-${cobId}" step="0.01" min="0" value="${saldoRestante.toFixed(2)}" placeholder="0,00"/>
+      </div>
+      <div>
+        <label>Forma de pagamento</label>
+        <select id="fpp-forma-${cobId}" onchange="document.getElementById('fpp-parc-wrap-${cobId}').style.display=this.value==='credito'?'':'none'">
+          <option value="dinheiro">Dinheiro</option>
+          <option value="pix">PIX</option>
+          <option value="credito">Cartão Crédito</option>
+          <option value="debito">Cartão Débito</option>
+        </select>
+      </div>
+      <div id="fpp-parc-wrap-${cobId}" style="display:none;">
+        <label>Parcelas no cartão</label>
+        <select id="fpp-parc-${cobId}">
+          ${Array.from({length:12},(_,i)=>`<option value="${i+1}">${i+1}x</option>`).join('')}
+        </select>
+      </div>
+      <div>
+        <label>Data</label>
+        <input type="date" id="fpp-data-${cobId}" value="${new Date().toISOString().slice(0,10)}"/>
+      </div>
+      <div style="grid-column:1/-1;">
+        <label>Observação</label>
+        <input type="text" id="fpp-obs-${cobId}" placeholder="Ex: Restante parcelado"/>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px;">
+      <button class="btn-secondary" onclick="document.getElementById('pac-fin-form-pag-${cobId}').innerHTML=''">Cancelar</button>
+      <button class="btn-primary" onclick="pagPacAddPag(${cobId},${pacId})"><i class="ti ti-check"></i> Confirmar</button>
+    </div>
+  </div>`;
+}
+
+async function pagPacAddPag(cobId, pacId){
+  const cob = pagPac.find(c=>c.id===cobId);
+  if(!cob) return;
+  const valor = parseFloat(document.getElementById('fpp-valor-'+cobId)?.value)||0;
+  const forma = document.getElementById('fpp-forma-'+cobId)?.value||'dinheiro';
+  const parcelas = parseInt(document.getElementById('fpp-parc-'+cobId)?.value)||1;
+  const data = document.getElementById('fpp-data-'+cobId)?.value||new Date().toISOString().slice(0,10);
+  const obs = document.getElementById('fpp-obs-'+cobId)?.value.trim()||'';
+  if(valor<=0){ showToast('Informe o valor.','error'); return; }
+
+  cob.pagamentos = cob.pagamentos||[];
+  cob.pagamentos.push({
+    id: _pagPacId(),
+    valor,
+    forma,
+    parcelas_cartao: forma==='credito'?parcelas:1,
+    data: new Date(data+'T12:00:00').toISOString(),
+    obs
+  });
+  const pago = cob.pagamentos.reduce((s,p)=>s+p.valor,0);
+  if(pago>=cob.valor_total) cob.status='quitado';
+
+  showLoading(true); await saveFinanceiro(); showLoading(false);
+  showToast('Pagamento registrado!');
+  pagPacRender(pacId);
+}
+
+async function pagPacDelPag(cobId, pagId, pacId){
+  if(!confirm('Remover este pagamento?')) return;
+  const cob = pagPac.find(c=>c.id===cobId);
+  if(!cob) return;
+  cob.pagamentos = (cob.pagamentos||[]).filter(p=>p.id!==pagId);
+  const pago = cob.pagamentos.reduce((s,p)=>s+p.valor,0);
+  cob.status = pago>=cob.valor_total?'quitado':'aberto';
+  showLoading(true); await saveFinanceiro(); showLoading(false);
+  showToast('Pagamento removido.');
+  pagPacRender(pacId);
+}
+
+async function pagPacDelCob(cobId, pacId){
+  if(!confirm('Excluir esta cobrança e todos os pagamentos?')) return;
+  pagPac = pagPac.filter(c=>c.id!==cobId);
+  showLoading(true); await saveFinanceiro(); showLoading(false);
+  showToast('Cobrança excluída.');
+  pagPacRender(pacId);
 }
 
 function _galeriaPath(pacId, filename){
