@@ -27,53 +27,9 @@
 :root{
   --rose:#d4735a;--rose-light:#f0cfc4;--rose-lighter:#fdf0eb;
   --rose-mid:#e0a090;--rose-dark:#7a3020;--rose-text:#a05040;
-  --sidebar-w:68px;--header-h:64px;
+  --header-h:64px;
 }
 body{font-family:'Segoe UI',Arial,sans-serif;background:#fdf6f3;color:#3a2020;min-height:100vh;overscroll-behavior:none;overflow-x:hidden;}
-
-/* ── HOME CAROUSEL ── */
-.home-carousel{
-  position:relative;border-radius:18px;overflow:hidden;height:220px;margin-bottom:18px;
-  box-shadow:0 8px 32px rgba(212,115,90,.22);
-}
-.hc-slide{
-  position:absolute;inset:0;display:none;
-  align-items:center;justify-content:center;flex-direction:column;
-  transition:opacity .4s;
-}
-.hc-slide.active{display:flex;}
-.hc-content{text-align:center;padding:20px 60px;position:relative;z-index:1;}
-.hc-icon{font-size:42px;color:rgba(255,255,255,.85);margin-bottom:10px;line-height:1;}
-.hc-content h2{color:#fff;font-size:1.35rem;font-weight:800;text-shadow:0 2px 10px rgba(0,0,0,.3);margin-bottom:8px;}
-.hc-content p{color:rgba(255,255,255,.82);font-size:.88rem;line-height:1.6;max-width:480px;margin:0 auto;}
-.hc-arrow{
-  position:absolute;top:50%;transform:translateY(-50%);
-  background:rgba(255,255,255,.22);color:#fff;border:none;
-  width:38px;height:38px;border-radius:50%;font-size:24px;line-height:1;
-  cursor:pointer;z-index:3;transition:background .2s;display:flex;align-items:center;justify-content:center;
-}
-.hc-arrow:hover{background:rgba(255,255,255,.38);}
-.hc-prev{left:14px;}
-.hc-next{right:14px;}
-.hc-dots{
-  position:absolute;bottom:12px;left:50%;transform:translateX(-50%);
-  display:flex;gap:7px;z-index:3;
-}
-.hc-dot{
-  width:9px;height:9px;border-radius:50%;
-  background:rgba(255,255,255,.4);border:none;cursor:pointer;padding:0;transition:background .2s,transform .2s;
-}
-.hc-dot.active{background:#fff;transform:scale(1.25);}
-@media(max-width:768px){
-  .home-carousel{height:170px;border-radius:12px;}
-  .hc-content{padding:16px 48px;}
-  .hc-content h2{font-size:1.1rem;}
-  .hc-content p{font-size:.8rem;}
-  .hc-icon{font-size:32px;margin-bottom:6px;}
-  .hc-arrow{width:30px;height:30px;font-size:18px;}
-  .hc-prev{left:8px;}
-  .hc-next{right:8px;}
-}
 
 /* ── HOME STAT CARDS ── */
 .home-stat-card{
@@ -193,125 +149,7 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#fdf6f3;color:#3a2020;mi
 /* ── APP SHELL ── */
 #app{display:none;min-height:100vh;}
 
-/* ── SIDEBAR ── */
-.sidebar{
-  position:fixed;left:0;top:0;bottom:0;width:var(--sidebar-w);
-  background:#fff;box-shadow:2px 0 18px rgba(0,0,0,.08);
-  display:flex;flex-direction:column;align-items:center;
-  padding:12px 6px 12px;transition:width .25s cubic-bezier(.4,0,.2,1);z-index:200;
-  overflow:hidden;
-}
-.sidebar.open{width:230px;}
-/* Hover expande no desktop */
-@media(min-width:769px){
-  .sidebar:not(.pinned):hover{width:230px;}
-  .sidebar:not(.pinned):hover .sidebar-item span,
-  .sidebar:not(.pinned):hover .btn-logout span,
-  .sidebar:not(.pinned):hover .sidebar-label,
-  .sidebar:not(.pinned):hover .sidebar-divider,
-  .sidebar:not(.pinned):hover .sidebar-avatar-name{ display:flex!important; }
-}
-/* Avatar no topo */
-.sidebar-avatar{
-  width:44px;height:44px;border-radius:50%;
-  background:linear-gradient(135deg,var(--rose),var(--rose-dark));
-  color:#fff;font-size:16px;font-weight:800;
-  display:flex;align-items:center;justify-content:center;
-  flex-shrink:0;margin-bottom:4px;cursor:default;
-  box-shadow:0 4px 12px rgba(212,115,90,.35);
-}
-.sidebar-avatar-name{
-  display:none;font-size:12px;font-weight:700;color:var(--rose-dark);
-  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
-  max-width:180px;margin-bottom:10px;text-align:center;
-}
-.sidebar.open .sidebar-avatar-name{display:flex;}
-/* Pin button */
-.sidebar-pin{
-  width:28px;height:28px;border-radius:8px;border:1.5px solid var(--rose-light);
-  background:none;color:var(--rose-text);cursor:pointer;
-  display:none;align-items:center;justify-content:center;
-  position:absolute;top:12px;right:8px;transition:all .2s;
-}
-.sidebar.open .sidebar-pin{display:flex;}
-.sidebar.pinned .sidebar-pin{background:var(--rose-lighter);color:var(--rose-dark);border-color:var(--rose);}
-.sidebar-pin i{font-size:14px;}
-/* Toggle no topo (ícone hamburger) */
-.sidebar-toggle{
-  width:44px;height:44px;border-radius:14px;border:none;
-  background:rgba(212,115,90,.08);color:var(--rose-dark);
-  cursor:pointer;display:grid;place-items:center;margin-bottom:10px;flex-shrink:0;
-  transition:background .2s;
-}
-.sidebar-toggle:hover{background:var(--rose-lighter);}
-/* Menu com scroll */
-.sidebar-menu{
-  width:100%;display:flex;flex-direction:column;gap:3px;
-  overflow-y:auto;overflow-x:hidden;flex:1;
-  scrollbar-width:thin;
-  scrollbar-color:var(--rose-light) transparent;
-}
-.sidebar-menu::-webkit-scrollbar{width:4px;}
-.sidebar-menu::-webkit-scrollbar-track{background:transparent;}
-.sidebar-menu::-webkit-scrollbar-thumb{background:var(--rose-light);border-radius:4px;}
-.sidebar-menu::-webkit-scrollbar-thumb:hover{background:var(--rose-mid);}
-.sidebar-label{
-  display:none;font-size:9px;font-weight:800;color:var(--rose-text);
-  text-transform:uppercase;letter-spacing:.6px;
-  padding:8px 14px 2px;opacity:.6;white-space:nowrap;
-}
-.sidebar-divider{display:none;height:1px;background:var(--rose-light);margin:5px 10px;}
-.sidebar.open .sidebar-label{display:block;}
-.sidebar.open .sidebar-divider{display:block;}
-.sidebar-item{
-  width:100%;border:none;background:none;color:var(--rose-text);
-  padding:10px 10px;border-radius:12px;cursor:pointer;
-  display:flex;align-items:center;gap:11px;font-size:13px;font-weight:500;
-  justify-content:flex-start;transition:background .2s,color .2s;white-space:nowrap;
-  font-family:inherit;
-}
-.sidebar-item span{display:none;overflow:hidden;}
-.sidebar.open .sidebar-item span{display:inline;}
-.sidebar-item.active{background:var(--rose-lighter);color:var(--rose-dark);font-weight:700;}
-.sidebar-item:hover{background:var(--rose-lighter);color:var(--rose-dark);}
-.sidebar-item i{font-size:18px;flex-shrink:0;min-width:20px;text-align:center;}
-/* Bottom: logout com avatar */
-.sidebar-bottom{width:100%;padding-top:8px;border-top:1px solid var(--rose-light);flex-shrink:0;}
-.btn-logout{
-  width:100%;border:none;background:none;color:var(--rose-text);
-  padding:10px 10px;border-radius:12px;cursor:pointer;
-  display:flex;align-items:center;gap:11px;font-size:13px;
-  transition:background .2s,color .2s;white-space:nowrap;font-family:inherit;
-}
-.btn-logout:hover{background:#ffebee;color:#b33;}
-.btn-logout i{font-size:18px;flex-shrink:0;min-width:20px;text-align:center;}
-.btn-logout span{display:none;}
-.sidebar.open .btn-logout span{display:inline;}
-.logout-avatar{
-  width:28px;height:28px;border-radius:50%;
-  background:linear-gradient(135deg,var(--rose),var(--rose-dark));
-  color:#fff;font-size:11px;font-weight:800;
-  display:flex;align-items:center;justify-content:center;
-  flex-shrink:0;
-}
-
-/* ── HEADER ── */
-.header{
-  position:fixed;left:var(--sidebar-w);right:0;top:0;height:var(--header-h);
-  background:#fff;border-bottom:1.5px solid var(--rose-light);
-  display:flex;align-items:center;gap:16px;padding:0 20px;z-index:100;
-  transition:left .25s;
-}
-.sidebar.open~.header{left:220px;}
-.header-text h1{font-size:16px;font-weight:700;color:var(--rose-dark);letter-spacing:.5px;text-transform:uppercase;line-height:1.2;}
-.header-text p{font-size:11px;color:var(--rose-text);margin-top:3px;}
-
 /* ── PAGE CONTENT ── */
-.page-content{
-  margin-left:var(--sidebar-w);margin-top:var(--header-h);
-  width:calc(100% - var(--sidebar-w));transition:margin-left .25s,width .25s;
-}
-.sidebar.open~.header~.page-content{margin-left:220px;width:calc(100% - 220px);}
 .content{padding:20px;max-width:1100px;margin:0 auto;}
 
 /* ── CARDS ── */
@@ -665,8 +503,7 @@ button{font-family:inherit;}
 
 /* ── RESPONSIVE ── */
 @media(max-width:768px){
-  :root{--sidebar-w:0px;--header-h:54px;}
-  .sidebar{display:none!important;}
+  :root{--header-h:54px;}
   .header{left:0!important;padding:0 14px;}
   .page-content{margin-left:0!important;width:100%!important;padding-bottom:90px;}
   .content{padding:14px 12px;}
@@ -835,12 +672,6 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px soli
 #cal-card:-moz-full-screen .cal-cell{
   min-height:100px;
 }
-@media(min-width:769px) and (max-width:960px){
-  :root{--sidebar-w:64px;}
-  .sidebar-item span{display:none!important;}
-  .btn-logout span{display:none!important;}
-}
-
 /* ══ MODELO 2 — TOPNAV REDESIGN ══ */
 /* Mobile: topnav simplificada (navegação fica na bottom nav) */
 @media(max-width:768px){
@@ -852,10 +683,7 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px soli
   .topnav-brand-sub { display: none !important; }
   .topnav-brand-icon { width: 32px !important; height: 32px !important; }
 }
-:root { --sidebar-w: 0px !important; --header-h: 54px !important; }
-.sidebar { display: none !important; }
-.sidebar.open~.header { left: 0 !important; }
-.sidebar.open~.header~.page-content { margin-left: 0 !important; width: 100% !important; }
+:root { --header-h: 54px !important; }
 @media(min-width:769px){ .mobile-bottom-nav { display: none !important; } }
 .header {
   left: 0 !important;
@@ -939,8 +767,6 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px soli
 }
 .home-hero-stat-val { font-size: 20px; font-weight: 700; color: #fff; }
 .home-hero-stat-lbl { font-size: 10px; color: rgba(255,255,255,.78); margin-top: 2px; }
-/* Ocultar carousel na home do Modelo 2 (substituído pelo hero) */
-.home-carousel { display: none !important; }
 
 
 /* ══ POLISH GERAL — MODELO 2 ══ */
@@ -1257,46 +1083,6 @@ select, textarea {
 
 <!-- ══════════════ APP ══════════════ -->
 <div id="app">
-  <!-- Sidebar desktop -->
-  <div class="sidebar" id="sidebar">
-    <!-- Pin button -->
-    <button class="sidebar-pin" id="sidebar-pin" onclick="togglePin()" title="Fixar menu">
-      <i class="ti ti-pin" id="pin-icon"></i>
-    </button>
-    <!-- Avatar + nome da clínica -->
-    <div class="sidebar-avatar" id="sidebar-avatar-initials">RW</div>
-    <div class="sidebar-avatar-name" id="sidebar-avatar-name">Minha Clínica</div>
-    <nav class="sidebar-menu">
-      <div class="sidebar-label">Clínica</div>
-      <button class="sidebar-item active" data-tab="home" onclick="switchTab('home')" aria-label="Início"><i class="ti ti-home"></i><span>Início</span></button>
-      <button class="sidebar-item" data-tab="venda_rapida" onclick="switchTab('venda_rapida')" aria-label="Venda Rápida"><i class="ti ti-shopping-cart"></i><span>Venda Rápida</span></button>
-      <button class="sidebar-item" data-tab="agendar" onclick="switchTab('agendar')" aria-label="Agendar"><i class="ti ti-calendar-plus"></i><span>Agendar</span></button>
-      <button class="sidebar-item" data-tab="lista" onclick="switchTab('lista')" aria-label="Agenda"><i class="ti ti-calendar-event"></i><span>Agenda</span></button>
-      <button class="sidebar-item" data-tab="calendario" onclick="switchTab('calendario')" aria-label="Calendário"><i class="ti ti-calendar-month"></i><span>Calendário</span></button>
-      <div class="sidebar-divider"></div>
-      <div class="sidebar-label">Pacientes</div>
-      <button class="sidebar-item" data-tab="pacientes" onclick="switchTab('pacientes')" aria-label="Pacientes"><i class="ti ti-users"></i><span>Pacientes</span></button>
-      <button class="sidebar-item" data-tab="profissionais" onclick="switchTab('profissionais')" aria-label="Profissionais"><i class="ti ti-briefcase"></i><span>Profissionais</span></button>
-      <div class="sidebar-divider"></div>
-      <div class="sidebar-label">Financeiro</div>
-      <button class="sidebar-item" data-tab="financeiro" onclick="switchTab('financeiro')" aria-label="Painel Financeiro"><i class="ti ti-chart-bar"></i><span>Painel</span></button>
-      <button class="sidebar-item" data-tab="procedimentos_fin" onclick="switchTab('procedimentos_fin')" aria-label="Procedimentos"><i class="ti ti-list-check"></i><span>Procedimentos</span></button>
-      <button class="sidebar-item" data-tab="materiais_fin" onclick="switchTab('materiais_fin')" aria-label="Materiais"><i class="ti ti-box"></i><span>Materiais</span></button>
-      <button class="sidebar-item" data-tab="estoque_fin" onclick="switchTab('estoque_fin')" aria-label="Estoque"><i class="ti ti-package"></i><span>Estoque</span></button>
-      <button class="sidebar-item" data-tab="vendas_fin" onclick="switchTab('vendas_fin')" aria-label="Vendas"><i class="ti ti-receipt"></i><span>Vendas</span></button>
-      <div class="sidebar-divider"></div>
-      <button class="sidebar-item" data-tab="invisalign_apresentacao" onclick="switchTab('invisalign_apresentacao')" aria-label="Invisalign"><i class="ti ti-align-box-left-stretch"></i><span>Invisalign</span></button>
-      <button class="sidebar-item" data-tab="resgate" onclick="switchTab('resgate')" aria-label="Resgate"><i class="ti ti-heart-handshake"></i><span>Resgate</span></button>
-      <button class="sidebar-item" data-tab="configuracoes" onclick="switchTab('configuracoes')" aria-label="Configurações"><i class="ti ti-settings"></i><span>Configurações</span></button>
-    </nav>
-    <div class="sidebar-bottom">
-      <button class="btn-logout" onclick="doLogout()" aria-label="Sair da conta">
-        <div class="logout-avatar" id="logout-avatar-sidebar">RW</div>
-        <span id="logout-name-sidebar">Sair</span>
-      </button>
-    </div>
-  </div>
-
   <!-- Header -->
   <div class="header">
     <div class="topnav-brand">
@@ -1375,48 +1161,6 @@ select, textarea {
         <div class="home-hero-date" id="home-hero-date"></div>
         <div class="home-hero-greeting" id="home-hero-greeting">Bem-vinda à sua clínica! 👋</div>
         <div class="home-hero-stats" id="home-hero-stats"></div>
-      </div>
-
-      <!-- ── CAROUSEL ── -->
-      <div class="home-carousel" id="home-carousel">
-        <div class="hc-slide active" style="background:linear-gradient(135deg,#d4735a,#7a3020);">
-          <div class="hc-content">
-            <div class="hc-icon"><i class="ti ti-calendar-plus"></i></div>
-            <h2>Agendamento Inteligente</h2>
-            <p>Cadastre e gerencie consultas com facilidade. Visualize sua agenda por dia, semana ou mês.</p>
-          </div>
-        </div>
-        <div class="hc-slide" style="background:linear-gradient(135deg,#b05a3a,#5a1a08);">
-          <div class="hc-content">
-            <div class="hc-icon"><i class="ti ti-users"></i></div>
-            <h2>Gestão de Pacientes</h2>
-            <p>Prontuários completos, histórico de tratamentos, anamnese e documentos em um só lugar.</p>
-          </div>
-        </div>
-        <div class="hc-slide" style="background:linear-gradient(135deg,#c06040,#8a2a10);">
-          <div class="hc-content">
-            <div class="hc-icon"><i class="ti ti-tooth"></i></div>
-            <h2>Odontograma Digital</h2>
-            <p>Mapeamento completo da arcada dentária com marcação de procedimentos por dente.</p>
-          </div>
-        </div>
-        <div class="hc-slide" style="background:linear-gradient(135deg,#a04828,#6a2010);">
-          <div class="hc-content">
-            <div class="hc-icon"><i class="ti ti-report-money"></i></div>
-            <h2>Controle Financeiro</h2>
-            <p>Acompanhe receitas, despesas, planos de tratamento e geração de orçamentos em PDF.</p>
-          </div>
-        </div>
-        <div class="hc-slide" style="background:linear-gradient(135deg,#e08060,#9a4030);">
-          <div class="hc-content">
-            <div class="hc-icon"><i class="ti ti-package"></i></div>
-            <h2>Estoque & Materiais</h2>
-            <p>Controle o inventário da sua clínica, alertas de estoque mínimo e histórico de movimentações.</p>
-          </div>
-        </div>
-        <button class="hc-arrow hc-prev" onclick="hcPrev();hcResetTimer();" aria-label="Slide anterior">&#8249;</button>
-        <button class="hc-arrow hc-next" onclick="hcNext();hcResetTimer();" aria-label="Próximo slide">&#8250;</button>
-        <div class="hc-dots" id="hc-dots"></div>
       </div>
 
       <!-- ── STATS CARDS ── -->
@@ -2491,7 +2235,6 @@ let profissionais = [];
 let pacientes = [];
 let selectedPatientId = null;
 let editingPatientId = null;
-let sidebarOpen = false;
 let currentUser = null;
 let clinicaId = null;       // ID da clínica do usuário logado (multi-tenant)
 let clinicaData = null;     // Dados completos da clínica
@@ -2570,7 +2313,6 @@ async function checkClinicaApproval(){
   // Atualiza nome da clínica na interface
   const el = document.getElementById('header-clinica');
   if(el) el.textContent = cli.nome_cli || 'Minha Clínica';
-  setTimeout(updateSidebarAvatar, 100);
   return true;
 }
 
@@ -2655,50 +2397,6 @@ async function loadAll(){
   showLoading(false);
 }
 
-// ══════════════════════════════════════════════════════
-// HOME CAROUSEL
-// ══════════════════════════════════════════════════════
-let _hcIdx = 0;
-let _hcTimer = null;
-const _HC_TOTAL = 5;
-
-function initHomeCarousel(){
-  const dotsEl = document.getElementById('hc-dots');
-  if(!dotsEl) return;
-  dotsEl.innerHTML = '';
-  for(let i=0;i<_HC_TOTAL;i++){
-    const d = document.createElement('button');
-    d.className = 'hc-dot' + (i===0?' active':'');
-    d.setAttribute('aria-label','Slide '+(i+1));
-    d.onclick = ()=>hcGo(i);
-    dotsEl.appendChild(d);
-  }
-  hcStartTimer();
-  const carousel = document.getElementById('home-carousel');
-  if(carousel){
-    carousel.addEventListener('mouseenter', ()=>{ clearInterval(_hcTimer); _hcTimer=null; });
-    carousel.addEventListener('mouseleave', ()=>hcStartTimer());
-  }
-}
-function hcStartTimer(){
-  clearInterval(_hcTimer);
-  _hcTimer = setInterval(()=>hcNext(), 4500);
-}
-function hcResetTimer(){ hcStartTimer(); }
-
-function hcGo(i){
-  const slides = document.querySelectorAll('.hc-slide');
-  const dots   = document.querySelectorAll('.hc-dot');
-  if(!slides.length) return;
-  slides[_hcIdx].classList.remove('active');
-  dots[_hcIdx] && dots[_hcIdx].classList.remove('active');
-  _hcIdx = i;
-  slides[_hcIdx].classList.add('active');
-  dots[_hcIdx] && dots[_hcIdx].classList.add('active');
-}
-function hcNext(){ hcGo((_hcIdx+1) % _HC_TOTAL); }
-function hcPrev(){ hcGo((_hcIdx-1+_HC_TOTAL) % _HC_TOTAL); }
-
 function initApp(){
   document.getElementById('data').value = hoje();
   renderSelectProf();
@@ -2706,62 +2404,12 @@ function initApp(){
   renderPatients();
   renderScheduleOptions();
   renderHomeStats();
-  initHomeCarousel();
   calSetView('semana', false);
 }
 
 // ══════════════════════════════════════════════════════
 // NAVIGATION
 // ══════════════════════════════════════════════════════
-
-let sidebarPinned = (typeof localStorage !== 'undefined' && localStorage.getItem('sidebarPinned')==='true');
-
-function toggleSidebarPin(){
-  const s = document.getElementById('sidebar');
-  if(!s) return;
-  sidebarPinned = !sidebarPinned;
-  if(typeof localStorage !== 'undefined') localStorage.setItem('sidebarPinned', sidebarPinned);
-  s.classList.toggle('pinned', sidebarPinned);
-  s.classList.toggle('open', sidebarPinned);
-  sidebarOpen = sidebarPinned;
-  const icon = document.getElementById('pin-icon');
-  if(icon) icon.className = sidebarPinned ? 'ti ti-pin-filled' : 'ti ti-pin';
-}
-
-function togglePin(){ toggleSidebarPin(); }
-
-function updateSidebarAvatar(){
-  const nome = (clinicaData && clinicaData.nome_cli) ? clinicaData.nome_cli : 'RW';
-  const parts = nome.split(' ').filter(Boolean);
-  const ini = (parts.length >= 2 ? parts[0][0]+parts[1][0] : parts[0].slice(0,2)).toUpperCase();
-  const avEl = document.getElementById('sidebar-avatar-initials');
-  const nameEl = document.getElementById('sidebar-avatar-name');
-  const logoutAv = document.getElementById('logout-avatar');
-  const logoutName = document.getElementById('logout-name');
-  if(avEl) avEl.textContent = ini;
-  if(nameEl) nameEl.textContent = nome;
-  if(logoutAv) logoutAv.textContent = ini;
-  if(logoutName) logoutName.textContent = 'Sair — ' + nome;
-}
-
-// Aplica pin salvo ao carregar
-(function initSidebarState(){
-  try {
-    const s = document.getElementById('sidebar');
-    if(!s) return;
-    if(sidebarPinned){
-      s.classList.add('open','pinned');
-      sidebarOpen = true;
-      const icon = document.getElementById('pin-icon');
-      if(icon) icon.className = 'ti ti-pin-filled';
-    }
-  } catch(e){}
-})();
-
-function toggleSidebar(){
-  sidebarOpen=!sidebarOpen;
-  document.getElementById('sidebar').classList.toggle('open',sidebarOpen);
-}
 
 function toggleFaq(i){
   const body=document.getElementById('faq-body-'+i);
@@ -2809,7 +2457,7 @@ function switchTab(tab){
     if(el) el.style.display = t===tab?'':'none';
   });
   tnUpdateActive(tab);
-  document.querySelectorAll('.sidebar-item,.mobile-nav-item,.topnav-item').forEach(b=>{
+  document.querySelectorAll('.mobile-nav-item,.topnav-item').forEach(b=>{
     b.classList.toggle('active', b.dataset.tab===tab);
   });
   const _tituloAba = {
@@ -4989,6 +4637,7 @@ const PAC_COND_PT = {higido:'Hígido',carie:'Cárie',restaurado:'Restaurado',ext
 let pacDentesMap  = {};  // { dente_num: registro }
 let pacDenteSel   = null;
 let pacProcsList  = [];
+let pacDentesRascunho = {};
 
 async function pacCarregarOdonto(pacId){
   const { data } = await _sb.from('procedimentos_dentes')
@@ -5041,9 +4690,6 @@ function pacRenderLegenda(){
     `<div class="odonto-leg"><div class="odonto-leg-dot" style="background:${bg};border-color:${brd};"></div>${lbl}</div>`
   ).join('');
 }
-
-// ── Rascunho temporário de dentes (antes de salvar) ──
-let pacDentesRascunho = {};  // { num: {condicao, faces, procs:[{nome,preco,global}], obs} }
 
 function pacSalvarRascunhoDenteAtual(){
   if(!pacDenteSel) return;
@@ -8490,8 +8136,6 @@ function pacPlanSyncFromValor(){
   pacPlanSyncValorTotal();
 }
 
-// Sobrescreve pacTogglePlanForm para resetar dentes
-const _origTogglePlanForm = pacTogglePlanForm;
 function pacTogglePlanForm(){
   const f = document.getElementById('pac-plan-form');
   if(!f) return;
@@ -10967,7 +10611,6 @@ async function salvarConfiguracoes(){
   clinicaData.telefone  = telefone;
   const el = document.getElementById('header-clinica');
   if(el) el.textContent = nome_cli;
-  updateSidebarAvatar();
   showToast('Configurações salvas!');
 }
 
