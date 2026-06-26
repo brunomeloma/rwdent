@@ -4122,6 +4122,10 @@ async function removerPaciente(id){
   showLoading(true);
   await _sb.from('prontuarios').delete().eq('paciente_id',id);
   await _sb.from('agendamentos').delete().eq('paciente_id',id);
+  await _sb.from('plano_tratamento').delete().eq('paciente_id',id);
+  await _sb.from('atendimentos_odonto').delete().eq('paciente_id',id);
+  await _sb.from('procedimentos_dentes').delete().eq('paciente_id',id);
+  await _sb.from('anamneses').delete().eq('paciente_id',id);
   const { error } = await _sb.from('pacientes').delete().eq('id',id);
   showLoading(false);
   if(error){ showToast('Erro: '+error.message,'error'); return; }
@@ -6334,6 +6338,7 @@ async function saveFinanceiro(){
     saveError = error;
   }
   if(saveError){ console.error('saveFinanceiro ERRO:', saveError.message); showToast('Erro ao salvar: '+saveError.message,'error'); }
+  return saveError || null;
 }
 
 // ── Helpers de cálculo ──
@@ -9645,21 +9650,23 @@ async function pacOrcConsolidar(pacId){
     data: new Date().toISOString(), obs: abertos.map(v=>v.obs||'').filter(Boolean).join(' | ')||''
   };
 
-  // Remove os antigos
+  // Remove os antigos (backup para rollback em caso de erro)
   const idsRemover = new Set(abertos.map(v=>v.id));
+  const _vendasBackup = [...vendas];
   vendas = vendas.filter(v=>!idsRemover.has(v.id));
   vendas.push(novaVenda);
-  await saveFinanceiro();
+  const _saveErr = await saveFinanceiro();
   showLoading(false);
+  if(_saveErr){ vendas = _vendasBackup; nextVendaId--; showToast('Erro ao consolidar — dados restaurados.','error'); return; }
   showToast('Orçamentos consolidados com sucesso!');
   pacRenderOrcamentos(pacId);
 }
 
 // ── Status de resposta do paciente ──
-function pacOrcSetStatus(vendaId, status, pacId){
+async function pacOrcSetStatus(vendaId, status, pacId){
   const v = vendas.find(x=>x.id===vendaId); if(!v) return;
   v.statusResposta = status;
-  saveFinanceiro();
+  await saveFinanceiro();
   // Feedback visual
   const colors = {pensando:'#856404',aprovado_pac:'#2e7d32',recusado:'#b33',''   :'#555'};
   const labels = {pensando:'🤔 Pensando...',aprovado_pac:'✅ Aprovado!',recusado:'❌ Recusado',''   :'⏳ Aguardando'};
