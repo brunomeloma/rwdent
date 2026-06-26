@@ -2109,6 +2109,8 @@ select, textarea {
             <div class="form-group"><label>Responsável</label><input type="text" id="cfg-nome-resp" /></div>
             <div class="form-group"><label>E-mail</label><input type="email" id="cfg-email" disabled style="opacity:.6;" /></div>
             <div class="form-group"><label>Telefone / WhatsApp</label><input type="tel" id="cfg-telefone" /></div>
+            <div class="form-group" style="grid-column:1/-1;"><label>Endereço da clínica</label><input type="text" id="cfg-endereco" placeholder="Ex: Rua das Flores, 123 - Centro, Cidade - UF" /></div>
+            <div class="form-group" style="grid-column:1/-1;"><label><i class="ti ti-map-pin" style="font-size:14px;"></i> Link do Google Maps (opcional)</label><input type="url" id="cfg-maps-link" placeholder="Cole aqui o link do Google Maps da clínica" /><div style="font-size:10px;color:var(--rose-text);margin-top:3px;">Abra o Google Maps, busque sua clínica, clique em "Compartilhar" e cole o link aqui.</div></div>
           </div>
           <div style="display:flex;justify-content:flex-end;margin-top:16px;">
             <button class="btn-primary" onclick="salvarConfiguracoes()"><i class="ti ti-check"></i> Salvar alterações</button>
@@ -2683,7 +2685,13 @@ function lembrarTodosAmanha(){
     <div style="padding:14px 16px;display:flex;flex-direction:column;gap:8px;">
       ${lista.map(a=>{
         const tel = a.telefone.replace(/\D/g,'');
-        const msg = `Olá, ${a.nome.split(' ')[0]}! 😊\n\nPassando para lembrar que amanhã é o seu dia na *${clinicaNome}*!\n\n📅 *Horário:* ${a.horario}\n🦷 *Procedimento:* ${a.procedimento||'Consulta'}\n\nPor favor, confirme sua presença respondendo *SIM* — ou nos avise caso precise reagendar. Estaremos esperando por você! 🙏`;
+        let _loc = '';
+        if(clinicaData?.endereco || clinicaData?.maps_link){
+          _loc = '\n📍 *Local:* ' + (clinicaData.endereco || clinicaNome);
+          if(clinicaData.maps_link) _loc += '\n🗺️ *Como chegar:* ' + clinicaData.maps_link;
+          _loc += '\n';
+        }
+        const msg = `Olá, ${a.nome.split(' ')[0]}! 😊\n\nPassando para lembrar que amanhã é o seu dia na *${clinicaNome}*!\n\n📅 *Horário:* ${a.horario}\n🦷 *Procedimento:* ${a.procedimento||'Consulta'}${_loc}\n\nPor favor, confirme sua presença respondendo *SIM* — ou nos avise caso precise reagendar. Estaremos esperando por você! 🙏`;
         const url = `https://wa.me/55${tel}?text=${encodeURIComponent(msg)}`;
         return `<div style="display:flex;align-items:center;gap:10px;padding:10px;border:1.5px solid #e8f5e9;border-radius:10px;">
           <div style="flex:1;min-width:0;">
@@ -8641,16 +8649,20 @@ async function pacOdontoSalvarOrc(){
 
 // ── WhatsApp Confirmação ──
 function enviarConfirmacaoWpp(tel, nome, data, horario, procedimento){
-  // Formata telefone (remove tudo que não é número)
   const num = tel.replace(/\D/g,'');
   const numBR = num.startsWith('55') ? num : '55' + num;
-  // Formata data
   const [y,m,d] = data.split('-');
   const dataFmt = `${d}/${m}/${y}`;
-  // Nome da clínica
   const clinica = clinicaData?.nome_cli || 'nossa clínica';
-  // Mensagem
-  const msg = `Olá, ${nome}! 😊\n\nTudo bem? Passando para confirmar o seu horário marcado conosco na *${clinica}*:\n\n📅 *Data:* ${dataFmt}\n⏰ *Horário:* ${horario}\n🦷 *Procedimento:* ${procedimento}\n\nResponda *SIM* para confirmar ou nos avise caso precise remarcar — será um prazer encontrar o melhor horário pra você! 🙏`;
+  const endereco = clinicaData?.endereco || '';
+  const mapsLink = clinicaData?.maps_link || '';
+  let locPart = '';
+  if(endereco || mapsLink){
+    locPart = '\n📍 *Local:* ' + (endereco || clinica);
+    if(mapsLink) locPart += '\n🗺️ *Como chegar:* ' + mapsLink;
+    locPart += '\n';
+  }
+  const msg = `Olá, ${nome}! 😊\n\nTudo bem? Passando para confirmar o seu horário marcado conosco na *${clinica}*:\n\n📅 *Data:* ${dataFmt}\n⏰ *Horário:* ${horario}\n🦷 *Procedimento:* ${procedimento}${locPart}\n\nResponda *SIM* para confirmar ou nos avise caso precise remarcar — será um prazer encontrar o melhor horário pra você! 🙏`;
   const url = `https://wa.me/${numBR}?text=${encodeURIComponent(msg)}`;
   window.open(url, '_blank');
 }
@@ -10525,6 +10537,8 @@ async function renderConfiguracoes(){
   document.getElementById('cfg-nome-resp').value = clinicaData.nome_resp || '';
   document.getElementById('cfg-email').value     = clinicaData.email     || '';
   document.getElementById('cfg-telefone').value  = clinicaData.telefone  || '';
+  document.getElementById('cfg-endereco').value  = clinicaData.endereco  || '';
+  document.getElementById('cfg-maps-link').value = clinicaData.maps_link || '';
   // Taxas
   document.getElementById('cfg-taxa-debito').value = taxasCfg.debito ?? 1.5;
   const cr = taxasCfg.credito || [];
@@ -10604,14 +10618,24 @@ async function salvarConfiguracoes(){
   const nome_cli  = document.getElementById('cfg-nome-cli').value.trim();
   const nome_resp = document.getElementById('cfg-nome-resp').value.trim();
   const telefone  = document.getElementById('cfg-telefone').value.trim();
+  const endereco  = document.getElementById('cfg-endereco').value.trim();
+  const maps_link = document.getElementById('cfg-maps-link').value.trim();
   if(!nome_cli){ showToast('Preencha o nome da clínica.','warn'); return; }
   showLoading(true);
-  const { error } = await _sb.from('clinicas').update({ nome_cli, nome_resp, telefone }).eq('id', clinicaId);
+  const updateData = { nome_cli, nome_resp, telefone };
+  let { error } = await _sb.from('clinicas').update({ ...updateData, endereco, maps_link }).eq('id', clinicaId);
+  if(error && error.message && (error.message.includes('endereco') || error.message.includes('maps_link'))){
+    ({ error } = await _sb.from('clinicas').update(updateData).eq('id', clinicaId));
+    clinicaData.endereco  = endereco;
+    clinicaData.maps_link = maps_link;
+  }
   showLoading(false);
   if(error){ showToast('Erro: '+error.message,'error'); return; }
   clinicaData.nome_cli  = nome_cli;
   clinicaData.nome_resp = nome_resp;
   clinicaData.telefone  = telefone;
+  clinicaData.endereco  = endereco;
+  clinicaData.maps_link = maps_link;
   const el = document.getElementById('header-clinica');
   if(el) el.textContent = nome_cli;
   showToast('Configurações salvas!');
