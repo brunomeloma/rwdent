@@ -5475,7 +5475,7 @@ function pacOdontoSelecionarProc(id){
 
 
 // ── Injeta novos materiais e procedimentos de ortodontia ──
-function injetarNovosMatsOrto(){
+async function injetarNovosMatsOrto(){
   // ── MIGRAÇÃO / LIMPEZA TOTAL — dados salvos no Supabase de versões anteriores tinham
   // nomes levemente diferentes (com/sem "Mensal", com/sem hífen) que IMPEDIAM a detecção
   // de duplicatas por nome exato. Esta versão identifica cada procedimento pela
@@ -5743,7 +5743,7 @@ function injetarNovosMatsOrto(){
       p.horaClin = parseFloat(((p.tempo/60)*calcHora()).toFixed(2));
       p.precoFinal = np.precoFinal>0 ? np.precoFinal : calcPrecoFinal(p);
     });
-    saveFinanceiro();
+    await saveFinanceiro();
   }
 }
 
@@ -6283,19 +6283,29 @@ async function loadFinanceiro(){
 
   // Salva padrões sem sobrescrever estoque
   if(precisaSalvar){
-    // Guarda estoque atual antes de salvar
+    // Salva padrões mantendo o estoque atual intacto
     const _estoqueBackup = JSON.parse(JSON.stringify(estoque));
     await saveFinanceiro();
-    // Restaura estoque do banco após save
+    // Após salvar, restaura o estoque do banco (pode ter sido importado antes)
     const { data: _fresh } = await _sb.from('financeiro_config').select('estoque').eq('clinica_id',clinicaId).single();
-    if(_fresh && _fresh.estoque && _fresh.estoque !== '{}'){
-      const _est = JSON.parse(_fresh.estoque||'{}');
-      if(Object.keys(_est).length > 0) estoque = _est;
+    if(_fresh && _fresh.estoque){
+      try {
+        const _est = JSON.parse(_fresh.estoque);
+        // Usa o estoque do banco se tiver mais itens que o atual
+        if(typeof _est === 'object' && !Array.isArray(_est) && Object.keys(_est).length > Object.keys(estoque).length){
+          estoque = _est;
+        }
+      } catch(e){ /* mantém estoque atual se JSON inválido */ }
+    }
+    // Garante que o backup local não seja perdido se o banco estiver vazio
+    if(Object.keys(estoque).length === 0 && Object.keys(_estoqueBackup).length > 0){
+      estoque = _estoqueBackup;
+      await saveFinanceiro(); // re-salva o backup que estava na memória
     }
   }
 
   _financeiroCarregado = true;
-  injetarNovosMatsOrto();
+  await injetarNovosMatsOrto();
 }
 
 async function saveFinanceiro(){
