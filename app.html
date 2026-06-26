@@ -6729,7 +6729,7 @@ table{width:100%;border-collapse:collapse;margin-top:10px;}
 <div class="header"><h1>${clinica}</h1><p>Tabela de Procedimentos e Valores — ${data}</p></div>
 <table><thead><tr style="background:#7a3020;color:#fff;"><th style="padding:8px 12px;text-align:left;font-size:12px;">Procedimento</th><th style="padding:8px 12px;text-align:center;font-size:12px;">Tempo</th><th style="padding:8px 12px;text-align:right;font-size:12px;">Valor</th></tr></thead><tbody>${rows}</tbody></table>
 <div class="footer">${clinica} · ${data} · ${ativos.length} procedimentos</div>
-<script>window.onload=()=>{window.print();}</script></body></html>`;
+<`+`script>window.onload=()=>{window.print();}<`+`/script></body></html>`;
   const w = window.open('','_blank');
   if(w){ w.document.write(html); w.document.close(); }
   else { showToast('Permita pop-ups para gerar o PDF.','warn'); }
