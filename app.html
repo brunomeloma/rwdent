@@ -6927,18 +6927,7 @@ async function saveInsumos(){
   if(pi>=0){
     procs[pi].insumos=parseFloat(totalIns.toFixed(2));
     procs[pi].horaClin=parseFloat(((procs[pi].tempo/60)*calcHora()).toFixed(2));
-    const _IDS_MANUT_ORTO = new Set([208,209,210,211,212,213,214,38]);
-    const _MANUT_TO_INST = {208:44, 209:202, 210:203, 211:204, 212:43, 213:51, 214:207, 38:37};
-    if(_IDS_MANUT_ORTO.has(procs[pi].id)){
-      const _instId = _MANUT_TO_INST[procs[pi].id];
-      const _instProc = procs.find(x=>x.id===_instId);
-      const _pct = cfg.pct_manut || 15;
-      if(_instProc && _instProc.precoFinal > 0 && _pct > 0){
-        procs[pi].precoFinal = parseFloat((_instProc.precoFinal * _pct / 100).toFixed(2));
-      }
-    } else {
-      procs[pi].precoFinal=calcPrecoFinal(procs[pi]);
-    }
+    procs[pi].precoFinal=calcPrecoFinal(procs[pi]);
   }
   showLoading(true); await saveFinanceiro(); showLoading(false);
   closeModal('modal-insumos');
@@ -6956,8 +6945,7 @@ async function recalcularInsumos(silent){
       if(novo!==p.insumos){p.insumos=novo;atualizados++;}
     }
     p.horaClin=parseFloat(((p.tempo/60)*calcHora()).toFixed(2));
-    const _IDS_MANUT_RECALC = new Set([208,209,210,211,212,213,214,38]);
-    if(!silent && !_IDS_MANUT_RECALC.has(p.id)){
+    if(!silent){
       p.precoFinal=calcPrecoFinal(p);
     }
   });
@@ -10575,10 +10563,8 @@ async function salvarPrecificacao(){
 
   showLoading(true);
 
-  const _IDS_MANUT = new Set([208,209,210,211,212,213,214,38]);
   const _hora = calcHora();
   procs.forEach(p=>{
-    if(_IDS_MANUT.has(p.id)) return;
     const ins = procInsumos[p.id]||[];
     if(ins.length){
       p.insumos = parseFloat(ins.reduce((acc,item)=>{const m=mats.find(x=>x.id===item.matId);return acc+(m?m.custo*item.qtd:0);},0).toFixed(2));
@@ -10586,15 +10572,6 @@ async function salvarPrecificacao(){
     p.margem = cfg.margem;
     p.horaClin = parseFloat(((p.tempo/60)*_hora).toFixed(2));
     p.precoFinal = calcPrecoFinal(p);
-  });
-
-  const _INST_MANUT_MAP = {44:208, 202:209, 203:210, 204:211, 43:212, 51:213, 207:214, 37:38};
-  Object.entries(_INST_MANUT_MAP).forEach(([instId, manutId])=>{
-    const _inst = procs.find(p=>p.id===Number(instId));
-    const _manut = procs.find(p=>p.id===manutId);
-    if(_inst && _manut && cfg.pct_manut > 0){
-      _manut.precoFinal = parseFloat((_inst.precoFinal * cfg.pct_manut / 100).toFixed(2));
-    }
   });
 
   await saveFinanceiro();
