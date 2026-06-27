@@ -2661,7 +2661,7 @@ function renderHomeStats(){
         return `<div class="home-table-row">
           <div>
             <div class="home-table-name">${escapeHtml(nome)}</div>
-            <div class="home-table-sub">${a.procedimento||''}</div>
+            <div class="home-table-sub">${escapeHtml(a.procedimento||'')}</div>
           </div>
           <div style="font-weight:700;color:#3a2020;min-width:44px;text-align:center;">${(a.horario||'').slice(0,5)}</div>
           <span class="home-badge ${badgeCls}">${badgeTxt}</span>
@@ -2794,7 +2794,7 @@ function buildGoogleCalendarUrl(nome, data, horario, procedimento, profNome, obs
   const pad = n => String(n).padStart(2,'0');
   const dtStart = `${ano}${mes}${dia}T${pad(hh)}${pad(mm)}00`;
   // Duração padrão: 1 hora
-  const endH = parseInt(hh)+1;
+  const endH = (parseInt(hh)||0)+1;
   const dtEnd = `${ano}${mes}${dia}T${pad(endH)}${pad(mm)}00`;
   const clinica = (clinicaData?.nome_cli) ? clinicaData.nome_cli : 'Clínica';
   const title = encodeURIComponent(`${procedimento||'Consulta'} — ${nome}`);
@@ -2885,8 +2885,9 @@ async function agendarConsulta(){
 
 function renderLista(){
   const container=document.getElementById('lista-agendamentos');
-  const dataFiltro=document.getElementById('filtro-data').value;
-  const profFiltro=document.getElementById('filtro-prof').value;
+  if(!container) return;
+  const dataFiltro=document.getElementById('filtro-data')?.value||'';
+  const profFiltro=document.getElementById('filtro-prof')?.value||'';
   let lista=agendamentos.filter(a=>{
     if(dataFiltro&&a.data!==dataFiltro) return false;
     if(profFiltro&&a.prof_id!==parseInt(profFiltro)) return false;
@@ -2910,7 +2911,7 @@ function renderLista(){
       <span class="appt-badge badge-main">${escapeHtml((a.prof_nome||'').split(' ')[0])}</span>
       <button class="btn-secondary" style="padding:6px 10px;background:${status==='compareceu'?'#2e7d32':'#fff'};color:${status==='compareceu'?'#fff':'#2e7d32'};border-color:#2e7d32;" onclick="calMarcarPresenca(${a.id},'compareceu')" title="Marcar que veio"><i class="ti ti-check"></i></button>
       <button class="btn-secondary" style="padding:6px 10px;background:${status==='faltou'?'#dc2626':'#fff'};color:${status==='faltou'?'#fff':'#dc2626'};border-color:#dc2626;" onclick="calMarcarPresenca(${a.id},'faltou')" title="Marcar que não veio"><i class="ti ti-x"></i></button>
-      ${a.telefone ? `<button class="btn-secondary" style="padding:6px 10px;background:#25d366;color:#fff;border-color:#25d366;" onclick="enviarConfirmacaoWpp('${escapeHtml(a.telefone)}','${escapeHtml(a.nome)}','${a.data}','${a.horario}','${escapeHtml(a.procedimento||'Consulta')}')" title="Confirmar via WhatsApp"><i class="ti ti-brand-whatsapp"></i></button>` : ''}
+      ${a.telefone ? `<button class="btn-secondary" style="padding:6px 10px;background:#25d366;color:#fff;border-color:#25d366;" onclick="enviarConfirmacaoWpp('${escapeHtml(a.telefone).replace(/'/g,'&#39;')}','${escapeHtml(a.nome).replace(/'/g,'&#39;')}','${escapeHtml(a.data).replace(/'/g,'&#39;')}','${escapeHtml(a.horario).replace(/'/g,'&#39;')}','${escapeHtml(a.procedimento||'Consulta').replace(/'/g,'&#39;')}')" title="Confirmar via WhatsApp"><i class="ti ti-brand-whatsapp"></i></button>` : ''}
       <a href="${buildGoogleCalendarUrl(a.nome, a.data, a.horario, a.procedimento||'Consulta', a.prof_nome, a.obs||'')}" target="_blank" class="btn-secondary" style="padding:6px 10px;background:#4285f4;color:#fff;border-color:#4285f4;text-decoration:none;display:inline-flex;align-items:center;" title="Adicionar ao Google Agenda"><i class="ti ti-brand-google"></i></a>
       <button class="btn-danger" onclick="removerAgendamento(${a.id})"><i class="ti ti-trash"></i></button>
     </div>
@@ -4569,7 +4570,7 @@ async function pacAlterarStatusPlano(id, status){
   if(status === 'aprovado') statusExtra.data_aprovado = new Date().toISOString();
   if(status === 'realizado') statusExtra.data_realizado = new Date().toISOString();
   let { error } = await _sb.from('plano_tratamento').update({ status, ...statusExtra }).eq('id',id);
-  if(error && error.message && error.message.includes('data_aprovado') || error && error.message && error.message.includes('data_realizado')){
+  if(error && error.message && (error.message.includes('data_aprovado') || error.message.includes('data_realizado'))){
     // Colunas de data não existem na tabela ainda — salva só o status
     ({ error } = await _sb.from('plano_tratamento').update({ status }).eq('id',id));
   }
@@ -5633,8 +5634,8 @@ async function injetarNovosMatsOrto(){
     }
   });
   if(alterou){
-    nextMatId = Math.max(...mats.map(m=>m.id))+1;
-    nextProcId = Math.max(...procs.map(p=>p.id))+1;
+    nextMatId = mats.length ? Math.max(...mats.map(m=>m.id||0))+1 : 91;
+    nextProcId = procs.length ? Math.max(...procs.map(p=>p.id||0))+1 : 103;
     // Calcula insumos (R$) e hora clínica de todos os procedimentos novos. Para o preço
     // final, usa o valor calibrado por pesquisa de mercado já definido em NOVOS_PROCS
     // (quando > 0); só recorre ao cálculo automático por insumos+margem quando o
@@ -5756,7 +5757,7 @@ function fioAtualizarInfo(){
     if(mat){
       const est = estoque[mat.id]||{atual:0};
       const cor = est.atual<=0?'#dc2626':est.atual<=2?'#856404':'#2e7d32';
-      infoEl.innerHTML = `<b>${mat.nome}</b><br>Estoque: <span style="color:${cor};font-weight:700;">${est.atual} unid</span> · Custo: R$ ${mat.custo.toFixed(2)}`;
+      infoEl.innerHTML = `<b>${escapeHtml(mat.nome)}</b><br>Estoque: <span style="color:${cor};font-weight:700;">${est.atual} unid</span> · Custo: R$ ${mat.custo.toFixed(2)}`;
     } else {
       infoEl.innerHTML = `Fio ${tipoNome} ${num} ${arcNome} — material não cadastrado`;
     }
@@ -6218,12 +6219,20 @@ async function loadFinanceiro(){
   await injetarNovosMatsOrto();
 }
 
+let _saveLock = null;
 async function saveFinanceiro(){
   if(!clinicaId) return {message:'clinicaId não definido'};
   if(!_financeiroCarregado){
     console.warn('saveFinanceiro bloqueado: dados ainda não carregados do banco');
     return {message:'Dados financeiros ainda não carregados. Aguarde e tente novamente.'};
   }
+  if(_saveLock) await _saveLock;
+  let _unlock;
+  _saveLock = new Promise(r=>{ _unlock=r; });
+  try { return await _saveFinanceiroImpl(); }
+  finally { _unlock(); _saveLock=null; }
+}
+async function _saveFinanceiroImpl(){
   cfg._pagPac = pagPac;
   const payload = {
     clinica_id   : clinicaId,
@@ -6481,6 +6490,7 @@ async function saveProc(){
   const obj    = { nome, grupo:document.getElementById('mp-grupo')?.value||'Geral', tempo, insumos, laboratorio:lab, margem, horaClin:hc, precoFinal:preco };
   if(editProcId){
     const i = procs.findIndex(x=>x.id===editProcId);
+    if(i<0){ showToast('Procedimento não encontrado.','error'); return; }
     procs[i] = { ...procs[i], ...obj };
     const pm = calcPrecoManut(editProcId, true);
     if(pm !== null) procs[i].precoFinal = pm;
@@ -6704,6 +6714,7 @@ async function saveMat(){
   if(editMatId){
     matId = editMatId;
     const i = mats.findIndex(x=>x.id===editMatId);
+    if(i<0){ showToast('Material não encontrado.','error'); return; }
     mats[i] = { ...mats[i], ...obj };
   } else {
     matId = nextMatId++;
@@ -8473,7 +8484,9 @@ function _modalSelecionarOrto(pacId, tipo){
     ? [{id:212,label:'Metálico Tradicional — R$ 90,00'},{id:213,label:'Metálico Autoligado — R$ 115,00'},{id:208,label:'Estético Cerâmico — R$ 130,00'},{id:209,label:'Estético Porcelana — R$ 160,00'},{id:211,label:'Estético Autoligado — R$ 190,00'},{id:210,label:'Estético Safira — R$ 220,00'},{id:214,label:'Invisalign (refinamento) — R$ 300,00'}]
     : [{id:215,label:'Metálico Tradicional'},{id:217,label:'Metálico Autoligado'},{id:216,label:'Cerâmico'},{id:218,label:'Porcelana'},{id:219,label:'Safira'},{id:220,label:'Autoligado Estético'}];
   const titulo = tipo==='manut' ? 'Qual tipo de aparelho para Manutenção?' : 'Qual tipo de aparelho para Recolagem?';
+  document.getElementById('_orto_plan_modal')?.remove();
   const modal = document.createElement('div');
+  modal.id = '_orto_plan_modal';
   modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:10000;display:flex;align-items:center;justify-content:center;';
   modal.innerHTML=`<div style="background:#fff;border-radius:16px;padding:24px;max-width:380px;width:90%;box-shadow:0 8px 40px rgba(0,0,0,.2);">
     <div style="font-size:15px;font-weight:700;color:var(--rose-dark);margin-bottom:16px;"><i class="ti ti-tooth"></i> ${titulo}</div>
@@ -8888,6 +8901,7 @@ let signCanvas = null, signCtx = null, signDrawing = false;
 let signCallback = null; // função chamada ao confirmar
 let signLastX = 0, signLastY = 0;
 
+let _signInited = false;
 function initSignCanvas(){
   signCanvas = document.getElementById('sign-canvas');
   if(!signCanvas) return;
@@ -8898,6 +8912,9 @@ function initSignCanvas(){
   signCtx.lineWidth = 2.5;
   signCtx.lineCap = 'round';
   signCtx.lineJoin = 'round';
+
+  if(_signInited) return;
+  _signInited = true;
 
   // Mouse
   signCanvas.addEventListener('mousedown', e=>{ signDrawing=true; const r=signCanvas.getBoundingClientRect(); signLastX=e.clientX-r.left; signLastY=e.clientY-r.top; });
