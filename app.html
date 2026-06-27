@@ -6135,7 +6135,7 @@ function manutConfirmar(){
 async function loadFinanceiro(){
   if(!clinicaId) return;
 
-  const safe = (str, def) => { try{ const v=JSON.parse(str); return v; }catch(e){ return def; } };
+  const safe = (str, def) => { if(str===null||str===undefined) return def; try{ const v=JSON.parse(str); return (v!==null&&v!==undefined)?v:def; }catch(e){ return def; } };
 
   const { data } = await _sb.from('financeiro_config')
     .select('*').eq('clinica_id', clinicaId).single();
@@ -6216,10 +6216,10 @@ async function loadFinanceiro(){
 }
 
 async function saveFinanceiro(){
-  if(!clinicaId) return;
+  if(!clinicaId) return {message:'clinicaId não definido'};
   if(!_financeiroCarregado){
     console.warn('saveFinanceiro bloqueado: dados ainda não carregados do banco');
-    return;
+    return {message:'Dados financeiros ainda não carregados. Aguarde e tente novamente.'};
   }
   cfg._pagPac = pagPac;
   const payload = {
@@ -10806,12 +10806,18 @@ async function salvarPrecificacao(){
 }
 
 async function salvarTaxas(){
+  if(!_financeiroCarregado){
+    showLoading(true);
+    await loadFinanceiro();
+    showLoading(false);
+  }
   taxasCfg.debito = parseFloat(document.getElementById('cfg-taxa-debito')?.value)||0;
   taxasCfg.credito = [1,2,3,4,5,6,7,8,9,10,11,12].map(p=>parseFloat(document.getElementById('cfg-taxa-cred'+p)?.value)||0);
   showLoading(true);
-  await saveFinanceiro();
+  const err = await saveFinanceiro();
   showLoading(false);
-  showToast('Taxas salvas!');
+  if(err) showToast('Erro ao salvar taxas: '+err.message,'error');
+  else showToast('Taxas salvas!');
 }
 
 function calcValorLiquido(total, forma, parcelas){
@@ -10849,6 +10855,13 @@ async function salvarConfiguracoes(){
   clinicaData.maps_link = maps_link;
   const el = document.getElementById('header-clinica');
   if(el) el.textContent = nome_cli;
+  // Salva taxas junto para não perder alterações
+  const taxaDebEl = document.getElementById('cfg-taxa-debito');
+  if(taxaDebEl && _financeiroCarregado){
+    taxasCfg.debito = parseFloat(taxaDebEl.value)||0;
+    taxasCfg.credito = [1,2,3,4,5,6,7,8,9,10,11,12].map(p=>parseFloat(document.getElementById('cfg-taxa-cred'+p)?.value)||0);
+    await saveFinanceiro();
+  }
   showToast('Configurações salvas!');
 }
 
