@@ -11018,17 +11018,7 @@ let _galeriaPacId = null;
 
 const GALERIA_BUCKET = 'galeria';
 
-async function _galeriaEnsureBucket(){
-  try {
-    const { data, error } = await _sb.storage.getBucket(GALERIA_BUCKET);
-    if(data) return true;
-    if(error && error.message?.includes('not found')){
-      showToast('Bucket "galeria" não existe. Crie-o no painel do Supabase (Storage → New bucket → "galeria", público).','error');
-      return false;
-    }
-  } catch(e){}
-  return true;
-}
+async function _galeriaEnsureBucket(){ return true; }
 
 // ── FINANCEIRO PACIENTE ──
 // Reads from vendas (finalized sales with outstanding balance)
