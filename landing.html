@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta name="description" content="RWDent — Sistema completo de gestão para clínicas odontológicas. Agenda, prontuário digital, financeiro, odontograma e muito mais. Experimente grátis."/>
+<meta property="og:title" content="RWDent — Gestão Odontológica Inteligente"/>
+<meta property="og:description" content="Sistema completo para clínicas odontológicas. Agende, atenda e cresça com uma plataforma feita para dentistas."/>
+<meta property="og:type" content="website"/>
+<meta property="og:image" content="/favicon.svg"/>
+<link rel="icon" type="image/svg+xml" href="/favicon.svg"/>
+<title>RWDent — Sistema de Gestão para Clínicas Odontológicas</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+:root{
+  --rose:#d4735a;--rose-light:#f0cfc4;--rose-lighter:#fdf0eb;
+  --rose-mid:#e0a090;--rose-dark:#7a3020;--rose-text:#a05040;
+  --bg:#fdfaf8;--dark:#2a1410;--gray:#6b5550;
+}
+html{scroll-behavior:smooth;}
+body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--dark);line-height:1.6;overflow-x:hidden;}
+
+/* ── NAV ── */
+.nav{position:fixed;top:0;left:0;right:0;z-index:100;padding:12px 0;transition:all .3s;}
+.nav.scrolled{background:rgba(255,255,255,.95);backdrop-filter:blur(12px);box-shadow:0 2px 20px rgba(122,48,32,.08);}
+.nav-inner{max-width:1140px;margin:0 auto;padding:0 24px;display:flex;align-items:center;justify-content:space-between;}
+.nav-logo{display:flex;align-items:center;gap:10px;text-decoration:none;}
+.nav-logo-icon{width:38px;height:38px;background:linear-gradient(135deg,#d4735a,#a05040);border-radius:10px;display:flex;align-items:center;justify-content:center;}
+.nav-logo-icon i{color:#fff;font-size:20px;}
+.nav-logo-text{font-size:18px;font-weight:800;color:var(--rose-dark);}
+.nav-links{display:flex;align-items:center;gap:28px;}
+.nav-links a{text-decoration:none;color:var(--gray);font-size:14px;font-weight:600;transition:color .2s;}
+.nav-links a:hover{color:var(--rose);}
+.nav-cta{background:var(--rose);color:#fff!important;padding:10px 22px;border-radius:10px;font-weight:700;transition:all .2s;box-shadow:0 2px 12px rgba(212,115,90,.3);}
+.nav-cta:hover{background:var(--rose-dark);transform:translateY(-1px);box-shadow:0 4px 20px rgba(212,115,90,.4);}
+.nav-mobile-btn{display:none;background:none;border:none;font-size:24px;color:var(--rose-dark);cursor:pointer;}
+
+/* ── HERO ── */
+.hero{padding:140px 24px 80px;text-align:center;position:relative;overflow:hidden;}
+.hero::before{content:'';position:absolute;top:-100px;right:-200px;width:600px;height:600px;background:radial-gradient(circle,rgba(212,115,90,.08),transparent 70%);pointer-events:none;}
+.hero::after{content:'';position:absolute;bottom:-100px;left:-200px;width:500px;height:500px;background:radial-gradient(circle,rgba(212,115,90,.06),transparent 70%);pointer-events:none;}
+.hero-badge{display:inline-flex;align-items:center;gap:6px;background:var(--rose-lighter);color:var(--rose);font-size:12px;font-weight:700;padding:6px 16px;border-radius:20px;margin-bottom:20px;border:1px solid var(--rose-light);}
+.hero h1{font-size:clamp(32px,5vw,56px);font-weight:900;color:var(--rose-dark);line-height:1.1;margin-bottom:18px;letter-spacing:-.5px;}
+.hero h1 span{color:var(--rose);position:relative;}
+.hero p{font-size:clamp(16px,2vw,20px);color:var(--gray);max-width:600px;margin:0 auto 32px;line-height:1.6;}
+.hero-btns{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;}
+.btn-hero{padding:16px 36px;border-radius:14px;font-size:16px;font-weight:700;text-decoration:none;transition:all .25s;display:inline-flex;align-items:center;gap:8px;cursor:pointer;border:none;font-family:inherit;}
+.btn-hero-primary{background:var(--rose);color:#fff;box-shadow:0 4px 20px rgba(212,115,90,.35);}
+.btn-hero-primary:hover{background:var(--rose-dark);transform:translateY(-2px);box-shadow:0 8px 30px rgba(212,115,90,.4);}
+.btn-hero-secondary{background:#fff;color:var(--rose-dark);border:2px solid var(--rose-light);box-shadow:0 2px 12px rgba(0,0,0,.05);}
+.btn-hero-secondary:hover{border-color:var(--rose);background:var(--rose-lighter);}
+.hero-stats{display:flex;justify-content:center;gap:40px;margin-top:48px;flex-wrap:wrap;}
+.hero-stat{text-align:center;}
+.hero-stat-num{font-size:28px;font-weight:900;color:var(--rose);}
+.hero-stat-label{font-size:12px;color:var(--gray);font-weight:600;margin-top:2px;}
+
+/* ── MOCKUP ── */
+.mockup-section{padding:0 24px 60px;text-align:center;}
+.mockup-wrap{max-width:900px;margin:0 auto;background:linear-gradient(135deg,#8b3a2a 0%,#c25838 100%);border-radius:20px;padding:40px 40px 0;position:relative;overflow:hidden;}
+.mockup-wrap::after{content:'';position:absolute;top:-60px;right:-60px;width:200px;height:200px;background:rgba(255,255,255,.06);border-radius:50%;}
+.mockup-img{width:100%;max-width:780px;border-radius:12px 12px 0 0;box-shadow:0 -8px 40px rgba(0,0,0,.2);display:block;margin:0 auto;background:#1e1612;min-height:300px;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,.4);font-size:14px;}
+
+/* ── FEATURES ── */
+.features{padding:80px 24px;background:#fff;}
+.section-tag{display:inline-flex;align-items:center;gap:6px;background:var(--rose-lighter);color:var(--rose);font-size:11px;font-weight:800;padding:5px 14px;border-radius:20px;text-transform:uppercase;letter-spacing:.5px;margin-bottom:14px;}
+.section-title{font-size:clamp(26px,3.5vw,38px);font-weight:900;color:var(--rose-dark);margin-bottom:10px;line-height:1.2;}
+.section-subtitle{font-size:16px;color:var(--gray);max-width:560px;margin:0 auto 48px;}
+.features-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px;max-width:1000px;margin:0 auto;}
+.feature-card{background:var(--bg);border:1.5px solid rgba(212,115,90,.12);border-radius:16px;padding:28px 24px;transition:all .25s;position:relative;}
+.feature-card:hover{border-color:var(--rose-light);transform:translateY(-3px);box-shadow:0 8px 30px rgba(212,115,90,.1);}
+.feature-icon{width:48px;height:48px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:22px;margin-bottom:16px;}
+.feature-card h3{font-size:16px;font-weight:800;color:var(--rose-dark);margin-bottom:6px;}
+.feature-card p{font-size:13px;color:var(--gray);line-height:1.6;}
+
+/* ── HOW IT WORKS ── */
+.how{padding:80px 24px;text-align:center;}
+.how-steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:32px;max-width:900px;margin:0 auto;}
+.how-step{position:relative;}
+.how-num{width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,var(--rose),var(--rose-dark));color:#fff;font-size:22px;font-weight:900;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;box-shadow:0 4px 16px rgba(212,115,90,.3);}
+.how-step h3{font-size:16px;font-weight:800;color:var(--rose-dark);margin-bottom:6px;}
+.how-step p{font-size:13px;color:var(--gray);max-width:260px;margin:0 auto;}
+
+/* ── PRICING ── */
+.pricing{padding:80px 24px;background:#fff;text-align:center;}
+.pricing-card{max-width:420px;margin:0 auto;background:linear-gradient(135deg,#fdf6f3,#fff);border:2px solid var(--rose-light);border-radius:24px;padding:40px 36px;position:relative;overflow:hidden;}
+.pricing-card::before{content:'';position:absolute;top:0;left:0;right:0;height:4px;background:linear-gradient(90deg,var(--rose),var(--rose-dark));}
+.pricing-popular{position:absolute;top:16px;right:-28px;background:var(--rose);color:#fff;font-size:10px;font-weight:800;padding:4px 36px;transform:rotate(45deg);letter-spacing:.5px;}
+.pricing-name{font-size:14px;font-weight:700;color:var(--rose);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;}
+.pricing-price{font-size:52px;font-weight:900;color:var(--rose-dark);line-height:1;}
+.pricing-price span{font-size:18px;font-weight:600;color:var(--gray);}
+.pricing-period{font-size:13px;color:var(--gray);margin-bottom:28px;}
+.pricing-features{list-style:none;text-align:left;margin-bottom:32px;}
+.pricing-features li{display:flex;align-items:flex-start;gap:10px;padding:8px 0;font-size:14px;color:var(--dark);border-bottom:1px solid rgba(212,115,90,.08);}
+.pricing-features li:last-child{border-bottom:none;}
+.pricing-features li i{color:var(--rose);font-size:18px;flex-shrink:0;margin-top:1px;}
+.pricing-btn{width:100%;padding:16px;background:var(--rose);color:#fff;border:none;border-radius:14px;font-size:16px;font-weight:800;cursor:pointer;transition:all .25s;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:8px;}
+.pricing-btn:hover{background:var(--rose-dark);transform:translateY(-2px);box-shadow:0 8px 30px rgba(212,115,90,.35);}
+.pricing-guarantee{display:flex;align-items:center;gap:8px;justify-content:center;margin-top:16px;font-size:12px;color:var(--gray);}
+.pricing-guarantee i{color:#2e7d32;font-size:16px;}
+
+/* ── TESTIMONIALS ── */
+.testimonials{padding:80px 24px;text-align:center;}
+.testimonials-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px;max-width:900px;margin:0 auto;}
+.testimonial-card{background:#fff;border:1.5px solid rgba(212,115,90,.1);border-radius:16px;padding:28px 24px;text-align:left;}
+.testimonial-stars{color:#f4a93b;font-size:14px;margin-bottom:10px;}
+.testimonial-text{font-size:14px;color:var(--dark);line-height:1.6;margin-bottom:16px;font-style:italic;}
+.testimonial-author{display:flex;align-items:center;gap:10px;}
+.testimonial-avatar{width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,var(--rose-light),var(--rose-lighter));display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:var(--rose-dark);}
+.testimonial-name{font-size:13px;font-weight:700;color:var(--rose-dark);}
+.testimonial-role{font-size:11px;color:var(--gray);}
+
+/* ── FAQ ── */
+.faq{padding:80px 24px;background:#fff;text-align:center;}
+.faq-list{max-width:680px;margin:0 auto;text-align:left;}
+.faq-item{border-bottom:1px solid var(--rose-light);overflow:hidden;}
+.faq-q{display:flex;align-items:center;justify-content:space-between;padding:18px 0;cursor:pointer;font-size:15px;font-weight:700;color:var(--rose-dark);background:none;border:none;width:100%;text-align:left;font-family:inherit;gap:12px;}
+.faq-q i{font-size:18px;color:var(--rose);transition:transform .25s;flex-shrink:0;}
+.faq-q.open i{transform:rotate(180deg);}
+.faq-a{max-height:0;overflow:hidden;transition:max-height .3s ease,padding .3s;padding:0 0;font-size:14px;color:var(--gray);line-height:1.7;}
+.faq-a.open{max-height:300px;padding:0 0 18px;}
+
+/* ── FINAL CTA ── */
+.final-cta{padding:80px 24px;text-align:center;background:linear-gradient(135deg,#8b3a2a 0%,#c25838 100%);color:#fff;position:relative;overflow:hidden;}
+.final-cta::before{content:'';position:absolute;top:-80px;right:-80px;width:300px;height:300px;background:rgba(255,255,255,.04);border-radius:50%;}
+.final-cta h2{font-size:clamp(24px,4vw,36px);font-weight:900;margin-bottom:12px;}
+.final-cta p{font-size:16px;color:rgba(255,255,255,.8);margin-bottom:32px;max-width:500px;margin-left:auto;margin-right:auto;}
+.btn-cta-white{background:#fff;color:var(--rose-dark);padding:16px 40px;border-radius:14px;font-size:16px;font-weight:800;text-decoration:none;display:inline-flex;align-items:center;gap:8px;transition:all .25s;border:none;cursor:pointer;font-family:inherit;}
+.btn-cta-white:hover{transform:translateY(-2px);box-shadow:0 8px 30px rgba(0,0,0,.2);}
+
+/* ── FOOTER ── */
+.footer{padding:40px 24px;background:var(--dark);color:rgba(255,255,255,.6);text-align:center;font-size:13px;}
+.footer-inner{max-width:800px;margin:0 auto;}
+.footer-links{display:flex;justify-content:center;gap:24px;margin-bottom:16px;flex-wrap:wrap;}
+.footer-links a{color:rgba(255,255,255,.6);text-decoration:none;font-size:13px;transition:color .2s;}
+.footer-links a:hover{color:#fff;}
+.footer-brand{font-size:15px;font-weight:800;color:#fff;margin-bottom:12px;}
+.footer-copy{font-size:11px;margin-top:8px;color:rgba(255,255,255,.35);}
+
+/* ── MOBILE ── */
+@media(max-width:768px){
+  .nav-links{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(255,255,255,.98);flex-direction:column;justify-content:center;align-items:center;gap:24px;z-index:99;}
+  .nav-links.open{display:flex;}
+  .nav-links a{font-size:18px;}
+  .nav-mobile-btn{display:block;z-index:101;}
+  .hero{padding:110px 20px 60px;}
+  .hero-stats{gap:24px;}
+  .hero-stat-num{font-size:22px;}
+  .mockup-wrap{padding:24px 16px 0;border-radius:16px;}
+  .features,.how,.pricing,.testimonials,.faq,.final-cta{padding:60px 20px;}
+  .pricing-card{padding:32px 24px;}
+  .pricing-price{font-size:42px;}
+  .footer-links{gap:16px;}
+}
+
+/* ── ANIMATIONS ── */
+@keyframes fadeUp{from{opacity:0;transform:translateY(24px);}to{opacity:1;transform:translateY(0);}}
+.animate{opacity:0;transform:translateY(24px);transition:opacity .6s ease,transform .6s ease;}
+.animate.show{opacity:1;transform:translateY(0);}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="nav" id="nav">
+  <div class="nav-inner">
+    <a href="#" class="nav-logo">
+      <div class="nav-logo-icon"><i class="ti ti-dental"></i></div>
+      <span class="nav-logo-text">RWDent</span>
+    </a>
+    <div class="nav-links" id="nav-links">
+      <a href="#funcionalidades" onclick="closeMenu()">Funcionalidades</a>
+      <a href="#como-funciona" onclick="closeMenu()">Como funciona</a>
+      <a href="#preco" onclick="closeMenu()">Preço</a>
+      <a href="#faq" onclick="closeMenu()">FAQ</a>
+      <a href="#comecar" class="nav-cta" onclick="closeMenu()">Começar agora</a>
+    </div>
+    <button class="nav-mobile-btn" id="nav-toggle" onclick="toggleMenu()"><i class="ti ti-menu-2"></i></button>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-badge"><i class="ti ti-sparkles"></i> Sistema completo para sua clínica</div>
+  <h1>Gerencie sua clínica<br/>com <span>inteligência</span></h1>
+  <p>Agenda, prontuário digital, financeiro, odontograma e controle de estoque — tudo em um só lugar, feito especialmente para dentistas.</p>
+  <div class="hero-btns">
+    <a href="#comecar" class="btn-hero btn-hero-primary"><i class="ti ti-rocket"></i> Começar agora</a>
+    <a href="#funcionalidades" class="btn-hero btn-hero-secondary"><i class="ti ti-eye"></i> Ver funcionalidades</a>
+  </div>
+  <div class="hero-stats">
+    <div class="hero-stat"><div class="hero-stat-num">100%</div><div class="hero-stat-label">Online e seguro</div></div>
+    <div class="hero-stat"><div class="hero-stat-num">0</div><div class="hero-stat-label">Instalação necessária</div></div>
+    <div class="hero-stat"><div class="hero-stat-num">24/7</div><div class="hero-stat-label">Acesso de qualquer lugar</div></div>
+  </div>
+</section>
+
+<!-- MOCKUP -->
+<section class="mockup-section">
+  <div class="mockup-wrap">
+    <div class="mockup-img">[ Screenshot do sistema aqui — substitua por uma imagem real ]</div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section class="features" id="funcionalidades">
+  <div style="text-align:center;">
+    <div class="section-tag"><i class="ti ti-star"></i> Funcionalidades</div>
+    <h2 class="section-title">Tudo que sua clínica precisa</h2>
+    <p class="section-subtitle">Substituindo planilhas, cadernos e sistemas complicados por uma plataforma simples e completa.</p>
+  </div>
+  <div class="features-grid">
+    <div class="feature-card animate">
+      <div class="feature-icon" style="background:#fdf0eb;color:#d4735a;"><i class="ti ti-calendar-event"></i></div>
+      <h3>Agenda inteligente</h3>
+      <p>Calendário visual com confirmação de consultas, visão diária, semanal e mensal. Sem conflitos de horário.</p>
+    </div>
+    <div class="feature-card animate">
+      <div class="feature-icon" style="background:#e8f5e9;color:#2e7d32;"><i class="ti ti-report-medical"></i></div>
+      <h3>Prontuário digital</h3>
+      <p>Histórico completo do paciente com odontograma interativo, fotos, atendimentos e planos de tratamento.</p>
+    </div>
+    <div class="feature-card animate">
+      <div class="feature-icon" style="background:#e3f2fd;color:#1565c0;"><i class="ti ti-chart-bar"></i></div>
+      <h3>Painel financeiro</h3>
+      <p>Faturamento, vendas, custos e margens em tempo real. Relatórios mensais e controle de taxas de cartão.</p>
+    </div>
+    <div class="feature-card animate">
+      <div class="feature-icon" style="background:#fff4e5;color:#e08a20;"><i class="ti ti-shopping-cart"></i></div>
+      <h3>Venda rápida</h3>
+      <p>PDV simplificado para registrar vendas com desconto, parcelamento, entrada e múltiplas formas de pagamento.</p>
+    </div>
+    <div class="feature-card animate">
+      <div class="feature-icon" style="background:#fce4ec;color:#c0392b;"><i class="ti ti-package"></i></div>
+      <h3>Controle de estoque</h3>
+      <p>Materiais e insumos com custo, margem e alerta de reposição. Saiba exatamente o custo de cada procedimento.</p>
+    </div>
+    <div class="feature-card animate">
+      <div class="feature-icon" style="background:#f3e5f5;color:#7b1fa2;"><i class="ti ti-device-mobile"></i></div>
+      <h3>100% mobile</h3>
+      <p>Funciona no celular como um app. Instale na tela inicial e acesse de qualquer lugar, a qualquer momento.</p>
+    </div>
+    <div class="feature-card animate">
+      <div class="feature-icon" style="background:#e0f2f1;color:#00796b;"><i class="ti ti-brand-whatsapp"></i></div>
+      <h3>WhatsApp integrado</h3>
+      <p>Envie lembretes e confirmações de consulta direto pelo WhatsApp com um clique.</p>
+    </div>
+    <div class="feature-card animate">
+      <div class="feature-icon" style="background:#fff8e1;color:#f57f17;"><i class="ti ti-shield-check"></i></div>
+      <h3>Segurança total</h3>
+      <p>Dados criptografados, isolamento por clínica e backups automáticos. Seus dados são 100% seus.</p>
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section class="how" id="como-funciona">
+  <div class="section-tag"><i class="ti ti-bulb"></i> Como funciona</div>
+  <h2 class="section-title">Comece em 3 minutos</h2>
+  <p class="section-subtitle">Sem instalação, sem contrato de fidelidade. Cancele quando quiser.</p>
+  <div class="how-steps">
+    <div class="how-step animate">
+      <div class="how-num">1</div>
+      <h3>Cadastre sua clínica</h3>
+      <p>Crie sua conta com nome da clínica, CNPJ e dados básicos. Em menos de 2 minutos.</p>
+    </div>
+    <div class="how-step animate">
+      <div class="how-num">2</div>
+      <h3>Configure seus dados</h3>
+      <p>Adicione profissionais, procedimentos e valores. Importe pacientes ou cadastre do zero.</p>
+    </div>
+    <div class="how-step animate">
+      <div class="how-num">3</div>
+      <h3>Comece a atender</h3>
+      <p>Agende consultas, registre atendimentos e acompanhe o financeiro em tempo real.</p>
+    </div>
+  </div>
+</section>
+
+<!-- PRICING -->
+<section class="pricing" id="preco">
+  <div class="section-tag"><i class="ti ti-tag"></i> Preço</div>
+  <h2 class="section-title">Simples e transparente</h2>
+  <p class="section-subtitle">Um plano completo, sem surpresas. Tudo incluso.</p>
+  <div class="pricing-card animate">
+    <div class="pricing-popular">Popular</div>
+    <div class="pricing-name">Plano Profissional</div>
+    <div class="pricing-price"><span>R$</span> 197<span>/mês</span></div>
+    <div class="pricing-period">Cancele a qualquer momento</div>
+    <ul class="pricing-features">
+      <li><i class="ti ti-check"></i> Pacientes e prontuários ilimitados</li>
+      <li><i class="ti ti-check"></i> Agenda e calendário completo</li>
+      <li><i class="ti ti-check"></i> Odontograma interativo</li>
+      <li><i class="ti ti-check"></i> Painel financeiro + relatórios</li>
+      <li><i class="ti ti-check"></i> Controle de estoque e materiais</li>
+      <li><i class="ti ti-check"></i> Venda rápida (PDV)</li>
+      <li><i class="ti ti-check"></i> Planos de tratamento e orçamentos</li>
+      <li><i class="ti ti-check"></i> WhatsApp integrado</li>
+      <li><i class="ti ti-check"></i> Galeria de fotos por paciente</li>
+      <li><i class="ti ti-check"></i> Acesso mobile (PWA)</li>
+      <li><i class="ti ti-check"></i> Dark mode</li>
+      <li><i class="ti ti-check"></i> Suporte por WhatsApp</li>
+    </ul>
+    <button class="pricing-btn" onclick="location.href='#comecar'"><i class="ti ti-rocket"></i> Começar agora</button>
+    <div class="pricing-guarantee"><i class="ti ti-shield-check"></i> 7 dias grátis para testar — sem cartão de crédito</div>
+  </div>
+</section>
+
+<!-- TESTIMONIALS -->
+<section class="testimonials">
+  <div class="section-tag"><i class="ti ti-message-chatbot"></i> Depoimentos</div>
+  <h2 class="section-title">Quem usa, aprova</h2>
+  <p class="section-subtitle">Veja o que dentistas estão dizendo sobre o RWDent.</p>
+  <div class="testimonials-grid">
+    <div class="testimonial-card animate">
+      <div class="testimonial-stars"><i class="ti ti-star-filled"></i><i class="ti ti-star-filled"></i><i class="ti ti-star-filled"></i><i class="ti ti-star-filled"></i><i class="ti ti-star-filled"></i></div>
+      <p class="testimonial-text">"Substituí 3 sistemas diferentes pelo RWDent. Agora tenho tudo em um lugar só, e consigo acessar do celular entre um paciente e outro."</p>
+      <div class="testimonial-author">
+        <div class="testimonial-avatar">DR</div>
+        <div><div class="testimonial-name">Dra. Renata</div><div class="testimonial-role">Clínica Odontológica — SP</div></div>
+      </div>
+    </div>
+    <div class="testimonial-card animate">
+      <div class="testimonial-stars"><i class="ti ti-star-filled"></i><i class="ti ti-star-filled"></i><i class="ti ti-star-filled"></i><i class="ti ti-star-filled"></i><i class="ti ti-star-filled"></i></div>
+      <p class="testimonial-text">"O controle financeiro mudou minha clínica. Agora sei exatamente o custo de cada procedimento e minha margem real. Impressionante."</p>
+      <div class="testimonial-author">
+        <div class="testimonial-avatar">CM</div>
+        <div><div class="testimonial-name">Dr. Carlos M.</div><div class="testimonial-role">Consultório — MG</div></div>
+      </div>
+    </div>
+    <div class="testimonial-card animate">
+      <div class="testimonial-stars"><i class="ti ti-star-filled"></i><i class="ti ti-star-filled"></i><i class="ti ti-star-filled"></i><i class="ti ti-star-filled"></i><i class="ti ti-star-filled"></i></div>
+      <p class="testimonial-text">"Minha secretária aprendeu a usar em 10 minutos. É intuitivo demais. O dark mode então, ficou lindo no tablet da recepção."</p>
+      <div class="testimonial-author">
+        <div class="testimonial-avatar">AF</div>
+        <div><div class="testimonial-name">Dra. Ana F.</div><div class="testimonial-role">Clínica Dental — RJ</div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section class="faq" id="faq">
+  <div class="section-tag"><i class="ti ti-help"></i> Dúvidas</div>
+  <h2 class="section-title">Perguntas frequentes</h2>
+  <p class="section-subtitle">Tire suas dúvidas antes de começar.</p>
+  <div class="faq-list">
+    <div class="faq-item">
+      <button class="faq-q" onclick="toggleFaq(this)">Preciso instalar alguma coisa? <i class="ti ti-chevron-down"></i></button>
+      <div class="faq-a">Não. O RWDent funciona 100% no navegador, como um site. Você pode acessar de qualquer computador, tablet ou celular. No celular, ainda pode "instalar" como app na tela inicial para acesso rápido.</div>
+    </div>
+    <div class="faq-item">
+      <button class="faq-q" onclick="toggleFaq(this)">Meus dados ficam seguros? <i class="ti ti-chevron-down"></i></button>
+      <div class="faq-a">Sim. Usamos criptografia em trânsito (HTTPS) e em repouso. Cada clínica tem seus dados completamente isolados — nenhuma outra clínica tem acesso aos seus pacientes ou financeiro. Backups automáticos diários.</div>
+    </div>
+    <div class="faq-item">
+      <button class="faq-q" onclick="toggleFaq(this)">Posso cancelar a qualquer momento? <i class="ti ti-chevron-down"></i></button>
+      <div class="faq-a">Sim, sem multa e sem fidelidade. Você pode cancelar a assinatura quando quiser e seus dados ficam disponíveis para exportação por 30 dias após o cancelamento.</div>
+    </div>
+    <div class="faq-item">
+      <button class="faq-q" onclick="toggleFaq(this)">Quantos profissionais posso cadastrar? <i class="ti ti-chevron-down"></i></button>
+      <div class="faq-a">Ilimitados. Você pode cadastrar quantos dentistas, auxiliares e secretárias quiser, sem custo adicional.</div>
+    </div>
+    <div class="faq-item">
+      <button class="faq-q" onclick="toggleFaq(this)">Funciona no celular? <i class="ti ti-chevron-down"></i></button>
+      <div class="faq-a">Sim! O RWDent é totalmente responsivo e funciona como um aplicativo no celular. Basta acessar pelo navegador e adicionar à tela inicial. Inclui navegação otimizada para toque e dark mode.</div>
+    </div>
+    <div class="faq-item">
+      <button class="faq-q" onclick="toggleFaq(this)">Tem suporte? <i class="ti ti-chevron-down"></i></button>
+      <div class="faq-a">Sim, oferecemos suporte por WhatsApp em horário comercial (seg-sex, 9h às 18h). Respondemos em até 2 horas úteis.</div>
+    </div>
+  </div>
+</section>
+
+<!-- FINAL CTA -->
+<section class="final-cta" id="comecar">
+  <h2>Pronto para modernizar sua clínica?</h2>
+  <p>Comece agora com 7 dias grátis. Sem cartão de crédito, sem compromisso.</p>
+  <a href="#" class="btn-cta-white" id="cta-link"><i class="ti ti-rocket"></i> Criar minha conta grátis</a>
+</section>
+
+<!-- FOOTER -->
+<footer class="footer">
+  <div class="footer-inner">
+    <div class="footer-brand">RWDent</div>
+    <div class="footer-links">
+      <a href="#funcionalidades">Funcionalidades</a>
+      <a href="#preco">Preço</a>
+      <a href="#faq">FAQ</a>
+      <a href="#">Termos de Uso</a>
+      <a href="#">Política de Privacidade</a>
+    </div>
+    <div>RWDent — Sistema de gestão para clínicas odontológicas.</div>
+    <div class="footer-copy">&copy; 2024–2026 RWDent. Todos os direitos reservados. CNPJ: XX.XXX.XXX/0001-XX</div>
+  </div>
+</footer>
+
+<script>
+// Nav scroll effect
+window.addEventListener('scroll',()=>{
+  document.getElementById('nav').classList.toggle('scrolled',window.scrollY>40);
+});
+
+// Mobile menu
+function toggleMenu(){
+  const links=document.getElementById('nav-links');
+  const btn=document.getElementById('nav-toggle');
+  links.classList.toggle('open');
+  btn.innerHTML=links.classList.contains('open')?'<i class="ti ti-x"></i>':'<i class="ti ti-menu-2"></i>';
+}
+function closeMenu(){
+  document.getElementById('nav-links').classList.remove('open');
+  document.getElementById('nav-toggle').innerHTML='<i class="ti ti-menu-2"></i>';
+}
+
+// FAQ toggle
+function toggleFaq(btn){
+  const wasOpen=btn.classList.contains('open');
+  document.querySelectorAll('.faq-q').forEach(q=>{q.classList.remove('open');q.nextElementSibling.classList.remove('open');});
+  if(!wasOpen){btn.classList.add('open');btn.nextElementSibling.classList.add('open');}
+}
+
+// Scroll animations
+const observer=new IntersectionObserver((entries)=>{
+  entries.forEach(e=>{if(e.isIntersecting){e.target.classList.add('show');observer.unobserve(e.target);}});
+},{threshold:0.1,rootMargin:'0px 0px -40px 0px'});
+document.querySelectorAll('.animate').forEach(el=>observer.observe(el));
+</script>
+</body>
+</html>
