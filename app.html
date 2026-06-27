@@ -6550,8 +6550,10 @@ async function saveProc(){
     const i = procs.findIndex(x=>x.id===editProcId);
     if(i<0){ showToast('Procedimento não encontrado.','error'); return; }
     procs[i] = { ...procs[i], ...obj };
-    const pm = calcPrecoManut(editProcId, true);
-    if(pm !== null) procs[i].precoFinal = pm;
+    if(!procs[i]._precoManual){
+      const pm = calcPrecoManut(editProcId, true);
+      if(pm !== null) procs[i].precoFinal = pm;
+    }
   } else {
     procs.push({ id: nextProcId++, ...obj });
   }
@@ -10861,6 +10863,7 @@ async function salvarPrecificacao(){
   });
   // Manutenção: preço = % da instalação correspondente
   procs.forEach(p=>{
+    if(p._precoManual) return;
     const pm = calcPrecoManut(p.id);
     if(pm !== null) p.precoFinal = pm;
   });
