@@ -185,7 +185,7 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--
   <h1>Gerencie sua clínica<br/>com <span>inteligência</span></h1>
   <p>Agenda, prontuário digital, financeiro, odontograma e controle de estoque — tudo em um só lugar, feito especialmente para dentistas.</p>
   <div class="hero-btns">
-    <a href="#comecar" class="btn-hero btn-hero-primary"><i class="ti ti-rocket"></i> Testar por R$50/semana</a>
+    <a href="#comecar" class="btn-hero btn-hero-primary"><i class="ti ti-rocket"></i> Testar por R$50 (24h)</a>
     <a href="/?demo=true" class="btn-hero btn-hero-secondary"><i class="ti ti-eye"></i> Ver demonstração ao vivo</a>
   </div>
   <div class="hero-stats">
@@ -257,12 +257,12 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--
 <section class="how" id="como-funciona">
   <div class="section-tag"><i class="ti ti-bulb"></i> Como funciona</div>
   <h2 class="section-title">Comece em 3 minutos</h2>
-  <p class="section-subtitle">Sem instalação, sem contrato. Teste por R$50/semana e depois decida.</p>
+  <p class="section-subtitle">Sem instalação, sem contrato. Teste por R$50 (24h) e depois decida.</p>
   <div class="how-steps">
     <div class="how-step animate">
       <div class="how-num">1</div>
       <h3>Ative seu teste</h3>
-      <p>Cadastre sua clínica e ative o teste por R$50/semana. Acesso completo em menos de 2 minutos.</p>
+      <p>Cadastre sua clínica e ative o teste por R$50 (24h de acesso completo). Em menos de 2 minutos.</p>
     </div>
     <div class="how-step animate">
       <div class="how-num">2</div>
@@ -282,7 +282,7 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--
   <div class="section-tag"><i class="ti ti-tag"></i> Preço</div>
   <h2 class="section-title">Simples e transparente</h2>
   <p class="section-subtitle">Um plano completo, sem surpresas. Tudo incluso.</p>
-  <div class="pricing-card animate">
+  <div class="pricing-card animate" style="max-width:480px;">
     <div class="pricing-popular">Popular</div>
     <div class="pricing-name">Plano Profissional</div>
     <div class="pricing-price"><span>R$</span> 197<span>/mês</span></div>
@@ -301,8 +301,10 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--
       <li><i class="ti ti-check"></i> Dark mode</li>
       <li><i class="ti ti-check"></i> Suporte por WhatsApp</li>
     </ul>
-    <button class="pricing-btn" onclick="location.href='#comecar'"><i class="ti ti-rocket"></i> Começar teste por R$50/semana</button>
-    <div class="pricing-guarantee"><i class="ti ti-shield-check"></i> Teste por R$50/semana — conheça o sistema completo antes de assinar</div>
+    <button class="pricing-btn" onclick="location.href='#comecar'" style="margin-bottom:10px;"><i class="ti ti-rocket"></i> Assinar por R$197/mês</button>
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;"><div style="flex:1;height:1px;background:var(--rose-light);"></div><span style="font-size:12px;color:var(--gray);font-weight:700;">ou</span><div style="flex:1;height:1px;background:var(--rose-light);"></div></div>
+    <button class="pricing-btn" onclick="location.href='#comecar'" style="background:var(--rose-lighter);color:var(--rose-dark);box-shadow:none;font-size:14px;padding:12px;"><i class="ti ti-eye"></i> Testar por R$50 (acesso por 24h)</button>
+    <div class="pricing-guarantee"><i class="ti ti-shield-check"></i> Teste de 24h com acesso completo — conheça antes de assinar</div>
   </div>
 </section>
 
@@ -354,8 +356,8 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--
       <div class="faq-a">Sim. Usamos criptografia em trânsito (HTTPS) e em repouso. Cada clínica tem seus dados completamente isolados — nenhuma outra clínica tem acesso aos seus pacientes ou financeiro. Backups automáticos diários.</div>
     </div>
     <div class="faq-item">
-      <button class="faq-q" onclick="toggleFaq(this)">Como funciona o teste por R$50/semana? <i class="ti ti-chevron-down"></i></button>
-      <div class="faq-a">Você paga R$50 por semana de teste com acesso completo ao sistema — todas as funcionalidades liberadas. Sem limite de pacientes ou profissionais. Se gostar, migra para o plano mensal de R$197/mês. Se não quiser continuar, basta não renovar.</div>
+      <button class="faq-q" onclick="toggleFaq(this)">Como funciona o teste por R$50? <i class="ti ti-chevron-down"></i></button>
+      <div class="faq-a">Você paga R$50 e recebe acesso completo ao sistema por 24 horas — todas as funcionalidades liberadas, sem limite de pacientes ou profissionais. É tempo suficiente para conhecer tudo e decidir. Se gostar, assina o plano mensal de R$197/mês. Se não quiser continuar, sem compromisso.</div>
     </div>
     <div class="faq-item">
       <button class="faq-q" onclick="toggleFaq(this)">Posso cancelar a qualquer momento? <i class="ti ti-chevron-down"></i></button>
@@ -379,8 +381,8 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--
 <!-- FINAL CTA -->
 <section class="final-cta" id="comecar">
   <h2>Pronto para modernizar sua clínica?</h2>
-  <p>Comece com um teste por apenas R$50/semana. Acesso completo ao sistema, sem compromisso.</p>
-  <a href="#" class="btn-cta-white" id="cta-link"><i class="ti ti-rocket"></i> Começar teste por R$50/semana</a>
+  <p>Assine por R$197/mês ou teste por R$50 com acesso completo por 24h. Sem compromisso.</p>
+  <a href="#" class="btn-cta-white" id="cta-link"><i class="ti ti-rocket"></i> Começar agora</a>
 </section>
 
 <!-- FOOTER -->
