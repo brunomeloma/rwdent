@@ -6344,7 +6344,7 @@ function calcPrecoManut(manutId, recalcInst){
     }
     inst.margem = cfg.margem;
     inst.horaClin = parseFloat(((inst.tempo/60)*calcHora()).toFixed(2));
-    inst.precoFinal = calcPrecoFinal(inst);
+    if(!inst._precoManual) inst.precoFinal = calcPrecoFinal(inst);
   }
   if(!inst.precoFinal) return null;
   const pct = Number(cfg.pct_manut)||15;
@@ -6590,6 +6590,7 @@ async function recalcularProc(id){
   }
   p.margem = cfg.margem;
   p.horaClin = parseFloat(((p.tempo/60)*calcHora()).toFixed(2));
+  p._precoManual = false;
   const antes = p.precoFinal;
   const pm = calcPrecoManut(p.id, true);
   p.precoFinal = pm !== null ? pm : calcPrecoFinal(p);
@@ -6619,9 +6620,9 @@ function exportarTabelaPrecos(){
   const data = new Date().toLocaleDateString('pt-BR');
   let rows = '';
   grupos.forEach(g=>{
-    rows += `<tr><td colspan="3" style="background:#f5ddd5;font-weight:700;color:#7a3020;padding:8px 12px;font-size:13px;">${g}</td></tr>`;
+    rows += `<tr><td colspan="3" style="background:#f5ddd5;font-weight:700;color:#7a3020;padding:8px 12px;font-size:13px;">${escapeHtml(g)}</td></tr>`;
     ativos.filter(p=>(p.grupo||'Geral')===g).forEach(p=>{
-      rows += `<tr><td style="padding:7px 12px;border-bottom:1px solid #eee;font-size:13px;">${p.nome}</td><td style="padding:7px 12px;border-bottom:1px solid #eee;font-size:12px;color:#888;text-align:center;">${p.tempo||0} min</td><td style="padding:7px 12px;border-bottom:1px solid #eee;text-align:right;font-weight:700;font-size:13px;color:#7a3020;">R$ ${(p.precoFinal||0).toFixed(2).replace('.',',')}</td></tr>`;
+      rows += `<tr><td style="padding:7px 12px;border-bottom:1px solid #eee;font-size:13px;">${escapeHtml(p.nome)}</td><td style="padding:7px 12px;border-bottom:1px solid #eee;font-size:12px;color:#888;text-align:center;">${p.tempo||0} min</td><td style="padding:7px 12px;border-bottom:1px solid #eee;text-align:right;font-weight:700;font-size:13px;color:#7a3020;">R$ ${(p.precoFinal||0).toFixed(2).replace('.',',')}</td></tr>`;
     });
   });
   const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Tabela de Preços - ${clinica}</title>
@@ -6631,9 +6632,9 @@ function exportarTabelaPrecos(){
 table{width:100%;border-collapse:collapse;margin-top:10px;}
 .footer{text-align:center;margin-top:24px;font-size:11px;color:#b08070;border-top:1px solid #f0cfc4;padding-top:12px;}
 @media print{body{padding:15px;}}</style></head><body>
-<div class="header"><h1>${clinica}</h1><p>Tabela de Procedimentos e Valores — ${data}</p></div>
+<div class="header"><h1>${escapeHtml(clinica)}</h1><p>Tabela de Procedimentos e Valores — ${data}</p></div>
 <table><thead><tr style="background:#7a3020;color:#fff;"><th style="padding:8px 12px;text-align:left;font-size:12px;">Procedimento</th><th style="padding:8px 12px;text-align:center;font-size:12px;">Tempo</th><th style="padding:8px 12px;text-align:right;font-size:12px;">Valor</th></tr></thead><tbody>${rows}</tbody></table>
-<div class="footer">${clinica} · ${data} · ${ativos.length} procedimentos</div>
+<div class="footer">${escapeHtml(clinica)} · ${data} · ${ativos.length} procedimentos</div>
 <`+`script>window.onload=()=>{window.print();}<`+`/script></body></html>`;
   const w = window.open('','_blank');
   if(w){ w.document.write(html); w.document.close(); }
@@ -6663,7 +6664,7 @@ function renderProcs(){
   if(gsel){
     const cur = gsel.value;
     const gs  = [...new Set(procs.map(p=>p.grupo).filter(Boolean))].sort();
-    gsel.innerHTML = '<option value="">Todos os grupos</option>' + gs.map(g=>`<option value="${g}"${g===cur?' selected':''}>${g}</option>`).join('');
+    gsel.innerHTML = '<option value="">Todos os grupos</option>' + gs.map(g=>`<option value="${escapeHtml(g)}"${g===cur?' selected':''}>${escapeHtml(g)}</option>`).join('');
   }
   const mostrarInativos = document.getElementById('proc-mostrar-inativos')?.checked;
   let list = procs.filter(p=>(!q||_norm(p.nome).includes(_norm(q)))&&(!grupo||p.grupo===grupo)&&(mostrarInativos||p.ativo!==false));
@@ -7126,12 +7127,12 @@ async function recalcularInsumos(silent){
     p.horaClin=parseFloat(((p.tempo/60)*calcHora()).toFixed(2));
     if(!silent){
       p.margem=cfg.margem;
-      p.precoFinal=calcPrecoFinal(p);
+      if(!p._precoManual) p.precoFinal=calcPrecoFinal(p);
     }
   });
   if(!silent){
-    // Manutenção: preço = % da instalação correspondente
     procs.forEach(p=>{
+      if(p._precoManual) return;
       const pm = calcPrecoManut(p.id);
       if(pm !== null) p.precoFinal = pm;
     });
