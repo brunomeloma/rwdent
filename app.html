@@ -2774,9 +2774,11 @@ function lembrarTodosAmanha(){
       ${lista.map(a=>{
         const tel = a.telefone.replace(/\D/g,'');
         let _loc = '';
-        if(clinicaData?.endereco || clinicaData?.maps_link){
-          _loc = '\n📍 *Local:* ' + (clinicaData.endereco || clinicaNome);
-          if(clinicaData.maps_link) _loc += '\n🗺️ *Como chegar:* ' + clinicaData.maps_link;
+        const _end = clinicaData?.endereco || cfg.endereco || '';
+        const _mpl = clinicaData?.maps_link || cfg.maps_link || '';
+        if(_end || _mpl){
+          _loc = '\n📍 *Local:* ' + (_end || clinicaNome);
+          if(_mpl) _loc += '\n🗺️ *Como chegar:* ' + _mpl;
           _loc += '\n';
         }
         const msg = `Olá, ${a.nome.split(' ')[0]}! 😊\n\nPassando para lembrar que amanhã é o seu dia na *${clinicaNome}*!\n\n📅 *Horário:* ${a.horario}\n🦷 *Procedimento:* ${a.procedimento||'Consulta'}${_loc}\n\nPor favor, confirme sua presença respondendo *SIM* — ou nos avise caso precise reagendar. Estaremos esperando por você! 🙏`;
@@ -8903,8 +8905,8 @@ function enviarConfirmacaoWpp(tel, nome, data, horario, procedimento){
   const [y,m,d] = data.split('-');
   const dataFmt = `${d}/${m}/${y}`;
   const clinica = clinicaData?.nome_cli || 'nossa clínica';
-  const endereco = clinicaData?.endereco || '';
-  const mapsLink = clinicaData?.maps_link || '';
+  const endereco = clinicaData?.endereco || cfg.endereco || '';
+  const mapsLink = clinicaData?.maps_link || cfg.maps_link || '';
   let locPart = '';
   if(endereco || mapsLink){
     locPart = '\n📍 *Local:* ' + (endereco || clinica);
@@ -10805,12 +10807,13 @@ function enviarResgateWpp(){
 // ══════════════════════════════════════════════════════
 async function renderConfiguracoes(){
   if(!clinicaData) return;
+  if(!_financeiroCarregado) await loadFinanceiro();
   document.getElementById('cfg-nome-cli').value  = clinicaData.nome_cli  || '';
   document.getElementById('cfg-nome-resp').value = clinicaData.nome_resp || '';
   document.getElementById('cfg-email').value     = clinicaData.email     || '';
   document.getElementById('cfg-telefone').value  = clinicaData.telefone  || '';
-  document.getElementById('cfg-endereco').value  = clinicaData.endereco  || '';
-  document.getElementById('cfg-maps-link').value = clinicaData.maps_link || '';
+  document.getElementById('cfg-endereco').value  = clinicaData.endereco  || cfg.endereco  || '';
+  document.getElementById('cfg-maps-link').value = clinicaData.maps_link || cfg.maps_link || '';
   // Taxas
   document.getElementById('cfg-taxa-debito').value = taxasCfg.debito ?? 1.5;
   const cr = taxasCfg.credito || [];
@@ -10818,10 +10821,6 @@ async function renderConfiguracoes(){
     const el = document.getElementById('cfg-taxa-cred'+p);
     if(el) el.value = (cr[p-1] !== undefined && cr[p-1] !== '') ? cr[p-1] : '';
   });
-  // Precificação (hora clínica / margem) — garante que cfg já foi carregado do Supabase
-  if(!_financeiroCarregado){
-    await loadFinanceiro();
-  }
   document.getElementById('cfg-salario').value  = cfg.salario  ?? 3000;
   document.getElementById('cfg-horas').value    = cfg.horas    ?? 132;
   document.getElementById('cfg-trib').value     = cfg.trib     ?? 0;
@@ -10910,11 +10909,8 @@ async function salvarConfiguracoes(){
   let { error } = await _sb.from('clinicas').update({ ...updateData, endereco, maps_link }).eq('id', clinicaId);
   if(error && error.message && (error.message.includes('endereco') || error.message.includes('maps_link'))){
     ({ error } = await _sb.from('clinicas').update(updateData).eq('id', clinicaId));
-    clinicaData.endereco  = endereco;
-    clinicaData.maps_link = maps_link;
   }
-  showLoading(false);
-  if(error){ showToast('Erro: '+error.message,'error'); return; }
+  if(error){ showLoading(false); showToast('Erro: '+error.message,'error'); return; }
   clinicaData.nome_cli  = nome_cli;
   clinicaData.nome_resp = nome_resp;
   clinicaData.telefone  = telefone;
@@ -10922,14 +10918,18 @@ async function salvarConfiguracoes(){
   clinicaData.maps_link = maps_link;
   const el = document.getElementById('header-clinica');
   if(el) el.textContent = nome_cli;
-  // Salva taxas junto para não perder alterações
+  // Persiste endereco/maps_link + taxas via financeiro_config (fallback confiável)
+  cfg.endereco  = endereco;
+  cfg.maps_link = maps_link;
   const taxaDebEl = document.getElementById('cfg-taxa-debito');
-  if(taxaDebEl && _financeiroCarregado){
+  if(taxaDebEl){
     taxasCfg.debito = parseFloat(taxaDebEl.value)||0;
     taxasCfg.credito = [1,2,3,4,5,6,7,8,9,10,11,12].map(p=>parseFloat(document.getElementById('cfg-taxa-cred'+p)?.value)||0);
-    const _eCfg=await saveFinanceiro();
-    if(_eCfg){ showToast('Erro ao salvar configurações: '+_eCfg.message,'error'); return; }
   }
+  if(!_financeiroCarregado) await loadFinanceiro();
+  const _eCfg=await saveFinanceiro();
+  showLoading(false);
+  if(_eCfg){ showToast('Erro ao salvar configurações: '+_eCfg.message,'error'); return; }
   showToast('Configurações salvas!');
 }
 
