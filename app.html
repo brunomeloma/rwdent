@@ -481,31 +481,63 @@ button{font-family:inherit;}
 /* ── MOBILE BOTTOM NAV ── */
 .mobile-bottom-nav{
   display:none;position:fixed;bottom:0;left:0;right:0;
-  background:rgba(255,255,255,0.97);border-top:1px solid rgba(212,115,90,.12);
-  padding:6px 0 calc(6px + env(safe-area-inset-bottom));z-index:200;
-  box-shadow:0 -8px 32px rgba(122,48,32,.10);
-  backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
-  overflow:hidden;
+  background:rgba(255,255,255,0.98);border-top:none;
+  padding:4px 0 calc(6px + env(safe-area-inset-bottom));z-index:200;
+  box-shadow:0 -2px 20px rgba(0,0,0,.08);
+  backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
 }
-.mobile-nav-items{display:flex;align-items:center;gap:0;padding:0 8px;overflow-x:scroll;-webkit-overflow-scrolling:touch;scrollbar-width:none;flex-wrap:nowrap;}
-.mobile-nav-items::-webkit-scrollbar{display:none;}
+.mobile-nav-items{display:flex;align-items:center;justify-content:space-around;padding:0 4px;}
 .mobile-nav-item{
-  display:flex;flex-direction:column;align-items:center;gap:1px;
+  display:flex;flex-direction:column;align-items:center;gap:2px;
   background:none;border:none;color:#b08070;cursor:pointer;
-  padding:4px 6px;border-radius:14px;transition:all .18s cubic-bezier(.4,0,.2,1);
-  font-size:9px;font-weight:600;letter-spacing:.1px;
-  min-width:62px;flex:0 0 auto;touch-action:pan-x;
+  padding:6px 4px;border-radius:14px;transition:all .2s ease;
+  font-size:10px;font-weight:600;letter-spacing:.1px;
+  flex:1;min-width:0;
 }
-.mobile-nav-item.active{ color:var(--rose-dark); }
+.mobile-nav-item span{transition:color .2s;}
+.mobile-nav-item.active{color:var(--rose-dark);}
 .mobile-nav-item i{
-  font-size:22px;
-  width:42px;height:30px;
+  font-size:22px;width:48px;height:32px;
   display:flex;align-items:center;justify-content:center;
-  border-radius:12px;
-  transition:background .18s,transform .12s;
+  border-radius:16px;transition:all .2s ease;
 }
-.mobile-nav-item.active i{ background:var(--rose-lighter); }
-.mobile-nav-item:active i{transform:scale(.86);}
+.mobile-nav-item.active i{background:var(--rose-lighter);color:var(--rose);transform:scale(1.05);}
+.mobile-nav-item:active i{transform:scale(.88);}
+
+/* ── MOBILE MORE DRAWER ── */
+.mobile-more-overlay{
+  display:none;position:fixed;inset:0;background:rgba(0,0,0,.35);
+  z-index:250;align-items:flex-end;justify-content:center;
+  transition:background .25s;
+}
+.mobile-more-overlay.show{display:flex;}
+.mobile-more-sheet{
+  background:#fff;border-radius:22px 22px 0 0;width:100%;
+  padding:8px 20px calc(20px + env(safe-area-inset-bottom));
+  box-shadow:0 -12px 50px rgba(0,0,0,.15);
+  transform:translateY(100%);transition:transform .3s cubic-bezier(.32,.72,.24,1);
+}
+.mobile-more-overlay.show .mobile-more-sheet{transform:translateY(0);}
+.mobile-more-handle{
+  width:36px;height:4px;background:var(--rose-light);border-radius:4px;
+  margin:4px auto 12px;
+}
+.mobile-more-title{
+  font-size:13px;font-weight:800;color:var(--rose-dark);
+  text-align:center;margin-bottom:16px;text-transform:uppercase;
+  letter-spacing:.5px;
+}
+.mobile-more-grid{
+  display:grid;grid-template-columns:repeat(4,1fr);gap:10px;
+}
+.mobile-more-grid button{
+  display:flex;flex-direction:column;align-items:center;gap:8px;
+  background:var(--rose-lighter);border:1.5px solid var(--rose-light);border-radius:16px;
+  padding:18px 8px 14px;cursor:pointer;font-size:11px;font-weight:700;
+  color:var(--rose-dark);font-family:inherit;transition:all .18s;
+}
+.mobile-more-grid button i{font-size:26px;color:var(--rose);}
+.mobile-more-grid button:active{transform:scale(.93);background:var(--rose-light);}
 
 /* ── RESPONSIVE ── */
 @media(max-width:768px){
@@ -543,10 +575,17 @@ button{font-family:inherit;}
 
   /* Home stat cards: 2 colunas no mobile */
   #home-stats { grid-template-columns: 1fr 1fr !important; gap:10px!important; }
-  .home-stat-card { min-width:0; padding:14px 12px; gap:10px; border-radius:14px!important; }
-  .home-stat-num { font-size:24px; }
+  .home-stat-card { min-width:0; padding:14px 12px; gap:10px; border-radius:16px!important; }
+  .home-stat-num { font-size:22px; }
   .home-stat-label { font-size:10px; white-space:normal; line-height:1.3; }
-  .home-stat-icon { width:40px; height:40px; font-size:20px; border-radius:11px; flex-shrink:0; }
+  .home-stat-icon { width:38px; height:38px; font-size:18px; border-radius:12px; flex-shrink:0; }
+  /* Hero banner mobile refinado */
+  .home-hero-banner{padding:18px 16px!important;border-radius:16px!important;margin-bottom:14px!important;}
+  .home-hero-greeting{font-size:18px!important;margin-bottom:14px!important;}
+  .home-hero-stats{gap:8px!important;}
+  .home-hero-stat{padding:10px 14px!important;min-width:0!important;flex:1!important;border-radius:12px!important;}
+  .home-hero-stat-val{font-size:18px!important;}
+  .home-hero-stat-lbl{font-size:9px!important;}
 
   /* Appointment items */
   .appt-item{flex-wrap:wrap;gap:8px;padding:10px 12px;}
@@ -617,13 +656,6 @@ button{font-family:inherit;}
   .home-table-title{font-size:13px;}
   .home-table-row{font-size:12px;padding:8px 0;}
 
-  /* Hero banner */
-  .home-hero-greeting{font-size:17px!important;margin-bottom:12px!important;}
-  .home-hero-stats{gap:8px!important;}
-  .home-hero-stat{padding:9px 12px!important;min-width:0!important;flex:1!important;}
-  .home-hero-stat-val{font-size:17px!important;}
-  .home-hero-stat-lbl{font-size:9px!important;}
-  .home-hero-banner{padding:16px!important;border-radius:14px!important;margin-bottom:14px!important;}
 }
 /* ── FOCO VISÍVEL (acessibilidade) ── */
 :focus-visible{outline:2px solid var(--rose);outline-offset:2px;}
@@ -1021,14 +1053,8 @@ select, textarea {
   }
   /* Botões primários/secundários maiores no mobile */
   .btn-primary, .btn-secondary { min-height: 44px !important; font-size: 14px !important; }
-  /* Hero banner mobile */
-  .home-hero-banner { padding: 18px 16px !important; }
-  .home-hero-stat { padding: 10px 12px !important; }
-  .home-hero-stat-val { font-size: 18px !important; }
-  /* Nav bottom maior */
-  .mobile-bottom-nav { min-height: 62px !important; height: auto !important; overflow: hidden !important; }
-  .mobile-nav-items { overflow-x: scroll !important; -webkit-overflow-scrolling: touch !important; flex-wrap: nowrap !important; justify-content: flex-start !important; gap: 2px !important; }
-  .mobile-nav-item { font-size: 10px !important; gap: 3px !important; min-width: 64px !important; flex: 0 0 auto !important; touch-action: pan-x !important; }
+  /* Nav bottom */
+  .mobile-bottom-nav { min-height: 60px !important; }
   .mobile-nav-item i { font-size: 22px !important; }
   /* Modal mais acessível no mobile */
   .modal-box { margin: 8px !important; max-height: 92vh !important; }
@@ -1101,6 +1127,14 @@ select, textarea {
 .dark-mode [style*="background:#dbeafe"]{background:#1a2030!important;}
 .dark-mode [style*="background:#fef9c3"]{background:#2a2410!important;}
 .dark-mode [style*="color:#3a2020"]{color:#e0c8c0!important;}
+.dark-mode .mobile-more-sheet{background:#1e1612!important;}
+.dark-mode .mobile-more-handle{background:#3a2a24!important;}
+.dark-mode .mobile-more-title{color:#e0c8c0!important;}
+.dark-mode .mobile-more-grid button{background:#2a1e1a!important;border-color:#3a2a24!important;color:#e0c8c0!important;}
+.dark-mode .mobile-more-grid button:active{background:#3a2a24!important;}
+.dark-mode .mobile-nav-item{color:#8a7060!important;}
+.dark-mode .mobile-nav-item.active{color:#f0c0b0!important;}
+.dark-mode .mobile-nav-item.active i{background:#2a1e1a!important;color:#c46a52!important;}
 
 /* ── BUSCA GLOBAL (Ctrl+K) ── */
 .search-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9998;display:none;align-items:flex-start;justify-content:center;padding-top:min(20vh,140px);}
@@ -2409,20 +2443,31 @@ select, textarea {
   <!-- Mobile bottom nav -->
   <nav class="mobile-bottom-nav">
     <div class="mobile-nav-items">
-      <button class="mobile-nav-item active" data-tab="home" onclick="switchTab('home')" aria-label="Início"><i class="ti ti-home"></i>Início</button>
-      <button class="mobile-nav-item" data-tab="venda_rapida" onclick="switchTab('venda_rapida')" aria-label="Venda Rápida"><i class="ti ti-shopping-cart"></i>Venda</button>
-      <button class="mobile-nav-item" data-tab="pacientes" onclick="switchTab('pacientes')" aria-label="Pacientes"><i class="ti ti-users"></i>Pacientes</button>
-      <button class="mobile-nav-item" data-tab="agendar" onclick="switchTab('agendar')" aria-label="Agendar"><i class="ti ti-calendar-plus"></i>Agendar</button>
-      <button class="mobile-nav-item" data-tab="lista" onclick="switchTab('lista')" aria-label="Agenda"><i class="ti ti-calendar-event"></i>Agenda</button>
-      <button class="mobile-nav-item" data-tab="calendario" onclick="switchTab('calendario')" aria-label="Calendário"><i class="ti ti-calendar-month"></i>Calendário</button>
-      <button class="mobile-nav-item" data-tab="resgate" onclick="switchTab('resgate')" aria-label="Resgate"><i class="ti ti-heart-handshake"></i>Resgate</button>
-      <button class="mobile-nav-item" data-tab="financeiro" onclick="switchTab('financeiro')" aria-label="Painel Financeiro"><i class="ti ti-chart-bar"></i>Financeiro</button>
-      <button class="mobile-nav-item" data-tab="profissionais" onclick="switchTab('profissionais')" aria-label="Profissionais"><i class="ti ti-stethoscope"></i>Profissionais</button>
-      <button class="mobile-nav-item" data-tab="invisalign_apresentacao" onclick="switchTab('invisalign_apresentacao')" aria-label="Invisalign"><i class="ti ti-align-box-left-stretch"></i>Invisalign</button>
-      <button class="mobile-nav-item" data-tab="configuracoes" onclick="switchTab('configuracoes')" aria-label="Configurações"><i class="ti ti-settings"></i>Config.</button>
-      <button class="mobile-nav-item" onclick="doLogout()" style="color:#b33;"><i class="ti ti-logout"></i>Sair</button>
+      <button class="mobile-nav-item active" data-tab="home" onclick="switchTab('home')" aria-label="Início"><i class="ti ti-home"></i><span>Início</span></button>
+      <button class="mobile-nav-item" data-tab="lista" onclick="switchTab('lista')" aria-label="Agenda"><i class="ti ti-calendar-event"></i><span>Agenda</span></button>
+      <button class="mobile-nav-item" data-tab="pacientes" onclick="switchTab('pacientes')" aria-label="Pacientes"><i class="ti ti-users"></i><span>Pacientes</span></button>
+      <button class="mobile-nav-item" data-tab="venda_rapida" onclick="switchTab('venda_rapida')" aria-label="Venda"><i class="ti ti-shopping-cart"></i><span>Venda</span></button>
+      <button class="mobile-nav-item" id="mobile-mais-btn" onclick="toggleMobileMore()" aria-label="Mais"><i class="ti ti-grid-dots"></i><span>Mais</span></button>
     </div>
   </nav>
+
+  <!-- Mobile "Mais" drawer -->
+  <div class="mobile-more-overlay" id="mobile-more-overlay" onclick="if(event.target===this)toggleMobileMore()">
+    <div class="mobile-more-sheet">
+      <div class="mobile-more-handle"></div>
+      <div class="mobile-more-title">Menu</div>
+      <div class="mobile-more-grid">
+        <button onclick="switchTab('agendar');toggleMobileMore()"><i class="ti ti-calendar-plus"></i>Agendar</button>
+        <button onclick="switchTab('calendario');toggleMobileMore()"><i class="ti ti-calendar-month"></i>Calendário</button>
+        <button onclick="switchTab('financeiro');toggleMobileMore()"><i class="ti ti-chart-bar"></i>Financeiro</button>
+        <button onclick="switchTab('profissionais');toggleMobileMore()"><i class="ti ti-stethoscope"></i>Equipe</button>
+        <button onclick="switchTab('resgate');toggleMobileMore()"><i class="ti ti-heart-handshake"></i>Resgate</button>
+        <button onclick="switchTab('invisalign_apresentacao');toggleMobileMore()"><i class="ti ti-align-box-left-stretch"></i>Invisalign</button>
+        <button onclick="switchTab('configuracoes');toggleMobileMore()"><i class="ti ti-settings"></i>Config.</button>
+        <button onclick="doLogout()" style="color:#c0392b;"><i class="ti ti-logout" style="color:#c0392b;"></i>Sair</button>
+      </div>
+    </div>
+  </div>
 </div><!-- end app -->
 
 <!-- Galeria Lightbox -->
@@ -2741,6 +2786,11 @@ function tnUpdateActive(tab){
   });
 }
 
+function toggleMobileMore(){
+  const ov=document.getElementById('mobile-more-overlay');
+  if(ov) ov.classList.toggle('show');
+}
+
 function switchTab(tab){
   ['home','agendar','lista','calendario','pacientes','profissionais','configuracoes','financeiro','procedimentos_fin','materiais_fin','estoque_fin','vendas_fin','venda_rapida','resgate','invisalign_apresentacao'].forEach(t=>{
     const el=document.getElementById('tab-'+t);
@@ -2750,6 +2800,11 @@ function switchTab(tab){
   document.querySelectorAll('.mobile-nav-item,.topnav-item').forEach(b=>{
     b.classList.toggle('active', b.dataset.tab===tab);
   });
+  const _maisBtn=document.getElementById('mobile-mais-btn');
+  if(_maisBtn){
+    const _mainTabs=['home','lista','pacientes','venda_rapida'];
+    _maisBtn.classList.toggle('active',!_mainTabs.includes(tab));
+  }
   const _tituloAba = {
     home:'Agendamentos e Prontuários Odontológicos', agendar:'Novo agendamento', lista:'Agenda do dia',
     calendario:'Calendário de atendimentos', pacientes:'Cadastro de pacientes',
