@@ -247,7 +247,7 @@ button{font-family:inherit;}
 .cal-view-btn{border:none;background:none;color:var(--rose-text);padding:7px 12px;border-radius:9px;font-size:12px;font-weight:700;cursor:pointer;transition:background .18s,color .18s;}
 .cal-view-btn.active{background:#fff;color:var(--rose-dark);box-shadow:0 1px 6px rgba(212,115,90,.18);}
 .cal-select{min-width:150px;}
-.cal-body{overflow:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;touch-action:pan-y;}
+.cal-body{overflow:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;touch-action:auto;}
 .cal-grid{display:grid;border:1px solid var(--rose-light);border-radius:14px;overflow:hidden;min-width:520px;}
 .cal-grid.dia{min-width:auto;width:100%;}
 .cal-grid-head{display:contents;}
@@ -306,16 +306,17 @@ button{font-family:inherit;}
 .cal-modal-bg.show{opacity:1;pointer-events:auto;}
 .cal-modal{background:#fff;border-radius:18px;max-width:420px;width:100%;padding:0;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.3);transform:translateY(10px);transition:transform .2s;}
 .cal-modal-bg.show .cal-modal{transform:translateY(0);}
-.cal-modal-head{padding:16px 20px;color:#fff;}
+.cal-modal-head{padding:16px 20px;color:#fff;overflow:hidden;}
 .cal-modal-head .mh-time{font-size:12px;font-weight:700;opacity:.95;}
-.cal-modal-head .mh-name{font-size:18px;font-weight:800;margin-top:3px;}
+.cal-modal-head .mh-name{font-size:18px;font-weight:800;margin-top:3px;overflow-wrap:break-word;word-break:break-word;min-width:0;}
 .cal-modal-body{padding:16px 20px;display:flex;flex-direction:column;gap:10px;max-height:60vh;overflow:auto;}
-.cal-modal-body .row{font-size:14px;color:#3a2020;display:flex;gap:8px;}
+.cal-modal-body .row{font-size:14px;color:#3a2020;display:flex;gap:8px;min-width:0;}
+.cal-modal-body .row span{overflow-wrap:break-word;word-break:break-word;min-width:0;}
 .cal-modal-body .row i{color:var(--rose);font-size:17px;flex-shrink:0;}
 .cal-modal-form .cal-modal-body .form-group{display:flex;flex-direction:column;gap:5px;}
 .cal-form-row{display:flex;gap:10px;}
 .cal-form-row .form-group{flex:1;}
-.cal-modal-foot{padding:0 20px 18px;display:flex;justify-content:flex-end;gap:10px;}
+.cal-modal-foot{padding:0 20px 18px;display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap;}
 
 
 
@@ -630,7 +631,7 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px soli
 #cal-card:-moz-full-screen{
   background:#fdf6f3;
   padding:16px;
-  overflow:hidden!important;
+  overflow:auto!important;
   display:flex!important;
   flex-direction:column!important;
   height:100%!important;
@@ -672,6 +673,18 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px soli
 #cal-card:-moz-full-screen .cal-cell{
   min-height:100px;
 }
+/* iOS Safari fallback — no Fullscreen API */
+#cal-card.cal-pseudo-fs{
+  position:fixed!important;inset:0!important;z-index:9999!important;
+  background:#fdf6f3;padding:16px;overflow:auto!important;
+  display:flex!important;flex-direction:column!important;
+  height:100%!important;width:100%!important;box-sizing:border-box;border-radius:0;
+}
+#cal-card.cal-pseudo-fs .cal-toolbar{flex:0 0 auto;}
+#cal-card.cal-pseudo-fs .cal-body{flex:1 1 auto;overflow-y:auto!important;overflow-x:auto!important;min-height:0!important;-webkit-overflow-scrolling:touch;}
+#cal-card.cal-pseudo-fs .cal-grid{min-width:auto;width:100%;overflow:visible!important;border-radius:0;}
+#cal-card.cal-pseudo-fs .cal-month{min-width:auto;width:100%;height:100%;}
+#cal-card.cal-pseudo-fs .cal-cell{min-height:100px;}
 /* ══ MODELO 2 — TOPNAV REDESIGN ══ */
 /* Mobile: topnav simplificada (navegação fica na bottom nav) */
 @media(max-width:768px){
@@ -3999,11 +4012,20 @@ function calNavigate(dir){
 }
 function calFullscreen(){
   const el=document.getElementById('cal-card');
-  const btn=el.querySelector('.cal-full i');
-  if(!document.fullscreenElement){
-    (el.requestFullscreen||el.webkitRequestFullscreen||el.mozRequestFullScreen).call(el);
+  const fn=el.requestFullscreen||el.webkitRequestFullscreen||el.mozRequestFullScreen;
+  if(fn){
+    if(!document.fullscreenElement){
+      fn.call(el);
+    } else {
+      (document.exitFullscreen||document.webkitExitFullscreen||document.mozCancelFullScreen).call(document);
+    }
   } else {
-    (document.exitFullscreen||document.webkitExitFullscreen||document.mozCancelFullScreen).call(document);
+    el.classList.toggle('cal-pseudo-fs');
+    const icon=el.querySelector('.cal-full i');
+    const isFs=el.classList.contains('cal-pseudo-fs');
+    if(icon) icon.className=isFs?'ti ti-minimize':'ti ti-maximize';
+    document.body.style.overflow=isFs?'hidden':'';
+    renderCalendario();
   }
 }
 document.getElementById('cal-card')?.addEventListener('wheel',e=>{
