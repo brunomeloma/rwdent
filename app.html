@@ -6492,7 +6492,7 @@ function calcPrecoManut(manutId, recalcInst){
     if(ins.length){
       inst.insumos = parseFloat(ins.reduce((acc,item)=>{const m=mats.find(x=>x.id===item.matId);return acc+(m?m.custo*item.qtd:0);},0).toFixed(2));
     }
-    inst.margem = cfg.margem;
+    if(!inst._margemManual) inst.margem = cfg.margem;
     inst.horaClin = parseFloat(((inst.tempo/60)*calcHora()).toFixed(2));
     if(!inst._precoManual) inst.precoFinal = calcPrecoFinal(inst);
   }
@@ -6748,7 +6748,8 @@ async function saveProc(){
       _precoManual = true;
     }
   }
-  const obj    = { nome, grupo:document.getElementById('mp-grupo')?.value||'Geral', tempo, insumos, laboratorio:lab, margem, horaClin:hc, precoFinal:preco, _precoManual };
+  const _margemManual = Math.abs(margem - (cfg.margem||100)) > 0.01;
+  const obj    = { nome, grupo:document.getElementById('mp-grupo')?.value||'Geral', tempo, insumos, laboratorio:lab, margem, horaClin:hc, precoFinal:preco, _precoManual, _margemManual };
   if(editProcId){
     const i = procs.findIndex(x=>x.id===editProcId);
     if(i<0){ showToast('Procedimento não encontrado.','error'); return; }
@@ -6792,6 +6793,7 @@ async function recalcularProc(id){
     p.insumos = parseFloat(ins.reduce((acc,item)=>{const m=mats.find(x=>x.id===item.matId);return acc+(m?m.custo*item.qtd:0);},0).toFixed(2));
   }
   p.margem = cfg.margem;
+  p._margemManual = false;
   p.horaClin = parseFloat(((p.tempo/60)*calcHora()).toFixed(2));
   p._precoManual = false;
   const antes = p.precoFinal;
@@ -7329,7 +7331,7 @@ async function recalcularInsumos(silent){
     }
     p.horaClin=parseFloat(((p.tempo/60)*calcHora()).toFixed(2));
     if(!silent){
-      p.margem=cfg.margem;
+      if(!p._margemManual) p.margem=cfg.margem;
       if(!p._precoManual) p.precoFinal=calcPrecoFinal(p);
     }
   });
@@ -11062,7 +11064,7 @@ async function salvarPrecificacao(){
     if(ins.length){
       p.insumos = parseFloat(ins.reduce((acc,item)=>{const m=mats.find(x=>x.id===item.matId);return acc+(m?m.custo*item.qtd:0);},0).toFixed(2));
     }
-    p.margem = cfg.margem;
+    if(!p._margemManual) p.margem = cfg.margem;
     p.horaClin = parseFloat(((p.tempo/60)*_hora).toFixed(2));
     if(!p._precoManual) p.precoFinal = calcPrecoFinal(p);
   });
