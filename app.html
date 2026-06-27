@@ -7,6 +7,8 @@
 <meta name="mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+<meta name="referrer" content="strict-origin-when-cross-origin" />
+<meta http-equiv="X-Content-Type-Options" content="nosniff" />
 <title>RWDent — Gestão Odontológica</title>
 <!-- build:202606120507 -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css" />
@@ -2348,7 +2350,7 @@ function showToast(msg, type='success'){
   t.textContent = msg; t.className = `toast show ${type}`;
   setTimeout(()=>{ t.className='toast'; }, 3800);
 }
-function escapeHtml(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function escapeHtml(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
 function toLocalISO(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
 function hoje(){ return toLocalISO(new Date()); }
 function formatDate(v){ if(!v)return''; const [y,m,d]=v.split('-'); return`${d}/${m}/${y}`; }
@@ -2380,6 +2382,7 @@ async function doLogin(){
   await loadAll();
   document.getElementById('login-screen').style.display='none';
   document.getElementById('app').style.display='block';
+  _sessionStartTimer();
 }
 
 async function checkClinicaApproval(){
@@ -2411,6 +2414,7 @@ async function checkClinicaApproval(){
 document.addEventListener('keydown', e=>{ if(e.key==='Enter'&&document.getElementById('login-screen').style.display!=='none') doLogin(); });
 
 async function doLogout(){
+  _sessionResetTimer();
   try {
     if(_financeiroCarregado) { const _e=await saveFinanceiro(); if(!_e) showToast('Dados salvos!'); }
   } catch(e){ console.error('Erro ao salvar:', e); }
@@ -2423,6 +2427,23 @@ async function doLogout(){
   document.getElementById('login-pass').value='';
 }
 
+// Timeout de inatividade — desloga após 30 min sem interação
+let _sessionTimer = null;
+const SESSION_TIMEOUT = 30*60*1000;
+function _sessionResetTimer(){
+  if(_sessionTimer) clearTimeout(_sessionTimer);
+  _sessionTimer = null;
+}
+function _sessionStartTimer(){
+  _sessionResetTimer();
+  _sessionTimer = setTimeout(()=>{
+    if(currentUser){ showToast('Sessão expirada por inatividade.','warn'); doLogout(); }
+  }, SESSION_TIMEOUT);
+}
+['click','keydown','touchstart','scroll'].forEach(ev=>
+  document.addEventListener(ev, ()=>{ if(currentUser) _sessionStartTimer(); }, {passive:true})
+);
+
 // Check existing session on load
 (async()=>{
   try {
@@ -2434,6 +2455,7 @@ async function doLogout(){
         await loadAll();
         document.getElementById('login-screen').style.display='none';
         document.getElementById('app').style.display='block';
+        _sessionStartTimer();
         return;
       }
     }
@@ -2838,7 +2860,7 @@ function mostrarBotaoGoogleAgenda(nome, data, horario, procedimento, profNome, o
     <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
       <div style="flex:1;min-width:180px;">
         <div style="font-size:13px;font-weight:700;color:#1a1a1a;margin-bottom:2px;">✅ Agendamento confirmado!</div>
-        <div style="font-size:12px;color:#555;">${nome} · ${dataFmt} às ${horario}</div>
+        <div style="font-size:12px;color:#555;">${escapeHtml(nome)} · ${dataFmt} às ${horario}</div>
       </div>
       <a href="${url}" target="_blank" style="display:inline-flex;align-items:center;gap:7px;background:#4285f4;color:#fff;border-radius:10px;padding:9px 16px;font-size:13px;font-weight:700;text-decoration:none;white-space:nowrap;box-shadow:0 2px 8px rgba(66,133,244,.35);flex-shrink:0;">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="24" height="24" rx="4" fill="white"/><path d="M17.5 7.5h-11A1.5 1.5 0 0 0 5 9v9a1.5 1.5 0 0 0 1.5 1.5h11A1.5 1.5 0 0 0 19 18V9a1.5 1.5 0 0 0-1.5-1.5Z" stroke="#4285f4" stroke-width="1.4"/><path d="M8 7.5V6M16 7.5V6M5 11h14" stroke="#4285f4" stroke-width="1.4" stroke-linecap="round"/><rect x="8" y="13" width="2.5" height="2.5" rx=".5" fill="#ea4335"/></svg>
@@ -5785,7 +5807,7 @@ function fioAtualizarInfo(){
       const cor = est.atual<=0?'#dc2626':est.atual<=2?'#856404':'#2e7d32';
       infoEl.innerHTML = `<b>${escapeHtml(mat.nome)}</b><br>Estoque: <span style="color:${cor};font-weight:700;">${est.atual} unid</span> · Custo: R$ ${mat.custo.toFixed(2)}`;
     } else {
-      infoEl.innerHTML = `Fio ${tipoNome} ${num} ${arcNome} — material não cadastrado`;
+      infoEl.innerHTML = `Fio ${escapeHtml(tipoNome)} ${escapeHtml(num)} ${escapeHtml(arcNome)} — material não cadastrado`;
     }
   }
   document.getElementById('fio-tipo').onchange = fioAtualizarInfo;
@@ -10998,13 +11020,13 @@ const GALERIA_BUCKET = 'galeria';
 
 async function _galeriaEnsureBucket(){
   try {
-    const { data } = await _sb.storage.getBucket(GALERIA_BUCKET);
+    const { data, error } = await _sb.storage.getBucket(GALERIA_BUCKET);
     if(data) return true;
+    if(error && error.message?.includes('not found')){
+      showToast('Bucket "galeria" não existe. Crie-o no painel do Supabase (Storage → New bucket → "galeria", público).','error');
+      return false;
+    }
   } catch(e){}
-  try {
-    const { error } = await _sb.storage.createBucket(GALERIA_BUCKET, { public: true, fileSizeLimit: 10485760 });
-    if(error && !error.message?.includes('already exists')){ showToast('Erro ao criar bucket: '+error.message,'error'); return false; }
-  } catch(e){ showToast('Erro storage: '+e.message,'error'); return false; }
   return true;
 }
 
@@ -11200,7 +11222,7 @@ async function galeriaCarregar(pacId){
     sortBy: { column: 'created_at', order: 'desc' }
   });
 
-  if(err2){ grid.innerHTML=`<div class="galeria-vazia"><i class="ti ti-alert-triangle"></i>${err2.message}</div>`; return; }
+  if(err2){ grid.innerHTML=`<div class="galeria-vazia"><i class="ti ti-alert-triangle"></i>${escapeHtml(err2.message)}</div>`; return; }
 
   _galeriaFotos = (files||[]).filter(f=>f.name && !f.name.endsWith('/')).map(f=>{
     const parts = f.name.split('__');
