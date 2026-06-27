@@ -6493,7 +6493,8 @@ function openEditProc(id){
   document.getElementById('mp-laboratorio').value = p.laboratorio||0;
   document.getElementById('mp-margem').value    = p.margem || cfg.margem || 100;
   document.getElementById('mp-preco').value     = p.precoFinal||0;
-  calcProcPreview(true);
+  if(p._precoManual) mpPrecoEditadoManualmente = true;
+  calcProcPreview(!p._precoManual);
   openModal('modal-proc');
 }
 let mpPrecoEditadoManualmente = false;
@@ -6534,8 +6535,17 @@ async function saveProc(){
   const lab    = Number(document.getElementById('mp-laboratorio')?.value)||0;
   const margem = Number(document.getElementById('mp-margem')?.value)||100;
   const hc     = parseFloat(((tempo/60)*hora).toFixed(2));
-  let preco  = calcPrecoFinal({tempo,insumos,laboratorio:lab,margem});
-  const obj    = { nome, grupo:document.getElementById('mp-grupo')?.value||'Geral', tempo, insumos, laboratorio:lab, margem, horaClin:hc, precoFinal:preco };
+  const precoCalc = calcPrecoFinal({tempo,insumos,laboratorio:lab,margem});
+  let preco = precoCalc;
+  let _precoManual = false;
+  if(mpPrecoEditadoManualmente){
+    const precoInput = parseFloat(document.getElementById('mp-preco')?.value)||0;
+    if(Math.abs(precoInput - precoCalc) > 0.01){
+      preco = precoInput;
+      _precoManual = true;
+    }
+  }
+  const obj    = { nome, grupo:document.getElementById('mp-grupo')?.value||'Geral', tempo, insumos, laboratorio:lab, margem, horaClin:hc, precoFinal:preco, _precoManual };
   if(editProcId){
     const i = procs.findIndex(x=>x.id===editProcId);
     if(i<0){ showToast('Procedimento não encontrado.','error'); return; }
@@ -10847,7 +10857,7 @@ async function salvarPrecificacao(){
     }
     p.margem = cfg.margem;
     p.horaClin = parseFloat(((p.tempo/60)*_hora).toFixed(2));
-    p.precoFinal = calcPrecoFinal(p);
+    if(!p._precoManual) p.precoFinal = calcPrecoFinal(p);
   });
   // Manutenção: preço = % da instalação correspondente
   procs.forEach(p=>{
