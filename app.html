@@ -735,6 +735,13 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px soli
 }
 :root { --header-h: 58px !important; }
 @media(min-width:769px){ .mobile-bottom-nav { display: none !important; } }
+/* Demo mode banner */
+.demo-banner{display:none;position:fixed;top:var(--header-h);left:0;right:0;z-index:999;background:linear-gradient(90deg,#f57f17,#ff8f00);color:#fff;text-align:center;padding:8px 16px;font-size:13px;font-weight:700;box-shadow:0 2px 8px rgba(0,0,0,.15);}
+.demo-banner.active{display:flex;align-items:center;justify-content:center;gap:8px;}
+.demo-banner a{color:#fff;text-decoration:underline;font-weight:800;}
+body.demo-mode .page-content{padding-top:calc(var(--header-h) + 36px)!important;}
+body.demo-mode .mobile-bottom-nav{z-index:998;}
+
 .header {
   display: flex !important;
   align-items: center !important;
@@ -1135,6 +1142,7 @@ select, textarea {
 .dark-mode .mobile-nav-item{color:#8a7060!important;}
 .dark-mode .mobile-nav-item.active{color:#f0c0b0!important;}
 .dark-mode .mobile-nav-item.active i{background:#2a1e1a!important;color:#c46a52!important;}
+.dark-mode .demo-banner{background:linear-gradient(90deg,#b36800,#c47a00);}
 
 /* ── BUSCA GLOBAL (Ctrl+K) ── */
 .search-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9998;display:none;align-items:flex-start;justify-content:center;padding-top:min(20vh,140px);}
@@ -1287,6 +1295,12 @@ select, textarea {
       <button class="topnav-item" data-tab="configuracoes" onclick="switchTab('configuracoes')" title="Configurações" style="padding:6px 8px;"><i class="ti ti-settings" style="font-size:17px;"></i></button>
       <div class="topnav-avatar" id="logout-avatar" onclick="doLogout()" title="Sair">RW</div>
     </div>
+  </div>
+
+  <!-- Demo mode banner -->
+  <div class="demo-banner" id="demo-banner">
+    <i class="ti ti-info-circle"></i>
+    Modo demonstração — <a href="/landing">Assine o plano completo</a>
   </div>
 
   <!-- Page Content -->
@@ -2641,6 +2655,9 @@ async function doLogout(){
     if(_financeiroCarregado) { const _e=await saveFinanceiro(); if(!_e) showToast('Dados salvos!'); }
   } catch(e){ console.error('Erro ao salvar:', e); }
   await _sb.auth.signOut();
+  sessionStorage.removeItem('rwdent-demo');
+  document.body.classList.remove('demo-mode');
+  document.getElementById('demo-banner').classList.remove('active');
   currentUser=null; agendamentos=[]; profissionais=[]; pacientes=[];
   procs=[]; mats=[]; estoque={}; procInsumos={}; vendas=[]; combos=[];
   _financeiroCarregado = false;
@@ -2678,6 +2695,10 @@ function _sessionStartTimer(){
         document.getElementById('login-screen').style.display='none';
         document.getElementById('app').style.display='block';
         _sessionStartTimer();
+        if(sessionStorage.getItem('rwdent-demo')==='1'){
+          document.body.classList.add('demo-mode');
+          document.getElementById('demo-banner').classList.add('active');
+        }
         return;
       }
     }

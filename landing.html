@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<meta name="description" content="RWDent — Sistema completo de gestão para clínicas odontológicas. Agenda, prontuário digital, financeiro, odontograma e muito mais. Experimente grátis."/>
+<meta name="description" content="RWDent — Sistema completo de gestão para clínicas odontológicas. Agenda, prontuário digital, financeiro, odontograma e muito mais. Teste agora por apenas R$50/semana."/>
 <meta property="og:title" content="RWDent — Gestão Odontológica Inteligente"/>
 <meta property="og:description" content="Sistema completo para clínicas odontológicas. Agende, atenda e cresça com uma plataforma feita para dentistas."/>
 <meta property="og:type" content="website"/>
@@ -173,7 +173,7 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--
       <a href="#como-funciona" onclick="closeMenu()">Como funciona</a>
       <a href="#preco" onclick="closeMenu()">Preço</a>
       <a href="#faq" onclick="closeMenu()">FAQ</a>
-      <a href="#comecar" class="nav-cta" onclick="closeMenu()">Começar agora</a>
+      <a href="#comecar" class="nav-cta" onclick="closeMenu()">Testar agora</a>
     </div>
     <button class="nav-mobile-btn" id="nav-toggle" onclick="toggleMenu()"><i class="ti ti-menu-2"></i></button>
   </div>
@@ -185,8 +185,8 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--
   <h1>Gerencie sua clínica<br/>com <span>inteligência</span></h1>
   <p>Agenda, prontuário digital, financeiro, odontograma e controle de estoque — tudo em um só lugar, feito especialmente para dentistas.</p>
   <div class="hero-btns">
-    <a href="#comecar" class="btn-hero btn-hero-primary"><i class="ti ti-rocket"></i> Começar agora</a>
-    <a href="#funcionalidades" class="btn-hero btn-hero-secondary"><i class="ti ti-eye"></i> Ver funcionalidades</a>
+    <a href="#comecar" class="btn-hero btn-hero-primary"><i class="ti ti-rocket"></i> Testar por R$50/semana</a>
+    <a href="/?demo=true" class="btn-hero btn-hero-secondary"><i class="ti ti-eye"></i> Ver demonstração ao vivo</a>
   </div>
   <div class="hero-stats">
     <div class="hero-stat"><div class="hero-stat-num">100%</div><div class="hero-stat-label">Online e seguro</div></div>
@@ -257,12 +257,12 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--
 <section class="how" id="como-funciona">
   <div class="section-tag"><i class="ti ti-bulb"></i> Como funciona</div>
   <h2 class="section-title">Comece em 3 minutos</h2>
-  <p class="section-subtitle">Sem instalação, sem contrato de fidelidade. Cancele quando quiser.</p>
+  <p class="section-subtitle">Sem instalação, sem contrato. Teste por R$50/semana e depois decida.</p>
   <div class="how-steps">
     <div class="how-step animate">
       <div class="how-num">1</div>
-      <h3>Cadastre sua clínica</h3>
-      <p>Crie sua conta com nome da clínica, CNPJ e dados básicos. Em menos de 2 minutos.</p>
+      <h3>Ative seu teste</h3>
+      <p>Cadastre sua clínica e ative o teste por R$50/semana. Acesso completo em menos de 2 minutos.</p>
     </div>
     <div class="how-step animate">
       <div class="how-num">2</div>
@@ -301,8 +301,8 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--
       <li><i class="ti ti-check"></i> Dark mode</li>
       <li><i class="ti ti-check"></i> Suporte por WhatsApp</li>
     </ul>
-    <button class="pricing-btn" onclick="location.href='#comecar'"><i class="ti ti-rocket"></i> Começar agora</button>
-    <div class="pricing-guarantee"><i class="ti ti-shield-check"></i> 7 dias grátis para testar — sem cartão de crédito</div>
+    <button class="pricing-btn" onclick="location.href='#comecar'"><i class="ti ti-rocket"></i> Começar teste por R$50/semana</button>
+    <div class="pricing-guarantee"><i class="ti ti-shield-check"></i> Teste por R$50/semana — conheça o sistema completo antes de assinar</div>
   </div>
 </section>
 
@@ -354,6 +354,10 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--
       <div class="faq-a">Sim. Usamos criptografia em trânsito (HTTPS) e em repouso. Cada clínica tem seus dados completamente isolados — nenhuma outra clínica tem acesso aos seus pacientes ou financeiro. Backups automáticos diários.</div>
     </div>
     <div class="faq-item">
+      <button class="faq-q" onclick="toggleFaq(this)">Como funciona o teste por R$50/semana? <i class="ti ti-chevron-down"></i></button>
+      <div class="faq-a">Você paga R$50 por semana de teste com acesso completo ao sistema — todas as funcionalidades liberadas. Sem limite de pacientes ou profissionais. Se gostar, migra para o plano mensal de R$197/mês. Se não quiser continuar, basta não renovar.</div>
+    </div>
+    <div class="faq-item">
       <button class="faq-q" onclick="toggleFaq(this)">Posso cancelar a qualquer momento? <i class="ti ti-chevron-down"></i></button>
       <div class="faq-a">Sim, sem multa e sem fidelidade. Você pode cancelar a assinatura quando quiser e seus dados ficam disponíveis para exportação por 30 dias após o cancelamento.</div>
     </div>
@@ -375,8 +379,8 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--
 <!-- FINAL CTA -->
 <section class="final-cta" id="comecar">
   <h2>Pronto para modernizar sua clínica?</h2>
-  <p>Comece agora com 7 dias grátis. Sem cartão de crédito, sem compromisso.</p>
-  <a href="#" class="btn-cta-white" id="cta-link"><i class="ti ti-rocket"></i> Criar minha conta grátis</a>
+  <p>Comece com um teste por apenas R$50/semana. Acesso completo ao sistema, sem compromisso.</p>
+  <a href="#" class="btn-cta-white" id="cta-link"><i class="ti ti-rocket"></i> Começar teste por R$50/semana</a>
 </section>
 
 <!-- FOOTER -->

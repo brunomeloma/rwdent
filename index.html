@@ -398,6 +398,31 @@ document.addEventListener('keydown', e => {
     if(loginVisible) doLogin();
   }
 });
+
+// Demo auto-login
+(async()=>{
+  const params = new URLSearchParams(window.location.search);
+  if(params.get('demo') === 'true' && _sb){
+    showPanel('loading');
+    try {
+      const { data, error } = await _sb.auth.signInWithPassword({
+        email: 'demo@rwdent.app',
+        password: 'demo2024rwdent'
+      });
+      if(!error && data.user){
+        sessionStorage.setItem('rwdent-demo','1');
+        await checkAndRedirect(data.user);
+      } else {
+        showPanel('login');
+        const errEl = document.getElementById('login-err');
+        errEl.textContent = 'Conta de demonstração não disponível no momento.';
+        errEl.classList.add('show');
+      }
+    } catch(e){
+      showPanel('login');
+    }
+  }
+})();
 </script>
 </body>
 </html>
