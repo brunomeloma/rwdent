@@ -2399,7 +2399,7 @@ document.addEventListener('keydown', e=>{ if(e.key==='Enter'&&document.getElemen
 
 async function doLogout(){
   try {
-    if(_financeiroCarregado) { await saveFinanceiro(); showToast('Dados salvos!'); }
+    if(_financeiroCarregado) { const _e=await saveFinanceiro(); if(!_e) showToast('Dados salvos!'); }
   } catch(e){ console.error('Erro ao salvar:', e); }
   await _sb.auth.signOut();
   currentUser=null; agendamentos=[]; profissionais=[]; pacientes=[];
@@ -3963,12 +3963,11 @@ async function savePatientEdit(id){
 async function removerPaciente(id){
   if(!confirm('Remover paciente e todos seus dados?')) return;
   showLoading(true);
-  await _sb.from('prontuarios').delete().eq('paciente_id',id);
-  await _sb.from('agendamentos').delete().eq('paciente_id',id);
-  await _sb.from('plano_tratamento').delete().eq('paciente_id',id);
-  await _sb.from('atendimentos_odonto').delete().eq('paciente_id',id);
-  await _sb.from('procedimentos_dentes').delete().eq('paciente_id',id);
-  await _sb.from('anamneses').delete().eq('paciente_id',id);
+  const _delTables = ['prontuarios','agendamentos','plano_tratamento','atendimentos_odonto','procedimentos_dentes','anamneses'];
+  for(const _t of _delTables){
+    const {error:_eD}=await _sb.from(_t).delete().eq('paciente_id',id);
+    if(_eD){ showLoading(false); showToast(`Erro ao limpar ${_t}: `+_eD.message,'error'); return; }
+  }
   const { error } = await _sb.from('pacientes').delete().eq('id',id);
   showLoading(false);
   if(error){ showToast('Erro: '+error.message,'error'); return; }
@@ -4595,7 +4594,8 @@ async function pacAlterarStatusPlano(id, status){
         _v.status='finalizada';
         _v.dataFinal=new Date().toISOString();
         _v.consumo=_aplicado;
-        await saveFinanceiro(); // bug fix: estava sem await
+        const _eVF2=await saveFinanceiro(); // bug fix: estava sem await
+        if(_eVF2) showToast('Erro ao salvar venda finalizada: '+_eVF2.message,'error');
         renderEstoque();
       }
 
@@ -4639,8 +4639,8 @@ async function pacAlterarStatusPlano(id, status){
         planoItemId: id
       };
       vendas.push(venda);
-      await saveFinanceiro();
-      showToast('Orçamento criado para: '+item.procedimento);
+      const _eOrc=await saveFinanceiro();
+      if(!_eOrc) showToast('Orçamento criado para: '+item.procedimento);
       if(document.getElementById('pac-orc-lista')) pacRenderOrcamentos(pacId);
     }
   }
@@ -5648,7 +5648,8 @@ async function injetarNovosMatsOrto(){
       p.horaClin = parseFloat(((p.tempo/60)*calcHora()).toFixed(2));
       p.precoFinal = np.precoFinal>0 ? np.precoFinal : calcPrecoFinal(p);
     });
-    await saveFinanceiro();
+    const _ePad2=await saveFinanceiro();
+    if(_ePad2) showToast('Erro ao salvar padrões: '+_ePad2.message,'error');
   }
 }
 
@@ -6193,7 +6194,8 @@ async function loadFinanceiro(){
   if(precisaSalvar){
     // Salva padrões mantendo o estoque atual intacto
     const _estoqueBackup = JSON.parse(JSON.stringify(estoque));
-    await saveFinanceiro();
+    const _eSvPad=await saveFinanceiro();
+    if(_eSvPad) showToast('Erro ao salvar padrões: '+_eSvPad.message,'error');
     // Após salvar, restaura o estoque do banco (pode ter sido importado antes)
     const { data: _fresh } = await _sb.from('financeiro_config').select('estoque').eq('clinica_id',clinicaId).single();
     if(_fresh && _fresh.estoque){
@@ -6208,7 +6210,8 @@ async function loadFinanceiro(){
     // Garante que o backup local não seja perdido se o banco estiver vazio
     if(Object.keys(estoque).length === 0 && Object.keys(_estoqueBackup).length > 0){
       estoque = _estoqueBackup;
-      await saveFinanceiro(); // re-salva o backup que estava na memória
+      const _eReB=await saveFinanceiro(); // re-salva o backup que estava na memória
+      if(_eReB) showToast('Erro ao salvar backup de estoque: '+_eReB.message,'error');
     }
   }
 
@@ -6485,11 +6488,11 @@ async function saveProc(){
     procs.push({ id: nextProcId++, ...obj });
   }
   showLoading(true);
-  await saveFinanceiro();
+  const _eProc=await saveFinanceiro();
   showLoading(false);
   closeModal('modal-proc');
   renderProcs();
-  showToast('Procedimento salvo!');
+  if(!_eProc) showToast('Procedimento salvo!');
 }
 async function deleteProc(id){
   const _pDel = procs.find(x=>x.id===id);
@@ -6498,10 +6501,10 @@ async function deleteProc(id){
   procs = procs.filter(x=>x.id!==id);
   delete procInsumos[id];
   showLoading(true);
-  await saveFinanceiro();
+  const _eDel=await saveFinanceiro();
   showLoading(false);
   renderProcs();
-  showToast('Removido.');
+  if(!_eDel) showToast('Removido.');
 }
 async function recalcularProc(id){
   const p = procs.find(x=>x.id===id); if(!p) return;
@@ -6521,8 +6524,9 @@ async function recalcularProc(id){
   const pm = calcPrecoManut(p.id, true);
   p.precoFinal = pm !== null ? pm : calcPrecoFinal(p);
   showLoading(true);
-  await saveFinanceiro();
+  const _eRC=await saveFinanceiro();
   showLoading(false);
+  if(_eRC){ showToast('Erro ao recalcular: '+_eRC.message,'error'); return; }
   renderProcs();
   const info = pm !== null
     ? `custo ${fmtBRL(custoProc(p))} + ${cfg.pct_manut}% da instalação ${fmtBRL(procs.find(x=>x.id===_MANUT_TO_INST[p.id])?.precoFinal||0)}`
@@ -6533,10 +6537,10 @@ async function toggleAtivoProc(id){
   const p = procs.find(x=>x.id===id); if(!p) return;
   p.ativo = p.ativo===false ? true : false;
   showLoading(true);
-  await saveFinanceiro();
+  const _eT=await saveFinanceiro();
   showLoading(false);
   renderProcs();
-  showToast(p.ativo!==false ? 'Procedimento ativado!' : 'Procedimento desativado. Não aparecerá na venda rápida.');
+  if(!_eT) showToast(p.ativo!==false ? 'Procedimento ativado!' : 'Procedimento desativado. Não aparecerá na venda rápida.');
 }
 function exportarTabelaPrecos(){
   const ativos = procs.filter(p=>p.ativo!==false);
@@ -6574,10 +6578,10 @@ async function duplicarProc(id){
     procInsumos[novoId] = JSON.parse(JSON.stringify(procInsumos[id]));
   }
   showLoading(true);
-  await saveFinanceiro();
+  const _eD=await saveFinanceiro();
   showLoading(false);
   renderProcs();
-  showToast('Procedimento duplicado!');
+  if(!_eD) showToast('Procedimento duplicado!');
 }
 function filterProcs(){ renderProcs(); }
 function renderProcs(){
@@ -6712,13 +6716,13 @@ async function saveMat(){
     estoque[matId] = { atual:Number(ea)||0, min:Number(em)||0, compra:Number(ec)||0 };
   }
   showLoading(true);
-  await saveFinanceiro();
+  const _eM=await saveFinanceiro();
   showLoading(false);
   closeModal('modal-mat');
   renderMats(); renderEstoque();
   recalcularInsumos(true);
   renderProcs();
-  showToast('Material salvo! Custos atualizados.');
+  if(!_eM) showToast('Material salvo! Custos atualizados.');
 }
 async function deleteMat(id){
   if(!confirm('Excluir este material? Será removido do estoque e dos insumos dos procedimentos.')) return;
@@ -6726,11 +6730,11 @@ async function deleteMat(id){
   delete estoque[id];
   for(const k in procInsumos){ procInsumos[k]=(procInsumos[k]||[]).filter(x=>x.matId!==id); }
   showLoading(true);
-  await saveFinanceiro();
+  const _eMD=await saveFinanceiro();
   showLoading(false);
   renderMats(); renderEstoque();
   recalcularInsumos(true);
-  showToast('Material excluído.');
+  if(!_eMD) showToast('Material excluído.');
 }
 function filterMats(){ renderMats(); }
 function setCat(c){ activeCat=c; renderMats(); }
@@ -6791,7 +6795,8 @@ async function deleteEstSelecionados(){
   if(!confirm(`Excluir ${estSelected.size} material(is)?`)) return;
   estSelected.forEach(id=>{ mats=mats.filter(x=>x.id!==id); delete estoque[id]; });
   estSelected.clear();
-  showLoading(true); await saveFinanceiro(); showLoading(false);
+  showLoading(true); const _eDelEst=await saveFinanceiro(); showLoading(false);
+  if(_eDelEst){ showToast('Erro ao excluir materiais: '+_eDelEst.message,'error'); return; }
   renderMats(); renderEstoque(); updateEstDelBtn();
 }
 function openEstEdit(id){
@@ -6817,10 +6822,11 @@ async function saveEst(){
   };
   const i = mats.findIndex(x=>x.id===id);
   if(i>=0) mats[i].unid = unid;
-  showLoading(true); await saveFinanceiro(); showLoading(false);
+  showLoading(true); const _eSvEst=await saveFinanceiro(); showLoading(false);
   closeModal('modal-est');
   renderEstoque(); renderMats();
-  showToast('Estoque atualizado!');
+  if(!_eSvEst) showToast('Estoque atualizado!');
+  else showToast('Erro ao salvar estoque: '+_eSvEst.message,'error');
 }
 function filterEstoque(){ renderEstoque(); }
 function renderEstoque(){
@@ -6886,8 +6892,8 @@ function updateEstField(id, field, val){
   // Autosave com debounce de 2s
   clearTimeout(window._estSaveTimer);
   window._estSaveTimer = setTimeout(async ()=>{
-    await saveFinanceiro();
-    showToast('Estoque salvo!','ok');
+    const _eEst=await saveFinanceiro();
+    if(!_eEst) showToast('Estoque salvo!','ok');
   }, 2000);
 }
 function _atualizarStatusEstLinha(id){
@@ -7026,10 +7032,10 @@ async function saveInsumos(){
     procs[pi].insumos=parseFloat(totalIns.toFixed(2));
     procs[pi].horaClin=parseFloat(((procs[pi].tempo/60)*calcHora()).toFixed(2));
   }
-  showLoading(true); await saveFinanceiro(); showLoading(false);
+  showLoading(true); const _eIns=await saveFinanceiro(); showLoading(false);
   closeModal('modal-insumos');
   renderProcs(); renderEstoque();
-  showToast('Insumos salvos!');
+  if(!_eIns) showToast('Insumos salvos!');
 }
 async function recalcularInsumos(silent){
   if(!silent){
@@ -7062,9 +7068,9 @@ async function recalcularInsumos(silent){
   renderProcs();
   if(!silent){
     showLoading(true);
-    await saveFinanceiro();
+    const _eRI=await saveFinanceiro();
     showLoading(false);
-    showToast(`${atualizados} procedimento(s) atualizados. Margem: ${cfg.margem}%.`);
+    if(!_eRI) showToast(`${atualizados} procedimento(s) atualizados. Margem: ${cfg.margem}%.`);
   }
 }
 
@@ -7160,9 +7166,9 @@ async function finalizarVendaSalva(id){
   const consumo=computeConsumo(v.itens||[]);
   const aplicado=aplicarBaixaEstoque(consumo);
   v.status='finalizada'; v.consumo=aplicado; v.dataFinal=new Date().toISOString();
-  showLoading(true); await saveFinanceiro(); showLoading(false);
+  showLoading(true); const _eVF=await saveFinanceiro(); showLoading(false);
   renderVendas(); renderEstoque();
-  showToast('Venda finalizada! Estoque atualizado.');
+  if(!_eVF) showToast('Venda finalizada! Estoque atualizado.');
 }
 async function cancelarVenda(id){
   const v=vendas.find(x=>x.id===id); if(!v||v.status!=='finalizada') return;
@@ -7174,16 +7180,17 @@ async function cancelarVenda(id){
   // Volta os itens do plano vinculados para 'aprovado'
   if(v.planoIds && v.planoIds.length){
     for(const id2 of v.planoIds){
-      await _sb.from('plano_tratamento').update({ status:'aprovado' }).eq('id',id2);
+      const {error:_ePR}=await _sb.from('plano_tratamento').update({ status:'aprovado' }).eq('id',id2);
+      if(_ePR) console.error('Erro ao reverter plano:',_ePR.message);
       const item = pacPlanoList.find(i=>i.id===id2);
       if(item) item.status='aprovado';
     }
     if(typeof pacRenderPlanoResumo==='function') pacRenderPlanoResumo();
     if(typeof pacRenderPlanoLista==='function') pacRenderPlanoLista();
   }
-  await saveFinanceiro(); showLoading(false);
+  const _eVC=await saveFinanceiro(); showLoading(false);
   renderVendas(); renderEstoque();
-  showToast('Venda cancelada. Estoque devolvido.');
+  if(!_eVC) showToast('Venda cancelada. Estoque devolvido.');
 }
 async function devolverEstoqueVenda(id){
   const v=vendas.find(x=>x.id===id); if(!v||v.status!=='cancelada') return;
@@ -7191,18 +7198,18 @@ async function devolverEstoqueVenda(id){
   const consumo=computeConsumo(v.itens||[]);
   devolverEstoque(consumo);
   v.consumoRevertido=consumo; v.estoqueDevolvido=true;
-  showLoading(true); await saveFinanceiro(); showLoading(false);
+  showLoading(true); const _eED=await saveFinanceiro(); showLoading(false);
   renderVendas(); renderEstoque();
-  showToast('Estoque devolvido!');
+  if(!_eED) showToast('Estoque devolvido!');
 }
 async function excluirVenda(id){
   const v=vendas.find(x=>x.id===id); if(!v) return;
   const msg = v.status==='finalizada'?'Venda finalizada — excluir NÃO devolve o estoque (cancele antes). Excluir mesmo assim?':'Excluir este registro?';
   if(!confirm(msg)) return;
   vendas=vendas.filter(x=>x.id!==id);
-  showLoading(true); await saveFinanceiro(); showLoading(false);
+  showLoading(true); const _eVE=await saveFinanceiro(); showLoading(false);
   renderVendas();
-  showToast('Excluído.');
+  if(!_eVE) showToast('Excluído.');
 }
 
 function updateDescPac(){
@@ -7360,8 +7367,8 @@ async function salvarOrcPac(pacId){
     data: new Date().toISOString()
   };
   vendas.push(venda);
-  showLoading(true); await saveFinanceiro(); showLoading(false);
-  showToast('Orçamento salvo!');
+  showLoading(true); const _eOrc2=await saveFinanceiro(); showLoading(false);
+  if(!_eOrc2) showToast('Orçamento salvo!');
   // Atualiza aba de orçamentos se estiver aberta
   if(document.getElementById('pac-orc-lista')) pacRenderOrcamentos(pacId);
 }
@@ -7403,10 +7410,10 @@ async function finalizarVendaPac(pacId){
   };
   vendas.push(venda);
   orcamento = [];
-  showLoading(true); await saveFinanceiro(); showLoading(false);
+  showLoading(true); const _eVP=await saveFinanceiro(); showLoading(false);
   renderOrcPac();
   renderEstoque();
-  showToast('Venda finalizada!');
+  if(!_eVP) showToast('Venda finalizada!');
   // Atualiza orçamentos e vai para realizados
   if(document.getElementById('pac-orc-lista')) pacRenderOrcamentos(pacId);
   renderPatientDetail('procs');
@@ -7425,9 +7432,9 @@ async function carregarPadroes(confirm_ask=true){
   nextProcId  = 103;
   nextMatId   = mats.length > 50 ? nextMatId : 91;
   nextComboId = 207;
-  await saveFinanceiro();
+  const _ePad=await saveFinanceiro();
   showLoading(false);
-  if(confirm_ask) showToast('Procedimentos e insumos carregados!');
+  if(!_ePad && confirm_ask) showToast('Procedimentos e insumos carregados!');
   renderFinanceiroDash();
   renderProcs();
 }
@@ -8608,11 +8615,12 @@ async function pacAprovarOrcamentoPlano(pacId){
       data: new Date().toISOString()
     };
     vendas.push(venda);
-    await saveFinanceiro();
+    const _eAprov=await saveFinanceiro();
 
     pacRenderPlanoResumo();
     pacRenderPlanoLista();
-    showToast('Orçamento aprovado!');
+    if(!_eAprov) showToast('Orçamento aprovado!');
+    else showToast('Erro ao aprovar orçamento: '+_eAprov.message,'error');
     renderPatientDetail('orcamentos');
   }catch(err){
     showToast('Erro ao aprovar orçamento: '+(err?.message||'tente novamente.'),'error');
@@ -8845,10 +8853,11 @@ async function pacOdontoSalvarOrc(){
     data: new Date().toISOString()
   };
   vendas.push(venda);
-  showLoading(true); await saveFinanceiro(); showLoading(false);
+  showLoading(true); const _eOdont=await saveFinanceiro(); showLoading(false);
   pacOdontoOrcList = [];
   pacOdontoRenderOrcLista();
-  showToast('Orçamento salvo! Veja em Financeiro → Vendas.');
+  if(!_eOdont) showToast('Orçamento salvo! Veja em Financeiro → Vendas.');
+  else showToast('Erro ao salvar orçamento: '+_eOdont.message,'error');
 }
 
 
@@ -9285,7 +9294,8 @@ function formaPagamentoLabel(val){
 async function pacOrcSetFormaPag(vendaId, valor, pacId){
   const v = vendas.find(x=>x.id===vendaId); if(!v) return;
   v.formaPagamento = valor;
-  showLoading(true); await saveFinanceiro(); showLoading(false);
+  showLoading(true); const _eFP=await saveFinanceiro(); showLoading(false);
+  if(_eFP) showToast('Erro ao salvar forma de pagamento: '+_eFP.message,'error');
   pacRenderOrcamentos(pacId);
 }
 
@@ -9514,14 +9524,15 @@ async function pacFinalizarVendaLista(vendaId, pacId){
   if(!confirm(`Finalizar venda de ${fmtBRL(v.total||0)}? O estoque será descontado.`)) return;
   // Atualiza item do plano para realizado
   if(v.planoItemId){
-    await _sb.from('plano_tratamento').update({status:'realizado'}).eq('id',v.planoItemId);
+    const {error:_ePl}=await _sb.from('plano_tratamento').update({status:'realizado'}).eq('id',v.planoItemId);
+    if(_ePl) console.error('Erro ao atualizar plano:',_ePl.message);
     pacPlanoList = pacPlanoList.map(i=>i.id===v.planoItemId?{...i,status:'realizado'}:i);
   } else if(v.itens?.length){
-    // Tenta achar pelo nome do procedimento
     for(const it of v.itens){
       const planoItem = pacPlanoList.find(p=>p.procedimento===it.nome&&p.status==='aprovado');
       if(planoItem){
-        await _sb.from('plano_tratamento').update({status:'realizado'}).eq('id',planoItem.id);
+        const {error:_ePl2}=await _sb.from('plano_tratamento').update({status:'realizado'}).eq('id',planoItem.id);
+        if(_ePl2) console.error('Erro ao atualizar plano:',_ePl2.message);
         pacPlanoList = pacPlanoList.map(i=>i.id===planoItem.id?{...i,status:'realizado'}:i);
       }
     }
@@ -9534,14 +9545,15 @@ async function pacFinalizarVendaLista(vendaId, pacId){
   // Marca os itens do plano vinculados como 'realizado'
   if(v.planoIds && v.planoIds.length){
     for(const id of v.planoIds){
-      await _sb.from('plano_tratamento').update({ status:'realizado' }).eq('id',id);
+      const {error:_ePU}=await _sb.from('plano_tratamento').update({ status:'realizado' }).eq('id',id);
+      if(_ePU) console.error('Erro ao atualizar plano:',_ePU.message);
       const item = pacPlanoList.find(i=>i.id===id);
       if(item) item.status='realizado';
     }
     if(typeof pacRenderPlanoResumo==='function') pacRenderPlanoResumo();
     if(typeof pacRenderPlanoLista==='function') pacRenderPlanoLista();
   }
-  await saveFinanceiro();
+  const _eFinV=await saveFinanceiro();
 
   // Cria automaticamente o registro de atendimento para assinatura
   const descProcs = (v.itens||[]).map(i=>{
@@ -9560,7 +9572,8 @@ async function pacFinalizarVendaLista(vendaId, pacId){
   if(!eAtend && novoAtend) pacProcsList.unshift(novoAtend);
 
   showLoading(false);
-  showToast('Venda finalizada!');
+  if(!_eFinV) showToast('Venda finalizada!');
+  else showToast('Erro ao finalizar venda: '+_eFinV.message,'error');
   pacRenderOrcamentos(pacId);
   // Abre aba de realizados para assinar
   renderPatientDetail('procs');
@@ -9606,7 +9619,8 @@ async function pacFinalizarItensSelecionados(vendaId, pacId){
   // "aprovado" pra sempre no Plano mesmo após a venda ser finalizada.
   if(v.planoItemId && !planoIdsSel.includes(v.planoItemId)) planoIdsSel.push(v.planoItemId);
   for(const pid of planoIdsSel){
-    await _sb.from('plano_tratamento').update({status:'realizado'}).eq('id',pid);
+    const {error:_ePSel}=await _sb.from('plano_tratamento').update({status:'realizado'}).eq('id',pid);
+    if(_ePSel) console.error('Erro ao atualizar plano:',_ePSel.message);
     const pl = pacPlanoList.find(p=>p.id===pid);
     if(pl) pl.status='realizado';
   }
@@ -9665,7 +9679,8 @@ async function pacFinalizarItensSelecionados(vendaId, pacId){
     delete _orcDesc[vendaId];
   }
 
-  await saveFinanceiro();
+  const _eFinSel=await saveFinanceiro();
+  if(_eFinSel){ showLoading(false); showToast('Erro ao finalizar itens: '+_eFinSel.message,'error'); return; }
 
   // 3. Cria atendimento para os itens finalizados
   const descProcs = itensSel.map(i=>{
@@ -9713,14 +9728,16 @@ function pacOrcDeselectAll(vendaId, pacId){
 async function pacOrcSetObs(vendaId, obs){
   const v = vendas.find(x=>x.id===vendaId); if(!v) return;
   v.obs = obs;
-  await saveFinanceiro();
+  const _eObs=await saveFinanceiro();
+  if(_eObs) showToast('Erro ao salvar observações: '+_eObs.message,'error');
 }
 
 // ── Validade do orçamento (editável no card) ──
 async function pacOrcSetValidade(vendaId, val, pacId){
   const v = vendas.find(x=>x.id===vendaId); if(!v) return;
   v.validade = val || null;
-  await saveFinanceiro();
+  const _eVal=await saveFinanceiro();
+  if(_eVal) showToast('Erro ao salvar validade: '+_eVal.message,'error');
 }
 
 // ── Adicionar item direto ao orçamento ──
@@ -9777,8 +9794,9 @@ async function pacOrcConfirmAddItem(vendaId, pacId){
   _orcSel[vendaId].add(novo);
   v.subtotal = v.itens.reduce((a,it)=>a+(it.precoUnit||0)*(it.qtd||1),0);
   v.total = v.subtotal - (v.desconto||0);
-  await saveFinanceiro();
-  showToast(`${proc.nome} adicionado ao orçamento!`);
+  const _eAdd=await saveFinanceiro();
+  if(!_eAdd) showToast(`${proc.nome} adicionado ao orçamento!`);
+  else showToast('Erro ao adicionar item: '+_eAdd.message,'error');
   pacRenderOrcamentos(pacId);
 }
 
@@ -9790,9 +9808,10 @@ async function pacOrcRemoveItem(vendaId, idx, pacId){
   // Recalcular subtotal e total
   v.subtotal = v.itens.reduce((a,it)=>a+(it.precoUnit||0)*(it.qtd||1), 0);
   v.total = Math.max(0, v.subtotal - (v.desconto||0));
-  await saveFinanceiro();
+  const _eRem=await saveFinanceiro();
   pacRenderOrcamentos(pacId);
-  showToast('Item removido.');
+  if(!_eRem) showToast('Item removido.');
+  else showToast('Erro ao remover item: '+_eRem.message,'error');
 }
 
 // ── Consolidar múltiplos orçamentos em um ──
@@ -9830,7 +9849,8 @@ async function pacOrcConsolidar(pacId){
 async function pacOrcSetStatus(vendaId, status, pacId){
   const v = vendas.find(x=>x.id===vendaId); if(!v) return;
   v.statusResposta = status;
-  await saveFinanceiro();
+  const _eSts=await saveFinanceiro();
+  if(_eSts){ showToast('Erro ao salvar status: '+_eSts.message,'error'); return; }
   // Feedback visual
   const colors = {pensando:'#856404',aprovado_pac:'#2e7d32',recusado:'#b33',''   :'#555'};
   const labels = {pensando:'🤔 Pensando...',aprovado_pac:'✅ Aprovado!',recusado:'❌ Recusado',''   :'⏳ Aguardando'};
@@ -10101,8 +10121,8 @@ async function histSalvarEIrOdonto(pacId){
       const cond = denteProcs[0]?.cond||'restaurado';
       const proc = document.getElementById('hist-proc')?.value||'';
       const {data:ex}=await _sb.from('procedimentos_dentes').select('id').eq('clinica_id',clinicaId).eq('paciente_id',pacId).eq('dente',dente).single();
-      if(ex){ await _sb.from('procedimentos_dentes').update({condicao:cond,procedimento:proc}).eq('id',ex.id); }
-      else   { await _sb.from('procedimentos_dentes').insert([{clinica_id:clinicaId,paciente_id:pacId,dente,condicao:cond,procedimento:proc,obs:'',data:document.getElementById('hist-data')?.value||hoje()}]); }
+      if(ex){ const {error:_eU}=await _sb.from('procedimentos_dentes').update({condicao:cond,procedimento:proc}).eq('id',ex.id); if(_eU) console.error('Erro odontograma:',_eU.message); }
+      else   { const {error:_eI}=await _sb.from('procedimentos_dentes').insert([{clinica_id:clinicaId,paciente_id:pacId,dente,condicao:cond,procedimento:proc,obs:'',data:document.getElementById('hist-data')?.value||hoje()}]); if(_eI) console.error('Erro odontograma:',_eI.message); }
     }
     await pacCarregarOdonto(pacId);
   }
@@ -10799,10 +10819,10 @@ async function salvarPrecificacao(){
     if(pm !== null) p.precoFinal = pm;
   });
 
-  await saveFinanceiro();
+  const _ePrec=await saveFinanceiro();
   showLoading(false);
   renderProcs();
-  showToast('Precificação salva! Margem global: '+cfg.margem+'%. Hora clínica: '+fmtBRL(calcHora())+'.');
+  if(!_ePrec) showToast('Precificação salva! Margem global: '+cfg.margem+'%. Hora clínica: '+fmtBRL(calcHora())+'.');
 }
 
 async function salvarTaxas(){
@@ -10860,7 +10880,8 @@ async function salvarConfiguracoes(){
   if(taxaDebEl && _financeiroCarregado){
     taxasCfg.debito = parseFloat(taxaDebEl.value)||0;
     taxasCfg.credito = [1,2,3,4,5,6,7,8,9,10,11,12].map(p=>parseFloat(document.getElementById('cfg-taxa-cred'+p)?.value)||0);
-    await saveFinanceiro();
+    const _eCfg=await saveFinanceiro();
+    if(_eCfg){ showToast('Erro ao salvar configurações: '+_eCfg.message,'error'); return; }
   }
   showToast('Configurações salvas!');
 }
@@ -10892,10 +10913,11 @@ async function importarEstoque(input){
   if(!confirm('Importar estoque do arquivo? Os valores atuais serão substituídos.')) return;
   estoque = novoEstoque;
   showLoading(true);
-  await saveFinanceiro();
+  const _eImp=await saveFinanceiro();
   showLoading(false);
   input.value = '';
-  showToast('Estoque importado e salvo com sucesso!');
+  if(!_eImp) showToast('Estoque importado e salvo com sucesso!');
+  else showToast('Erro ao importar estoque: '+_eImp.message,'error');
 }
 
 async function alterarSenha(){
@@ -11118,8 +11140,9 @@ async function pagPacAddPag(vendaId, pacId){
     obs
   });
 
-  showLoading(true); await saveFinanceiro(); showLoading(false);
-  showToast('Pagamento registrado!');
+  showLoading(true); const _ePagR=await saveFinanceiro(); showLoading(false);
+  if(!_ePagR) showToast('Pagamento registrado!');
+  else{ showToast('Erro ao registrar pagamento: '+_ePagR.message,'error'); return; }
   pagPacRender(pacId);
 }
 
@@ -11128,16 +11151,18 @@ async function pagPacDelPag(vendaId, pagId, pacId){
   const v = vendas.find(x=>x.id===vendaId);
   if(!v) return;
   v.pagamentos = (v.pagamentos||[]).filter(p=>p.id!==pagId);
-  showLoading(true); await saveFinanceiro(); showLoading(false);
-  showToast('Pagamento removido.');
+  showLoading(true); const _ePagD=await saveFinanceiro(); showLoading(false);
+  if(!_ePagD) showToast('Pagamento removido.');
+  else{ showToast('Erro ao remover pagamento: '+_ePagD.message,'error'); return; }
   pagPacRender(pacId);
 }
 
 async function pagPacDelVenda(vendaId, pacId){
   if(!confirm('Excluir esta venda e todos os pagamentos registrados?')) return;
   vendas = vendas.filter(x=>x.id!==vendaId);
-  showLoading(true); await saveFinanceiro(); showLoading(false);
-  showToast('Venda excluída.');
+  showLoading(true); const _eVDel=await saveFinanceiro(); showLoading(false);
+  if(!_eVDel) showToast('Venda excluída.');
+  else{ showToast('Erro ao excluir venda: '+_eVDel.message,'error'); return; }
   pagPacRender(pacId);
 }
 
