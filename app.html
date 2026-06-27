@@ -1052,68 +1052,24 @@ select, textarea {
 
 /* ── DARK MODE ── */
 .dark-mode {
-  --rose:#c46a52;--rose-light:#5a4038;--rose-lighter:#2a1e1a;
-  --rose-mid:#b07060;--rose-dark:#f0d0c0;--rose-text:#d4b8a8;
+  --rose:#c46a52;--rose-light:#3a2a24;--rose-lighter:#1e1412;
+  --rose-mid:#9a5a48;--rose-dark:#f0c0b0;--rose-text:#c8a090;
 }
-/* Force ALL backgrounds dark via universal selector — overrides inline styles */
-.dark-mode div,.dark-mode span,.dark-mode p,.dark-mode li,.dark-mode ul,.dark-mode ol,
-.dark-mode section,.dark-mode article,.dark-mode header,.dark-mode footer,.dark-mode nav,
-.dark-mode main,.dark-mode aside,.dark-mode form,.dark-mode fieldset,.dark-mode legend,
-.dark-mode details,.dark-mode summary,.dark-mode figure,.dark-mode figcaption,
-.dark-mode tr,.dark-mode td,.dark-mode th,.dark-mode thead,.dark-mode tbody,.dark-mode tfoot,
-.dark-mode table,.dark-mode label,.dark-mode small,.dark-mode strong,.dark-mode em,.dark-mode b,
-.dark-mode blockquote,.dark-mode pre,.dark-mode code{
-  background-color:#1e1612!important;
-  border-color:#4a3830!important;
-}
-/* Exempt: colored avatar circles, stat icons, buttons, badges */
-.dark-mode .patient-avatar{color:#fff!important;}
-.dark-mode .btn-primary,.dark-mode .btn-login{background-color:#c46a52!important;border-color:#c46a52!important;}
-.dark-mode .btn-danger{background-color:#dc2626!important;border-color:#dc2626!important;}
-.dark-mode .fin-badge{border-color:transparent!important;}
-.dark-mode .fin-badge.finalizada{background-color:#1b5e20!important;}
-.dark-mode .fin-badge.orcamento{background-color:#4a3800!important;}
-.dark-mode .fin-badge.cancelada,.dark-mode .fin-badge.danger{background-color:#4a1010!important;}
 .dark-mode body,.dark-mode .page-content,.dark-mode .sidebar{background:#141010!important;}
 .dark-mode .card,.dark-mode .fin-card,.dark-mode .modal-box,.dark-mode .cal-modal,
 .dark-mode .prof-card,.dark-mode .appt-item,.dark-mode table,.dark-mode thead tr,
-.dark-mode .topbar,.dark-mode .mobile-bottom-nav{background:#1e1612!important;color:#e8d4cc!important;}
-.dark-mode input,.dark-mode select,.dark-mode textarea{background:#2a1e1a!important;color:#e8d4cc!important;border-color:#5a4038!important;}
-.dark-mode .sidebar .nav-item,.dark-mode .sidebar .nav-item span{color:#d4b8a8!important;}
+.dark-mode .topbar,.dark-mode .mobile-bottom-nav{background:#1e1612!important;color:#e0c8c0!important;}
+.dark-mode input,.dark-mode select,.dark-mode textarea{background:#2a1e1a!important;color:#e0c8c0!important;border-color:#3a2a24!important;}
+.dark-mode .sidebar .nav-item,.dark-mode .sidebar .nav-item span{color:#c8a090!important;}
 .dark-mode .sidebar .nav-item.active,.dark-mode .sidebar .nav-item:hover{background:#2a1e1a!important;}
-.dark-mode td,.dark-mode th{border-color:#4a3830!important;color:#e0c8c0!important;}
-.dark-mode tr{background:#1e1612!important;}
-.dark-mode tr:nth-child(even){background:#241a16!important;}
-.dark-mode .btn-secondary{background:#2a1e1a!important;color:#e8d4cc!important;border-color:#5a4038!important;}
-.dark-mode .btn-primary,.dark-mode .btn-login{background:#c46a52!important;border-color:#c46a52!important;}
-.dark-mode .btn-danger{background:#dc2626!important;border-color:#dc2626!important;}
-.dark-mode .home-table-row{border-color:#4a3830!important;}
+.dark-mode td{border-color:#2a1e1a!important;color:#d0b8b0!important;}
+.dark-mode .btn-secondary{background:#2a1e1a!important;color:#e0c8c0!important;border-color:#3a2a24!important;}
+.dark-mode .btn-primary,.dark-mode .btn-login{background:#c46a52!important;}
+.dark-mode .home-table-row{border-color:#2a1e1a!important;}
 .dark-mode .login-screen{background:linear-gradient(135deg,#1a1010,#241816)!important;}
 .dark-mode .login-card{background:#1e1612!important;box-shadow:0 20px 60px rgba(0,0,0,.5)!important;}
-/* All text forced to light */
-.dark-mode, .dark-mode *{color:#e0c8c0!important;}
-.dark-mode h1,.dark-mode h2,.dark-mode h3,.dark-mode .name,.dark-mode .header-clinica{color:#f0d0c0!important;}
+.dark-mode h1,.dark-mode h2,.dark-mode h3,.dark-mode .name,.dark-mode .header-clinica{color:#f0c0b0!important;}
 .dark-mode .stat-num,.dark-mode .stat-card .num{color:#c46a52!important;}
-.dark-mode a{color:#e8a080!important;}
-.dark-mode .btn-primary,.dark-mode .btn-primary *,.dark-mode .btn-login,.dark-mode .btn-login *{color:#fff!important;}
-.dark-mode .btn-danger,.dark-mode .btn-danger *{color:#fff!important;}
-.dark-mode .fin-badge.finalizada{background:#1b5e20!important;color:#a5d6a7!important;}
-.dark-mode .fin-badge.orcamento{background:#4a3800!important;color:#ffd54f!important;}
-.dark-mode .fin-badge.cancelada{background:#4a1010!important;color:#ef9a9a!important;}
-.dark-mode .fin-badge.danger{background:#4a1010!important;color:#ef9a9a!important;}
-.dark-mode hr{border-color:#4a3830!important;}
-/* Gradient/transparent backgrounds need special handling */
-.dark-mode .topbar{background:linear-gradient(135deg,#1a1010,#241816)!important;}
-.dark-mode .section-header{background-color:transparent!important;}
-.dark-mode .home-hero-banner{background:linear-gradient(135deg,#8a3828,#5a2818)!important;}
-.dark-mode .home-hero-banner *{background-color:transparent!important;border-color:rgba(255,255,255,.15)!important;}
-.dark-mode .home-hero-stat{background-color:rgba(255,255,255,.1)!important;}
-.dark-mode .home-hero-stat-val,.dark-mode .home-hero-stat-lbl,
-.dark-mode .home-hero-greeting,.dark-mode .home-hero-date{color:#fff!important;}
-/* Topbar text */
-.dark-mode .topbar *{background-color:transparent!important;}
-.dark-mode .topbar a,.dark-mode .topbar span,.dark-mode .topbar button{color:#e0c8c0!important;}
-.dark-mode .topbar .nav-item.active{background-color:rgba(255,255,255,.1)!important;}
 
 /* ── BUSCA GLOBAL (Ctrl+K) ── */
 .search-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9998;display:none;align-items:flex-start;justify-content:center;padding-top:min(20vh,140px);}
@@ -2847,23 +2803,23 @@ function renderHomeStats(){
   `;
   document.getElementById('home-stats').innerHTML = `
     <div class="home-stat-card">
-      <div class="home-stat-icon" style="background-color:#fdf0eb!important;color:#d4735a!important;"><i class="ti ti-users"></i></div>
+      <div class="home-stat-icon" style="background:#fdf0eb;color:#d4735a;"><i class="ti ti-users"></i></div>
       <div><div class="home-stat-num">${pacientes.length}</div><div class="home-stat-label">Total de Pacientes</div></div>
     </div>
     <div class="home-stat-card">
-      <div class="home-stat-icon" style="background-color:#e8f5e9!important;color:#2e7d32!important;"><i class="ti ti-currency-dollar"></i></div>
+      <div class="home-stat-icon" style="background:#e8f5e9;color:#2e7d32;"><i class="ti ti-currency-dollar"></i></div>
       <div><div class="home-stat-num" style="font-size:16px;">${fmtBRL(_fatMes)}</div><div class="home-stat-label">Faturamento ${_mesLabel}</div></div>
     </div>
     <div class="home-stat-card">
-      <div class="home-stat-icon" style="background-color:#fff4e5!important;color:#e08a20!important;"><i class="ti ti-calendar"></i></div>
+      <div class="home-stat-icon" style="background:#fff4e5;color:#e08a20;"><i class="ti ti-calendar"></i></div>
       <div><div class="home-stat-num">${semana_count}</div><div class="home-stat-label">Consultas na semana</div></div>
     </div>
     <div class="home-stat-card">
-      <div class="home-stat-icon" style="background-color:#e3f2fd!important;color:#1565c0!important;"><i class="ti ti-clock"></i></div>
+      <div class="home-stat-icon" style="background:#e3f2fd;color:#1565c0;"><i class="ti ti-clock"></i></div>
       <div><div class="home-stat-num">${hoje_count}</div><div class="home-stat-label">Consultas hoje</div></div>
     </div>
     <div class="home-stat-card">
-      <div class="home-stat-icon" style="background-color:#fce4e4!important;color:#c0392b!important;"><i class="ti ti-check"></i></div>
+      <div class="home-stat-icon" style="background:#fce4e4;color:#c0392b;"><i class="ti ti-check"></i></div>
       <div><div class="home-stat-num">${confirmadas}</div><div class="home-stat-label">Confirmadas hoje</div></div>
     </div>
   `;
@@ -3168,7 +3124,7 @@ function renderProfissionais(){
   if(!c) return;
   c.innerHTML=profissionais.map(p=>`
     <div class="prof-card">
-      <div class="patient-avatar" style="background-color:${p.cor}!important">${initials(p.nome)}</div>
+      <div class="patient-avatar" style="background:${p.cor}">${initials(p.nome)}</div>
       <div class="patient-info">
         <div class="name">${escapeHtml(p.nome)}${p.principal?' <span class="badge-principal">Principal</span>':''}</div>
         <div class="meta">${escapeHtml(p.especialidade)}${p.cro?' · '+escapeHtml(p.cro):''}</div>
@@ -3379,7 +3335,7 @@ function renderPatientDropdown(){
     <div onmousedown="abrirPacienteDetalhe(${p.id})"
       style="display:flex;align-items:center;gap:10px;padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--rose-light);transition:background .15s;"
       onmouseover="this.style.background='#fdf0ec'" onmouseout="this.style.background=''">
-      <div style="width:36px;height:36px;border-radius:10px;background-color:#${hashColor(p.nome)}!important;display:grid;place-items:center;color:#fff!important;font-weight:800;font-size:13px;flex-shrink:0;">${initials(p.nome)}</div>
+      <div style="width:36px;height:36px;border-radius:10px;background:#${hashColor(p.nome)};display:grid;place-items:center;color:#fff;font-weight:800;font-size:13px;flex-shrink:0;">${initials(p.nome)}</div>
       <div style="flex:1;min-width:0;">
         <div style="font-size:13px;font-weight:700;color:var(--rose-dark);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(p.nome)}</div>
         <div style="font-size:11px;color:var(--rose-text);">${escapeHtml(p.telefone||'Sem telefone')}${p.cpf?' · '+escapeHtml(p.cpf):''}</div>
@@ -4315,7 +4271,7 @@ function renderCalendario(){
           const [hh,mm]=((a.horario||'00:00')+':00').split(':').map(Number);
           const startMin=hh*60+mm, topPct=(startMin-CAL_START_MIN)/((CAL_END_MIN-CAL_START_MIN))*height;
           const _st=agGetStatus(a);const _bl=_st==='compareceu'?'3px solid #2e7d32':_st==='faltou'?'3px solid #dc2626':'3px solid rgba(0,0,0,.18)';const _op=_st==='faltou'?'.55':'1';
-          return`<div class="cal-event" style="background-color:${a.prof_cor||'#d4735a'}!important;top:${topPct}px;height:44px;border-left:${_bl};opacity:${_op};" onclick="calOpenEvent(event,${a.id})">
+          return`<div class="cal-event" style="background:${a.prof_cor||'#d4735a'};top:${topPct}px;height:44px;border-left:${_bl};opacity:${_op};" onclick="calOpenEvent(event,${a.id})">
             <div class="ev-time">${a.horario}</div>
             <div class="ev-name">${escapeHtml(a.nome)}</div>
             <div class="ev-meta">${escapeHtml(a.procedimento||'Consulta')}</div>
@@ -4340,7 +4296,7 @@ function renderCalendario(){
       ${DAYS_PT.map(d=>`<div class="cal-month-dow">${d}</div>`).join('')}
       ${cells.map(cell=>{
         const dayAppts=filtered.filter(a=>a.data===cell.iso);
-        const pills=dayAppts.slice(0,3).map(a=>`<div class="cal-pill" style="background-color:${a.prof_cor||'#d4735a'}!important" onclick="event.stopPropagation();calOpenEvent(event,${a.id})">${escapeHtml(a.nome.split(' ')[0])}</div>`).join('');
+        const pills=dayAppts.slice(0,3).map(a=>`<div class="cal-pill" style="background:${a.prof_cor||'#d4735a'}" onclick="event.stopPropagation();calOpenEvent(event,${a.id})">${escapeHtml(a.nome.split(' ')[0])}</div>`).join('');
         const more=dayAppts.length>3?`<div class="cal-more">+${dayAppts.length-3} mais</div>`:'';
         return`<div class="cal-cell${!cell.cur?' out':''}${cell.iso===today?' is-today':''}" onclick="calDayClick('${cell.iso}')">
           <div class="cell-num">${cell.day}</div>${pills}${more}
@@ -4379,7 +4335,7 @@ function calOpenEvent(e, id){
     ? '<span class="fin-badge ok" style="font-size:10px;">COMPARECEU</span>'
     : '';
   bg.innerHTML=`<div class="cal-modal" onclick="event.stopPropagation()">
-    <div class="cal-modal-head" style="background-color:${a.prof_cor||'var(--rose)'}!important;">
+    <div class="cal-modal-head" style="background:${a.prof_cor||'var(--rose)'};">
       <div class="mh-time"><i class="ti ti-clock"></i> ${a.horario} · ${formatDate(a.data)}</div>
       <div class="mh-name">${escapeHtml(a.nome)} ${statusBadge}</div>
     </div>
