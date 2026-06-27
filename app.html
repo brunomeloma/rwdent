@@ -2781,7 +2781,7 @@ function lembrarTodosAmanha(){
           if(_mpl) _loc += '\n🗺️ *Como chegar:* ' + _mpl;
           _loc += '\n';
         }
-        const msg = `Olá, ${a.nome.split(' ')[0]}! 😊\n\nPassando para lembrar que amanhã é o seu dia na *${clinicaNome}*!\n\n📅 *Horário:* ${a.horario}\n🦷 *Procedimento:* ${a.procedimento||'Consulta'}${_loc}\n\nPor favor, confirme sua presença respondendo *SIM* — ou nos avise caso precise reagendar. Estaremos esperando por você! 🙏`;
+        const msg = `Olá, ${a.nome.split(' ')[0]}! 😊\n\nPassando para lembrar que amanhã é o seu dia ${_prepClinica(clinicaNome)}!\n\n📅 *Horário:* ${a.horario}\n🦷 *Procedimento:* ${a.procedimento||'Consulta'}${_loc}\n\nPor favor, confirme sua presença respondendo *SIM* — ou nos avise caso precise reagendar. Estaremos esperando por você! 🙏`;
         const url = `https://wa.me/55${tel}?text=${encodeURIComponent(msg)}`;
         return `<div style="display:flex;align-items:center;gap:10px;padding:10px;border:1.5px solid #e8f5e9;border-radius:10px;">
           <div style="flex:1;min-width:0;">
@@ -4235,20 +4235,22 @@ async function calMarcarPresenca(id, status){
   }
 }
 
-function gerarMensagemFalta(nome, proc){
-  const clinica = clinicaData?.nome_cli || 'nossa clínica';
-  const tipo = classificarTratamento(proc);
-  const msgsFalta = {
-    ortodontia: `Olá, ${nome}! 😊 Notei que você não pôde comparecer hoje à sua manutenção do aparelho aqui na ${clinica}. Faz parte, essas coisas acontecem! 😄\n\nMas é importante manter as manutenções em dia para o seu tratamento evoluir certinho. Quando você tem um tempinho? Me manda um horário que eu já encaixo pra você! 📅🦷`,
-    geral: `Olá, ${nome}! 😊 Notei que você não pôde comparecer hoje à sua consulta na ${clinica}. Tudo bem com você?\n\nSem problemas — vamos remarcar pra um horário que funcione melhor! Me manda uma opção que eu já vejo aqui pra encaixar. 📅`,
-  };
-  return msgsFalta[tipo] || msgsFalta.geral;
+function _primeiroNome(nome){ return (nome||'').split(' ')[0]; }
+function _prepClinica(nome){
+  const n = (nome||'').trim().toLowerCase();
+  const prep = n.startsWith('clínica')||n.startsWith('clinica') ? 'na' : 'no';
+  return prep + ' ' + (nome||'nossa clínica');
+}
+
+function gerarMensagemFalta(nome){
+  const pn = _primeiroNome(nome);
+  return `Oi, ${pn}! Sentimos sua falta na sua consulta recentemente. Está tudo bem por aí? Quer que eu te envie os horários disponíveis desta semana para remarcarmos? 😊`;
 }
 
 function abrirResgateModalFalta(nome, tel, proc){
   resgateModalTel = tel;
   document.getElementById('resgate-modal-nome').textContent = nome;
-  document.getElementById('resgate-modal-msg').value = gerarMensagemFalta(nome, proc);
+  document.getElementById('resgate-modal-msg').value = gerarMensagemFalta(nome);
   const bg = document.getElementById('resgate-modal-bg');
   if(bg) bg.style.display = 'flex';
 }
@@ -8913,7 +8915,7 @@ function enviarConfirmacaoWpp(tel, nome, data, horario, procedimento){
     if(mapsLink) locPart += '\n🗺️ *Como chegar:* ' + mapsLink;
     locPart += '\n';
   }
-  const msg = `Olá, ${nome}! 😊\n\nTudo bem? Passando para confirmar o seu horário marcado conosco na *${clinica}*:\n\n📅 *Data:* ${dataFmt}\n⏰ *Horário:* ${horario}\n🦷 *Procedimento:* ${procedimento}${locPart}\n\nResponda *SIM* para confirmar ou nos avise caso precise remarcar — será um prazer encontrar o melhor horário pra você! 🙏`;
+  const msg = `Olá, ${_primeiroNome(nome)}! 😊\n\nTudo bem? Passando para confirmar o seu horário marcado conosco ${_prepClinica(clinica)}:\n\n📅 *Data:* ${dataFmt}\n⏰ *Horário:* ${horario}\n🦷 *Procedimento:* ${procedimento}${locPart}\n\nResponda *SIM* para confirmar ou nos avise caso precise remarcar — será um prazer encontrar o melhor horário pra você! 🙏`;
   const url = `https://wa.me/${numBR}?text=${encodeURIComponent(msg)}`;
   window.open(url, '_blank');
 }
@@ -9986,7 +9988,7 @@ function pacOrcWhatsApp(vendaId, pacId){
   const telefone = pac?.telefone?.replace(/\D/g,'')||'';
 
   let msg = `*${clinicaNome}* — Orçamento Odontológico\n\n`;
-  msg += `Olá, ${pac?.nome?.split(' ')[0]||''}! 😊 Preparamos um orçamento personalizado pra você na *${clinicaNome}*. Confira abaixo:\n\n`;
+  msg += `Olá, ${_primeiroNome(pac?.nome)}! 😊 Preparamos um orçamento personalizado pra você ${_prepClinica(clinicaNome)}. Confira abaixo:\n\n`;
   itensSel.forEach(it=>{
     msg += `• ${it.nome}${it.dente?' (dente '+it.dente+')':''}${it.qtd>1?' x'+it.qtd:''}: ${fmtBRL((it.precoUnit||0)*(it.qtd||1))}\n`;
   });
@@ -10715,51 +10717,17 @@ function classificarTratamento(proc){
 }
 
 function gerarMensagemResgate(nome, proc, meses){
+  const pn = _primeiroNome(nome);
   const clinica = clinicaData?.nome_cli || 'nossa clínica';
+  const prepCli = _prepClinica(clinica);
+  const ausencia = meses >= 12 ? `${Math.round(meses/12)} ano(s)` : `${Math.round(meses)} meses`;
 
-  // Paciente sem registro — mensagem de primeiro contato
-  if(!proc || proc === 'Sem registro' || meses >= 999){
-    return `Olá, ${nome}! 😊 Tudo bem por aí?\n\nSentimos a sua falta aqui na ${clinica}! Que tal aproveitar para agendar uma avaliação? Cuidar do sorriso em dia faz toda diferença, e estamos com horários disponíveis essa semana.\n\nÉ só me chamar! Adoraria te receber! 🦷✨`;
+  if(meses >= 5){
+    return `Olá, ${pn}! Tudo bem? Já faz mais de ${ausencia} desde a sua última limpeza ${prepCli}. Como o recomendado para a sua saúde bucal é a prevenção a cada 6 meses, gostaria de dar uma olhada nos dias disponíveis para esta semana? 📅`;
   }
 
-  const tipo = classificarTratamento(proc);
-  const msgs = {
-    ortodontia: {
-      1: `Olá, ${nome}! 😊 Já faz 1 mês desde sua última manutenção do aparelho aqui na ${clinica}. Manter a frequência certinha é super importante pro resultado ficar top! Quando você tá disponível? Me manda um horário que eu já encaixo. 📅🦷`,
-      2: `Olá, ${nome}! 😊 Oi sumido(a)! Já fazem 2 meses da sua manutenção do aparelho na ${clinica}. Isso pode atrasar o seu tratamento, e a gente não quer isso! 😄 Me manda uma data boa pra você que a gente marca! 📅🦷`,
-      3: `Olá, ${nome}! 😊 Estávamos com saudade! Já fazem 3 meses sem sua manutenção aqui na ${clinica}. Seu aparelho precisa de uma olhadinha urgente pra não comprometer tudo que já evoluímos juntos! Vamos marcar? 📅🦷`,
-      5: `Olá, ${nome}! 😊 Sentimos muito a sua falta na ${clinica}! Já faz mais de ${meses} meses desde sua última manutenção. Sabemos que a vida corre, mas o seu tratamento precisa de atenção! Que tal passarmos por uma avaliação pra ver como tá tudo? Temos horários essa semana. 🦷✨`,
-    },
-    limpeza: {
-      1: `Olá, ${nome}! 😊 Passando só pra dar um oi e saber como você tá! Já faz 1 mês desde sua última visita à ${clinica}. Está sentindo algum desconforto? Qualquer coisa, pode me chamar. Estamos sempre aqui pra você! 🦷`,
-      2: `Olá, ${nome}! 😊 Tudo bem? Já faz 2 meses desde sua última limpeza aqui na ${clinica}. Uma profilaxia regular previne tantos problemas e ainda deixa o sorriso bem mais bonito! Que tal agendarmos? Tenho horários disponíveis. 🦷✨`,
-      3: `Olá, ${nome}! 😊 Já faz 3 meses desde sua última limpeza na ${clinica} — está na hora da revisão! Uma limpeza profissional faz toda a diferença pra saúde do seu sorriso. Que tal agendarmos essa semana? 🦷`,
-      5: `Olá, ${nome}! 😊 Sentimos muito a sua falta por aqui! Já faz mais de ${meses} meses desde sua última limpeza na ${clinica}. Que tal voltarmos a cuidar do seu sorriso juntos? Temos horários disponíveis essa semana — é só me avisar! 📅🦷`,
-    },
-    clareamento: {
-      1: `Olá, ${nome}! 😊 Passando para saber como está o seu sorriso após o clareamento! Esperamos que esteja arrasando. 😁 Tem alguma dúvida ou algo que queira ajustar? Estamos à disposição! 🦷✨`,
-      3: `Olá, ${nome}! 😊 Já faz 3 meses do seu clareamento na ${clinica}! Que tal passarmos por uma avaliação rápida pra ver como tá o resultado? E se quiser renovar aquele sorriso, temos condições especiais pra você! ✨🦷`,
-      5: `Olá, ${nome}! 😊 Já faz ${meses} meses desde o seu clareamento na ${clinica}! O sorriso branco é aquele detalhe que faz toda diferença, né? 😁 Temos condições especiais pra quem volta. Que tal renovarmos juntos? ✨`,
-    },
-    cirurgia: {
-      1: `Olá, ${nome}! 😊 Passando só para saber como você está se sentindo após o seu procedimento aqui na ${clinica}. A recuperação está bem? Se tiver qualquer dúvida ou desconforto, pode me chamar à vontade! 🦷`,
-      3: `Olá, ${nome}! 😊 Já faz 3 meses desde o seu procedimento na ${clinica}! Que tal passarmos por uma revisão rápida pra confirmar que está tudo ótimo por aí? Vale muito a pena! 🦷`,
-      5: `Olá, ${nome}! 😊 Sentimos a sua falta na ${clinica}! Já faz ${meses} meses desde o seu último procedimento. Que tal agendar uma revisão? Cuidar do sorriso é sempre prioridade! 🦷`,
-    },
-    geral: {
-      1: `Olá, ${nome}! 😊 Já faz 1 mês desde a sua última visita aqui na ${clinica}! Tudo bem por aí? Tem algum desconforto ou dúvida? Pode me chamar — estamos sempre à disposição pra cuidar do seu sorriso! 🦷`,
-      2: `Olá, ${nome}! 😊 Já faz 2 meses desde sua última visita à ${clinica}. Cuidar do sorriso em dia faz toda diferença! Que tal agendarmos uma revisãozinha? Temos horários disponíveis e adoraríamos te receber! 🦷✨`,
-      3: `Olá, ${nome}! 😊 Oi, sumido(a)! Já faz 3 meses desde sua última visita à ${clinica}. Já está na hora de uma revisão — e é bem rápidinho! Que tal marcarmos? Temos horários essa semana. 🦷`,
-      5: `Olá, ${nome}! 😊 Sentimos muito a sua falta aqui na ${clinica}! Já faz mais de ${meses} meses desde a sua última visita. Sabemos que o dia a dia corrido prega peças, mas cuidar do sorriso vale demais! Temos horários disponíveis essa semana. Que tal retomarmos juntos? 🦷✨`,
-    },
-  };
-
-  const tipoMsgs = msgs[tipo] || msgs.geral;
-  // Encontra a mensagem mais adequada ao tempo
-  if(meses <= 1) return tipoMsgs[1] || msgs.geral[1];
-  if(meses <= 2) return tipoMsgs[2] || tipoMsgs[1] || msgs.geral[2];
-  if(meses <= 4) return tipoMsgs[3] || tipoMsgs[2] || msgs.geral[3];
-  return tipoMsgs[5] || msgs.geral[5];
+  const procNome = (!proc || proc === 'Sem registro' || proc === 'Não informado') ? 'seu último procedimento' : proc;
+  return `Oi, ${pn}, tudo bem? Passando para acompanhar o seu tratamento. Como está o conforto e a adaptação com o procedimento de ${procNome} que fizemos? Se precisar de qualquer suporte, estou por aqui! 🦷`;
 }
 
 function abrirResgateModal(nome, tel, proc, meses){
