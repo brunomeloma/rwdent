@@ -158,6 +158,15 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--
 .faq-a{max-height:0;overflow:hidden;transition:max-height .3s ease,padding .3s;padding:0 0;font-size:14px;color:var(--gray);line-height:1.7;}
 .faq-a.open{max-height:300px;padding:0 0 18px;}
 
+/* ── WHATSAPP FLOAT ── */
+.wpp-float{position:fixed;bottom:24px;right:24px;z-index:90;display:flex;flex-direction:column;align-items:flex-end;gap:8px;}
+.wpp-float-btn{width:60px;height:60px;border-radius:50%;background:#25d366;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 20px rgba(37,211,102,.4);transition:all .25s;text-decoration:none;}
+.wpp-float-btn:hover{transform:scale(1.08);box-shadow:0 6px 28px rgba(37,211,102,.5);}
+.wpp-float-btn i{font-size:30px;color:#fff;}
+.wpp-tooltip{background:#fff;color:var(--dark);padding:8px 14px;border-radius:10px;font-size:12px;font-weight:700;box-shadow:0 4px 16px rgba(0,0,0,.12);white-space:nowrap;animation:wppPulse 3s ease-in-out infinite;}
+@keyframes wppPulse{0%,100%{opacity:1;}50%{opacity:.6;}}
+@media(max-width:768px){.wpp-float{bottom:18px;right:18px;}.wpp-float-btn{width:54px;height:54px;}.wpp-float-btn i{font-size:26px;}}
+
 /* ── FINAL CTA ── */
 .final-cta{padding:80px 24px;text-align:center;background:linear-gradient(135deg,#8b3a2a 0%,#c25838 100%);color:#fff;position:relative;overflow:hidden;}
 .final-cta::before{content:'';position:absolute;top:-80px;right:-80px;width:300px;height:300px;background:rgba(255,255,255,.04);border-radius:50%;}
@@ -211,7 +220,7 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--
       <a href="#como-funciona" onclick="closeMenu()">Como funciona</a>
       <a href="#preco" onclick="closeMenu()">Preço</a>
       <a href="#faq" onclick="closeMenu()">FAQ</a>
-      <a href="#comecar" class="nav-cta" onclick="closeMenu()">Testar agora</a>
+      <a href="javascript:wppMsg('testar')" class="nav-cta" onclick="closeMenu()">Testar agora</a>
     </div>
     <button class="nav-mobile-btn" id="nav-toggle" onclick="toggleMenu()"><i class="ti ti-menu-2"></i></button>
   </div>
@@ -223,7 +232,7 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--
   <h1>Gerencie sua clínica<br/>com <span>inteligência</span></h1>
   <p>Agenda, prontuário digital, financeiro, odontograma e controle de estoque — tudo em um só lugar, feito especialmente para dentistas.</p>
   <div class="hero-btns">
-    <a href="#comecar" class="btn-hero btn-hero-primary"><i class="ti ti-rocket"></i> Testar por R$50 (24h)</a>
+    <a href="javascript:wppMsg('testar')" class="btn-hero btn-hero-primary"><i class="ti ti-brand-whatsapp"></i> Testar por R$50 (24h)</a>
     <a href="/?demo=true" class="btn-hero btn-hero-secondary"><i class="ti ti-eye"></i> Ver demonstração ao vivo</a>
   </div>
   <div class="hero-stats">
@@ -580,9 +589,9 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--
       <li><i class="ti ti-check"></i> Dark mode</li>
       <li><i class="ti ti-check"></i> Suporte por WhatsApp</li>
     </ul>
-    <button class="pricing-btn" onclick="location.href='#comecar'" style="margin-bottom:10px;"><i class="ti ti-rocket"></i> Assinar por R$197/mês</button>
+    <button class="pricing-btn" onclick="wppMsg('assinar')" style="margin-bottom:10px;"><i class="ti ti-brand-whatsapp"></i> Assinar por R$197/mês</button>
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;"><div style="flex:1;height:1px;background:var(--rose-light);"></div><span style="font-size:12px;color:var(--gray);font-weight:700;">ou</span><div style="flex:1;height:1px;background:var(--rose-light);"></div></div>
-    <button class="pricing-btn" onclick="location.href='#comecar'" style="background:var(--rose-lighter);color:var(--rose-dark);box-shadow:none;font-size:14px;padding:12px;"><i class="ti ti-eye"></i> Testar por R$50 (acesso por 24h)</button>
+    <button class="pricing-btn" onclick="wppMsg('testar')" style="background:var(--rose-lighter);color:var(--rose-dark);box-shadow:none;font-size:14px;padding:12px;"><i class="ti ti-eye"></i> Testar por R$50 (acesso por 24h)</button>
     <div class="pricing-guarantee"><i class="ti ti-shield-check"></i> Teste de 24h com acesso completo — conheça antes de assinar</div>
   </div>
 </section>
@@ -661,8 +670,14 @@ body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--
 <section class="final-cta" id="comecar">
   <h2>Pronto para modernizar sua clínica?</h2>
   <p>Assine por R$197/mês ou teste por R$50 com acesso completo por 24h. Sem compromisso.</p>
-  <a href="#" class="btn-cta-white" id="cta-link"><i class="ti ti-rocket"></i> Começar agora</a>
+  <a href="javascript:wppMsg('assinar')" class="btn-cta-white" id="cta-link"><i class="ti ti-brand-whatsapp"></i> Falar no WhatsApp</a>
 </section>
+
+<!-- WHATSAPP FLOAT -->
+<div class="wpp-float">
+  <div class="wpp-tooltip">Dúvidas? Fale conosco!</div>
+  <a href="https://wa.me/55SEUNUMEROAQUI?text=Olá!%20Vim%20pelo%20site%20do%20RWDent%20e%20gostaria%20de%20saber%20mais%20sobre%20o%20sistema." class="wpp-float-btn" id="wpp-btn" target="_blank" rel="noopener"><i class="ti ti-brand-whatsapp"></i></a>
+</div>
 
 <!-- FOOTER -->
 <footer class="footer">
@@ -710,6 +725,16 @@ const observer=new IntersectionObserver((entries)=>{
   entries.forEach(e=>{if(e.isIntersecting){e.target.classList.add('show');observer.unobserve(e.target);}});
 },{threshold:0.1,rootMargin:'0px 0px -40px 0px'});
 document.querySelectorAll('.animate').forEach(el=>observer.observe(el));
+
+// WhatsApp
+const WPP_NUM = '55SEUNUMEROAQUI'; // ← Coloque seu número aqui (ex: 5511999990000)
+function wppMsg(tipo){
+  const msgs = {
+    assinar: 'Olá! Vim pelo site do RWDent e quero *assinar o plano mensal* de R$197/mês. Como faço para começar?',
+    testar: 'Olá! Vim pelo site do RWDent e quero *testar o sistema por R$50* (24h de acesso). Como faço o pagamento?'
+  };
+  window.open('https://wa.me/'+WPP_NUM+'?text='+encodeURIComponent(msgs[tipo]||msgs.assinar),'_blank');
+}
 
 // Carousel
 (()=>{
