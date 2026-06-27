@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <meta name="theme-color" content="#d4735a" />
 <meta name="mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -6757,7 +6757,7 @@ function renderMats(){
   const cats = [...new Set(mats.map(m=>m.cat).filter(Boolean))].sort();
   const cfEl = document.getElementById('cat-filter');
   if(cfEl) cfEl.innerHTML = '<button class="btn-secondary'+(activeCat===''?' active':'')+'" style="font-size:11px;padding:4px 10px;border-radius:20px;" onclick="setCat(\'\')">Todas</button>'+
-    cats.map(c=>`<button class="btn-secondary${activeCat===c?' active':''}" style="font-size:11px;padding:4px 10px;border-radius:20px;" onclick="setCat('${c}')">${c}</button>`).join('');
+    cats.map(c=>`<button class="btn-secondary${activeCat===c?' active':''}" style="font-size:11px;padding:4px 10px;border-radius:20px;" onclick="setCat('${escapeHtml(c).replace(/'/g,'&#39;')}')">${escapeHtml(c)}</button>`).join('');
   const matCatSel = document.getElementById('mat-cat-filter');
   if(matCatSel){
     const cur=matCatSel.value;
@@ -8898,8 +8898,8 @@ function enviarConfirmacaoWpp(tel, nome, data, horario, procedimento){
 // ASSINATURA DIGITAL
 // ══════════════════════════════════════════════════════
 let signCanvas = null, signCtx = null, signDrawing = false;
-let signCallback = null; // função chamada ao confirmar
-let signLastX = 0, signLastY = 0;
+let signCallback = null;
+let signLastX = 0, signLastY = 0, signHasStrokes = false;
 
 let _signInited = false;
 function initSignCanvas(){
@@ -8917,13 +8917,13 @@ function initSignCanvas(){
   _signInited = true;
 
   // Mouse
-  signCanvas.addEventListener('mousedown', e=>{ signDrawing=true; const r=signCanvas.getBoundingClientRect(); signLastX=e.clientX-r.left; signLastY=e.clientY-r.top; });
+  signCanvas.addEventListener('mousedown', e=>{ signDrawing=true; signHasStrokes=true; const r=signCanvas.getBoundingClientRect(); signLastX=e.clientX-r.left; signLastY=e.clientY-r.top; });
   signCanvas.addEventListener('mousemove', e=>{ if(!signDrawing) return; const r=signCanvas.getBoundingClientRect(); const x=e.clientX-r.left,y=e.clientY-r.top; signCtx.beginPath(); signCtx.moveTo(signLastX,signLastY); signCtx.lineTo(x,y); signCtx.stroke(); signLastX=x; signLastY=y; });
   signCanvas.addEventListener('mouseup', ()=>signDrawing=false);
   signCanvas.addEventListener('mouseleave', ()=>signDrawing=false);
 
   // Touch
-  signCanvas.addEventListener('touchstart', e=>{ e.preventDefault(); signDrawing=true; const r=signCanvas.getBoundingClientRect(); const t=e.touches[0]; signLastX=t.clientX-r.left; signLastY=t.clientY-r.top; },{passive:false});
+  signCanvas.addEventListener('touchstart', e=>{ e.preventDefault(); signDrawing=true; signHasStrokes=true; const r=signCanvas.getBoundingClientRect(); const t=e.touches[0]; signLastX=t.clientX-r.left; signLastY=t.clientY-r.top; },{passive:false});
   signCanvas.addEventListener('touchmove', e=>{ e.preventDefault(); if(!signDrawing) return; const r=signCanvas.getBoundingClientRect(); const t=e.touches[0]; const x=t.clientX-r.left,y=t.clientY-r.top; signCtx.beginPath(); signCtx.moveTo(signLastX,signLastY); signCtx.lineTo(x,y); signCtx.stroke(); signLastX=x; signLastY=y; },{passive:false});
   signCanvas.addEventListener('touchend', ()=>signDrawing=false);
 }
@@ -8944,13 +8944,11 @@ function closeSignModal(){
 
 function signClear(){
   if(signCtx && signCanvas) signCtx.clearRect(0,0,signCanvas.width,signCanvas.height);
+  signHasStrokes = false;
 }
 
 function signIsEmpty(){
-  if(!signCanvas || !signCtx) return true;
-  const data = signCtx.getImageData(0,0,signCanvas.width,signCanvas.height).data;
-  for(let i=3;i<data.length;i+=4){ if(data[i]>0) return false; }
-  return true;
+  return !signHasStrokes;
 }
 
 function signConfirm(){
@@ -9586,11 +9584,13 @@ async function pacFinalizarVendaLista(vendaId, pacId){
     profissional_id: null, profissional_nome: '',
     dentes_tratados: dentesTratados
   }]).select().single();
+  if(eAtend) console.error('Erro ao registrar atendimento:', eAtend.message);
   if(!eAtend && novoAtend) pacProcsList.unshift(novoAtend);
 
   showLoading(false);
-  if(!_eFinV) showToast('Venda finalizada!');
-  else showToast('Erro ao finalizar venda: '+_eFinV.message,'error');
+  if(_eFinV) showToast('Erro ao finalizar venda: '+_eFinV.message,'error');
+  else if(eAtend) showToast('Venda finalizada, mas erro ao registrar atendimento.','warn');
+  else showToast('Venda finalizada!');
   pacRenderOrcamentos(pacId);
   // Abre aba de realizados para assinar
   renderPatientDetail('procs');
@@ -9637,7 +9637,7 @@ async function pacFinalizarItensSelecionados(vendaId, pacId){
   if(v.planoItemId && !planoIdsSel.includes(v.planoItemId)) planoIdsSel.push(v.planoItemId);
   for(const pid of planoIdsSel){
     const {error:_ePSel}=await _sb.from('plano_tratamento').update({status:'realizado'}).eq('id',pid);
-    if(_ePSel) console.error('Erro ao atualizar plano:',_ePSel.message);
+    if(_ePSel){ showLoading(false); showToast('Erro ao marcar item do plano: '+_ePSel.message,'error'); return; }
     const pl = pacPlanoList.find(p=>p.id===pid);
     if(pl) pl.status='realizado';
   }
@@ -10478,9 +10478,17 @@ async function histSalvar(pacId){
   for(const dente of dentes){
     const denteProcs = histDentesProc[dente] || [{cond,qtd:1}];
     const condDente = denteProcs[0]?.cond || cond;
-    const {data:ex}=await _sb.from('procedimentos_dentes').select('id').eq('clinica_id',clinicaId).eq('paciente_id',pacId).eq('dente',dente).single();
-    if(ex){ await _sb.from('procedimentos_dentes').update({condicao:condDente,procedimento:proc,obs,data}).eq('id',ex.id); }
-    else   { await _sb.from('procedimentos_dentes').insert([{clinica_id:clinicaId,paciente_id:pacId,dente,condicao:condDente,procedimento:proc,obs,data}]); }
+    const {data:ex,error:errSel}=await _sb.from('procedimentos_dentes').select('id').eq('clinica_id',clinicaId).eq('paciente_id',pacId).eq('dente',dente).single();
+    if(errSel && errSel.code!=='PGRST116'){
+      showLoading(false); showToast('Erro ao carregar dente '+dente+': '+errSel.message,'error'); return;
+    }
+    if(ex){
+      const {error:errU}=await _sb.from('procedimentos_dentes').update({condicao:condDente,procedimento:proc,obs,data}).eq('id',ex.id);
+      if(errU){ showLoading(false); showToast('Erro ao atualizar dente '+dente+': '+errU.message,'error'); return; }
+    } else {
+      const {error:errI}=await _sb.from('procedimentos_dentes').insert([{clinica_id:clinicaId,paciente_id:pacId,dente,condicao:condDente,procedimento:proc,obs,data}]);
+      if(errI){ showLoading(false); showToast('Erro ao salvar dente '+dente+': '+errI.message,'error'); return; }
+    }
   }
   const dentesArr=dentes.map(d=>({dente:d,procedimento:proc,condicao:condsStr}));
   const {error}=await _sb.from('atendimentos_odonto').insert([{
@@ -11148,18 +11156,19 @@ async function pagPacAddPag(vendaId, pacId){
   if(valor<=0){ showToast('Informe o valor.','error'); return; }
 
   v.pagamentos = v.pagamentos||[];
-  v.pagamentos.push({
+  const _newPag = {
     id: Date.now(),
     valor,
     forma,
     parcelas_cartao: forma==='credito'?parcelas:1,
     data: new Date(data+'T12:00:00').toISOString(),
     obs
-  });
+  };
+  v.pagamentos.push(_newPag);
 
   showLoading(true); const _ePagR=await saveFinanceiro(); showLoading(false);
   if(!_ePagR) showToast('Pagamento registrado!');
-  else{ showToast('Erro ao registrar pagamento: '+_ePagR.message,'error'); return; }
+  else{ v.pagamentos=v.pagamentos.filter(p=>p!==_newPag); showToast('Erro ao registrar pagamento: '+_ePagR.message,'error'); return; }
   pagPacRender(pacId);
 }
 
@@ -11301,7 +11310,9 @@ function _galeriaCompress(file, maxDim){
     if(file.size < 500*1024){ resolve(file); return; }
     const img = new Image();
     const url = URL.createObjectURL(file);
+    const timeout = setTimeout(()=>{ URL.revokeObjectURL(url); resolve(file); }, 30000);
     img.onload = ()=>{
+      clearTimeout(timeout);
       URL.revokeObjectURL(url);
       let w=img.width, h=img.height;
       if(w>maxDim || h>maxDim){
@@ -11313,7 +11324,7 @@ function _galeriaCompress(file, maxDim){
       c.getContext('2d').drawImage(img,0,0,w,h);
       c.toBlob(blob=>{ resolve(blob||file); },'image/jpeg',0.82);
     };
-    img.onerror = ()=>{ resolve(file); };
+    img.onerror = ()=>{ clearTimeout(timeout); URL.revokeObjectURL(url); resolve(file); };
     img.src = url;
   });
 }
@@ -11643,4 +11654,8 @@ document.addEventListener('keydown', e=>{
       <button class="btn-secondary" onclick="document.getElementById('manut-modal-bg').style.display='none'">Cancelar</button>
       <button class="btn-primary" onclick="manutConfirmar()"><i class="ti ti-check"></i> Confirmar manutenção</button>
     </div>
-  <
+  </div>
+</div>
+
+</body>
+</html>
