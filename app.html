@@ -9,6 +9,9 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default" />
 <meta name="referrer" content="strict-origin-when-cross-origin" />
 <meta http-equiv="X-Content-Type-Options" content="nosniff" />
+<meta name="description" content="RWDent — Sistema de gestão odontológica completo para sua clínica." />
+<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+<link rel="manifest" href="/manifest.json" />
 <title>RWDent — Gestão Odontológica</title>
 <!-- build:202606120507 -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css" />
@@ -1047,10 +1050,49 @@ select, textarea {
   th, td { padding: 8px 6px !important; }
 }
 
+/* ── DARK MODE ── */
+.dark-mode {
+  --rose:#c46a52;--rose-light:#3a2a24;--rose-lighter:#1e1412;
+  --rose-mid:#9a5a48;--rose-dark:#f0c0b0;--rose-text:#c8a090;
+}
+.dark-mode body,.dark-mode .page-content,.dark-mode .sidebar{background:#141010!important;}
+.dark-mode .card,.dark-mode .fin-card,.dark-mode .modal-box,.dark-mode .cal-modal,
+.dark-mode .prof-card,.dark-mode .appt-item,.dark-mode table,.dark-mode thead tr,
+.dark-mode .topbar,.dark-mode .mobile-bottom-nav{background:#1e1612!important;color:#e0c8c0!important;}
+.dark-mode input,.dark-mode select,.dark-mode textarea{background:#2a1e1a!important;color:#e0c8c0!important;border-color:#3a2a24!important;}
+.dark-mode .sidebar .nav-item,.dark-mode .sidebar .nav-item span{color:#c8a090!important;}
+.dark-mode .sidebar .nav-item.active,.dark-mode .sidebar .nav-item:hover{background:#2a1e1a!important;}
+.dark-mode td{border-color:#2a1e1a!important;color:#d0b8b0!important;}
+.dark-mode .btn-secondary{background:#2a1e1a!important;color:#e0c8c0!important;border-color:#3a2a24!important;}
+.dark-mode .btn-primary,.dark-mode .btn-login{background:#c46a52!important;}
+.dark-mode .home-table-row{border-color:#2a1e1a!important;}
+.dark-mode .login-screen{background:linear-gradient(135deg,#1a1010,#241816)!important;}
+.dark-mode .login-card{background:#1e1612!important;box-shadow:0 20px 60px rgba(0,0,0,.5)!important;}
+.dark-mode h1,.dark-mode h2,.dark-mode h3,.dark-mode .name,.dark-mode .header-clinica{color:#f0c0b0!important;}
+.dark-mode .stat-num,.dark-mode .stat-card .num{color:#c46a52!important;}
+
+/* ── BUSCA GLOBAL (Ctrl+K) ── */
+.search-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9998;display:none;align-items:flex-start;justify-content:center;padding-top:min(20vh,140px);}
+.search-overlay.show{display:flex;}
+.search-box{background:#fff;border-radius:16px;width:90%;max-width:520px;box-shadow:0 20px 60px rgba(0,0,0,.3);overflow:hidden;}
+.dark-mode .search-box{background:#1e1612!important;}
+.search-box input{width:100%;border:none;padding:18px 20px;font-size:16px;font-family:inherit;outline:none;background:transparent;color:inherit;}
+.search-results{max-height:340px;overflow-y:auto;}
+.search-result-item{display:flex;align-items:center;gap:12px;padding:12px 20px;cursor:pointer;border-top:1px solid var(--rose-light);transition:background .15s;}
+.search-result-item:hover,.search-result-item.active{background:var(--rose-lighter);}
+
 </style>
 </head>
 <body>
 <div id="toast" class="toast"></div>
+
+<!-- ══════ BUSCA GLOBAL (Ctrl+K) ══════ -->
+<div class="search-overlay" id="search-overlay" onclick="if(event.target===this)fecharBuscaGlobal()">
+  <div class="search-box">
+    <input type="text" id="search-global-input" placeholder="Buscar pacientes, procedimentos, agendamentos..." oninput="buscaGlobalFiltrar()" onkeydown="buscaGlobalNav(event)" autocomplete="off"/>
+    <div class="search-results" id="search-global-results"></div>
+  </div>
+</div>
 
 <!-- ══════════════ LOGIN ══════════════ -->
 <div id="login-screen">
@@ -1103,6 +1145,9 @@ select, textarea {
       <button class="btn-login" id="btn-login" onclick="doLogin()">
         <span id="btn-login-text">Entrar</span>
       </button>
+      <div style="text-align:center;margin-top:10px;">
+        <button onclick="esqueciSenha()" style="background:none;border:none;color:var(--rose-text);font-size:12px;cursor:pointer;text-decoration:underline;font-family:inherit;">Esqueci minha senha</button>
+      </div>
       <div class="login-err" id="login-err"></div>
     </div>
     <div class="lpr-clinica">Consultório Odontológico <strong>Rhaiza Barroso</strong></div>
@@ -1291,10 +1336,10 @@ select, textarea {
           <div class="form-grid">
             <div class="form-group"><label>Nome completo</label><input type="text" id="pt-nome" placeholder="Nome do paciente" /></div>
             <div class="form-group"><label>Data de nascimento</label><input type="date" id="pt-nascimento" onchange="ptCheckMenor()" /></div>
-            <div class="form-group"><label>Telefone</label><input type="tel" id="pt-telefone" placeholder="(00) 00000-0000" /></div>
+            <div class="form-group"><label>Telefone</label><input type="tel" id="pt-telefone" placeholder="(00) 00000-0000" oninput="maskTel(this)" /></div>
             <div class="form-group"><label>E-mail</label><input type="email" id="pt-email" placeholder="email@exemplo.com" /></div>
             <div class="form-group"><label>Plano / Convênio</label><input type="text" id="pt-plano" placeholder="Particular, OdontoPrev..." /></div>
-            <div class="form-group"><label>CPF</label><input type="text" id="pt-cpf" placeholder="000.000.000-00" /></div>
+            <div class="form-group"><label>CPF</label><input type="text" id="pt-cpf" placeholder="000.000.000-00" oninput="maskCPF(this)" /></div>
             <div class="form-group full"><label>Observações</label><textarea id="pt-notas" placeholder="Histórico, alergias, etc."></textarea></div>
           </div>
 
@@ -1309,8 +1354,8 @@ select, textarea {
           <div class="form-grid">
             <div class="form-group"><label>Nome do responsável</label><input type="text" id="pt-resp-nome" placeholder="Nome completo do responsável"/></div>
             <div class="form-group"><label>Parentesco</label><input type="text" id="pt-resp-parentesco" placeholder="Mãe, pai, tutor(a)..."/></div>
-            <div class="form-group"><label>CPF do responsável</label><input type="text" id="pt-resp-cpf" placeholder="000.000.000-00"/></div>
-            <div class="form-group"><label>Telefone do responsável</label><input type="tel" id="pt-resp-telefone" placeholder="(00) 00000-0000"/></div>
+            <div class="form-group"><label>CPF do responsável</label><input type="text" id="pt-resp-cpf" placeholder="000.000.000-00" oninput="maskCPF(this)"/></div>
+            <div class="form-group"><label>Telefone do responsável</label><input type="tel" id="pt-resp-telefone" placeholder="(00) 00000-0000" oninput="maskTel(this)"/></div>
           </div>
 
           <hr style="border-color:var(--rose-light);margin:16px 0;"/>
@@ -1320,7 +1365,7 @@ select, textarea {
           <div class="form-grid">
             <div class="form-group"><label>Nome</label><input type="text" id="pt-emerg-nome" placeholder="Nome do contato de emergência"/></div>
             <div class="form-group"><label>Parentesco / Relação</label><input type="text" id="pt-emerg-parentesco" placeholder="Cônjuge, amigo, familiar..."/></div>
-            <div class="form-group"><label>Telefone</label><input type="tel" id="pt-emerg-telefone" placeholder="(00) 00000-0000"/></div>
+            <div class="form-group"><label>Telefone</label><input type="tel" id="pt-emerg-telefone" placeholder="(00) 00000-0000" oninput="maskTel(this)"/></div>
           </div>
 
           <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:14px;">
@@ -1491,6 +1536,7 @@ select, textarea {
       <div class="card">
         <div class="section-header">
           <h2><i class="ti ti-chart-bar"></i> Painel Financeiro</h2>
+          <button class="btn-secondary" onclick="relProdutividade()" style="font-size:12px;"><i class="ti ti-chart-dots-3"></i> Produtividade</button>
           <button class="btn-secondary" onclick="abrirRelatorioMensal()" style="font-size:12px;"><i class="ti ti-file-analytics"></i> Relatório Mensal</button>
         </div>
         <div style="display:flex;gap:8px;align-items:center;margin-bottom:14px;flex-wrap:wrap;">
@@ -1500,6 +1546,16 @@ select, textarea {
           <button class="btn-secondary" style="font-size:12px;padding:5px 12px;" onclick="finSetPeriodo('tudo')">Todo o histórico</button>
         </div>
         <div id="fin-metrics" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:20px;"></div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;margin-bottom:20px;">
+          <div>
+            <h2 style="font-size:13px;margin-bottom:10px;"><i class="ti ti-chart-area-line"></i> Faturamento mensal</h2>
+            <div id="fin-chart-mensal" style="background:var(--rose-lighter);border:1px solid var(--rose-light);border-radius:12px;padding:16px;min-height:160px;"></div>
+          </div>
+          <div>
+            <h2 style="font-size:13px;margin-bottom:10px;"><i class="ti ti-chart-pie"></i> Top procedimentos</h2>
+            <div id="fin-chart-procs" style="background:var(--rose-lighter);border:1px solid var(--rose-light);border-radius:12px;padding:16px;min-height:160px;"></div>
+          </div>
+        </div>
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;">
           <div>
             <h2 style="font-size:13px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;"><span><i class="ti ti-trending-up"></i> Vendas recentes</span> <button class="btn-secondary" style="font-size:11px;padding:4px 10px;" onclick="switchTab('vendas_fin')">Ver todas</button></h2>
@@ -2265,6 +2321,53 @@ select, textarea {
           <div style="display:flex;justify-content:flex-end;margin-top:14px;">
             <button class="btn-secondary" onclick="alterarSenha()"><i class="ti ti-key"></i> Alterar senha</button>
           </div>
+
+          <hr style="border-color:var(--rose-light);margin:24px 0;"/>
+          <h2 style="font-size:13px;font-weight:700;color:var(--rose-dark);margin-bottom:14px;display:flex;align-items:center;gap:8px;text-transform:uppercase;letter-spacing:.5px;"><i class="ti ti-moon"></i> Aparência</h2>
+          <div style="display:flex;align-items:center;gap:12px;">
+            <label style="font-size:13px;color:var(--rose-text);">Modo escuro</label>
+            <button id="btn-dark-mode" onclick="toggleDarkMode()" class="btn-secondary" style="padding:8px 16px;font-size:13px;display:flex;align-items:center;gap:6px;">
+              <i class="ti ti-sun"></i> <span id="dark-mode-label">Desativado</span>
+            </button>
+          </div>
+
+          <hr style="border-color:var(--rose-light);margin:24px 0;"/>
+          <h2 style="font-size:13px;font-weight:700;color:var(--rose-dark);margin-bottom:14px;display:flex;align-items:center;gap:8px;text-transform:uppercase;letter-spacing:.5px;"><i class="ti ti-database-export"></i> Backup</h2>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;">
+            <button class="btn-secondary" onclick="exportarBackup()" style="padding:8px 16px;font-size:13px;"><i class="ti ti-download"></i> Exportar todos os dados (JSON)</button>
+          </div>
+
+          <hr style="border-color:var(--rose-light);margin:24px 0;"/>
+          <h2 style="font-size:13px;font-weight:700;color:var(--rose-dark);margin-bottom:14px;display:flex;align-items:center;gap:8px;text-transform:uppercase;letter-spacing:.5px;"><i class="ti ti-bell"></i> Lembretes de consulta</h2>
+          <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+            <label style="font-size:13px;color:var(--rose-text);">Notificação no navegador</label>
+            <button id="btn-notif" onclick="ativarNotificacoes()" class="btn-secondary" style="padding:8px 16px;font-size:13px;"><i class="ti ti-bell-ringing"></i> Ativar</button>
+          </div>
+          <p style="font-size:11px;color:var(--rose-text);margin-top:6px;">Receba um alerta no navegador 15 minutos antes de cada consulta.</p>
+
+          <hr style="border-color:var(--rose-light);margin:24px 0;"/>
+          <h2 style="font-size:13px;font-weight:700;color:var(--rose-dark);margin-bottom:14px;display:flex;align-items:center;gap:8px;text-transform:uppercase;letter-spacing:.5px;"><i class="ti ti-brand-whatsapp"></i> Confirmação WhatsApp</h2>
+          <div style="background:var(--rose-lighter);border:1px solid var(--rose-light);border-radius:10px;padding:14px;margin-bottom:10px;">
+            <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:10px;">
+              <label style="font-size:13px;color:var(--rose-text);min-width:140px;">Antecedência (horas)</label>
+              <input type="number" id="wpp-antecedencia" min="1" max="72" value="24" style="width:80px;padding:6px 10px;border:1px solid var(--rose-light);border-radius:8px;font-size:13px;"/>
+            </div>
+            <div style="margin-bottom:10px;">
+              <label style="font-size:13px;color:var(--rose-text);display:block;margin-bottom:6px;">Modelo de mensagem</label>
+              <textarea id="wpp-template" rows="3" style="width:100%;padding:8px 12px;border:1px solid var(--rose-light);border-radius:8px;font-size:12px;resize:vertical;" placeholder="Olá {nome}, sua consulta está marcada para {data} às {horario}. Confirma?">Olá {nome}, sua consulta está marcada para {data} às {horario} com {profissional}. Confirma?</textarea>
+              <p style="font-size:10px;color:var(--rose-text);margin-top:4px;">Variáveis: {nome}, {data}, {horario}, {profissional}, {procedimento}</p>
+            </div>
+            <button class="btn-secondary" onclick="salvarConfigWhatsApp()" style="padding:8px 16px;font-size:13px;"><i class="ti ti-device-floppy"></i> Salvar configuração</button>
+            <button class="btn-secondary" onclick="wppEnviarManual()" style="padding:8px 16px;font-size:13px;margin-left:6px;"><i class="ti ti-brand-whatsapp"></i> Enviar agora (manual)</button>
+          </div>
+          <p style="font-size:11px;color:var(--rose-text);">O envio automático requer integração com backend (API WhatsApp Business). O botão "Enviar agora" abre cada mensagem no WhatsApp Web para envio manual.</p>
+
+          <hr style="border-color:var(--rose-light);margin:24px 0;"/>
+          <h2 style="font-size:13px;font-weight:700;color:var(--rose-dark);margin-bottom:14px;display:flex;align-items:center;gap:8px;text-transform:uppercase;letter-spacing:.5px;"><i class="ti ti-history"></i> Log de atividades</h2>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;">
+            <button class="btn-secondary" onclick="verLogAtividades()" style="padding:8px 16px;font-size:13px;"><i class="ti ti-list-search"></i> Ver log de atividades</button>
+          </div>
+          <p style="font-size:11px;color:var(--rose-text);margin-top:6px;">Histórico local das últimas 500 ações realizadas neste navegador.</p>
         </div>
       </div>
     </div>
@@ -2351,6 +2454,34 @@ function showToast(msg, type='success'){
   setTimeout(()=>{ t.className='toast'; }, 3800);
 }
 function escapeHtml(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+
+// ── MÁSCARAS DE INPUT ──
+function maskTel(el){
+  let v=el.value.replace(/\D/g,'').slice(0,11);
+  if(v.length>6) v=v.replace(/^(\d{2})(\d{5})(\d{0,4}).*/,'($1) $2-$3');
+  else if(v.length>2) v=v.replace(/^(\d{2})(\d{0,5}).*/,'($1) $2');
+  else if(v.length) v='('+v;
+  el.value=v;
+}
+function maskCPF(el){
+  let v=el.value.replace(/\D/g,'').slice(0,11);
+  if(v.length>9) v=v.replace(/^(\d{3})(\d{3})(\d{3})(\d{0,2}).*/,'$1.$2.$3-$4');
+  else if(v.length>6) v=v.replace(/^(\d{3})(\d{3})(\d{0,3}).*/,'$1.$2.$3');
+  else if(v.length>3) v=v.replace(/^(\d{3})(\d{0,3}).*/,'$1.$2');
+  el.value=v;
+}
+function validarCPF(cpf){
+  cpf=cpf.replace(/\D/g,'');
+  if(cpf.length!==11||/^(\d)\1{10}$/.test(cpf)) return false;
+  let soma=0;
+  for(let i=0;i<9;i++) soma+=parseInt(cpf[i])*(10-i);
+  let resto=11-(soma%11); if(resto>=10) resto=0;
+  if(parseInt(cpf[9])!==resto) return false;
+  soma=0;
+  for(let i=0;i<10;i++) soma+=parseInt(cpf[i])*(11-i);
+  resto=11-(soma%11); if(resto>=10) resto=0;
+  return parseInt(cpf[10])===resto;
+}
 function toLocalISO(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
 function hoje(){ return toLocalISO(new Date()); }
 function formatDate(v){ if(!v)return''; const [y,m,d]=v.split('-'); return`${d}/${m}/${y}`; }
@@ -2408,6 +2539,20 @@ async function checkClinicaApproval(){
   const el = document.getElementById('header-clinica');
   if(el) el.textContent = cli.nome_cli || 'Minha Clínica';
   return true;
+}
+
+async function esqueciSenha(){
+  const email = document.getElementById('login-email').value.trim();
+  const errEl = document.getElementById('login-err');
+  if(!email){ errEl.textContent='Digite seu e-mail primeiro.'; errEl.className='login-err show'; return; }
+  errEl.className='login-err'; errEl.textContent='';
+  try {
+    const { error } = await _sb.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin + '/app.html' });
+    if(error){ errEl.textContent=error.message; errEl.className='login-err show'; return; }
+    errEl.textContent='E-mail de recuperacao enviado! Verifique sua caixa de entrada.';
+    errEl.style.background='#edf7ee'; errEl.style.color='#2e6b32'; errEl.style.borderColor='#a5d6a7';
+    errEl.className='login-err show';
+  } catch(e){ errEl.textContent='Erro: '+e.message; errEl.className='login-err show'; }
 }
 
 // Enter key on login
@@ -2517,6 +2662,7 @@ function initApp(){
   renderScheduleOptions();
   renderHomeStats();
   calSetView('semana', false);
+  carregarConfigWhatsApp();
 }
 
 // ══════════════════════════════════════════════════════
@@ -2913,6 +3059,7 @@ async function agendarConsulta(){
   agendamentos.sort((a,b)=>(a.data+a.horario).localeCompare(b.data+b.horario));
   ['schedule-phone','horario','procedimento','obs'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
   document.getElementById('data').value=hoje();
+  logAtividade('Agendamento criado', `${paciente.nome} — ${data} ${horario}`);
   showToast('Agendamento salvo!');
   renderLista(); renderHomeStats();
   switchTab('lista');
@@ -3002,6 +3149,7 @@ async function adicionarProfissional(){
   ['p-nome','p-esp','p-cro'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('p-cor').value='#d4735a';
   toggleFormProf(); renderProfissionais();
+  logAtividade('Profissional adicionado', nome);
   showToast('Profissional adicionado.');
 }
 
@@ -3149,6 +3297,7 @@ function resetPatientForm(){
 async function adicionarPaciente(){
   const dados=readPatientForm();
   if(!dados.nome){ showToast('Preencha o nome do paciente.','warn'); return; }
+  if(dados.cpf && !validarCPF(dados.cpf)){ showToast('CPF inválido. Verifique os números.','warn'); document.getElementById('pt-cpf').focus(); return; }
   if(ptCheckMenor() && !dados._responsavel.nome){
     showToast('Paciente menor de idade: preencha o nome do responsável.','warn');
     document.getElementById('pt-resp-nome').focus();
@@ -3162,6 +3311,7 @@ async function adicionarPaciente(){
   novo.prontuarios=[]; pacientes.push(novo);
   resetPatientForm(); togglePatientForm();
   renderPatients(); renderScheduleOptions(); renderHomeStats();
+  logAtividade('Paciente adicionado', dados.nome);
   showToast('Paciente adicionado.');
 }
 
@@ -6453,6 +6603,59 @@ function renderFinanceiroDash(){
         <span class="fin-badge danger">Crítico: ${(estoque[m.id]||{}).atual||0} ${m.unid||''}</span>
       </div>`).join('')
     : '<div style="color:#2e7d32;font-size:13px;">✓ Estoque OK</div>';
+
+  renderChartMensal();
+  renderChartTopProcs(fin);
+}
+
+function renderChartMensal(){
+  const el = document.getElementById('fin-chart-mensal'); if(!el) return;
+  const hoje = new Date();
+  const meses = [];
+  for(let i=5;i>=0;i--){
+    const d = new Date(hoje.getFullYear(), hoje.getMonth()-i, 1);
+    const key = d.toISOString().slice(0,7);
+    const label = d.toLocaleDateString('pt-BR',{month:'short'}).replace('.','');
+    const total = vendas.filter(v=>v.status==='finalizada'&&(v.data||'').startsWith(key)).reduce((a,v)=>a+(v.total||0),0);
+    meses.push({label, total, key});
+  }
+  const max = Math.max(...meses.map(m=>m.total),1);
+  const barW = Math.floor(100/meses.length);
+  el.innerHTML = `<div style="display:flex;align-items:flex-end;gap:6px;height:120px;">
+    ${meses.map(m=>{
+      const h = Math.max(m.total/max*100, 4);
+      return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;">
+        <span style="font-size:10px;color:var(--rose-dark);font-weight:700;">${m.total>0?fmtBRL(m.total):''}</span>
+        <div style="width:100%;max-width:40px;height:${h}%;background:linear-gradient(180deg,var(--rose),var(--rose-dark));border-radius:6px 6px 2px 2px;transition:height .3s;"></div>
+        <span style="font-size:10px;color:var(--rose-text);text-transform:capitalize;">${m.label}</span>
+      </div>`;
+    }).join('')}
+  </div>`;
+}
+
+function renderChartTopProcs(finVendas){
+  const el = document.getElementById('fin-chart-procs'); if(!el) return;
+  const contagem = {};
+  (finVendas||[]).forEach(v=>{
+    (v.itens||[]).forEach(i=>{
+      const nome = i.nome||'Outro';
+      contagem[nome] = (contagem[nome]||0) + (i.qtd||1);
+    });
+  });
+  const top = Object.entries(contagem).sort((a,b)=>b[1]-a[1]).slice(0,5);
+  if(!top.length){ el.innerHTML='<div style="color:var(--rose-text);font-size:13px;">Sem dados no período.</div>'; return; }
+  const maxVal = top[0][1];
+  const cores = ['#d4735a','#e8956e','#f0b88a','#c9a87c','#b5978a'];
+  el.innerHTML = top.map(([nome, qtd], i)=>{
+    const pct = Math.max(qtd/maxVal*100, 8);
+    return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+      <span style="font-size:11px;color:var(--rose-dark);min-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escapeHtml(nome)}">${escapeHtml(nome)}</span>
+      <div style="flex:1;background:var(--rose-light);border-radius:4px;height:18px;overflow:hidden;">
+        <div style="width:${pct}%;height:100%;background:${cores[i]||cores[0]};border-radius:4px;transition:width .3s;"></div>
+      </div>
+      <span style="font-size:11px;font-weight:700;color:var(--rose-dark);min-width:28px;text-align:right;">${qtd}x</span>
+    </div>`;
+  }).join('');
 }
 
 // ── PROCEDIMENTOS ──
@@ -6562,7 +6765,7 @@ async function saveProc(){
   showLoading(false);
   closeModal('modal-proc');
   renderProcs();
-  if(!_eProc) showToast('Procedimento salvo!');
+  if(!_eProc){ logAtividade('Procedimento salvo', nome); showToast('Procedimento salvo!'); }
 }
 async function deleteProc(id){
   const _pDel = procs.find(x=>x.id===id);
@@ -7209,6 +7412,7 @@ function renderVendas(){
     const itensRes = (v.itens||[]).map(i=>(i.qtd>1?i.qtd+'× ':'')+escapeHtml(i.nome||'')+(i.dente?` (Dente ${i.dente})`:'')+(i.descDente?` — ${escapeHtml(i.descDente)}`:'')).join(', ');
     let acoes = `<button class="btn-secondary" style="padding:4px 8px;font-size:11px;" onclick="toggleVendaMat(${v.id})" title="Ver materiais"><i class="ti ti-box"></i></button>`;
     if(v.status==='orcamento') acoes += `<button class="btn-secondary" style="padding:4px 8px;font-size:11px;color:#2e7d32;" onclick="finalizarVendaSalva(${v.id})" title="Finalizar venda"><i class="ti ti-circle-check"></i></button>`;
+    if(v.status==='finalizada') acoes += `<button class="btn-secondary" style="padding:4px 8px;font-size:11px;color:#2e7d32;" onclick="gerarRecibo(${v.id})" title="Gerar recibo"><i class="ti ti-receipt"></i></button>`;
     if(v.status==='finalizada') acoes += `<button class="btn-secondary" style="padding:4px 8px;font-size:11px;color:#856404;" onclick="cancelarVenda(${v.id})" title="Cancelar venda"><i class="ti ti-arrow-back-up"></i></button>`;
     if(v.status==='cancelada'&&!v.estoqueDevolvido) acoes += `<button class="btn-secondary" style="padding:4px 8px;font-size:11px;color:#2e7d32;" onclick="devolverEstoqueVenda(${v.id})" title="Devolver estoque"><i class="ti ti-package-import"></i></button>`;
     acoes += `<button class="btn-danger" style="padding:4px 8px;font-size:11px;" onclick="excluirVenda(${v.id})"><i class="ti ti-trash"></i></button>`;
@@ -7240,7 +7444,7 @@ async function finalizarVendaSalva(id){
   v.status='finalizada'; v.consumo=aplicado; v.dataFinal=new Date().toISOString();
   showLoading(true); const _eVF=await saveFinanceiro(); showLoading(false);
   renderVendas(); renderEstoque();
-  if(!_eVF) showToast('Venda finalizada! Estoque atualizado.');
+  if(!_eVF){ logAtividade('Venda finalizada', `${v.pacienteNome||'—'} — ${fmtBRL(v.total)}`); showToast('Venda finalizada! Estoque atualizado.'); }
 }
 async function cancelarVenda(id){
   const v=vendas.find(x=>x.id===id); if(!v||v.status!=='finalizada') return;
@@ -10986,6 +11190,288 @@ async function alterarSenha(){
   showToast('Senha alterada com sucesso!');
 }
 
+// ── DARK MODE ──
+function toggleDarkMode(){
+  const isDark = document.documentElement.classList.toggle('dark-mode');
+  localStorage.setItem('rwdent-dark', isDark?'1':'0');
+  const icon = document.querySelector('#btn-dark-mode i');
+  const label = document.getElementById('dark-mode-label');
+  if(icon) icon.className = isDark ? 'ti ti-moon' : 'ti ti-sun';
+  if(label) label.textContent = isDark ? 'Ativado' : 'Desativado';
+}
+(function(){
+  if(localStorage.getItem('rwdent-dark')==='1'){
+    document.documentElement.classList.add('dark-mode');
+    setTimeout(()=>{
+      const icon = document.querySelector('#btn-dark-mode i');
+      const label = document.getElementById('dark-mode-label');
+      if(icon) icon.className='ti ti-moon';
+      if(label) label.textContent='Ativado';
+    },100);
+  }
+})();
+
+// ── EXPORTAR BACKUP ──
+async function exportarBackup(){
+  showLoading(true);
+  try {
+    const backup = {
+      exportadoEm: new Date().toISOString(),
+      clinica: clinicaData,
+      pacientes: pacientes,
+      agendamentos: agendamentos,
+      profissionais: profissionais,
+      financeiro: { procs, mats, estoque, procInsumos, vendas, combos, cfg, taxasCfg, descCfg, pagPac }
+    };
+    const blob = new Blob([JSON.stringify(backup, null, 2)], {type:'application/json'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `rwdent-backup-${new Date().toISOString().slice(0,10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast('Backup exportado com sucesso!');
+  } catch(e){ showToast('Erro ao exportar: '+e.message,'error'); }
+  showLoading(false);
+}
+
+// ── NOTIFICAÇÕES DE CONSULTA ──
+let _notifInterval = null;
+function ativarNotificacoes(){
+  if(!('Notification' in window)){ showToast('Seu navegador não suporta notificações.','warn'); return; }
+  Notification.requestPermission().then(perm=>{
+    if(perm==='granted'){
+      showToast('Notificações ativadas! Você será avisado 15min antes de cada consulta.');
+      const btn = document.getElementById('btn-notif');
+      if(btn) btn.innerHTML='<i class="ti ti-bell-check"></i> Ativado';
+      if(_notifInterval) clearInterval(_notifInterval);
+      _notifInterval = setInterval(checarLembretesConsulta, 60000);
+      checarLembretesConsulta();
+    } else { showToast('Permissão de notificação negada.','warn'); }
+  });
+}
+function checarLembretesConsulta(){
+  if(Notification.permission!=='granted') return;
+  const agora = new Date();
+  const hoje = agora.toISOString().slice(0,10);
+  const notificados = JSON.parse(localStorage.getItem('rwdent-notif-sent')||'[]');
+  agendamentos.filter(a=>a.data===hoje && a.horario).forEach(a=>{
+    const [h,m] = a.horario.split(':').map(Number);
+    const horaConsulta = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate(), h, m);
+    const diff = (horaConsulta - agora) / 60000;
+    const key = a.id+'-'+hoje;
+    if(diff > 0 && diff <= 15 && !notificados.includes(key)){
+      new Notification('Consulta em 15 minutos', {
+        body: `${a.nome||'Paciente'} — ${a.procedimento||'Consulta'} às ${a.horario.slice(0,5)}`,
+        icon: '/favicon.svg'
+      });
+      notificados.push(key);
+      localStorage.setItem('rwdent-notif-sent', JSON.stringify(notificados.slice(-100)));
+    }
+  });
+}
+
+// ── BUSCA GLOBAL (Ctrl+K) ──
+let _buscaGlobalIdx = -1;
+document.addEventListener('keydown', e=>{
+  if((e.ctrlKey||e.metaKey) && e.key==='k'){
+    e.preventDefault();
+    abrirBuscaGlobal();
+  }
+  if(e.key==='Escape'){
+    fecharBuscaGlobal();
+  }
+});
+function abrirBuscaGlobal(){
+  const ol = document.getElementById('search-overlay');
+  ol.classList.add('show');
+  const inp = document.getElementById('search-global-input');
+  inp.value=''; inp.focus();
+  document.getElementById('search-global-results').innerHTML='<div style="padding:16px;text-align:center;color:var(--rose-text);font-size:13px;">Digite para buscar pacientes, procedimentos ou agendamentos</div>';
+  _buscaGlobalIdx=-1;
+}
+function fecharBuscaGlobal(){
+  document.getElementById('search-overlay').classList.remove('show');
+}
+function buscaGlobalFiltrar(){
+  const q = _norm(document.getElementById('search-global-input').value);
+  const res = document.getElementById('search-global-results');
+  if(!q){ res.innerHTML='<div style="padding:16px;text-align:center;color:var(--rose-text);font-size:13px;">Digite para buscar...</div>'; return; }
+  const items = [];
+  pacientes.filter(p=>_norm(p.nome).includes(q)||(p.cpf||'').includes(q)||(p.telefone||'').includes(q)).slice(0,5).forEach(p=>{
+    items.push({icon:'ti-user',label:escapeHtml(p.nome),sub:escapeHtml(p.telefone||'Sem telefone'),action:`fecharBuscaGlobal();switchTab('pacientes');setTimeout(()=>selectPatient(${p.id}),150)`});
+  });
+  procs.filter(p=>_norm(p.nome).includes(q)).slice(0,4).forEach(p=>{
+    items.push({icon:'ti-medical-cross',label:escapeHtml(p.nome),sub:fmtBRL(p.precoFinal||0),action:`fecharBuscaGlobal();switchTab('procedimentos_fin')`});
+  });
+  const hoje = new Date().toISOString().slice(0,10);
+  agendamentos.filter(a=>a.data>=hoje&&(_norm(a.nome||'').includes(q)||_norm(a.procedimento||'').includes(q))).slice(0,4).forEach(a=>{
+    items.push({icon:'ti-calendar',label:escapeHtml(a.nome||''),sub:`${formatDate(a.data)} ${(a.horario||'').slice(0,5)}`,action:`fecharBuscaGlobal();switchTab('lista')`});
+  });
+  if(!items.length){ res.innerHTML='<div style="padding:16px;text-align:center;color:var(--rose-text);font-size:13px;">Nenhum resultado encontrado</div>'; return; }
+  _buscaGlobalIdx=-1;
+  res.innerHTML=items.map((it,i)=>`<div class="search-result-item" data-idx="${i}" onclick="${it.action}"><i class="ti ${it.icon}" style="font-size:18px;color:var(--rose);"></i><div style="flex:1;min-width:0;"><div style="font-weight:600;font-size:13px;">${it.label}</div><div style="font-size:11px;color:var(--rose-text);">${it.sub}</div></div><i class="ti ti-chevron-right" style="font-size:14px;color:var(--rose-light);"></i></div>`).join('');
+}
+function buscaGlobalNav(e){
+  const items = document.querySelectorAll('.search-result-item');
+  if(!items.length) return;
+  if(e.key==='ArrowDown'){ e.preventDefault(); _buscaGlobalIdx=Math.min(_buscaGlobalIdx+1,items.length-1); }
+  else if(e.key==='ArrowUp'){ e.preventDefault(); _buscaGlobalIdx=Math.max(_buscaGlobalIdx-1,0); }
+  else if(e.key==='Enter' && _buscaGlobalIdx>=0){ e.preventDefault(); items[_buscaGlobalIdx]?.click(); return; }
+  else return;
+  items.forEach((it,i)=>it.classList.toggle('active',i===_buscaGlobalIdx));
+  items[_buscaGlobalIdx]?.scrollIntoView({block:'nearest'});
+}
+
+// ── RECIBO DE VENDA ──
+function gerarRecibo(vendaId){
+  const v = vendas.find(x=>x.id===vendaId); if(!v) return;
+  const clinica = clinicaData?.nome_cli || 'Clínica';
+  const data = new Date(v.data).toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'});
+  const hora = new Date(v.data).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+  const itensHtml = (v.itens||[]).map(i=>`<tr><td style="padding:6px 10px;border-bottom:1px solid #eee;font-size:13px;">${escapeHtml(i.nome||'')}</td><td style="padding:6px 10px;border-bottom:1px solid #eee;text-align:center;font-size:13px;">${i.qtd||1}</td><td style="padding:6px 10px;border-bottom:1px solid #eee;text-align:right;font-size:13px;">R$ ${(i.preco||0).toFixed(2).replace('.',',')}</td></tr>`).join('');
+  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Recibo - ${escapeHtml(clinica)}</title>
+<style>*{margin:0;padding:0;box-sizing:border-box;}body{font-family:'Segoe UI',Arial,sans-serif;padding:30px;color:#3a2020;max-width:400px;margin:0 auto;}
+.header{text-align:center;border-bottom:2px dashed #d4735a;padding-bottom:14px;margin-bottom:16px;}
+.header h1{font-size:16px;color:#7a3020;}.header p{font-size:11px;color:#a05040;margin-top:3px;}
+table{width:100%;border-collapse:collapse;margin:12px 0;}
+.total{text-align:right;font-size:16px;font-weight:800;color:#7a3020;border-top:2px solid #d4735a;padding-top:10px;margin-top:10px;}
+.footer{text-align:center;margin-top:20px;font-size:10px;color:#b08070;border-top:1px dashed #f0cfc4;padding-top:10px;}
+@media print{body{padding:10px;}}</style></head><body>
+<div class="header"><h1>${escapeHtml(clinica)}</h1><p>RECIBO DE PAGAMENTO</p><p>${data} - ${hora}</p></div>
+${v.pacienteNome?`<p style="font-size:13px;margin-bottom:8px;"><strong>Paciente:</strong> ${escapeHtml(v.pacienteNome)}</p>`:''}
+<table><thead><tr style="background:#fdf0eb;"><th style="padding:6px 10px;text-align:left;font-size:11px;">Item</th><th style="padding:6px 10px;text-align:center;font-size:11px;">Qtd</th><th style="padding:6px 10px;text-align:right;font-size:11px;">Valor</th></tr></thead><tbody>${itensHtml}</tbody></table>
+${v.desconto?`<p style="font-size:12px;text-align:right;color:#856404;">Desconto: -R$ ${(v.desconto||0).toFixed(2).replace('.',',')}</p>`:''}
+<div class="total">Total: R$ ${(v.total||0).toFixed(2).replace('.',',')}</div>
+<p style="font-size:12px;margin-top:8px;text-align:right;color:var(--rose-text);">Pagamento: ${escapeHtml(v.pagamento||'Não informado')}</p>
+<div class="footer">${escapeHtml(clinica)}<br>Obrigado pela preferência!</div>
+<`+`script>window.onload=()=>{window.print();}<`+`/script></body></html>`;
+  const w = window.open('','_blank');
+  if(w){ w.document.write(html); w.document.close(); }
+  else { showToast('Permita pop-ups para gerar o recibo.','warn'); }
+}
+
+// ── RELATÓRIO POR PROFISSIONAL ──
+function relProdutividade(){
+  if(!vendas.length && !agendamentos.length){ showToast('Sem dados para gerar relatório.','warn'); return; }
+  const mesAtual = new Date().toISOString().slice(0,7);
+  const profStats = {};
+  profissionais.forEach(p=>{ profStats[p.id]={nome:p.nome,atendimentos:0,receita:0,procedimentos:{}}; });
+  vendas.filter(v=>v.status==='finalizada'&&(v.data||'').startsWith(mesAtual)).forEach(v=>{
+    const profId = v.profId || v.profissionalId;
+    if(profId && profStats[profId]){
+      profStats[profId].atendimentos++;
+      profStats[profId].receita += v.total||0;
+      (v.itens||[]).forEach(i=>{
+        const nome = i.nome||'Outro';
+        profStats[profId].procedimentos[nome] = (profStats[profId].procedimentos[nome]||0) + (i.qtd||1);
+      });
+    }
+  });
+  agendamentos.filter(a=>(a.data||'').startsWith(mesAtual)&&a.status==='compareceu').forEach(a=>{
+    const profId = a.profissional_id;
+    if(profId && profStats[profId]) profStats[profId].atendimentos++;
+  });
+  const lista = Object.values(profStats).filter(p=>p.atendimentos>0||p.receita>0).sort((a,b)=>b.receita-a.receita);
+  const mesNome = new Date().toLocaleDateString('pt-BR',{month:'long',year:'numeric'});
+  let html = `<div style="padding:20px;"><h3 style="color:var(--rose-dark);margin-bottom:16px;"><i class="ti ti-chart-bar"></i> Produtividade — ${mesNome}</h3>`;
+  if(!lista.length){ html+='<p style="color:var(--rose-text);font-size:13px;">Nenhum dado de produtividade neste mês.</p>'; }
+  else {
+    lista.forEach(p=>{
+      const topProcs = Object.entries(p.procedimentos).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([n,q])=>`${escapeHtml(n)} (${q}x)`).join(', ');
+      html+=`<div style="background:var(--rose-lighter);border:1px solid var(--rose-light);border-radius:12px;padding:14px;margin-bottom:10px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+          <span style="font-weight:700;color:var(--rose-dark);">${escapeHtml(p.nome)}</span>
+          <span style="font-weight:800;color:var(--rose);">${fmtBRL(p.receita)}</span>
+        </div>
+        <div style="font-size:12px;color:var(--rose-text);">${p.atendimentos} atendimento(s) ${topProcs?'· '+topProcs:''}</div>
+      </div>`;
+    });
+  }
+  html+='</div>';
+  const modal = document.createElement('div');
+  modal.className='cal-modal-bg show';
+  modal.onclick=e=>{if(e.target===modal)modal.remove();};
+  modal.innerHTML=`<div class="cal-modal" onclick="event.stopPropagation()" style="max-width:500px;max-height:80vh;overflow:auto;">${html}<div style="padding:0 20px 20px;text-align:right;"><button class="btn-secondary" onclick="this.closest('.cal-modal-bg').remove()">Fechar</button></div></div>`;
+  document.body.appendChild(modal);
+}
+
+// ── LOG DE ATIVIDADES ──
+function logAtividade(acao, detalhe){
+  const logs = JSON.parse(localStorage.getItem('rwdent-log')||'[]');
+  logs.unshift({ data: new Date().toISOString(), acao, detalhe: (detalhe||'').slice(0,200) });
+  localStorage.setItem('rwdent-log', JSON.stringify(logs.slice(0,500)));
+}
+function verLogAtividades(){
+  const logs = JSON.parse(localStorage.getItem('rwdent-log')||'[]');
+  let html = `<div style="padding:20px;"><h3 style="color:var(--rose-dark);margin-bottom:16px;"><i class="ti ti-history"></i> Log de atividades</h3>`;
+  if(!logs.length){ html+='<p style="color:var(--rose-text);font-size:13px;">Nenhuma atividade registrada.</p>'; }
+  else {
+    html+='<div style="max-height:400px;overflow-y:auto;">';
+    logs.slice(0,100).forEach(l=>{
+      const dt = new Date(l.data);
+      const fmt = dt.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})+' '+dt.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+      html+=`<div style="display:flex;gap:10px;padding:8px 0;border-bottom:1px solid var(--rose-light);font-size:12px;">
+        <span style="color:var(--rose-text);min-width:85px;">${fmt}</span>
+        <span style="font-weight:600;color:var(--rose-dark);">${escapeHtml(l.acao)}</span>
+        <span style="color:var(--rose-text);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(l.detalhe||'')}</span>
+      </div>`;
+    });
+    html+='</div>';
+  }
+  html+='</div>';
+  const modal = document.createElement('div');
+  modal.className='cal-modal-bg show';
+  modal.onclick=e=>{if(e.target===modal)modal.remove();};
+  modal.innerHTML=`<div class="cal-modal" onclick="event.stopPropagation()" style="max-width:550px;max-height:80vh;overflow:auto;">${html}<div style="padding:0 20px 20px;text-align:right;"><button class="btn-secondary" onclick="this.closest('.cal-modal-bg').remove()">Fechar</button></div></div>`;
+  document.body.appendChild(modal);
+}
+
+// ── WHATSAPP CONFIRMAÇÃO ──
+function salvarConfigWhatsApp(){
+  const antecedencia = parseInt(document.getElementById('wpp-antecedencia')?.value)||24;
+  const template = document.getElementById('wpp-template')?.value||'';
+  localStorage.setItem('rwdent-wpp', JSON.stringify({antecedencia, template}));
+  logAtividade('Config WhatsApp salva', `Antecedência: ${antecedencia}h`);
+  showToast('Configuração WhatsApp salva!');
+}
+function carregarConfigWhatsApp(){
+  const saved = JSON.parse(localStorage.getItem('rwdent-wpp')||'{}');
+  const el1 = document.getElementById('wpp-antecedencia');
+  const el2 = document.getElementById('wpp-template');
+  if(saved.antecedencia && el1) el1.value = saved.antecedencia;
+  if(saved.template && el2) el2.value = saved.template;
+}
+function wppEnviarManual(){
+  const cfg = JSON.parse(localStorage.getItem('rwdent-wpp')||'{}');
+  const template = cfg.template || document.getElementById('wpp-template')?.value || 'Olá {nome}, sua consulta está marcada para {data} às {horario}. Confirma?';
+  const antecedencia = (cfg.antecedencia||24)*3600000;
+  const agora = Date.now();
+  const proximos = agendamentos.filter(a=>{
+    if(!a.data||!a.horario) return false;
+    const dt = new Date(a.data+'T'+a.horario).getTime();
+    return dt > agora && dt < agora + antecedencia;
+  });
+  if(!proximos.length){ showToast('Nenhuma consulta nas próximas '+((antecedencia/3600000))+'h.','warn'); return; }
+  let enviados = 0;
+  proximos.forEach(a=>{
+    const pac = pacientes.find(p=>p.id===a.paciente_id);
+    const tel = (a.telefone||pac?.telefone||'').replace(/\D/g,'');
+    if(!tel){ return; }
+    const dataFmt = new Date(a.data).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric'});
+    const msg = template
+      .replace(/{nome}/g, a.nome||pac?.nome||'')
+      .replace(/{data}/g, dataFmt)
+      .replace(/{horario}/g, a.horario||'')
+      .replace(/{profissional}/g, a.prof_nome||'')
+      .replace(/{procedimento}/g, a.procedimento||'');
+    window.open('https://wa.me/55'+tel+'?text='+encodeURIComponent(msg),'_blank');
+    enviados++;
+  });
+  logAtividade('WhatsApp manual', `${enviados} mensagem(ns) aberta(s)`);
+  showToast(`${enviados} mensagem(ns) aberta(s) no WhatsApp Web.`);
+}
+
 async function calSaveNewAppt(){
   const patientId=document.getElementById('cn-patient').value;
   const paciente=pacientes.find(p=>p.id==patientId);
@@ -11017,6 +11503,7 @@ async function calSaveNewAppt(){
   agendamentos.sort((a,b)=>(a.data+a.horario).localeCompare(b.data+b.horario));
   document.getElementById('cal-new-bg').classList.remove('show');
   renderCalendario(); renderLista(); renderHomeStats();
+  logAtividade('Agendamento criado (calendário)', `${paciente.nome} — ${data} ${horario}`);
   showToast('Agendamento salvo!');
   // Botão Google Agenda
   mostrarBotaoGoogleAgenda(novo.nome, novo.data, novo.horario, novo.procedimento, novo.prof_nome, novo.obs);

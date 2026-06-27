@@ -3,6 +3,14 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no"/>
+<meta name="description" content="RWDent — Sistema de gestão odontológica completo. Agenda, prontuário, financeiro, odontograma e muito mais para sua clínica." />
+<meta name="referrer" content="strict-origin-when-cross-origin" />
+<meta http-equiv="X-Content-Type-Options" content="nosniff" />
+<meta property="og:title" content="RWDent — Gestão Odontológica Inteligente" />
+<meta property="og:description" content="Sistema completo para clínicas odontológicas: agenda, prontuário digital, financeiro, odontograma e controle de estoque." />
+<meta property="og:type" content="website" />
+<meta property="og:image" content="/favicon.svg" />
+<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 <title>RWDent — Gestão Odontológica</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css"/>
 <script>
@@ -105,6 +113,9 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#
       <button class="btn-primary" id="btn-login" onclick="doLogin()">
         <i class="ti ti-login"></i><span id="btn-login-text">Entrar</span>
       </button>
+      <div style="text-align:center;margin-top:12px;">
+        <button onclick="esqueciSenha()" style="background:none;border:none;color:var(--rose-text);font-size:12px;cursor:pointer;text-decoration:underline;font-family:inherit;">Esqueci minha senha</button>
+      </div>
       <div class="alert error" id="login-err"></div>
     </div>
 
@@ -363,6 +374,22 @@ async function doCadastro() {
 async function doLogout() {
   await _sb.auth.signOut();
   showPanel('login');
+}
+
+async function esqueciSenha(){
+  const email = document.getElementById('login-email').value.trim();
+  const errEl = document.getElementById('login-err');
+  if(!email){ errEl.textContent='Digite seu e-mail primeiro.'; errEl.className='alert error show'; return; }
+  errEl.className='alert'; errEl.textContent='';
+  try {
+    const { error } = await _sb.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin + '/app.html' });
+    if(error){ errEl.textContent=error.message; errEl.className='alert error show'; return; }
+    errEl.textContent='E-mail de recuperacao enviado! Verifique sua caixa de entrada.';
+    errEl.className='alert success show';
+  } catch(e) {
+    errEl.textContent='Erro: '+e.message;
+    errEl.className='alert error show';
+  }
 }
 
 document.addEventListener('keydown', e => {

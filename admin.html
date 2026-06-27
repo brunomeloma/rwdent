@@ -3,6 +3,9 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<meta name="referrer" content="strict-origin-when-cross-origin" />
+<meta http-equiv="X-Content-Type-Options" content="nosniff" />
+<meta name="robots" content="noindex, nofollow" />
 <title>Admin — RWDent</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css"/>
 
@@ -10,7 +13,7 @@
      SUPABASE CONFIG  ←  coloque suas credenciais aqui
      ══════════════════════════════════════════════════════ -->
 <script>
-  const SUPABASE_URL      = 'https://xdncwmxjdqiwykbcaddd._sb.co';
+  const SUPABASE_URL      = 'https://xdncwmxjdqiwykbcaddd.supabase.co';
   const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhkbmN3bXhqZHFpd3lrYmNhZGRkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEyMjMwNDMsImV4cCI6MjA5Njc5OTA0M30.9qBm7G2xg-DifQu5NPrcNIw6YG0dbVkZ725I4WhG6yM';
   // E-mails autorizados como admin (pode ser apenas o seu)
   const ADMIN_EMAILS = ['admin@rwdent.com'];
@@ -280,7 +283,7 @@ async function excluir(id){
   showToast('Cadastro excluído.');
 }
 
-function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
 
 function showToast(msg, type='success'){
   const t=document.getElementById('toast');

@@ -1,0 +1,16 @@
+{
+  "name": "RWDent - Gestao Odontologica",
+  "short_name": "RWDent",
+  "description": "Sistema de gestao odontologica completo",
+  "start_url": "/app.html",
+  "display": "standalone",
+  "background_color": "#fdf6f3",
+  "theme_color": "#d4735a",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}

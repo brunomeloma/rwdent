@@ -36,6 +36,14 @@ CREATE POLICY "clinicas_own" ON clinicas FOR ALL
   USING (user_id = auth.uid())
   WITH CHECK (user_id = auth.uid());
 
+-- Admin: pode ver e atualizar TODAS as clinicas (para aprovar/rejeitar)
+-- IMPORTANTE: substitua 'SEU_EMAIL_ADMIN@email.com' pelo seu e-mail real
+-- Para descobrir seu user_id, rode: SELECT id FROM auth.users WHERE email = 'seu@email.com';
+-- CREATE POLICY "clinicas_admin" ON clinicas FOR ALL
+--   TO authenticated
+--   USING (auth.uid() = 'SEU_USER_ID_AQUI')
+--   WITH CHECK (auth.uid() = 'SEU_USER_ID_AQUI');
+
 -- Pacientes
 ALTER TABLE pacientes ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "pacientes_own" ON pacientes FOR ALL
