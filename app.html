@@ -2655,7 +2655,7 @@ async function doLogout(){
     if(_financeiroCarregado) { const _e=await saveFinanceiro(); if(!_e) showToast('Dados salvos!'); }
   } catch(e){ console.error('Erro ao salvar:', e); }
   await _sb.auth.signOut();
-  sessionStorage.removeItem('rwdent-demo');
+  localStorage.removeItem('rwdent-demo');
   document.body.classList.remove('demo-mode');
   document.getElementById('demo-banner').classList.remove('active');
   currentUser=null; agendamentos=[]; profissionais=[]; pacientes=[];
@@ -2695,9 +2695,27 @@ function _sessionStartTimer(){
         document.getElementById('login-screen').style.display='none';
         document.getElementById('app').style.display='block';
         _sessionStartTimer();
-        if(sessionStorage.getItem('rwdent-demo')==='1'){
+        const demoStart = localStorage.getItem('rwdent-demo');
+        if(demoStart){
+          const elapsed = Date.now() - parseInt(demoStart);
+          const DEMO_24H = 24*60*60*1000;
+          if(elapsed > DEMO_24H){
+            localStorage.removeItem('rwdent-demo');
+            await _sb.auth.signOut();
+            currentUser=null;
+            document.getElementById('app').style.display='none';
+            document.getElementById('login-screen').style.display='flex';
+            const errEl=document.getElementById('login-err');
+            if(errEl){errEl.textContent='Seu período de demonstração de 24h expirou. Assine o plano para continuar.';errEl.className='login-err show';}
+            return;
+          }
           document.body.classList.add('demo-mode');
-          document.getElementById('demo-banner').classList.add('active');
+          const banner=document.getElementById('demo-banner');
+          const restante=DEMO_24H-elapsed;
+          const horas=Math.floor(restante/3600000);
+          const mins=Math.floor((restante%3600000)/60000);
+          banner.innerHTML='<i class="ti ti-info-circle"></i> Demonstração — expira em '+horas+'h'+String(mins).padStart(2,'0')+'min — <a href="/landing">Assinar plano completo</a>';
+          banner.classList.add('active');
         }
         return;
       }
