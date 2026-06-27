@@ -6723,7 +6723,29 @@ function calcProcPreview(forcarAutoPreco){
     pp.value = preco.toFixed(2);
   }
 }
-function mpMarcarPrecoManual(){ mpPrecoEditadoManualmente = true; }
+function mpMarcarPrecoManual(){
+  mpPrecoEditadoManualmente = true;
+  const precoInput = parseFloat(document.getElementById('mp-preco')?.value)||0;
+  if(precoInput <= 0) return;
+  const tempo  = Number(document.getElementById('mp-tempo')?.value)||0;
+  const insumos= Number(document.getElementById('mp-insumos')?.value)||0;
+  const lab    = Number(document.getElementById('mp-laboratorio')?.value)||0;
+  const hora   = calcHora();
+  const hc     = parseFloat(((tempo/60)*hora).toFixed(2));
+  const custo  = parseFloat((insumos+hc+lab).toFixed(2));
+  if(custo <= 0) return;
+  const desperd = Number(cfg.desperd||0);
+  const custoComDesp = custo * (1 + desperd/100);
+  const novaMargemPct = ((precoInput / custoComDesp) - 1) * 100;
+  const margemEl = document.getElementById('mp-margem');
+  if(margemEl) margemEl.value = Math.max(0, novaMargemPct).toFixed(1);
+  const lucro = precoInput - custo;
+  const set = (id,v) => { const el=document.getElementById(id); if(el) el.textContent=v; };
+  set('mp-horaClin-calc', fmtBRL(hc));
+  set('mp-custo-calc',    fmtBRL(custo));
+  set('mp-lucro-calc',    fmtBRL(Math.max(0,lucro)));
+  set('mp-preco-calc',    fmtBRL(precoInput));
+}
 function mpUsarPrecoCalculado(){
   mpPrecoEditadoManualmente = false;
   calcProcPreview(true);
@@ -6748,7 +6770,7 @@ async function saveProc(){
       _precoManual = true;
     }
   }
-  const _margemManual = Math.abs(margem - (cfg.margem||100)) > 0.01;
+  const _margemManual = _precoManual || Math.abs(margem - (cfg.margem||100)) > 0.01;
   const obj    = { nome, grupo:document.getElementById('mp-grupo')?.value||'Geral', tempo, insumos, laboratorio:lab, margem, horaClin:hc, precoFinal:preco, _precoManual, _margemManual };
   if(editProcId){
     const i = procs.findIndex(x=>x.id===editProcId);
@@ -11922,7 +11944,7 @@ document.addEventListener('keydown', e=>{
         <input type="number" id="mp-preco" step="0.01" style="flex:1;" oninput="mpMarcarPrecoManual()"/>
         <button type="button" class="btn-secondary" style="white-space:nowrap;" onclick="mpUsarPrecoCalculado()" title="Recalcular o preço final usando a margem de lucro definida acima"><i class="ti ti-refresh"></i> Usar calculado</button>
       </div>
-      <small style="color:var(--rose-text);font-size:11px;display:block;margin-top:4px;">Se você mudar a margem e quiser que o preço final reflita a nova margem, clique em "Usar calculado".</small>
+      <small style="color:var(--rose-text);font-size:11px;display:block;margin-top:4px;">Ao digitar o preço, a margem é recalculada automaticamente. Clique em "Usar calculado" para voltar ao preço pela margem padrão.</small>
     </div>
     <div class="modal-footer">
       <button class="btn-secondary" onclick="closeModal('modal-proc')">Cancelar</button>
