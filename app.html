@@ -2629,6 +2629,11 @@ async function checkClinicaApproval(){
   // Atualiza nome da clínica na interface
   const el = document.getElementById('header-clinica');
   if(el) el.textContent = cli.nome_cli || 'Minha Clínica';
+  // Invisalign só aparece para a clínica principal
+  const _isMainClinic = cli.user_id === 'b39d8b67-0610-4708-9733-104db7f0307b';
+  document.querySelectorAll('[data-tab="invisalign_apresentacao"], [onclick*="invisalign"]').forEach(b=>{
+    b.style.display = _isMainClinic ? '' : 'none';
+  });
   return true;
 }
 
