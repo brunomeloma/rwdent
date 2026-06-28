@@ -24,161 +24,284 @@
   --rose:#d4735a;--rose-light:#f0cfc4;--rose-lighter:#fdf0eb;
   --rose-mid:#e0a090;--rose-dark:#7a3020;--rose-text:#a05040;
 }
-body{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(135deg,#fdf6f3 0%,#f5ddd5 100%);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;}
-.container{width:100%;max-width:460px;}
-.hero{text-align:center;margin-bottom:28px;}
-.hero-icon{width:72px;height:72px;display:inline-flex;align-items:center;justify-content:center;margin-bottom:14px;}
-.hero-icon i{font-size:36px;color:#fff;}
-.hero h1{font-size:22px;font-weight:800;color:var(--rose-dark);}
-.hero p{font-size:13px;color:var(--rose-text);margin-top:5px;}
-.card{background:#fff;border-radius:24px;padding:36px 32px;box-shadow:0 20px 60px rgba(212,115,90,.16);}
+html,body{height:100%;overflow:hidden;}
+body{font-family:'Segoe UI',Arial,sans-serif;background:#fdf0eb;display:flex;min-height:100vh;}
+
+/* ── LAYOUT SPLIT ── */
+.login-page{display:flex;width:100%;min-height:100vh;}
+
+.login-brand{
+  flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  background:linear-gradient(160deg,#fdf6f3 0%,#f5ddd5 40%,#e8bfaf 100%);
+  padding:48px 36px;position:relative;overflow:hidden;
+}
+.login-brand::before{
+  content:'';position:absolute;top:-80px;right:-80px;width:320px;height:320px;
+  background:radial-gradient(circle,rgba(212,115,90,.12) 0%,transparent 70%);border-radius:50%;
+}
+.login-brand::after{
+  content:'';position:absolute;bottom:-60px;left:-60px;width:260px;height:260px;
+  background:radial-gradient(circle,rgba(122,48,32,.08) 0%,transparent 70%);border-radius:50%;
+}
+
+.brand-logo{position:relative;z-index:1;margin-bottom:16px;}
+.brand-logo svg{filter:drop-shadow(0 8px 24px rgba(122,48,32,.18));}
+.brand-title{font-size:2.2rem;font-weight:900;color:var(--rose-dark);letter-spacing:-1px;position:relative;z-index:1;}
+.brand-title span{color:#4f9cf9;}
+.brand-subtitle{font-size:.95rem;color:var(--rose-text);margin-top:6px;position:relative;z-index:1;opacity:.85;}
+
+.brand-features{
+  display:flex;flex-direction:column;gap:14px;margin-top:40px;position:relative;z-index:1;width:100%;max-width:320px;
+}
+.brand-feat{
+  display:flex;align-items:center;gap:14px;background:rgba(255,255,255,.55);
+  backdrop-filter:blur(10px);border-radius:14px;padding:14px 18px;
+  border:1px solid rgba(212,115,90,.12);transition:transform .2s;
+}
+.brand-feat:hover{transform:translateX(4px);}
+.brand-feat-icon{
+  width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;
+  background:linear-gradient(135deg,var(--rose),var(--rose-dark));color:#fff;font-size:18px;
+}
+.brand-feat-text{font-size:13px;font-weight:600;color:var(--rose-dark);}
+
+/* ── PAINEL DIREITO (LOGIN) ── */
+.login-panel{
+  width:480px;min-width:380px;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  background:#fff;padding:48px 40px;position:relative;
+  box-shadow:-20px 0 60px rgba(122,48,32,.06);
+}
+
+.login-header{text-align:center;margin-bottom:32px;}
+.login-header h2{font-size:1.5rem;font-weight:800;color:var(--rose-dark);}
+.login-header p{font-size:13px;color:var(--rose-text);margin-top:6px;}
+
+.login-form{width:100%;max-width:360px;}
+
 .tabs{display:flex;background:var(--rose-lighter);border-radius:14px;padding:4px;gap:4px;margin-bottom:28px;}
-.tab-btn{flex:1;border:none;background:none;padding:10px;border-radius:11px;font-size:13px;font-weight:700;color:var(--rose-text);cursor:pointer;transition:all .2s;}
+.tab-btn{flex:1;border:none;background:none;padding:11px;border-radius:11px;font-size:13px;font-weight:700;color:var(--rose-text);cursor:pointer;transition:all .2s;font-family:inherit;}
 .tab-btn.active{background:#fff;color:var(--rose-dark);box-shadow:0 2px 8px rgba(212,115,90,.18);}
-.form-group{margin-bottom:16px;}
-.form-group label{display:block;font-size:11px;font-weight:700;color:var(--rose-text);text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px;}
-.form-group input{width:100%;border:1.5px solid var(--rose-light);border-radius:12px;padding:13px 15px;font-size:14px;color:#3a2020;background:var(--rose-lighter);outline:none;transition:border .2s,box-shadow .2s;font-family:inherit;}
+
+.form-group{margin-bottom:18px;}
+.form-group label{display:block;font-size:11px;font-weight:700;color:var(--rose-text);text-transform:uppercase;letter-spacing:.5px;margin-bottom:7px;}
+.form-group input{width:100%;border:1.5px solid var(--rose-light);border-radius:12px;padding:13px 16px;font-size:14px;color:#3a2020;background:var(--rose-lighter);outline:none;transition:border .2s,box-shadow .2s,background .2s;font-family:inherit;}
 .form-group input:focus{border-color:var(--rose);background:#fff;box-shadow:0 0 0 3px rgba(212,115,90,.14);}
+.form-group input::placeholder{color:#c0a098;}
 .form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
-.btn-primary{width:100%;background:var(--rose);color:#fff;border:none;border-radius:12px;padding:14px;font-size:15px;font-weight:700;cursor:pointer;transition:background .2s,transform .15s;margin-top:4px;display:flex;align-items:center;justify-content:center;gap:8px;font-family:inherit;}
-.btn-primary:hover{background:var(--rose-dark);}
+
+.btn-primary{
+  width:100%;background:linear-gradient(135deg,var(--rose),var(--rose-dark));color:#fff;border:none;
+  border-radius:12px;padding:14px;font-size:15px;font-weight:700;cursor:pointer;
+  transition:opacity .2s,transform .15s;margin-top:6px;
+  display:flex;align-items:center;justify-content:center;gap:8px;font-family:inherit;
+  box-shadow:0 4px 16px rgba(212,115,90,.3);
+}
+.btn-primary:hover{opacity:.92;}
 .btn-primary:active{transform:scale(.98);}
-.btn-primary:disabled{background:var(--rose-mid);cursor:not-allowed;}
-.alert{border-radius:10px;padding:10px 14px;font-size:13px;margin-top:14px;display:none;}
+.btn-primary:disabled{opacity:.6;cursor:not-allowed;}
+
+.link-btn{background:none;border:none;color:var(--rose-text);font-size:12px;cursor:pointer;text-decoration:underline;font-family:inherit;transition:color .2s;}
+.link-btn:hover{color:var(--rose-dark);}
+
+.alert{border-radius:10px;padding:10px 14px;font-size:13px;margin-top:14px;display:none;line-height:1.5;}
 .alert.show{display:block;}
 .alert.error{background:#ffebee;color:#b33;border:1px solid #ffaaaa;}
 .alert.success{background:#edf7ee;color:#2e6b32;border:1px solid #a5d6a7;}
 .alert.warn{background:#fff8e1;color:#b36000;border:1px solid #ffcc80;}
+
 .pending-box{text-align:center;padding:20px 0;}
 .pending-icon{font-size:52px;color:var(--rose);margin-bottom:14px;}
 .pending-box h2{font-size:18px;font-weight:800;color:var(--rose-dark);margin-bottom:8px;}
 .pending-box p{font-size:13px;color:var(--rose-text);line-height:1.6;}
-.btn-secondary{background:var(--rose-lighter);color:var(--rose-dark);border:1px solid var(--rose-light);border-radius:12px;padding:11px 18px;font-size:13px;font-weight:700;cursor:pointer;margin-top:18px;width:100%;font-family:inherit;}
-/* spinner de carregamento inicial */
-.init-loading{text-align:center;padding:20px 0;color:var(--rose-text);font-size:13px;}
-.spinner{width:32px;height:32px;border:3px solid var(--rose-light);border-top-color:var(--rose);border-radius:50%;animation:spin .7s linear infinite;margin:0 auto 10px;}
+.btn-secondary{background:var(--rose-lighter);color:var(--rose-dark);border:1px solid var(--rose-light);border-radius:12px;padding:11px 18px;font-size:13px;font-weight:700;cursor:pointer;margin-top:18px;width:100%;font-family:inherit;transition:background .2s;}
+.btn-secondary:hover{background:var(--rose-light);}
+
+.init-loading{text-align:center;padding:40px 0;color:var(--rose-text);font-size:13px;}
+.spinner{width:36px;height:36px;border:3px solid var(--rose-light);border-top-color:var(--rose);border-radius:50%;animation:spin .7s linear infinite;margin:0 auto 12px;}
 @keyframes spin{to{transform:rotate(360deg);}}
+
+.login-footer{
+  position:absolute;bottom:24px;left:0;right:0;text-align:center;
+  font-size:11px;color:var(--rose-mid);
+}
+.login-footer a{color:var(--rose);text-decoration:none;font-weight:600;}
+
+/* ── MOBILE ── */
+@media(max-width:860px){
+  .login-page{flex-direction:column;}
+  .login-brand{
+    flex:none;padding:32px 24px 28px;min-height:auto;
+  }
+  .brand-features{display:none;}
+  .login-panel{
+    width:100%;min-width:0;flex:1;padding:32px 24px;
+    box-shadow:0 -10px 40px rgba(122,48,32,.08);border-radius:28px 28px 0 0;
+    margin-top:-20px;z-index:1;
+  }
+  .login-header{margin-bottom:24px;}
+  .login-footer{position:static;margin-top:24px;}
+}
+@media(max-width:420px){
+  .form-row{grid-template-columns:1fr;}
+  .login-panel{padding:28px 20px;}
+}
 </style>
 </head>
 <body>
-<div class="container">
-  <div class="hero">
-    <div class="hero-icon" style="background:none;box-shadow:none;"><svg width="64" height="64" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
-  <defs>
-    <linearGradient id="rwbg" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#1a1a2e"/>
-      <stop offset="100%" stop-color="#16213e"/>
-    </linearGradient>
-    <linearGradient id="rwtooth" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#ffffff"/>
-      <stop offset="100%" stop-color="#d4e8ff"/>
-    </linearGradient>
-  </defs>
-  <rect width="200" height="200" rx="28" fill="url(#rwbg)"/>
-  <rect width="200" height="5" rx="4" fill="#4f9cf9"/>
-  <path d="M100 48 C82 48 70 58 70 73 C70 84 74 90 74 100 C74 116 80 133 88 133 C93 133 96 126 100 118 C104 126 107 133 112 133 C120 133 126 116 126 100 C126 90 130 84 130 73 C130 58 118 48 100 48 Z" fill="url(#rwtooth)"/>
-  <path d="M85 128 C82 140 78 150 76 160" fill="none" stroke="#ffffff" stroke-width="3.5" stroke-linecap="round" opacity="0.7"/>
-  <path d="M94 132 C92 144 91 154 90 164" fill="none" stroke="#ffffff" stroke-width="3.5" stroke-linecap="round" opacity="0.7"/>
-  <path d="M115 128 C118 140 122 150 124 160" fill="none" stroke="#ffffff" stroke-width="3.5" stroke-linecap="round" opacity="0.7"/>
-  <path d="M106 132 C108 144 109 154 110 164" fill="none" stroke="#ffffff" stroke-width="3.5" stroke-linecap="round" opacity="0.7"/>
-  <circle cx="90" cy="68" r="4" fill="#4f9cf9" opacity="0.8"/>
-</svg></div>
-    <h1>RW<span style="color:#4f9cf9;">Dent</span></h1>
-    <p>Gestão Odontológica Inteligente</p>
+<div class="login-page">
+  <!-- LADO ESQUERDO — BRANDING -->
+  <div class="login-brand">
+    <div class="brand-logo">
+      <svg width="80" height="80" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="rwbg" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stop-color="#1a1a2e"/>
+            <stop offset="100%" stop-color="#16213e"/>
+          </linearGradient>
+          <linearGradient id="rwtooth" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#ffffff"/>
+            <stop offset="100%" stop-color="#d4e8ff"/>
+          </linearGradient>
+        </defs>
+        <rect width="200" height="200" rx="28" fill="url(#rwbg)"/>
+        <rect width="200" height="5" rx="4" fill="#4f9cf9"/>
+        <path d="M100 48 C82 48 70 58 70 73 C70 84 74 90 74 100 C74 116 80 133 88 133 C93 133 96 126 100 118 C104 126 107 133 112 133 C120 133 126 116 126 100 C126 90 130 84 130 73 C130 58 118 48 100 48 Z" fill="url(#rwtooth)"/>
+        <path d="M85 128 C82 140 78 150 76 160" fill="none" stroke="#ffffff" stroke-width="3.5" stroke-linecap="round" opacity="0.7"/>
+        <path d="M94 132 C92 144 91 154 90 164" fill="none" stroke="#ffffff" stroke-width="3.5" stroke-linecap="round" opacity="0.7"/>
+        <path d="M115 128 C118 140 122 150 124 160" fill="none" stroke="#ffffff" stroke-width="3.5" stroke-linecap="round" opacity="0.7"/>
+        <path d="M106 132 C108 144 109 154 110 164" fill="none" stroke="#ffffff" stroke-width="3.5" stroke-linecap="round" opacity="0.7"/>
+        <circle cx="90" cy="68" r="4" fill="#4f9cf9" opacity="0.8"/>
+      </svg>
+    </div>
+    <div class="brand-title">RW<span>Dent</span></div>
+    <div class="brand-subtitle">Gestão Odontológica Inteligente</div>
+
+    <div class="brand-features">
+      <div class="brand-feat">
+        <div class="brand-feat-icon"><i class="ti ti-calendar-event"></i></div>
+        <div class="brand-feat-text">Agenda e agendamentos inteligentes</div>
+      </div>
+      <div class="brand-feat">
+        <div class="brand-feat-icon"><i class="ti ti-stethoscope"></i></div>
+        <div class="brand-feat-text">Prontuário e plano de tratamento</div>
+      </div>
+      <div class="brand-feat">
+        <div class="brand-feat-icon"><i class="ti ti-chart-bar"></i></div>
+        <div class="brand-feat-text">Controle financeiro completo</div>
+      </div>
+      <div class="brand-feat">
+        <div class="brand-feat-icon"><i class="ti ti-package"></i></div>
+        <div class="brand-feat-text">Estoque e materiais odontológicos</div>
+      </div>
+    </div>
   </div>
 
-  <div class="card" id="main-card">
-    <!-- Spinner enquanto verifica sessão -->
-    <div id="panel-loading" class="init-loading">
-      <div class="spinner"></div>
-      Carregando...
-    </div>
-
-    <!-- TABS (escondidas até terminar o loading) -->
-    <div class="tabs" id="tabs" style="display:none;">
-      <button class="tab-btn active" onclick="switchMode('login')">Entrar</button>
-      <button class="tab-btn" onclick="switchMode('cadastro')">Criar conta</button>
-    </div>
-
-    <!-- LOGIN -->
-    <div id="panel-login" style="display:none;">
-      <div class="form-group">
-        <label>E-mail</label>
-        <input type="email" id="login-email" placeholder="clinica@email.com" autocomplete="username"/>
+  <!-- LADO DIREITO — LOGIN -->
+  <div class="login-panel">
+    <div class="login-form">
+      <!-- Spinner enquanto verifica sessão -->
+      <div id="panel-loading" class="init-loading">
+        <div class="spinner"></div>
+        Carregando...
       </div>
-      <div class="form-group">
-        <label>Senha</label>
-        <input type="password" id="login-pass" placeholder="••••••••" autocomplete="current-password"/>
-      </div>
-      <button class="btn-primary" id="btn-login" onclick="doLogin()">
-        <i class="ti ti-login"></i><span id="btn-login-text">Entrar</span>
-      </button>
-      <div style="text-align:center;margin-top:12px;">
-        <button onclick="esqueciSenha()" style="background:none;border:none;color:var(--rose-text);font-size:12px;cursor:pointer;text-decoration:underline;font-family:inherit;">Esqueci minha senha</button>
-      </div>
-      <div class="alert error" id="login-err"></div>
-    </div>
 
-    <!-- CADASTRO -->
-    <div id="panel-cadastro" style="display:none;">
-      <div class="form-row">
-        <div class="form-group">
-          <label>Nome do responsável</label>
-          <input type="text" id="cad-nome" placeholder="Dr. João Silva"/>
+      <!-- TABS -->
+      <div class="tabs" id="tabs" style="display:none;">
+        <button class="tab-btn active" onclick="switchMode('login')">Entrar</button>
+        <button class="tab-btn" onclick="switchMode('cadastro')">Criar conta</button>
+      </div>
+
+      <!-- LOGIN -->
+      <div id="panel-login" style="display:none;">
+        <div class="login-header">
+          <h2>Bem-vindo de volta!</h2>
+          <p>Entre com suas credenciais para acessar a clínica</p>
         </div>
         <div class="form-group">
-          <label>Nome da clínica</label>
-          <input type="text" id="cad-clinica" placeholder="Clínica Sorriso"/>
+          <label>E-mail</label>
+          <input type="email" id="login-email" placeholder="clinica@email.com" autocomplete="username"/>
         </div>
-      </div>
-      <div class="form-group">
-        <label>E-mail profissional</label>
-        <input type="email" id="cad-email" placeholder="dr.joao@clinica.com"/>
-      </div>
-      <div class="form-row">
         <div class="form-group">
           <label>Senha</label>
-          <input type="password" id="cad-pass" placeholder="Mínimo 6 caracteres"/>
+          <input type="password" id="login-pass" placeholder="Sua senha" autocomplete="current-password"/>
+        </div>
+        <button class="btn-primary" id="btn-login" onclick="doLogin()">
+          <i class="ti ti-login"></i><span id="btn-login-text">Entrar</span>
+        </button>
+        <div style="text-align:center;margin-top:14px;">
+          <button class="link-btn" onclick="esqueciSenha()">Esqueci minha senha</button>
+        </div>
+        <div class="alert error" id="login-err"></div>
+      </div>
+
+      <!-- CADASTRO -->
+      <div id="panel-cadastro" style="display:none;">
+        <div class="login-header">
+          <h2>Crie sua conta</h2>
+          <p>Preencha seus dados para solicitar o acesso</p>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Nome do responsável</label>
+            <input type="text" id="cad-nome" placeholder="Dr. João Silva"/>
+          </div>
+          <div class="form-group">
+            <label>Nome da clínica</label>
+            <input type="text" id="cad-clinica" placeholder="Clínica Sorriso"/>
+          </div>
         </div>
         <div class="form-group">
-          <label>Confirmar senha</label>
-          <input type="password" id="cad-pass2" placeholder="Repita a senha"/>
+          <label>E-mail profissional</label>
+          <input type="email" id="cad-email" placeholder="dr.joao@clinica.com"/>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Senha</label>
+            <input type="password" id="cad-pass" placeholder="Mínimo 6 caracteres"/>
+          </div>
+          <div class="form-group">
+            <label>Confirmar senha</label>
+            <input type="password" id="cad-pass2" placeholder="Repita a senha"/>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Telefone / WhatsApp</label>
+          <input type="tel" id="cad-telefone" placeholder="(00) 00000-0000"/>
+        </div>
+        <button class="btn-primary" id="btn-cad" onclick="doCadastro()">
+          <i class="ti ti-send"></i><span id="btn-cad-text">Solicitar cadastro</span>
+        </button>
+        <div class="alert" id="cad-msg"></div>
+      </div>
+
+      <!-- AGUARDANDO APROVAÇÃO -->
+      <div id="panel-pending" style="display:none;">
+        <div class="pending-box">
+          <div class="pending-icon"><i class="ti ti-clock-hour-4"></i></div>
+          <h2>Cadastro em análise</h2>
+          <p>Seu pedido foi enviado com sucesso!<br>Em breve você receberá a confirmação de acesso.</p>
+          <button class="btn-secondary" onclick="doLogout()"><i class="ti ti-logout"></i> Sair</button>
         </div>
       </div>
-      <div class="form-group">
-        <label>Telefone / WhatsApp</label>
-        <input type="tel" id="cad-telefone" placeholder="(00) 00000-0000"/>
-      </div>
-      <button class="btn-primary" id="btn-cad" onclick="doCadastro()">
-        <i class="ti ti-send"></i><span id="btn-cad-text">Solicitar cadastro</span>
-      </button>
-      <div class="alert" id="cad-msg"></div>
-    </div>
 
-    <!-- AGUARDANDO APROVAÇÃO -->
-    <div id="panel-pending" style="display:none;">
-      <div class="pending-box">
-        <div class="pending-icon"><i class="ti ti-clock-hour-4"></i></div>
-        <h2>Cadastro em análise</h2>
-        <p>Seu pedido foi enviado com sucesso!<br>Em breve você receberá a confirmação de acesso.</p>
-        <button class="btn-secondary" onclick="doLogout()"><i class="ti ti-logout"></i> Sair</button>
+      <!-- ERRO DE CONFIGURAÇÃO -->
+      <div id="panel-error" style="display:none;">
+        <div class="pending-box">
+          <div class="pending-icon" style="color:#b33;"><i class="ti ti-alert-triangle"></i></div>
+          <h2 style="color:#b33;">Banco não configurado</h2>
+          <p id="error-detail" style="color:#b33;"></p>
+          <p style="margin-top:10px;">Execute o SQL do <strong>SETUP_SUPABASE.md</strong> no Supabase e recarregue a página.</p>
+        </div>
       </div>
     </div>
 
-    <!-- ERRO DE CONFIGURAÇÃO -->
-    <div id="panel-error" style="display:none;">
-      <div class="pending-box">
-        <div class="pending-icon" style="color:#b33;"><i class="ti ti-alert-triangle"></i></div>
-        <h2 style="color:#b33;">Banco não configurado</h2>
-        <p id="error-detail" style="color:#b33;"></p>
-        <p style="margin-top:10px;">Execute o SQL do <strong>SETUP_SUPABASE.md</strong> no Supabase e recarregue a página.</p>
-      </div>
+    <div class="login-footer">
+      <a href="/landing">Conheça o RWDent</a>
     </div>
   </div>
 </div>
 
 <script>
-// Inicializa Supabase com tratamento de erro
 let _sb;
 try {
   _sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
@@ -197,31 +320,25 @@ try {
 }
 
 function showPanel(name) {
-  // Esconde tudo
   ['loading','login','cadastro','pending','error'].forEach(p => {
     const el = document.getElementById('panel-' + p);
     if(el) el.style.display = 'none';
   });
   document.getElementById('tabs').style.display = 'none';
 
-  // Mostra o painel pedido + tabs quando necessário
   const target = document.getElementById('panel-' + name);
   if(target) target.style.display = '';
 
   if(name === 'login' || name === 'cadastro') {
     document.getElementById('tabs').style.display = '';
-    // Marca aba correta
     document.querySelectorAll('.tab-btn').forEach((b, i) => {
       b.classList.toggle('active', (i===0 && name==='login') || (i===1 && name==='cadastro'));
     });
   }
 }
 
-function switchMode(mode) {
-  showPanel(mode);
-}
+function switchMode(mode) { showPanel(mode); }
 
-// ── Verifica sessão ao carregar — NÃO bloqueia os botões ──
 (async () => {
   if(!_sb) return;
   try {
@@ -246,7 +363,6 @@ async function checkAndRedirect(user) {
       .single();
 
     if(error || !perfil) {
-      // Tabela não existe ainda ou sem perfil — mostra login normalmente
       showPanel('login');
       return;
     }
@@ -312,7 +428,7 @@ async function doCadastro() {
     msgEl.className = `alert ${type} show`;
   };
 
-  msgEl.className = 'alert'; // limpa
+  msgEl.className = 'alert';
 
   if(!nome || !clinica || !email || !pass) { show('Preencha todos os campos obrigatórios.'); return; }
   if(pass.length < 6)  { show('A senha deve ter no mínimo 6 caracteres.'); return; }
@@ -322,7 +438,6 @@ async function doCadastro() {
   document.getElementById('btn-cad-text').textContent = 'Enviando...';
 
   try {
-    // 1. Cria conta no Supabase Auth
     const { data: signUpData, error: signUpError } = await _sb.auth.signUp({ email, password: pass });
 
     if(signUpError) {
@@ -332,7 +447,6 @@ async function doCadastro() {
       return;
     }
 
-    // 2. Faz login imediato para ter sessão ativa (necessário para o RLS)
     const { data: loginData, error: loginError } = await _sb.auth.signInWithPassword({ email, password: pass });
 
     if(loginError || !loginData.user) {
@@ -341,7 +455,6 @@ async function doCadastro() {
       return;
     }
 
-    // 3. Agora com sessão ativa, salva perfil da clínica como pendente
     const { error: err2 } = await _sb.from('clinicas').insert([{
       user_id  : loginData.user.id,
       nome_resp: nome,
@@ -360,7 +473,6 @@ async function doCadastro() {
       return;
     }
 
-    // 4. Sucesso — mostra tela de aguardando
     showPanel('pending');
 
   } catch(e) {
@@ -384,7 +496,7 @@ async function esqueciSenha(){
   try {
     const { error } = await _sb.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin + '/app.html' });
     if(error){ errEl.textContent=error.message; errEl.className='alert error show'; return; }
-    errEl.textContent='E-mail de recuperacao enviado! Verifique sua caixa de entrada.';
+    errEl.textContent='E-mail de recuperação enviado! Verifique sua caixa de entrada.';
     errEl.className='alert success show';
   } catch(e) {
     errEl.textContent='Erro: '+e.message;
