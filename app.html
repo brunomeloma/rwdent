@@ -2696,28 +2696,26 @@ function _sessionStartTimer(){
       currentUser=session.user;
       const ok = await checkClinicaApproval();
       if(ok){
-        await loadAll();
-        document.getElementById('login-screen').style.display='none';
-        document.getElementById('app').style.display='block';
-        _sessionStartTimer();
-        const demoStart = localStorage.getItem('rwdent-demo');
-        if(demoStart){
-          const elapsed = Date.now() - parseInt(demoStart);
-          const DEMO_24H = 24*60*60*1000;
-          if(elapsed > DEMO_24H){
-            localStorage.removeItem('rwdent-demo');
+        // Verifica expiração da conta (trial 24h)
+        if(clinicaData.expira_em){
+          const expiraEm = new Date(clinicaData.expira_em);
+          if(Date.now() > expiraEm.getTime()){
             await _sb.auth.signOut();
             window.location.replace('index.html?msg=demo_expirado');
             return;
           }
           document.body.classList.add('demo-mode');
           const banner=document.getElementById('demo-banner');
-          const restante=DEMO_24H-elapsed;
+          const restante=expiraEm.getTime()-Date.now();
           const horas=Math.floor(restante/3600000);
           const mins=Math.floor((restante%3600000)/60000);
-          banner.innerHTML='<i class="ti ti-info-circle"></i> Demonstração — expira em '+horas+'h'+String(mins).padStart(2,'0')+'min — <a href="/landing">Assinar plano completo</a>';
+          banner.innerHTML='<i class="ti ti-info-circle"></i> Acesso expira em '+horas+'h'+String(mins).padStart(2,'0')+'min — <a href="/landing">Assinar plano completo</a>';
           banner.classList.add('active');
         }
+        await loadAll();
+        document.getElementById('login-screen').style.display='none';
+        document.getElementById('app').style.display='block';
+        _sessionStartTimer();
         return;
       }
     }

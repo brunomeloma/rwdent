@@ -349,7 +349,7 @@ async function checkAndRedirect(user) {
   try {
     const { data: perfil, error } = await _sb
       .from('clinicas')
-      .select('status')
+      .select('status, expira_em')
       .eq('user_id', user.id)
       .single();
 
@@ -359,6 +359,14 @@ async function checkAndRedirect(user) {
     }
 
     if(perfil.status === 'aprovado') {
+      if(perfil.expira_em && Date.now() > new Date(perfil.expira_em).getTime()){
+        await _sb.auth.signOut();
+        showPanel('login');
+        const errEl = document.getElementById('login-err');
+        errEl.textContent = 'Seu período de acesso expirou. Assine o plano completo para continuar.';
+        errEl.classList.add('show');
+        return;
+      }
       window.location.replace('app.html');
     } else {
       showPanel('pending');
@@ -518,38 +526,6 @@ document.addEventListener('keydown', e => {
   }
 })();
 
-// Demo auto-login
-(async()=>{
-  const params = new URLSearchParams(window.location.search);
-  if(params.get('demo') === 'true' && _sb){
-    const demoStart = localStorage.getItem('rwdent-demo');
-    if(demoStart && (Date.now() - parseInt(demoStart)) > 24*60*60*1000){
-      showPanel('login');
-      const errEl = document.getElementById('login-err');
-      errEl.textContent = 'Seu período de demonstração de 24h expirou. Assine o plano completo para continuar usando.';
-      errEl.classList.add('show');
-      return;
-    }
-    showPanel('loading');
-    try {
-      const { data, error } = await _sb.auth.signInWithPassword({
-        email: 'demo@rwdent.app',
-        password: 'demo2024rwdent'
-      });
-      if(!error && data.user){
-        if(!demoStart) localStorage.setItem('rwdent-demo', Date.now().toString());
-        await checkAndRedirect(data.user);
-      } else {
-        showPanel('login');
-        const errEl = document.getElementById('login-err');
-        errEl.textContent = 'Conta de demonstração não disponível no momento.';
-        errEl.classList.add('show');
-      }
-    } catch(e){
-      showPanel('login');
-    }
-  }
-})();
 </script>
 </body>
 </html>
