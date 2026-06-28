@@ -11,127 +11,47 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css" />
 <script>
   const SUPABASE_URL      = 'https://xdncwmxjdqiwykbcaddd.supabase.co';
-  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJIUzI1NiIsInJlZiI6InhkbmN3bXhqZHFpd3lrYmNhZGRkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEyMjMwNDMsImV4cCI6MjA5Njc5OTA0M30.9qBm7G2xg-DifQu5NPrcNIw6YG0dbVkZ725I4WhG6yM';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhkbmN3bXhqZHFpd3lrYmNhZGRkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEyMjMwNDMsImV4cCI6MjA5Njc5OTA0M30.9qBm7G2xg-DifQu5NPrcNIw6YG0dbVkZ725I4WhG6yM';
 </script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
-:root{--rose:#d4735a;--rose-light:#f0cfc4;--rose-lighter:#fdf0eb;--rose-dark:#7a3020;--rose-text:#a05040;--ok:#2e7d32;--warn:#b36000;--danger:#b33;}
+:root{--rose:#d4735a;--rose-light:#f0cfc4;--rose-lighter:#fdf0eb;--rose-dark:#7a3020;--rose-text:#a05040;--danger:#b33;}
 body{font-family:'Segoe UI',Arial,sans-serif;background:#fdf6f3;color:#3a2020;min-height:100vh;padding:24px;}
-.shell{max-width:860px;margin:0 auto;}
-.top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:20px;}
-.brand{display:flex;align-items:center;gap:10px;font-size:18px;font-weight:800;color:var(--rose-dark);}
-.brand i{font-size:24px;color:var(--rose);}
-a{color:var(--rose);font-weight:700;text-decoration:none;}
-.card{background:#fff;border:1px solid var(--rose-light);border-radius:16px;padding:20px;margin-bottom:16px;box-shadow:0 2px 18px rgba(122,48,32,.08);}
-h1{font-size:22px;color:var(--rose-dark);margin-bottom:6px;}
-h2{font-size:14px;color:var(--rose-dark);text-transform:uppercase;letter-spacing:.4px;margin-bottom:12px;display:flex;align-items:center;gap:8px;}
-p{font-size:14px;color:var(--rose-text);line-height:1.6;margin-bottom:10px;}
-.notice{background:#fff8e1;border:1px solid #ffcc80;color:#7a4a00;border-radius:12px;padding:12px 14px;font-size:13px;margin-top:12px;line-height:1.5;}
-.safe{background:#edf7ee;border-color:#a5d6a7;color:#235c28;}
-input[type=file]{width:100%;padding:14px;border:2px dashed var(--rose-light);border-radius:12px;background:var(--rose-lighter);cursor:pointer;}
-button{font-family:inherit;}
-.btn{border:none;border-radius:10px;padding:11px 16px;font-size:13px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:7px;transition:opacity .2s,transform .15s;}
-.btn:disabled{opacity:.55;cursor:not-allowed;}
-.btn:active{transform:scale(.98);}
-.btn-primary{background:var(--rose);color:#fff;}
-.btn-secondary{background:var(--rose-lighter);color:var(--rose-dark);border:1px solid var(--rose-light);}
-.btn-danger{background:#fff0f0;color:var(--danger);border:1px solid #ffaaaa;}
-.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:14px;}
-.summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-top:12px;}
-.stat{background:var(--rose-lighter);border:1px solid var(--rose-light);border-radius:12px;padding:12px;text-align:center;}
-.stat strong{display:block;font-size:22px;color:var(--rose-dark);line-height:1;}
-.stat span{font-size:11px;color:var(--rose-text);font-weight:700;text-transform:uppercase;letter-spacing:.4px;}
-.log{font-family:Consolas,'Courier New',monospace;background:#1e1612;color:#f4d5c8;border-radius:12px;padding:14px;min-height:180px;max-height:360px;overflow:auto;font-size:12px;line-height:1.5;white-space:pre-wrap;}
-.check{display:flex;gap:9px;align-items:flex-start;margin-top:12px;font-size:13px;color:var(--rose-text);}
-.check input{margin-top:3px;accent-color:var(--rose);}
-.hidden{display:none!important;}
-@media(max-width:640px){body{padding:14px}.top{align-items:flex-start;flex-direction:column}.row .btn{width:100%;justify-content:center}}
+.shell{max-width:860px;margin:0 auto;}.top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:20px;}
+.brand{display:flex;align-items:center;gap:10px;font-size:18px;font-weight:800;color:var(--rose-dark);}.brand i{font-size:24px;color:var(--rose);}a{color:var(--rose);font-weight:700;text-decoration:none;}
+.card{background:#fff;border:1px solid var(--rose-light);border-radius:16px;padding:20px;margin-bottom:16px;box-shadow:0 2px 18px rgba(122,48,32,.08);}h1{font-size:22px;color:var(--rose-dark);margin-bottom:6px;}h2{font-size:14px;color:var(--rose-dark);text-transform:uppercase;letter-spacing:.4px;margin-bottom:12px;display:flex;align-items:center;gap:8px;}p{font-size:14px;color:var(--rose-text);line-height:1.6;margin-bottom:10px;}
+.notice{background:#fff8e1;border:1px solid #ffcc80;color:#7a4a00;border-radius:12px;padding:12px 14px;font-size:13px;margin-top:12px;line-height:1.5;}.safe{background:#edf7ee;border-color:#a5d6a7;color:#235c28;}input[type=file]{width:100%;padding:14px;border:2px dashed var(--rose-light);border-radius:12px;background:var(--rose-lighter);cursor:pointer;}button{font-family:inherit;}.btn{border:none;border-radius:10px;padding:11px 16px;font-size:13px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:7px;transition:opacity .2s,transform .15s;}.btn:disabled{opacity:.55;cursor:not-allowed;}.btn:active{transform:scale(.98);}.btn-primary{background:var(--rose);color:#fff;}.btn-secondary{background:var(--rose-lighter);color:var(--rose-dark);border:1px solid var(--rose-light);}.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:14px;}.summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-top:12px;}.stat{background:var(--rose-lighter);border:1px solid var(--rose-light);border-radius:12px;padding:12px;text-align:center;}.stat strong{display:block;font-size:22px;color:var(--rose-dark);line-height:1;}.stat span{font-size:11px;color:var(--rose-text);font-weight:700;text-transform:uppercase;letter-spacing:.4px;}.log{font-family:Consolas,'Courier New',monospace;background:#1e1612;color:#f4d5c8;border-radius:12px;padding:14px;min-height:180px;max-height:360px;overflow:auto;font-size:12px;line-height:1.5;white-space:pre-wrap;}.check{display:flex;gap:9px;align-items:flex-start;margin-top:12px;font-size:13px;color:var(--rose-text);}.check input{margin-top:3px;accent-color:var(--rose);}.hidden{display:none!important;}@media(max-width:640px){body{padding:14px}.top{align-items:flex-start;flex-direction:column}.row .btn{width:100%;justify-content:center}}
 </style>
 </head>
 <body>
 <div class="shell">
-  <div class="top">
-    <div class="brand"><i class="ti ti-database-import"></i> RWDent — Restaurar Backup</div>
-    <a href="app.html"><i class="ti ti-arrow-left"></i> Voltar ao app</a>
-  </div>
-
-  <div class="card" id="auth-card">
-    <h1>Importar backup exportado</h1>
-    <p>Esta tela importa o arquivo JSON gerado em <strong>Configurações → Backup → Exportar todos os dados</strong>.</p>
-    <div class="notice safe"><strong>Modo seguro:</strong> por padrão ela mescla/atualiza dados pelo ID e não apaga registros existentes.</div>
-    <div class="notice"><strong>Antes de importar:</strong> mantenha o arquivo original guardado. A importação depende das permissões/RLS do Supabase do usuário logado.</div>
-  </div>
-
-  <div class="card">
-    <h2><i class="ti ti-file-upload"></i> 1. Escolha o arquivo</h2>
-    <input type="file" id="backup-file" accept="application/json,.json" />
-    <div id="summary" class="summary hidden"></div>
-  </div>
-
-  <div class="card">
-    <h2><i class="ti ti-shield-check"></i> 2. Confirme</h2>
-    <label class="check"><input type="checkbox" id="confirm-merge" /> <span>Entendo que esta importação vai mesclar/atualizar dados do backup na clínica logada, sem limpar dados existentes automaticamente.</span></label>
-    <label class="check"><input type="checkbox" id="confirm-backup" /> <span>Tenho uma cópia do arquivo de backup guardada.</span></label>
-    <div class="row">
-      <button class="btn btn-primary" id="btn-import" disabled><i class="ti ti-database-import"></i> Importar backup</button>
-      <button class="btn btn-secondary" id="btn-dry" disabled><i class="ti ti-list-search"></i> Verificar arquivo</button>
-    </div>
-  </div>
-
-  <div class="card">
-    <h2><i class="ti ti-terminal"></i> Log</h2>
-    <div class="log" id="log">Aguardando arquivo...</div>
-  </div>
+  <div class="top"><div class="brand"><i class="ti ti-database-import"></i> RWDent — Restaurar Backup</div><a href="app.html"><i class="ti ti-arrow-left"></i> Voltar ao app</a></div>
+  <div class="card"><h1>Importar backup exportado</h1><p>Esta tela importa o arquivo JSON gerado em <strong>Configurações → Backup → Exportar todos os dados</strong>.</p><div class="notice safe"><strong>Modo seguro:</strong> por padrão ela mescla/atualiza dados pelo ID e não apaga registros existentes.</div><div class="notice"><strong>Antes de importar:</strong> mantenha o arquivo original guardado. A importação depende das permissões/RLS do Supabase do usuário logado.</div></div>
+  <div class="card"><h2><i class="ti ti-file-upload"></i> 1. Escolha o arquivo</h2><input type="file" id="backup-file" accept="application/json,.json" /><div id="summary" class="summary hidden"></div></div>
+  <div class="card"><h2><i class="ti ti-shield-check"></i> 2. Confirme</h2><label class="check"><input type="checkbox" id="confirm-merge" /> <span>Entendo que esta importação vai mesclar/atualizar dados do backup na clínica logada, sem limpar dados existentes automaticamente.</span></label><label class="check"><input type="checkbox" id="confirm-backup" /> <span>Tenho uma cópia do arquivo de backup guardada.</span></label><div class="row"><button class="btn btn-primary" id="btn-import" disabled><i class="ti ti-database-import"></i> Importar backup</button><button class="btn btn-secondary" id="btn-dry" disabled><i class="ti ti-list-search"></i> Verificar arquivo</button></div></div>
+  <div class="card"><h2><i class="ti ti-terminal"></i> Log</h2><div class="log" id="log">Aguardando arquivo...</div></div>
 </div>
-
 <script>
-const _sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-  auth: {
-    storage: window.localStorage,
-    storageKey: 'rwdent-auth',
-    flowType: 'implicit',
-    detectSessionInUrl: true,
-    persistSession: true,
-    autoRefreshToken: true
-  }
-});
-
+const _sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { auth: { storage: window.localStorage, storageKey: 'rwdent-auth', flowType: 'implicit', detectSessionInUrl: true, persistSession: true, autoRefreshToken: true } });
 let backup = null;
 let currentUser = null;
 let currentClinic = null;
-
 const $ = (id) => document.getElementById(id);
 function log(msg){ $('log').textContent += '\n' + msg; $('log').scrollTop = $('log').scrollHeight; }
 function resetLog(msg){ $('log').textContent = msg; }
 function asArray(v){ return Array.isArray(v) ? v : []; }
-function cleanRows(rows, dropKeys){
-  return asArray(rows).map((row) => {
-    const out = { ...row };
-    dropKeys.forEach((k) => delete out[k]);
-    return out;
-  });
-}
+function cleanRows(rows, dropKeys){ return asArray(rows).map((row) => { const out = { ...row }; dropKeys.forEach((k) => delete out[k]); return out; }); }
 function countObjectKeys(obj){ return obj && typeof obj === 'object' && !Array.isArray(obj) ? Object.keys(obj).length : 0; }
-
 async function initAuth(){
   const { data: { session } } = await _sb.auth.getSession();
-  if(!session){
-    resetLog('Você precisa estar logado no RWDent antes de importar. Volte para app.html, faça login e abra restore.html novamente.');
-    $('btn-import').disabled = true;
-    $('btn-dry').disabled = true;
-    return;
-  }
+  if(!session){ resetLog('Você precisa estar logado no RWDent antes de importar. Volte para app.html, faça login e abra restore.html novamente.'); return; }
   currentUser = session.user;
   const { data: cli, error } = await _sb.from('clinicas').select('*').eq('user_id', currentUser.id).single();
-  if(error || !cli){
-    resetLog('Não encontrei a clínica do usuário logado. Importação bloqueada.');
-    return;
-  }
+  if(error || !cli){ resetLog('Não encontrei a clínica do usuário logado. Importação bloqueada.'); return; }
   currentClinic = cli;
   resetLog('Logado como: ' + currentUser.email + '\nClínica atual: ' + (cli.nome_cli || cli.id));
 }
-
 function renderSummary(){
   if(!backup) return;
   const fin = backup.financeiro || {};
@@ -142,10 +62,8 @@ function renderSummary(){
     <div class="stat"><strong>${asArray(backup.profissionais).length}</strong><span>Profissionais</span></div>
     <div class="stat"><strong>${asArray(fin.procs).length}</strong><span>Procedimentos</span></div>
     <div class="stat"><strong>${asArray(fin.mats).length}</strong><span>Materiais</span></div>
-    <div class="stat"><strong>${countObjectKeys(fin.estoque)}</strong><span>Estoque</span></div>
-  `;
+    <div class="stat"><strong>${countObjectKeys(fin.estoque)}</strong><span>Estoque</span></div>`;
 }
-
 function validateBackup(){
   const problems = [];
   if(!backup || typeof backup !== 'object') problems.push('Arquivo não é um JSON de backup válido.');
@@ -154,13 +72,11 @@ function validateBackup(){
   if(!backup?.financeiro || typeof backup.financeiro !== 'object') problems.push('Backup sem bloco financeiro.');
   return problems;
 }
-
 function updateButtons(){
   const ok = backup && $('confirm-merge').checked && $('confirm-backup').checked;
   $('btn-import').disabled = !ok;
   $('btn-dry').disabled = !backup;
 }
-
 $('backup-file').addEventListener('change', async (event) => {
   const file = event.target.files?.[0];
   if(!file){ backup = null; updateButtons(); return; }
@@ -168,13 +84,9 @@ $('backup-file').addEventListener('change', async (event) => {
     backup = JSON.parse(await file.text());
     resetLog('Arquivo carregado: ' + file.name + '\nExportado em: ' + (backup.exportadoEm || 'não informado'));
     const problems = validateBackup();
-    if(problems.length) problems.forEach((p) => log('⚠ ' + p));
-    else log('Estrutura básica OK.');
+    if(problems.length) problems.forEach((p) => log('⚠ ' + p)); else log('Estrutura básica OK.');
     renderSummary();
-  } catch(e) {
-    backup = null;
-    resetLog('Erro ao ler JSON: ' + e.message);
-  }
+  } catch(e) { backup = null; resetLog('Erro ao ler JSON: ' + e.message); }
   updateButtons();
 });
 $('confirm-merge').addEventListener('change', updateButtons);
@@ -182,77 +94,42 @@ $('confirm-backup').addEventListener('change', updateButtons);
 $('btn-dry').addEventListener('click', () => {
   const problems = validateBackup();
   resetLog('Verificação do arquivo:');
-  if(problems.length) problems.forEach((p) => log('⚠ ' + p));
-  else log('OK. O arquivo parece compatível com o importador.');
-  if(currentClinic && backup?.clinica?.id && String(currentClinic.id) !== String(backup.clinica.id)) {
-    log('⚠ Atenção: o ID da clínica logada é diferente do ID no backup. A importação vai usar a clínica logada para evitar restaurar em conta errada.');
-  }
+  if(problems.length) problems.forEach((p) => log('⚠ ' + p)); else log('OK. O arquivo parece compatível com o importador.');
+  if(currentClinic && backup?.clinica?.id && String(currentClinic.id) !== String(backup.clinica.id)) log('⚠ Atenção: o ID da clínica logada é diferente do ID no backup. A importação vai usar a clínica logada para evitar restaurar em conta errada.');
 });
-
 async function upsertTable(table, rows, label){
   if(!rows.length){ log(label + ': nada para importar.'); return; }
   const { error } = await _sb.from(table).upsert(rows, { onConflict: 'id' });
   if(error) throw new Error(label + ': ' + error.message);
   log(label + ': ' + rows.length + ' registro(s) importado(s).');
 }
-
 async function importBackup(){
   const problems = validateBackup();
   if(problems.length){ resetLog('Importação bloqueada. Corrija o arquivo primeiro.'); problems.forEach((p)=>log('⚠ '+p)); return; }
   if(!currentClinic){ resetLog('Importação bloqueada: usuário/clínica não carregados.'); return; }
-
   $('btn-import').disabled = true;
   $('btn-dry').disabled = true;
   resetLog('Iniciando importação segura...');
-
   try {
     const clinicId = currentClinic.id;
-
-    const profissionais = cleanRows(backup.profissionais, ['created_at']).map((p) => ({ ...p, clinica_id: clinicId }));
-    await upsertTable('profissionais', profissionais, 'Profissionais');
-
-    const pacientes = cleanRows(backup.pacientes, ['prontuarios', 'anamnese', 'created_at']).map((p) => ({ ...p, clinica_id: clinicId }));
-    await upsertTable('pacientes', pacientes, 'Pacientes');
-
+    await upsertTable('profissionais', cleanRows(backup.profissionais, ['created_at']).map((p) => ({ ...p, clinica_id: clinicId })), 'Profissionais');
+    await upsertTable('pacientes', cleanRows(backup.pacientes, ['prontuarios', 'anamnese', 'created_at']).map((p) => ({ ...p, clinica_id: clinicId })), 'Pacientes');
     const prontuarios = asArray(backup.pacientes).flatMap((p) => asArray(p.prontuarios).map((r) => ({ ...r, clinica_id: clinicId, paciente_id: p.id })));
     await upsertTable('prontuarios', cleanRows(prontuarios, ['created_at']), 'Prontuários');
-
-    const anamneses = asArray(backup.pacientes)
-      .filter((p) => p.anamnese)
-      .map((p) => ({ paciente_id: p.id, clinica_id: clinicId, dados: p.anamnese }));
-    if(anamneses.length){
-      const { error } = await _sb.from('anamneses').upsert(anamneses, { onConflict: 'paciente_id' });
-      if(error) throw new Error('Anamneses: ' + error.message);
-      log('Anamneses: ' + anamneses.length + ' registro(s) importado(s).');
-    } else log('Anamneses: nada para importar.');
-
-    const agendamentos = cleanRows(backup.agendamentos, ['created_at']).map((a) => ({ ...a, clinica_id: clinicId }));
-    await upsertTable('agendamentos', agendamentos, 'Agendamentos');
-
+    const anamneses = asArray(backup.pacientes).filter((p) => p.anamnese).map((p) => ({ paciente_id: p.id, clinica_id: clinicId, dados: p.anamnese }));
+    if(anamneses.length){ const { error } = await _sb.from('anamneses').upsert(anamneses, { onConflict: 'paciente_id' }); if(error) throw new Error('Anamneses: ' + error.message); log('Anamneses: ' + anamneses.length + ' registro(s) importado(s).'); } else log('Anamneses: nada para importar.');
+    await upsertTable('agendamentos', cleanRows(backup.agendamentos, ['created_at']).map((a) => ({ ...a, clinica_id: clinicId })), 'Agendamentos');
     const fin = backup.financeiro || {};
-    const financeiroRow = {
-      clinica_id: clinicId,
-      procs: fin.procs || [],
-      mats: fin.mats || [],
-      estoque: fin.estoque || {},
-      proc_insumos: fin.procInsumos || fin.proc_insumos || {},
-      vendas: fin.vendas || [],
-      combos: fin.combos || [],
-      taxas: fin.taxasCfg || fin.taxas || {},
-    };
+    const financeiroRow = { clinica_id: clinicId, procs: fin.procs || [], mats: fin.mats || [], estoque: fin.estoque || {}, proc_insumos: fin.procInsumos || fin.proc_insumos || {}, vendas: fin.vendas || [], combos: fin.combos || [], taxas: fin.taxasCfg || fin.taxas || {} };
     const { error: finError } = await _sb.from('financeiro_config').upsert([financeiroRow], { onConflict: 'clinica_id' });
     if(finError) throw new Error('Financeiro: ' + finError.message);
     log('Financeiro: procedimentos, materiais, estoque e configurações importados.');
-
     log('\nImportação concluída. Recarregue app.html e confira pacientes, estoque, agenda e financeiro.');
   } catch(e) {
     log('\nERRO: ' + e.message);
     log('Nada foi apagado automaticamente. Confira o que já importou antes de tentar novamente.');
-  } finally {
-    updateButtons();
-  }
+  } finally { updateButtons(); }
 }
-
 $('btn-import').addEventListener('click', importBackup);
 initAuth();
 </script>
