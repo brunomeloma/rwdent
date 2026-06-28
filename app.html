@@ -4873,7 +4873,7 @@ function renderOdontogramaMain(){
   ['odonto-d-prof','odonto-atend-prof'].forEach(id=>{ const el=document.getElementById(id); if(el) el.innerHTML=opts; });
 }
 
-/* ── Tooth SVG paths by type ── */
+/* ── Tooth sprite positions in dente-chart.png ── */
 const TOOTH_COND_COLORS = {
   higido:     { fill:'#ffffff', stroke:'#c0b0a8' },
   carie:      { fill:'#ffcdd2', stroke:'#e57373' },
@@ -4885,6 +4885,20 @@ const TOOTH_COND_COLORS = {
   fratura:    { fill:'#ffccbc', stroke:'#ff7043' },
   selante:    { fill:'#b2ebf2', stroke:'#26c6da' },
   outro:      { fill:'#f5f5f5', stroke:'#9e9e9e' }
+};
+const TOOTH_SPRITE = {
+  18:{x:0,y:0,w:47,h:140},17:{x:47,y:0,w:46,h:140},16:{x:93,y:0,w:47,h:140},
+  15:{x:140,y:0,w:38,h:140},14:{x:178,y:0,w:40,h:140},13:{x:218,y:0,w:38,h:140},
+  12:{x:256,y:0,w:34,h:140},11:{x:290,y:0,w:45,h:140},
+  21:{x:347,y:0,w:42,h:140},22:{x:389,y:0,w:33,h:140},23:{x:422,y:0,w:38,h:140},
+  24:{x:460,y:0,w:36,h:140},25:{x:496,y:0,w:39,h:140},26:{x:535,y:0,w:43,h:140},
+  27:{x:578,y:0,w:46,h:140},28:{x:624,y:0,w:51,h:140},
+  48:{x:0,y:302,w:47,h:151},47:{x:47,y:302,w:46,h:151},46:{x:93,y:302,w:47,h:151},
+  45:{x:140,y:302,w:38,h:151},44:{x:178,y:302,w:40,h:151},43:{x:218,y:302,w:38,h:151},
+  42:{x:256,y:302,w:34,h:151},41:{x:290,y:302,w:45,h:151},
+  31:{x:347,y:302,w:42,h:151},32:{x:389,y:302,w:33,h:151},33:{x:422,y:302,w:38,h:151},
+  34:{x:460,y:302,w:36,h:151},35:{x:496,y:302,w:39,h:151},36:{x:535,y:302,w:43,h:151},
+  37:{x:578,y:302,w:46,h:151},38:{x:624,y:302,w:51,h:151}
 };
 
 function getToothType(num) {
@@ -4907,143 +4921,20 @@ function isUpperTooth(num) {
 }
 
 function getToothSVG(num, cond, extraStyle) {
-  const type = getToothType(num);
-  const upper = isUpperTooth(num);
+  const pos = TOOTH_SPRITE[num];
+  if (!pos) return '';
   const c = TOOTH_COND_COLORS[cond] || TOOTH_COND_COLORS.higido;
   const isExtr = cond === 'extraido';
-  const o = isExtr ? 0.4 : 1;
-  const u = num % 10;
-  const rf = cond==='higido'?'#ede3d8':c.fill;
-  const rs = cond==='higido'?'#a89080':c.stroke;
-  const hl = 'rgba(255,255,255,0.55)';
-  let s='', W, H;
-
-  if(type==='incisor'){
-    const lat = (u===2);
-    W=lat?26:30; H=lat?56:60;
-    const cx=W/2, rw=lat?3:3.5, ch=lat?30:34, cw=lat?9:11.5, ry=H-ch;
-    // Root
-    s+=`<path d="M${cx-0.8},2 C${cx-0.3},0.5 ${cx+0.3},0.5 ${cx+0.8},2 C${cx+1.5},7 ${cx+rw-1},14 ${cx+rw},${ry-2} C${cx+rw+0.3},${ry-0.5} ${cx+rw+0.5},${ry} ${cx+rw},${ry+0.5} L${cx-rw},${ry+0.5} C${cx-rw-0.5},${ry} ${cx-rw-0.3},${ry-0.5} ${cx-rw},${ry-2} C${cx-rw+1},14 ${cx-1.5},7 ${cx-0.8},2Z" fill="${rf}" stroke="${rs}" stroke-width="0.9" opacity="${o*0.7}"/>`;
-    // Root highlight
-    s+=`<path d="M${cx-0.5},4 C${cx},8 ${cx+0.5},14 ${cx+0.5},${ry-4}" fill="none" stroke="${hl}" stroke-width="1.2" opacity="${o*0.2}" stroke-linecap="round"/>`;
-    // CEJ
-    s+=`<path d="M${cx-rw-1},${ry+0.5} C${cx-2},${ry-1} ${cx+2},${ry-1} ${cx+rw+1},${ry+0.5}" fill="none" stroke="${rs}" stroke-width="0.6" opacity="${o*0.3}"/>`;
-    // Crown
-    s+=`<path d="M${cx-rw},${ry+0.5} C${cx-rw-2},${ry+2} ${cx-cw+1},${ry+4} ${cx-cw},${ry+6} C${cx-cw-1.2},${ry+10} ${cx-cw-1.5},${ry+15} ${cx-cw-1},${ry+20} C${cx-cw-0.3},${ry+25} ${cx-cw+2},${ry+ch-4} ${cx-cw+4},${ry+ch-2} C${cx-3},${ry+ch-0.5} ${cx-1},${ry+ch} ${cx},${ry+ch} C${cx+1},${ry+ch} ${cx+3},${ry+ch-0.5} ${cx+cw-4},${ry+ch-2} C${cx+cw-2},${ry+ch-4} ${cx+cw+0.3},${ry+25} ${cx+cw+1},${ry+20} C${cx+cw+1.5},${ry+15} ${cx+cw+1.2},${ry+10} ${cx+cw},${ry+6} C${cx+cw-1},${ry+4} ${cx+rw+2},${ry+2} ${cx+rw},${ry+0.5}Z" fill="${c.fill}" stroke="${c.stroke}" stroke-width="1.3" opacity="${o}"/>`;
-    // Crown highlight (mesial)
-    s+=`<path d="M${cx-rw},${ry+3} C${cx-cw+2},${ry+6} ${cx-cw},${ry+13} ${cx-cw+0.5},${ry+21} C${cx-cw+1},${ry+26} ${cx-cw+3},${ry+ch-5} ${cx-cw+5},${ry+ch-3}" fill="none" stroke="${hl}" stroke-width="2.5" opacity="${o*0.3}" stroke-linecap="round"/>`;
-    // Crown shadow (distal)
-    s+=`<path d="M${cx+rw},${ry+3} C${cx+cw-2},${ry+6} ${cx+cw},${ry+13} ${cx+cw-0.5},${ry+21}" fill="none" stroke="rgba(0,0,0,0.06)" stroke-width="2" opacity="${o*0.4}" stroke-linecap="round"/>`;
-    // Incisal edge
-    s+=`<path d="M${cx-cw+5},${ry+ch-2.5} C${cx-2},${ry+ch-0.5} ${cx+2},${ry+ch-0.5} ${cx+cw-5},${ry+ch-2.5}" fill="none" stroke="${c.stroke}" stroke-width="0.6" opacity="${o*0.3}"/>`;
-    if(!lat){
-      s+=`<line x1="${cx-3}" y1="${ry+5}" x2="${cx-3}" y2="${ry+ch-7}" stroke="${c.stroke}" stroke-width="0.3" opacity="${o*0.07}"/>`;
-      s+=`<line x1="${cx+3}" y1="${ry+5}" x2="${cx+3}" y2="${ry+ch-7}" stroke="${c.stroke}" stroke-width="0.3" opacity="${o*0.07}"/>`;
-      s+=`<line x1="${cx}" y1="${ry+5}" x2="${cx}" y2="${ry+ch-7}" stroke="${c.stroke}" stroke-width="0.2" opacity="${o*0.05}"/>`;
-    }
-
-  } else if(type==='canine'){
-    W=28; H=66;
-    const cx=14, ry=30;
-    // Root
-    s+=`<path d="M${cx-0.8},2 C${cx-0.3},0.5 ${cx+0.3},0.5 ${cx+0.8},2 C${cx+1.5},8 ${cx+2.5},16 ${cx+3},22 C${cx+3.3},25 ${cx+3.8},28 ${cx+4},${ry} L${cx-4},${ry} C${cx-3.8},28 ${cx-3.3},25 ${cx-3},22 C${cx-2.5},16 ${cx-1.5},8 ${cx-0.8},2Z" fill="${rf}" stroke="${rs}" stroke-width="0.9" opacity="${o*0.7}"/>`;
-    // Root highlight
-    s+=`<path d="M${cx-0.3},4 C${cx+0.5},10 ${cx+1},18 ${cx+1},26" fill="none" stroke="${hl}" stroke-width="1.2" opacity="${o*0.2}" stroke-linecap="round"/>`;
-    // CEJ
-    s+=`<path d="M${cx-5},${ry} C${cx-2},${ry-1.5} ${cx+2},${ry-1.5} ${cx+5},${ry}" fill="none" stroke="${rs}" stroke-width="0.6" opacity="${o*0.3}"/>`;
-    // Crown
-    s+=`<path d="M${cx-4},${ry} C${cx-6},${ry+2} ${cx-8.5},${ry+5} ${cx-9.5},${ry+9} C${cx-10.5},${ry+14} ${cx-10},${ry+19} ${cx-8.5},${ry+24} C${cx-7},${ry+28} ${cx-4},${ry+32} ${cx-1},${ry+34.5} C${cx-0.3},${ry+35.2} ${cx},${ry+35.5} ${cx},${ry+35.5} C${cx},${ry+35.5} ${cx+0.3},${ry+35.2} ${cx+1},${ry+34.5} C${cx+4},${ry+32} ${cx+7},${ry+28} ${cx+8.5},${ry+24} C${cx+10},${ry+19} ${cx+10.5},${ry+14} ${cx+9.5},${ry+9} C${cx+8.5},${ry+5} ${cx+6},${ry+2} ${cx+4},${ry}Z" fill="${c.fill}" stroke="${c.stroke}" stroke-width="1.3" opacity="${o}"/>`;
-    // Crown highlight
-    s+=`<path d="M${cx-5},${ry+3} C${cx-8},${ry+7} ${cx-9.5},${ry+13} ${cx-9},${ry+19} C${cx-8},${ry+24} ${cx-5.5},${ry+28} ${cx-3},${ry+31}" fill="none" stroke="${hl}" stroke-width="2.5" opacity="${o*0.3}" stroke-linecap="round"/>`;
-    // Crown shadow
-    s+=`<path d="M${cx+5},${ry+3} C${cx+8},${ry+7} ${cx+9},${ry+13} ${cx+8.5},${ry+19}" fill="none" stroke="rgba(0,0,0,0.06)" stroke-width="2" opacity="${o*0.4}" stroke-linecap="round"/>`;
-    // Cusp ridges
-    s+=`<path d="M${cx-6.5},${ry+27} C${cx-4},${ry+31} ${cx-1.5},${ry+34} ${cx},${ry+35.5}" fill="none" stroke="${c.stroke}" stroke-width="0.5" opacity="${o*0.2}"/>`;
-    s+=`<path d="M${cx+6.5},${ry+27} C${cx+4},${ry+31} ${cx+1.5},${ry+34} ${cx},${ry+35.5}" fill="none" stroke="${c.stroke}" stroke-width="0.5" opacity="${o*0.2}"/>`;
-    // Labial ridge
-    s+=`<path d="M${cx-5},${ry+18} C${cx-2},${ry+10} ${cx},${ry+4}" fill="none" stroke="${c.stroke}" stroke-width="0.3" opacity="${o*0.08}"/>`;
-    s+=`<path d="M${cx+5},${ry+18} C${cx+2},${ry+10} ${cx},${ry+4}" fill="none" stroke="${c.stroke}" stroke-width="0.3" opacity="${o*0.08}"/>`;
-
-  } else if(type==='premolar'){
-    W=28; H=54;
-    const cx=14, p2=(u===5), ry=21;
-    if(p2){
-      s+=`<path d="M${cx-0.8},2 C${cx-0.3},0.5 ${cx+0.3},0.5 ${cx+0.8},2 C${cx+1.5},6 ${cx+2.5},11 ${cx+3},16 C${cx+3.3},18 ${cx+3.5},20 ${cx+3.5},${ry} L${cx-3.5},${ry} C${cx-3.5},20 ${cx-3.3},18 ${cx-3},16 C${cx-2.5},11 ${cx-1.5},6 ${cx-0.8},2Z" fill="${rf}" stroke="${rs}" stroke-width="0.9" opacity="${o*0.7}"/>`;
-    } else {
-      s+=`<path d="M${cx-5},2 C${cx-4.5},0.5 ${cx-3.5},0.5 ${cx-3},2 C${cx-2},6 ${cx-1.5},10 ${cx-1},14 L${cx-1},${ry} L${cx-7},${ry} C${cx-7},18 ${cx-6.8},15 ${cx-6.5},12 C${cx-6},8 ${cx-5.5},5 ${cx-5},2Z" fill="${rf}" stroke="${rs}" stroke-width="0.9" opacity="${o*0.65}"/>`;
-      s+=`<path d="M${cx+3},2 C${cx+3.5},0.5 ${cx+4.5},0.5 ${cx+5},2 C${cx+5.5},5 ${cx+6},8 ${cx+6.5},12 C${cx+6.8},15 ${cx+7},18 ${cx+7},${ry} L${cx+1},${ry} L${cx+1},14 C${cx+1.5},10 ${cx+2},6 ${cx+3},2Z" fill="${rf}" stroke="${rs}" stroke-width="0.9" opacity="${o*0.65}"/>`;
-      s+=`<path d="M${cx-1},${ry} L${cx-1},15 C${cx-0.5},17 ${cx+0.5},17 ${cx+1},15 L${cx+1},${ry}Z" fill="${rf}" stroke="none" opacity="${o*0.35}"/>`;
-    }
-    // Root highlight
-    s+=`<path d="M${cx},5 C${cx+0.5},10 ${cx+0.5},15 ${cx+0.3},${ry-2}" fill="none" stroke="${hl}" stroke-width="1" opacity="${o*0.15}" stroke-linecap="round"/>`;
-    // CEJ
-    s+=`<path d="M${cx-5.5},${ry} C${cx-2},${ry-1.5} ${cx+2},${ry-1.5} ${cx+5.5},${ry}" fill="none" stroke="${rs}" stroke-width="0.6" opacity="${o*0.3}"/>`;
-    // Crown
-    const ch=32;
-    s+=`<path d="M${p2?cx-3.5:cx-7},${ry} C${cx-9},${ry+2} ${cx-11.5},${ry+5} ${cx-12},${ry+10} C${cx-12.5},${ry+15} ${cx-12},${ry+20} ${cx-11},${ry+24} C${cx-9.5},${ry+28} ${cx-6},${ry+30.5} ${cx-3},${ry+31.5} C${cx-1},${ry+ch} ${cx},${ry+ch} ${cx},${ry+ch} C${cx},${ry+ch} ${cx+1},${ry+ch} ${cx+3},${ry+31.5} C${cx+6},${ry+30.5} ${cx+9.5},${ry+28} ${cx+11},${ry+24} C${cx+12},${ry+20} ${cx+12.5},${ry+15} ${cx+12},${ry+10} C${cx+11.5},${ry+5} ${cx+9},${ry+2} ${p2?cx+3.5:cx+7},${ry}Z" fill="${c.fill}" stroke="${c.stroke}" stroke-width="1.3" opacity="${o}"/>`;
-    // Crown highlight
-    s+=`<path d="M${cx-8},${ry+4} C${cx-10.5},${ry+8} ${cx-11.5},${ry+14} ${cx-11},${ry+20} C${cx-10},${ry+24} ${cx-7.5},${ry+27} ${cx-5},${ry+29}" fill="none" stroke="${hl}" stroke-width="2.2" opacity="${o*0.3}" stroke-linecap="round"/>`;
-    // Crown shadow
-    s+=`<path d="M${cx+8},${ry+4} C${cx+10},${ry+8} ${cx+11},${ry+14} ${cx+10.5},${ry+20}" fill="none" stroke="rgba(0,0,0,0.06)" stroke-width="1.8" opacity="${o*0.35}" stroke-linecap="round"/>`;
-    // Central fissure
-    s+=`<path d="M${cx-8},${ry+25} C${cx-4},${ry+22} ${cx},${ry+19} ${cx+4},${ry+22} C${cx+8},${ry+25}" fill="none" stroke="${c.stroke}" stroke-width="0.6" opacity="${o*0.2}"/>`;
-    // Buccal/lingual cusp tips
-    s+=`<path d="M${cx-7},${ry+28} C${cx-4},${ry+30.5} ${cx-2},${ry+31.5} ${cx-0.5},${ry+ch}" fill="none" stroke="${c.stroke}" stroke-width="0.5" opacity="${o*0.2}"/>`;
-    s+=`<path d="M${cx+7},${ry+28} C${cx+4},${ry+30.5} ${cx+2},${ry+31.5} ${cx+0.5},${ry+ch}" fill="none" stroke="${c.stroke}" stroke-width="0.5" opacity="${o*0.2}"/>`;
-    // Vertical groove
-    s+=`<line x1="${cx}" y1="${ry+6}" x2="${cx}" y2="${ry+19}" stroke="${c.stroke}" stroke-width="0.4" opacity="${o*0.1}"/>`;
-    // Marginal ridges
-    s+=`<path d="M${cx-10},${ry+12} C${cx-8},${ry+10} ${cx-5},${ry+9} ${cx},${ry+9}" fill="none" stroke="${c.stroke}" stroke-width="0.3" opacity="${o*0.08}"/>`;
-    s+=`<path d="M${cx+10},${ry+12} C${cx+8},${ry+10} ${cx+5},${ry+9} ${cx},${ry+9}" fill="none" stroke="${c.stroke}" stroke-width="0.3" opacity="${o*0.08}"/>`;
-
-  } else {
-    W=40; H=56;
-    const cx=20, t3=(u===8), t1=(u===6), ry=22;
-    if(t3){
-      s+=`<path d="M${cx-3},2 C${cx-2},0.5 ${cx+2},0.5 ${cx+3},2 C${cx+4},7 ${cx+5},13 ${cx+5.5},18 C${cx+5.5},20 ${cx+6},${ry} ${cx+6},${ry} L${cx-6},${ry} C${cx-6},${ry} ${cx-5.5},20 ${cx-5.5},18 C${cx-5},13 ${cx-4},7 ${cx-3},2Z" fill="${rf}" stroke="${rs}" stroke-width="0.9" opacity="${o*0.65}"/>`;
-    } else {
-      s+=`<path d="M7,3 C7.5,1 9,0.5 9.5,3 C10,6 10.5,10 11,14 C11,16.5 11,19 11,${ry} L5.5,${ry} C5.5,19 5.5,16 6,14 C6.5,10 7,6 7,3Z" fill="${rf}" stroke="${rs}" stroke-width="0.9" opacity="${o*0.6}"/>`;
-      s+=`<path d="M18,2 C18.5,0.5 21.5,0.5 22,2 C22.5,5 23,9 23,14 L23,${ry} L17,${ry} L17,14 C17,9 17.5,5 18,2Z" fill="${rf}" stroke="${rs}" stroke-width="0.85" opacity="${o*0.55}"/>`;
-      s+=`<path d="M31,3 C31.5,1 33,0.5 33.5,3 C34,6 34.5,10 34.5,14 C34.5,16.5 34.5,19 34.5,${ry} L29,${ry} C29,19 29,16 29.5,14 C30,10 30.5,6 31,3Z" fill="${rf}" stroke="${rs}" stroke-width="0.9" opacity="${o*0.6}"/>`;
-      s+=`<path d="M11,${ry} L17,${ry} L17,15 C16,17 14,19 13,${ry} L11,${ry}Z" fill="${rf}" stroke="none" opacity="${o*0.35}"/>`;
-      s+=`<path d="M23,${ry} L29,${ry} C28,19 26.5,17 25.5,15 L23,15 L23,${ry}Z" fill="${rf}" stroke="none" opacity="${o*0.35}"/>`;
-    }
-    // Root highlights
-    if(!t3){
-      s+=`<path d="M8,5 C8.5,10 9,15 9,${ry-2}" fill="none" stroke="${hl}" stroke-width="0.8" opacity="${o*0.15}" stroke-linecap="round"/>`;
-      s+=`<path d="M20,4 C20,9 20,14 20,${ry-2}" fill="none" stroke="${hl}" stroke-width="0.8" opacity="${o*0.12}" stroke-linecap="round"/>`;
-      s+=`<path d="M32,5 C32.5,10 33,15 33,${ry-2}" fill="none" stroke="${hl}" stroke-width="0.8" opacity="${o*0.15}" stroke-linecap="round"/>`;
-    }
-    // CEJ
-    s+=`<path d="M${t3?cx-7:4},${ry} C${cx-5},${ry-1.5} ${cx+5},${ry-1.5} ${t3?cx+7:36},${ry}" fill="none" stroke="${rs}" stroke-width="0.6" opacity="${o*0.25}"/>`;
-    // Crown
-    const ch=t3?28:32;
-    s+=`<path d="M${t3?cx-6:4},${ry} C2,${ry+2} 1,${ry+6} 1,${ry+10} C1,${ry+15} 1.5,${ry+20} 3,${ry+24} C4.5,${ry+28} 7.5,${ry+ch-3} 11,${ry+ch-1} C14,${ry+ch} 17,${ry+ch+0.5} 20,${ry+ch+0.5} C23,${ry+ch+0.5} 26,${ry+ch} 29,${ry+ch-1} C32.5,${ry+ch-3} 35.5,${ry+28} 37,${ry+24} C38.5,${ry+20} 39,${ry+15} 39,${ry+10} C39,${ry+6} 38,${ry+2} ${t3?cx+6:36},${ry}Z" fill="${c.fill}" stroke="${c.stroke}" stroke-width="1.3" opacity="${o}"/>`;
-    // Crown highlight
-    s+=`<path d="M${t3?cx-5:5},${ry+3} C3,${ry+7} 2.5,${ry+12} 2.5,${ry+17} C2.5,${ry+22} 4,${ry+26} 6.5,${ry+ch-3}" fill="none" stroke="${hl}" stroke-width="3" opacity="${o*0.25}" stroke-linecap="round"/>`;
-    // Crown shadow
-    s+=`<path d="M${t3?cx+5:35},${ry+3} C37,${ry+7} 37.5,${ry+12} 37.5,${ry+17}" fill="none" stroke="rgba(0,0,0,0.06)" stroke-width="2.5" opacity="${o*0.35}" stroke-linecap="round"/>`;
-    // Fissure (H-pattern)
-    s+=`<path d="M6,${ry+24} C10,${ry+20} 15,${ry+17} 20,${ry+16} C25,${ry+17} 30,${ry+20} 34,${ry+24}" fill="none" stroke="${c.stroke}" stroke-width="0.7" opacity="${o*0.2}"/>`;
-    // Central groove
-    s+=`<line x1="20" y1="${ry+7}" x2="20" y2="${ry+16}" stroke="${c.stroke}" stroke-width="0.45" opacity="${o*0.15}"/>`;
-    if(t1){
-      s+=`<path d="M10,${ry+13} C15,${ry+11} 20,${ry+11} 30,${ry+14}" fill="none" stroke="${c.stroke}" stroke-width="0.35" opacity="${o*0.1}"/>`;
-    }
-    // Cusp bumps
-    s+=`<path d="M4,${ry+ch-4} C6.5,${ry+ch-1.5} 9,${ry+ch-0.5} 12,${ry+ch}" fill="none" stroke="${c.stroke}" stroke-width="0.5" opacity="${o*0.2}"/>`;
-    s+=`<path d="M36,${ry+ch-4} C33.5,${ry+ch-1.5} 31,${ry+ch-0.5} 28,${ry+ch}" fill="none" stroke="${c.stroke}" stroke-width="0.5" opacity="${o*0.2}"/>`;
-    // Inter-cusp lines
-    s+=`<path d="M14,${ry+ch} C16,${ry+ch+0.3} 18,${ry+ch+0.5} 20,${ry+ch+0.5} C22,${ry+ch+0.5} 24,${ry+ch+0.3} 26,${ry+ch}" fill="none" stroke="${c.stroke}" stroke-width="0.4" opacity="${o*0.15}"/>`;
-    // Marginal ridges
-    s+=`<path d="M3,${ry+12} C7,${ry+9} 13,${ry+8} 20,${ry+8}" fill="none" stroke="${c.stroke}" stroke-width="0.3" opacity="${o*0.08}"/>`;
-    s+=`<path d="M37,${ry+12} C33,${ry+9} 27,${ry+8} 20,${ry+8}" fill="none" stroke="${c.stroke}" stroke-width="0.3" opacity="${o*0.08}"/>`;
+  const o = isExtr ? 0.35 : 1;
+  let overlay = '';
+  if (cond !== 'higido' && !isExtr) {
+    overlay = `<rect x="${pos.x}" y="${pos.y}" width="${pos.w}" height="${pos.h}" fill="${c.fill}" opacity="0.45"/>`;
   }
-
-  const tr = upper ? '' : `transform="scale(1,-1) translate(0,-${H})"`;
-  const xm = isExtr ? `<line x1="${W*0.1}" y1="${H*0.05}" x2="${W*0.9}" y2="${H*0.95}" stroke="#777" stroke-width="2.5" stroke-linecap="round" opacity="0.6"/><line x1="${W*0.9}" y1="${H*0.05}" x2="${W*0.1}" y2="${H*0.95}" stroke="#777" stroke-width="2.5" stroke-linecap="round" opacity="0.6"/>` : '';
-
-  return `<svg class="odonto-tooth-svg" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="${extraStyle||''}"><g ${tr}>${s}${xm}</g></svg>`;
+  if (cond !== 'higido' && !isExtr) {
+    overlay += `<rect x="${pos.x}" y="${pos.y}" width="${pos.w}" height="${pos.h}" fill="none" stroke="${c.stroke}" stroke-width="2" opacity="0.6"/>`;
+  }
+  const xm = isExtr ? `<line x1="${pos.x+pos.w*0.15}" y1="${pos.y+pos.h*0.1}" x2="${pos.x+pos.w*0.85}" y2="${pos.y+pos.h*0.9}" stroke="#777" stroke-width="3" stroke-linecap="round" opacity="0.6"/><line x1="${pos.x+pos.w*0.85}" y1="${pos.y+pos.h*0.1}" x2="${pos.x+pos.w*0.15}" y2="${pos.y+pos.h*0.9}" stroke="#777" stroke-width="3" stroke-linecap="round" opacity="0.6"/>` : '';
+  return `<svg class="odonto-tooth-svg" viewBox="${pos.x} ${pos.y} ${pos.w} ${pos.h}" xmlns="http://www.w3.org/2000/svg" style="${extraStyle||''}"><image href="dente-chart.png" x="0" y="0" width="691" height="453" opacity="${o}"/>${overlay}${xm}</svg>`;
 }
 
 function renderArcada(containerId, dentes){
