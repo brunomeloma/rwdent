@@ -325,15 +325,45 @@ button{font-family:inherit;}
 
 
 
-/* ── ODONTOGRAMA ── */
-.odonto-arcada{display:flex;justify-content:flex-start;align-items:flex-end;gap:2px;overflow-x:auto;padding:6px 2px;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
+/* ── ODONTOGRAMA MODERNO ── */
+.odonto-arcada{display:flex;justify-content:flex-start;align-items:flex-end;gap:5px;overflow-x:auto;padding:8px 4px;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
 .odonto-arcada::-webkit-scrollbar{display:none;}
-.odonto-arcada .odonto-quadrant-gap{width:14px;flex-shrink:0;}
-.odonto-dente-wrap{display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;flex-shrink:0;padding:2px;border-radius:8px;transition:background .15s;}
-.odonto-dente-wrap:hover{background:rgba(212,115,90,.07);}
-.odonto-dente-wrap:hover .odonto-tooth-svg{transform:scale(1.1);filter:drop-shadow(0 2px 4px rgba(0,0,0,.15));}
-.odonto-dente-wrap.selected .odonto-tooth-svg{filter:drop-shadow(0 0 6px rgba(212,115,90,.5)) drop-shadow(0 0 12px rgba(212,115,90,.25));}
-.odonto-tooth-svg{transition:all .2s ease;height:72px;width:auto;}
+.odonto-arcada .odonto-quadrant-gap{width:12px;flex-shrink:0;border-left:1.5px dashed rgba(212,115,90,.25);}
+.odonto-dente-wrap{
+  display:flex;flex-direction:column;align-items:center;gap:3px;
+  cursor:pointer;flex-shrink:0;padding:4px 3px;border-radius:10px;
+  transition:background .18s, transform .18s, box-shadow .18s;
+  position:relative;
+}
+.odonto-dente-wrap:hover{background:rgba(212,115,90,.08);transform:translateY(-2px);box-shadow:0 3px 10px rgba(122,48,32,.08);}
+.odonto-dente-wrap:hover .ot-front{filter:drop-shadow(0 3px 6px rgba(0,0,0,.18));}
+.odonto-dente-wrap:hover .ot-num{color:var(--rose-dark);}
+/* Selected state */
+.odonto-dente-wrap.selected{background:rgba(212,115,90,.12);box-shadow:0 0 0 1px rgba(212,115,90,.25) inset;}
+.odonto-dente-wrap.selected .ot-front{filter:drop-shadow(0 0 5px rgba(29,78,216,.55)) drop-shadow(0 0 10px rgba(29,78,216,.2));transform:scale(1.05);}
+.odonto-dente-wrap.selected .ot-ocl{filter:drop-shadow(0 0 4px rgba(29,78,216,.45));}
+.odonto-dente-wrap.selected .ot-num{color:#1d4ed8;font-weight:800;}
+/* Tooth sub-elements */
+.ot-front{transition:all .2s ease;}
+.ot-ocl{transition:all .2s ease;}
+.ot-num{
+  font-size:8.5px;font-weight:700;color:var(--rose-text);
+  line-height:1;transition:color .18s;
+  font-variant-numeric:tabular-nums;letter-spacing:0;
+}
+/* Pending dot (not-saved) */
+.odonto-pending-dot{position:absolute;top:-1px;right:0px;width:7px;height:7px;background:#f59e0b;border-radius:50%;border:1.5px solid #fff;z-index:2;}
+/* Dual-view tooth wrapper */
+.ot-views{display:flex;flex-direction:column;align-items:center;gap:2px;}
+/* Upper arcada aligns to bottom, lower to top */
+.odonto-arcada#arc-sup .odonto-dente-wrap,
+.odonto-arcada#pac-arc-sup .odonto-dente-wrap,
+.odonto-arcada#pac-arc-dec-sup .odonto-dente-wrap{justify-content:flex-end;}
+.odonto-arcada#arc-inf .odonto-dente-wrap,
+.odonto-arcada#pac-arc-inf .odonto-dente-wrap,
+.odonto-arcada#pac-arc-dec-inf .odonto-dente-wrap{justify-content:flex-start;}
+/* Legacy class kept for JS compat */
+.odonto-tooth-svg{transition:all .2s ease;}
 .odonto-dente-num{font-size:9px;font-weight:700;color:var(--rose-text);line-height:1;margin:1px 0;}
 .odonto-dente-icon{font-size:13px;line-height:1;}
 .odonto-leg{display:inline-flex;align-items:center;gap:4px;font-size:10px;color:var(--rose-text);white-space:nowrap;}
@@ -630,9 +660,13 @@ button{font-family:inherit;}
 
   /* Odontograma */
   .odonto-arcada{overflow-x:auto;}
-  .odonto-tooth-svg{height:48px;}
+  .odonto-tooth-svg{height:auto;}
   .odonto-dente-num{font-size:8px;}
-  .odonto-arcada .odonto-quadrant-gap{width:10px;}
+  .ot-num{font-size:7.5px;}
+  .odonto-arcada .odonto-quadrant-gap{width:8px;}
+  .ot-front{transform:scale(0.9);transform-origin:center top;}
+  .ot-ocl{transform:scale(0.9);transform-origin:center top;}
+  .ot-views{gap:1px;}
 
   /* Sim orçamento */
   .sim-orcamento-item{font-size:13px;}
@@ -4873,41 +4907,26 @@ function renderOdontogramaMain(){
   ['odonto-d-prof','odonto-atend-prof'].forEach(id=>{ const el=document.getElementById(id); if(el) el.innerHTML=opts; });
 }
 
-/* ── Tooth sprite positions in dente-chart.png ── */
+/* ── Modern SVG Tooth System — versão anatômica ── */
 const TOOTH_COND_COLORS = {
-  higido:     { fill:'#ffffff', stroke:'#c0b0a8' },
-  carie:      { fill:'#ffcdd2', stroke:'#e57373' },
-  restaurado: { fill:'#c8e6c9', stroke:'#66bb6a' },
-  extraido:   { fill:'#eeeeee', stroke:'#bdbdbd' },
-  canal:      { fill:'#fff9c4', stroke:'#fdd835' },
-  coroa:      { fill:'#bbdefb', stroke:'#42a5f5' },
-  implante:   { fill:'#e1bee7', stroke:'#ab47bc' },
-  fratura:    { fill:'#ffccbc', stroke:'#ff7043' },
-  selante:    { fill:'#b2ebf2', stroke:'#26c6da' },
-  outro:      { fill:'#f5f5f5', stroke:'#9e9e9e' }
-};
-const TOOTH_SPRITE = {
-  18:{x:0,y:0,w:47,h:125},17:{x:47,y:0,w:46,h:125},16:{x:93,y:0,w:47,h:125},
-  15:{x:140,y:0,w:38,h:125},14:{x:178,y:0,w:40,h:125},13:{x:218,y:0,w:38,h:125},
-  12:{x:256,y:0,w:34,h:125},11:{x:290,y:0,w:45,h:125},
-  21:{x:347,y:0,w:42,h:125},22:{x:389,y:0,w:33,h:125},23:{x:422,y:0,w:38,h:125},
-  24:{x:460,y:0,w:36,h:125},25:{x:496,y:0,w:39,h:125},26:{x:535,y:0,w:43,h:125},
-  27:{x:578,y:0,w:46,h:125},28:{x:624,y:0,w:51,h:125},
-  48:{x:0,y:320,w:47,h:133},47:{x:47,y:320,w:46,h:133},46:{x:93,y:320,w:47,h:133},
-  45:{x:140,y:320,w:38,h:133},44:{x:178,y:320,w:40,h:133},43:{x:218,y:320,w:38,h:133},
-  42:{x:256,y:320,w:34,h:133},41:{x:290,y:320,w:45,h:133},
-  31:{x:347,y:320,w:42,h:133},32:{x:389,y:320,w:33,h:133},33:{x:422,y:320,w:38,h:133},
-  34:{x:460,y:320,w:36,h:133},35:{x:496,y:320,w:39,h:133},36:{x:535,y:320,w:43,h:133},
-  37:{x:578,y:320,w:46,h:133},38:{x:624,y:320,w:51,h:133}
+  higido:     { fill:'#fffdf9', stroke:'#b89b8a', oclFill:'#fffaf4', root:'#d9b98f' },
+  carie:      { fill:'#ffd9dc', stroke:'#e57373', oclFill:'#ffd9dc', root:'#d9b98f' },
+  restaurado: { fill:'#d9f2dc', stroke:'#62b56a', oclFill:'#d9f2dc', root:'#d9b98f' },
+  extraido:   { fill:'#eeeeee', stroke:'#bdbdbd', oclFill:'#eeeeee', root:'#c9c9c9' },
+  canal:      { fill:'#fff4b8', stroke:'#e7b800', oclFill:'#fff4b8', root:'#d9b98f' },
+  coroa:      { fill:'#d8eaff', stroke:'#4d8edb', oclFill:'#d8eaff', root:'#d9b98f' },
+  implante:   { fill:'#ecd8ff', stroke:'#9b5ad6', oclFill:'#ecd8ff', root:'#d9b98f' },
+  fratura:    { fill:'#ffd8c8', stroke:'#ff7043', oclFill:'#ffd8c8', root:'#d9b98f' },
+  selante:    { fill:'#d3f7fb', stroke:'#26aebe', oclFill:'#d3f7fb', root:'#d9b98f' },
+  outro:      { fill:'#f6f1ed', stroke:'#9e9e9e', oclFill:'#f6f1ed', root:'#d9b98f' }
 };
 
 function getToothType(num) {
   const u = num % 10;
   if (num >= 51 && num <= 85) {
-    // Deciduous teeth
     if (u === 1 || u === 2) return 'incisor';
     if (u === 3) return 'canine';
-    return 'molar';
+    return 'molar_dec';
   }
   if (u === 1 || u === 2) return 'incisor';
   if (u === 3) return 'canine';
@@ -4920,27 +4939,94 @@ function isUpperTooth(num) {
   return q === 1 || q === 2 || q === 5 || q === 6;
 }
 
+function toothDefs(id, c){
+  return `<defs>
+    <linearGradient id="${id}c" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#f5eee7"/>
+      <stop offset="28%" stop-color="${c.fill}"/>
+      <stop offset="58%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#e2d6cb"/>
+    </linearGradient>
+    <linearGradient id="${id}r" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#f0d8b4"/>
+      <stop offset="100%" stop-color="${c.root || '#d9b98f'}"/>
+    </linearGradient>
+    <filter id="${id}s" x="-30%" y="-30%" width="160%" height="170%">
+      <feDropShadow dx="0" dy="2" stdDeviation="1.5" flood-color="#000" flood-opacity="0.18"/>
+    </filter>
+  </defs>`;
+}
+
+function getFrontalSVG(type, isUpper, c, isExtr) {
+  const id = `t${Math.random().toString(36).slice(2,8)}`;
+  const defs = toothDefs(id, c);
+  const crownFill = isExtr ? '#ece8e4' : `url(#${id}c)`;
+  const rootFill = isExtr ? '#d7d7d7' : `url(#${id}r)`;
+  const opacity = isExtr ? ' opacity="0.42"' : '';
+  let crown='', root='', grooves='', shine='', sizeW=34;
+
+  if(type === 'incisor'){
+    sizeW = 30;
+    crown = `<path d="M10 8 C13 4 21 4 24 8 C26 13 25 30 24 36 C21 40 13 40 10 36 C9 29 8 14 10 8 Z" fill="${crownFill}" stroke="${c.stroke}" stroke-width="1.25"${opacity}/>`;
+    root = isUpper
+      ? `<path d="M13 35 C12 47 13 60 17 70 C21 60 22 47 21 35 Z" fill="${rootFill}" stroke="#caa77f" stroke-width="1"${opacity}/>`
+      : `<path d="M13 35 C13 48 14 62 17 70 C20 62 21 48 21 35 Z" fill="${rootFill}" stroke="#caa77f" stroke-width="1"${opacity}/>`;
+    shine = `<path d="M13 11 C12 19 12 28 14 34" fill="none" stroke="#fff" stroke-width="2.2" opacity=".55" stroke-linecap="round"/>`;
+  } else if(type === 'canine'){
+    sizeW = 32;
+    crown = `<path d="M8 9 C11 4 23 4 26 9 C27 20 24 32 17 41 C10 32 7 20 8 9 Z" fill="${crownFill}" stroke="${c.stroke}" stroke-width="1.25"${opacity}/>`;
+    root = `<path d="M12 38 C11 52 13 66 17 74 C21 66 23 52 22 38 Z" fill="${rootFill}" stroke="#caa77f" stroke-width="1"${opacity}/>`;
+    grooves = `<path d="M17 10 C16 20 16 31 17 40" fill="none" stroke="${c.stroke}" stroke-width=".8" opacity=".25"/>`;
+    shine = `<path d="M12 11 C10 20 11 28 14 34" fill="none" stroke="#fff" stroke-width="2.2" opacity=".52" stroke-linecap="round"/>`;
+  } else if(type === 'premolar'){
+    sizeW = 34;
+    crown = `<path d="M6 10 C9 5 15 7 17 8 C20 6 26 5 29 10 C31 19 28 32 24 38 C20 41 13 41 10 38 C6 32 4 19 6 10 Z" fill="${crownFill}" stroke="${c.stroke}" stroke-width="1.25"${opacity}/>`;
+    root = `<path d="M10 36 C9 50 10 64 13 73 C16 62 17 49 17 37 C18 49 19 62 22 73 C25 64 26 50 24 36 Z" fill="${rootFill}" stroke="#caa77f" stroke-width="1"${opacity}/>`;
+    grooves = `<path d="M17 10 C16 20 16 31 17 39 M11 16 C14 14 20 14 23 16" fill="none" stroke="${c.stroke}" stroke-width=".8" opacity=".28" stroke-linecap="round"/>`;
+    shine = `<path d="M10 12 C8 20 9 30 12 35" fill="none" stroke="#fff" stroke-width="2.2" opacity=".5" stroke-linecap="round"/>`;
+  } else {
+    sizeW = type === 'molar_dec' ? 35 : 38;
+    crown = `<path d="M5 11 C8 5 15 8 18 9 C22 6 31 5 34 11 C37 20 35 32 31 39 C25 43 14 43 8 39 C4 32 2 20 5 11 Z" fill="${crownFill}" stroke="${c.stroke}" stroke-width="1.25"${opacity}/>`;
+    root = isUpper
+      ? `<path d="M8 37 C6 49 6 62 9 72 C13 62 14 49 15 38 C16 49 17 60 19 69 C22 59 22 49 22 38 C24 49 26 62 30 72 C33 62 33 49 31 37 Z" fill="${rootFill}" stroke="#caa77f" stroke-width="1"${opacity}/>`
+      : `<path d="M9 37 C7 51 8 65 12 74 C16 63 17 50 18 38 C19 50 21 63 26 74 C30 65 31 51 29 37 Z" fill="${rootFill}" stroke="#caa77f" stroke-width="1"${opacity}/>`;
+    grooves = `<path d="M18 10 C17 21 17 31 18 40 M9 20 C15 17 25 17 31 20 M11 31 C16 28 24 28 29 31" fill="none" stroke="${c.stroke}" stroke-width=".8" opacity=".28" stroke-linecap="round"/>`;
+    shine = `<path d="M9 13 C7 22 8 31 12 36" fill="none" stroke="#fff" stroke-width="2.3" opacity=".5" stroke-linecap="round"/>`;
+  }
+
+  const xmark = isExtr ? `<path d="M8 10 L30 38 M30 10 L8 38" stroke="#8f8f8f" stroke-width="3" stroke-linecap="round" opacity=".75"/>` : '';
+  return `<svg class="ot-front odonto-tooth-svg" viewBox="0 0 40 78" xmlns="http://www.w3.org/2000/svg" width="${sizeW}" height="66" aria-hidden="true">${defs}<g filter="url(#${id}s)">${root}${crown}${grooves}${shine}${xmark}</g></svg>`;
+}
+
+function getOclusalSVG(type, c) {
+  const id = `o${Math.random().toString(36).slice(2,8)}`;
+  const defs = `<defs><radialGradient id="${id}g" cx="45%" cy="35%" r="70%"><stop offset="0%" stop-color="#ffffff"/><stop offset="55%" stop-color="${c.oclFill}"/><stop offset="100%" stop-color="#ded3ca"/></radialGradient></defs>`;
+  if(type === 'incisor'){
+    return `<svg class="ot-ocl" viewBox="0 0 40 18" xmlns="http://www.w3.org/2000/svg" width="30" height="13" aria-hidden="true">${defs}<path d="M8 5 C14 2 26 2 32 5 L33 12 C26 16 14 16 7 12 Z" fill="url(#${id}g)" stroke="${c.stroke}" stroke-width="1.15"/><path d="M13 8 C18 6 23 6 28 8" stroke="${c.stroke}" stroke-width=".7" opacity=".25" fill="none"/></svg>`;
+  }
+  if(type === 'canine'){
+    return `<svg class="ot-ocl" viewBox="0 0 40 20" xmlns="http://www.w3.org/2000/svg" width="31" height="15" aria-hidden="true">${defs}<path d="M20 2 C30 4 35 10 30 16 C24 20 14 20 9 16 C4 10 10 4 20 2 Z" fill="url(#${id}g)" stroke="${c.stroke}" stroke-width="1.15"/><path d="M20 5 L24 10 L20 15 L16 10 Z" fill="none" stroke="${c.stroke}" stroke-width=".75" opacity=".35"/></svg>`;
+  }
+  if(type === 'premolar'){
+    return `<svg class="ot-ocl" viewBox="0 0 40 22" xmlns="http://www.w3.org/2000/svg" width="32" height="17" aria-hidden="true">${defs}<path d="M7 5 C11 1 29 1 33 5 C37 10 35 18 29 20 C24 22 16 22 11 20 C5 18 3 10 7 5 Z" fill="url(#${id}g)" stroke="${c.stroke}" stroke-width="1.15"/><path d="M20 4 C18 9 18 14 20 19 M9 11 C14 7 18 8 20 11 C22 8 27 7 31 11" fill="none" stroke="${c.stroke}" stroke-width=".8" opacity=".42" stroke-linecap="round"/></svg>`;
+  }
+  return `<svg class="ot-ocl" viewBox="0 0 44 26" xmlns="http://www.w3.org/2000/svg" width="36" height="21" aria-hidden="true">${defs}<path d="M8 5 C13 0 31 0 36 5 C42 11 40 21 32 24 C26 27 18 27 12 24 C4 21 2 11 8 5 Z" fill="url(#${id}g)" stroke="${c.stroke}" stroke-width="1.15"/><path d="M22 4 C24 10 30 10 35 13 C29 14 25 17 22 23 C19 17 15 14 9 13 C14 10 20 10 22 4 Z" fill="none" stroke="${c.stroke}" stroke-width=".85" opacity=".42" stroke-linecap="round"/><path d="M13 7 C16 9 18 10 22 10 M31 7 C28 9 26 10 22 10 M13 20 C16 17 18 16 22 16 M31 20 C28 17 26 16 22 16" fill="none" stroke="${c.stroke}" stroke-width=".65" opacity=".28" stroke-linecap="round"/></svg>`;
+}
+
 function getToothSVG(num, cond, extraStyle) {
-  const pos = TOOTH_SPRITE[num];
-  if (!pos) return '';
+  const type = getToothType(num);
+  const upper = isUpperTooth(num);
   const c = TOOTH_COND_COLORS[cond] || TOOTH_COND_COLORS.higido;
   const isExtr = cond === 'extraido';
-  const o = isExtr ? 0.35 : 1;
-  let overlay = '';
-  if (cond !== 'higido' && !isExtr) {
-    overlay = `<rect x="${pos.x}" y="${pos.y}" width="${pos.w}" height="${pos.h}" fill="${c.fill}" opacity="0.45"/>`;
-  }
-  if (cond !== 'higido' && !isExtr) {
-    overlay += `<rect x="${pos.x}" y="${pos.y}" width="${pos.w}" height="${pos.h}" fill="none" stroke="${c.stroke}" stroke-width="2" opacity="0.6"/>`;
-  }
-  const xm = isExtr ? `<line x1="${pos.x+pos.w*0.15}" y1="${pos.y+pos.h*0.1}" x2="${pos.x+pos.w*0.85}" y2="${pos.y+pos.h*0.9}" stroke="#777" stroke-width="3" stroke-linecap="round" opacity="0.6"/><line x1="${pos.x+pos.w*0.85}" y1="${pos.y+pos.h*0.1}" x2="${pos.x+pos.w*0.15}" y2="${pos.y+pos.h*0.9}" stroke="#777" stroke-width="3" stroke-linecap="round" opacity="0.6"/>` : '';
-  return `<svg class="odonto-tooth-svg" viewBox="${pos.x} ${pos.y} ${pos.w} ${pos.h}" xmlns="http://www.w3.org/2000/svg" style="${extraStyle||''}"><image href="dente-chart.png" x="0" y="0" width="691" height="453" opacity="${o}"/>${overlay}${xm}</svg>`;
+  const frontSVG = getFrontalSVG(type, upper, c, isExtr);
+  const oclSVG = getOclusalSVG(type, c);
+  const wStyle = extraStyle ? `style="${extraStyle}"` : '';
+  return `<div class="ot-views" ${wStyle}>${frontSVG}${oclSVG}</div>`;
 }
 
 function renderArcada(containerId, dentes){
   const c = document.getElementById(containerId);
   if(!c) return;
-  // Determine midpoint for quadrant gap
   const mid = Math.floor(dentes.length / 2);
   c.innerHTML = dentes.map((num, i) => {
     const d = odontoDentes[num] || {};
@@ -4949,12 +5035,13 @@ function renderArcada(containerId, dentes){
     const title = d.procedimento ? `${num}: ${d.procedimento}` : `Dente ${num}`;
     const upper = isUpperTooth(num);
     const gap = (i === mid) ? '<div class="odonto-quadrant-gap"></div>' : '';
-    const numDiv = `<div class="odonto-dente-num">${num}</div>`;
-    return `${gap}<div class="odonto-dente-wrap${sel}" onclick="odontoClicarDente(${num})" title="${escapeHtml(title)}">
-      ${upper ? numDiv : ''}
-      ${getToothSVG(num, cond)}
-      ${upper ? '' : numDiv}
-    </div>`;
+    const numDiv = `<div class="ot-num">${num}</div>`;
+    const toothHTML = getToothSVG(num, cond);
+    // Upper: number top → frontal → oclusal; Lower: oclusal → frontal → number
+    const inner = upper
+      ? `${numDiv}${toothHTML}`
+      : `${toothHTML}${numDiv}`;
+    return `${gap}<div class="odonto-dente-wrap${sel}" onclick="odontoClicarDente(${num})" title="${escapeHtml(title)}">${inner}</div>`;
   }).join('');
 }
 
@@ -5345,15 +5432,15 @@ function pacRenderArcada(id, dentes){
     const tip  = r ? `Dente ${num}: ${r.procs.map(p=>p.nome).join(', ')||'rascunho'} (não salvo)` :
                  d.procedimento ? `${num}: ${d.procedimento}` : `Dente ${num}`;
     const upper = isUpperTooth(num);
-    const pendingStyle = hasPending ? 'filter:drop-shadow(0 0 4px rgba(245,158,11,.6));' : '';
+    const pendingStyle = hasPending ? 'filter:drop-shadow(0 0 4px rgba(245,158,11,.7));' : '';
     const gap = (i === mid) ? '<div class="odonto-quadrant-gap"></div>' : '';
-    const numDiv = `<div class="odonto-dente-num">${num}</div>`;
-    return `${gap}<div class="odonto-dente-wrap${sel}" onclick="pacClicarDente(${num})" title="${escapeHtml(tip)}" style="position:relative;">
-      ${upper ? numDiv : ''}
-      ${getToothSVG(num, cond, pendingStyle)}
-      ${upper ? '' : numDiv}
-      ${hasPending?'<div style="position:absolute;top:-3px;right:-3px;width:8px;height:8px;background:#f59e0b;border-radius:50%;border:1.5px solid #fff;z-index:1;"></div>':''}
-    </div>`;
+    const numDiv = `<div class="ot-num">${num}</div>`;
+    const toothHTML = getToothSVG(num, cond, pendingStyle);
+    const inner = upper
+      ? `${numDiv}${toothHTML}`
+      : `${toothHTML}${numDiv}`;
+    const pendingDot = hasPending ? '<div class="odonto-pending-dot"></div>' : '';
+    return `${gap}<div class="odonto-dente-wrap${sel}" onclick="pacClicarDente(${num})" title="${escapeHtml(tip)}">${pendingDot}${inner}</div>`;
   }).join('');
 }
 
@@ -5484,17 +5571,9 @@ async function pacSalvarDente(pacId){
     if(r.procs.length){
       const numFaces = r.faces.length || 1;
       for(const dp of r.procs){
-        const procObj = procs.find(p=>p.nome===dp.nome);
+        const procObj = pacOdontoFindProcExato(dp.nome) || procs.find(p=>p.nome===dp.nome);
         if(procObj){
-          const isGlob = procIsGlobal(dp.nome);
-          const qtd    = isGlob ? 1 : numFaces;
-          const exists = pacOdontoOrcList.findIndex(x=>x.procId===procObj.id && x.dentes===String(num));
-          if(exists>=0) pacOdontoOrcList.splice(exists,1);
-          pacOdontoOrcList.push({
-            procId:procObj.id, nome:procObj.nome, precoUnit:procObj.precoFinal||0,
-            qtd, dentes:String(num), tipo:isGlob?'global':'por_dente',
-            faces: isGlob?'':faces, total:(procObj.precoFinal||0)*qtd
-          });
+          pacOdontoUpsertItemOrc(procObj, num, faces);
         }
         const valor = dp.preco ? dp.preco.toFixed(2).replace('.',',') : '0,00';
         // Evita duplicar no plano se o procedimento já existe (realizado, pendente ou aprovado) para o mesmo dente
@@ -5518,9 +5597,9 @@ async function pacSalvarDente(pacId){
     }
   }
 
-  // Limpa rascunho e orçamento temporário (itens já foram inseridos no plano acima)
+  // Limpa apenas o rascunho. Mantém pacOdontoOrcList com os procedimentos exatos salvos,
+  // para o orçamento rápido não voltar a sugerir um procedimento parecido pelo nome da condição.
   pacDentesRascunho = {};
-  pacOdontoOrcList = [];
 
   showLoading(false);
 
@@ -9341,34 +9420,67 @@ function pacOdontoInitOrc(){
 function pacOdontoAutoPopular(){
   if(!pacDentesMap || !Object.keys(pacDentesMap).length) return;
   const adicionados = new Map();
+
   Object.entries(pacDentesMap).forEach(([dente, info])=>{
-    if(!info || !info.condicao || info.condicao==='higido') return;
+    if(!info) return;
+    const num = parseInt(dente);
+
+    // 1) Prioridade máxima: usar exatamente o procedimento que foi salvo no dente.
+    // Ex.: se foi salvo "Endodontia - 3 canais", não pode virar "Endodontia - Necro (1 canal)".
+    const nomesSalvos = String(info.procedimento || '')
+      .split(',')
+      .map(x => x.trim())
+      .filter(Boolean);
+
+    if(nomesSalvos.length){
+      nomesSalvos.forEach(nomeSalvo=>{
+        const procExato = pacOdontoFindProcExato(nomeSalvo);
+        if(!procExato) return;
+        const tipo = getTipoCobranca(procExato.id);
+        const dentesStr = tipo!=='global' && !isNaN(num) ? String(num) : '';
+        const key = String(procExato.id) + '|' + dentesStr;
+        if(adicionados.has(key)) return;
+        const preco = procExato.precoFinal || 0;
+        const item = {
+          procId: procExato.id,
+          nome: procExato.nome,
+          precoUnit: preco,
+          qtd: 1,
+          dentes: dentesStr,
+          tipo,
+          faces: info.face || '',
+          total: preco
+        };
+        adicionados.set(key, item);
+        pacOdontoOrcList.push(item);
+      });
+      return;
+    }
+
+    // 2) Só se não houver procedimento salvo, usa sugestão por condição.
+    // Essa parte é fallback e pode escolher um procedimento genérico.
+    if(!info.condicao || info.condicao==='higido') return;
     const cond = info.condicao.toLowerCase();
     const keywords = COND_PARA_PROC[cond] || [];
     if(!keywords.length) return;
-    const num = parseInt(dente);
+
     const proc = procs.find(p=>{
-      const n = p.nome.toLowerCase();
+      const n = (p.nome||'').toLowerCase();
       return keywords.some(k=>n.includes(k)) && (p.ativo!==false);
     });
     if(!proc) return;
-    const key = proc.id;
+
     const tipo = getTipoCobranca(proc.id);
-    if(adicionados.has(key)){
-      const existing = adicionados.get(key);
-      if(tipo!=='global' && !isNaN(num)){
-        const arr = (existing.dentes||'').split(',').map(Number).filter(Boolean);
-        if(!arr.includes(num)){ arr.push(num); arr.sort((a,b)=>a-b); existing.dentes=arr.join(','); existing.qtd=arr.length; existing.total=existing.precoUnit*existing.qtd; }
-      }
-    } else {
-      const preco = proc.precoFinal||0;
-      const dentesStr = tipo!=='global' && !isNaN(num) ? String(num) : '';
-      const qtd = tipo==='global' ? 1 : (dentesStr ? 1 : 1);
-      const item = {procId:proc.id, nome:proc.nome, precoUnit:preco, qtd, dentes:dentesStr, tipo, total:preco*qtd};
-      adicionados.set(key, item);
-      pacOdontoOrcList.push(item);
-    }
+    const dentesStr = tipo!=='global' && !isNaN(num) ? String(num) : '';
+    const key = String(proc.id) + '|' + dentesStr;
+    if(adicionados.has(key)) return;
+
+    const preco = proc.precoFinal||0;
+    const item = {procId:proc.id, nome:proc.nome, precoUnit:preco, qtd:1, dentes:dentesStr, tipo, faces:info.face||'', total:preco};
+    adicionados.set(key, item);
+    pacOdontoOrcList.push(item);
   });
+
   if(pacOdontoOrcList.length) showToast(pacOdontoOrcList.length+' procedimento(s) sugerido(s) pelo odontograma');
 }
 
@@ -9398,6 +9510,38 @@ function getTipoCobranca(procId){
   if(p.tipoCobranca) return p.tipoCobranca;
   if(p.tipo_cobranca) return p.tipo_cobranca;
   return procIsGlobal(p.nome) ? 'global' : 'por_dente';
+}
+
+
+// Busca procedimento EXATO salvo no odontograma.
+// Importante: não usa busca parcial aqui, para não trocar "Endodontia - 3 canais" por "Endodontia - Necro (1 canal)".
+function pacOdontoFindProcExato(nome){
+  const alvo = (nome||'').trim().toLowerCase();
+  if(!alvo) return null;
+  return procs.find(p => (p.nome||'').trim().toLowerCase() === alvo && p.ativo !== false) || null;
+}
+
+function pacOdontoUpsertItemOrc(proc, dente, faces){
+  if(!proc) return;
+  const num = parseInt(dente);
+  const tipo = getTipoCobranca(proc.id);
+  const preco = proc.precoFinal || 0;
+  const dentesStr = tipo !== 'global' && !isNaN(num) ? String(num) : '';
+  const key = String(proc.id) + '|' + dentesStr;
+  const idx = pacOdontoOrcList.findIndex(x => String(x.procId) + '|' + (x.dentes||'') === key);
+  const qtd = tipo === 'global' ? 1 : 1;
+  const item = {
+    procId: proc.id,
+    nome: proc.nome,
+    precoUnit: preco,
+    qtd,
+    dentes: dentesStr,
+    tipo,
+    faces: tipo === 'global' ? '' : (faces || ''),
+    total: preco * qtd
+  };
+  if(idx >= 0) pacOdontoOrcList[idx] = item;
+  else pacOdontoOrcList.push(item);
 }
 
 function pacOdontoAddOrc(){
