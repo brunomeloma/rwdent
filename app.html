@@ -1155,6 +1155,47 @@ select, textarea {
 .search-result-item{display:flex;align-items:center;gap:12px;padding:12px 20px;cursor:pointer;border-top:1px solid var(--rose-light);transition:background .15s;}
 .search-result-item:hover,.search-result-item.active{background:var(--rose-lighter);}
 
+/* ── ADMIN PANEL ── */
+.admin-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:20px;}
+.admin-stat-card{background:#fff;border-radius:14px;border:1px solid var(--rose-light);padding:18px;text-align:center;box-shadow:0 2px 12px rgba(212,115,90,.06);}
+.admin-stat-card .stat-num{font-size:28px;font-weight:800;color:var(--rose);}
+.admin-stat-card .stat-label{font-size:12px;color:var(--rose-text);margin-top:4px;text-transform:uppercase;letter-spacing:.3px;}
+.admin-stat-card.pending .stat-num{color:#e67e22;}
+.admin-stat-card.active .stat-num{color:#27ae60;}
+.admin-stat-card.expired .stat-num{color:#c0392b;}
+.admin-table{width:100%;border-collapse:separate;border-spacing:0;background:#fff;border-radius:14px;border:1px solid var(--rose-light);overflow:hidden;box-shadow:0 2px 12px rgba(212,115,90,.06);}
+.admin-table th{background:var(--rose-lighter);color:var(--rose-dark);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;padding:12px 14px;text-align:left;border-bottom:2px solid var(--rose-light);}
+.admin-table td{padding:12px 14px;font-size:13px;border-bottom:1px solid var(--rose-lighter);vertical-align:middle;}
+.admin-table tr:last-child td{border-bottom:none;}
+.admin-table tr:hover td{background:var(--rose-lighter);}
+.admin-badge{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:700;}
+.admin-badge.pendente{background:#fef3e2;color:#e67e22;border:1px solid #f5d9a0;}
+.admin-badge.aprovado{background:#edf7ee;color:#27ae60;border:1px solid #a5d6a7;}
+.admin-badge.rejeitado{background:#fde8e8;color:#c0392b;border:1px solid #f5a5a5;}
+.admin-badge.expirado{background:#f5f5f5;color:#888;border:1px solid #ddd;}
+.admin-btn{padding:6px 14px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;border:none;transition:all .18s;display:inline-flex;align-items:center;gap:5px;}
+.admin-btn.aprovar{background:#27ae60;color:#fff;}.admin-btn.aprovar:hover{background:#219a52;}
+.admin-btn.rejeitar{background:#e74c3c;color:#fff;}.admin-btn.rejeitar:hover{background:#c0392b;}
+.admin-btn.renovar{background:#e67e22;color:#fff;}.admin-btn.renovar:hover{background:#cf6e18;}
+.admin-filter-bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;}
+.admin-filter-btn{padding:6px 14px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid var(--rose-light);background:#fff;color:var(--rose-text);transition:all .18s;}
+.admin-filter-btn.active{background:var(--rose);color:#fff;border-color:var(--rose);}
+.admin-empty{text-align:center;padding:40px 20px;color:var(--rose-text);font-size:14px;}
+.admin-empty i{font-size:48px;display:block;margin-bottom:12px;opacity:.4;}
+@media(max-width:768px){
+  .admin-table{font-size:12px;}
+  .admin-table th,.admin-table td{padding:10px 8px;}
+  .admin-stats{grid-template-columns:repeat(2,1fr);}
+  .admin-btn{padding:5px 10px;font-size:11px;}
+}
+.dark-mode .admin-stat-card{background:#1e1612!important;border-color:#3a2a24!important;}
+.dark-mode .admin-table{background:#1e1612!important;border-color:#3a2a24!important;}
+.dark-mode .admin-table th{background:#2a1e1a!important;border-color:#3a2a24!important;}
+.dark-mode .admin-table td{border-color:#2a1e1a!important;}
+.dark-mode .admin-table tr:hover td{background:#2a1e1a!important;}
+.dark-mode .admin-filter-btn{background:#1e1612!important;border-color:#3a2a24!important;color:#e0c8c0!important;}
+.dark-mode .admin-filter-btn.active{background:var(--rose)!important;color:#fff!important;}
+
 </style>
 </head>
 <body>
@@ -1288,6 +1329,7 @@ select, textarea {
           <button class="tn-dropdown-item" data-tab="profissionais" onclick="switchTab('profissionais');tnClose()"><i class="ti ti-briefcase"></i> Profissionais</button>
           <button class="tn-dropdown-item" data-tab="resgate" onclick="switchTab('resgate');tnClose()"><i class="ti ti-heart-handshake"></i> Resgate de Pacientes</button>
           <button class="tn-dropdown-item" data-tab="invisalign_apresentacao" onclick="switchTab('invisalign_apresentacao');tnClose()"><i class="ti ti-align-box-left-stretch"></i> Alinhador Transparente</button>
+          <button class="tn-dropdown-item admin-only" data-tab="admin" onclick="switchTab('admin');tnClose()" style="display:none;"><i class="ti ti-shield-check"></i> Painel Admin</button>
         </div>
       </div>
     </div>
@@ -2452,6 +2494,21 @@ select, textarea {
       </div>
     </div>
 
+    <!-- ADMIN PANEL -->
+    <div id="tab-admin" class="content" style="display:none;">
+      <div class="admin-stats" id="admin-stats"></div>
+      <div class="card">
+        <h2><i class="ti ti-shield-check"></i> Gerenciar Contas</h2>
+        <div class="admin-filter-bar" id="admin-filters">
+          <button class="admin-filter-btn active" onclick="adminFilter('todos')">Todos</button>
+          <button class="admin-filter-btn" onclick="adminFilter('pendente')">Pendentes</button>
+          <button class="admin-filter-btn" onclick="adminFilter('aprovado')">Aprovados</button>
+          <button class="admin-filter-btn" onclick="adminFilter('rejeitado')">Rejeitados</button>
+        </div>
+        <div style="overflow-x:auto;" id="admin-table-wrap"></div>
+      </div>
+    </div>
+
   </div><!-- end page-content -->
 
   <!-- Mobile bottom nav -->
@@ -2478,6 +2535,7 @@ select, textarea {
         <button onclick="switchTab('resgate');toggleMobileMore()"><i class="ti ti-heart-handshake"></i>Resgate</button>
         <button onclick="switchTab('invisalign_apresentacao');toggleMobileMore()"><i class="ti ti-align-box-left-stretch"></i>Alinhador</button>
         <button onclick="switchTab('configuracoes');toggleMobileMore()"><i class="ti ti-settings"></i>Config.</button>
+        <button class="admin-only" onclick="switchTab('admin');toggleMobileMore()" style="display:none;"><i class="ti ti-shield-check"></i>Admin</button>
         <button onclick="doLogout()" style="color:#c0392b;"><i class="ti ti-logout" style="color:#c0392b;"></i>Sair</button>
       </div>
     </div>
@@ -2525,6 +2583,7 @@ let editingPatientId = null;
 let currentUser = null;
 let clinicaId = null;       // ID da clínica do usuário logado (multi-tenant)
 let clinicaData = null;     // Dados completos da clínica
+const _ADMIN_IDS = ['09f21b22-76c8-4aee-8af4-9fc292ff08d4','b39d8b67-0610-4708-9733-104db7f0307b'];
 
 // Calendário state
 const CAL_START_HOUR = 7, CAL_END_HOUR = 19;
@@ -2634,7 +2693,131 @@ async function checkClinicaApproval(){
   document.querySelectorAll('[data-tab="invisalign_apresentacao"], [onclick*="invisalign"]').forEach(b=>{
     b.style.display = _isMainClinic ? '' : 'none';
   });
+  // Admin panel — apenas para o administrador
+  const _isAdmin = _ADMIN_IDS.includes(cli.user_id);
+  document.querySelectorAll('.admin-only').forEach(b=>{
+    b.style.display = _isAdmin ? '' : 'none';
+  });
   return true;
+}
+
+// ══════════════════════════════════════════════════════
+// ADMIN PANEL
+// ══════════════════════════════════════════════════════
+let _adminClinics = [];
+let _adminFilterStatus = 'todos';
+
+async function loadAdminPanel(){
+  if(!_ADMIN_IDS.includes(currentUser?.id)) return;
+  showLoading(true);
+  const { data, error } = await _sb.from('clinicas').select('*').order('created_at',{ascending:false});
+  showLoading(false);
+  if(error){ showToast('Erro ao carregar contas: '+error.message,'error'); return; }
+  _adminClinics = data || [];
+  renderAdminStats();
+  renderAdminTable();
+}
+
+function renderAdminStats(){
+  const el = document.getElementById('admin-stats');
+  const pending = _adminClinics.filter(c=>c.status==='pendente').length;
+  const approved = _adminClinics.filter(c=>c.status==='aprovado' && (!c.expira_em || new Date(c.expira_em)>new Date())).length;
+  const expired = _adminClinics.filter(c=>c.status==='aprovado' && c.expira_em && new Date(c.expira_em)<=new Date()).length;
+  const rejected = _adminClinics.filter(c=>c.status==='rejeitado').length;
+  el.innerHTML = `
+    <div class="admin-stat-card pending"><div class="stat-num">${pending}</div><div class="stat-label">Pendentes</div></div>
+    <div class="admin-stat-card active"><div class="stat-num">${approved}</div><div class="stat-label">Ativos</div></div>
+    <div class="admin-stat-card expired"><div class="stat-num">${expired}</div><div class="stat-label">Expirados</div></div>
+    <div class="admin-stat-card"><div class="stat-num">${rejected}</div><div class="stat-label">Rejeitados</div></div>
+  `;
+}
+
+function adminFilter(status){
+  _adminFilterStatus = status;
+  document.querySelectorAll('.admin-filter-btn').forEach(b=>{
+    b.classList.toggle('active', b.textContent.toLowerCase().includes(status==='todos'?'todos':status));
+  });
+  renderAdminTable();
+}
+
+function renderAdminTable(){
+  const wrap = document.getElementById('admin-table-wrap');
+  let list = _adminClinics;
+  if(_adminFilterStatus==='pendente') list = list.filter(c=>c.status==='pendente');
+  else if(_adminFilterStatus==='aprovado') list = list.filter(c=>c.status==='aprovado');
+  else if(_adminFilterStatus==='rejeitado') list = list.filter(c=>c.status==='rejeitado');
+
+  if(list.length===0){
+    wrap.innerHTML = '<div class="admin-empty"><i class="ti ti-inbox"></i>Nenhuma conta encontrada.</div>';
+    return;
+  }
+  let html = `<table class="admin-table">
+    <thead><tr><th>Clínica</th><th>Responsável</th><th>E-mail</th><th>Status</th><th>Expira em</th><th>Ações</th></tr></thead><tbody>`;
+  list.forEach(c=>{
+    const isExpired = c.expira_em && new Date(c.expira_em) <= new Date();
+    let badge = '';
+    if(c.status==='pendente') badge='<span class="admin-badge pendente"><i class="ti ti-clock"></i> Pendente</span>';
+    else if(c.status==='aprovado' && isExpired) badge='<span class="admin-badge expirado"><i class="ti ti-clock-off"></i> Expirado</span>';
+    else if(c.status==='aprovado') badge='<span class="admin-badge aprovado"><i class="ti ti-check"></i> Aprovado</span>';
+    else badge='<span class="admin-badge rejeitado"><i class="ti ti-x"></i> Rejeitado</span>';
+
+    let expiraStr = '-';
+    if(c.expira_em){
+      const d = new Date(c.expira_em);
+      expiraStr = d.toLocaleDateString('pt-BR')+' '+d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+      if(isExpired) expiraStr = '<span style="color:#c0392b;">'+expiraStr+'</span>';
+    }
+
+    let actions = '';
+    if(c.status==='pendente'){
+      actions = `<button class="admin-btn aprovar" onclick="adminAprovar('${c.id}')"><i class="ti ti-check"></i> Aprovar 24h</button>
+        <button class="admin-btn rejeitar" onclick="adminRejeitar('${c.id}')"><i class="ti ti-x"></i></button>`;
+    } else if(c.status==='aprovado' && isExpired){
+      actions = `<button class="admin-btn renovar" onclick="adminRenovar('${c.id}')"><i class="ti ti-refresh"></i> Renovar 24h</button>`;
+    } else if(c.status==='aprovado'){
+      actions = `<button class="admin-btn rejeitar" onclick="adminRejeitar('${c.id}')"><i class="ti ti-x"></i> Revogar</button>`;
+    } else {
+      actions = `<button class="admin-btn aprovar" onclick="adminAprovar('${c.id}')"><i class="ti ti-check"></i> Aprovar</button>`;
+    }
+
+    // Don't show action buttons for admin's own clinics
+    if(_ADMIN_IDS.includes(c.user_id)) actions = '<span style="color:var(--rose-text);font-size:11px;">Admin</span>';
+
+    html += `<tr>
+      <td style="font-weight:600;">${c.nome_cli||'-'}</td>
+      <td>${c.nome_resp||'-'}</td>
+      <td>${c.email||'-'}</td>
+      <td>${badge}</td>
+      <td>${expiraStr}</td>
+      <td>${actions}</td>
+    </tr>`;
+  });
+  html += '</tbody></table>';
+  wrap.innerHTML = html;
+}
+
+async function adminAprovar(id){
+  const expira = new Date(Date.now() + 24*60*60*1000).toISOString();
+  const { error } = await _sb.from('clinicas').update({status:'aprovado', expira_em: expira}).eq('id', id);
+  if(error){ showToast('Erro: '+error.message,'error'); return; }
+  showToast('Conta aprovada! Acesso de 24h ativado.','ok');
+  loadAdminPanel();
+}
+
+async function adminRejeitar(id){
+  if(!confirm('Tem certeza que deseja rejeitar/revogar esta conta?')) return;
+  const { error } = await _sb.from('clinicas').update({status:'rejeitado', expira_em: null}).eq('id', id);
+  if(error){ showToast('Erro: '+error.message,'error'); return; }
+  showToast('Conta rejeitada.','warn');
+  loadAdminPanel();
+}
+
+async function adminRenovar(id){
+  const expira = new Date(Date.now() + 24*60*60*1000).toISOString();
+  const { error } = await _sb.from('clinicas').update({expira_em: expira}).eq('id', id);
+  if(error){ showToast('Erro: '+error.message,'error'); return; }
+  showToast('Acesso renovado por mais 24h!','ok');
+  loadAdminPanel();
 }
 
 async function esqueciSenha(){
@@ -2811,7 +2994,7 @@ document.addEventListener('click', e=>{
 function tnUpdateActive(tab){
   const agendaTabs = ['agendar','lista','calendario'];
   const finTabs = ['financeiro','vendas_fin','procedimentos_fin','materiais_fin','estoque_fin'];
-  const maisTabs = ['profissionais','resgate','invisalign_apresentacao'];
+  const maisTabs = ['profissionais','resgate','invisalign_apresentacao','admin'];
   const grpAgenda = document.getElementById('tng-agenda');
   const grpFin = document.getElementById('tng-fin');
   const grpMais = document.getElementById('tng-mais');
@@ -2830,7 +3013,7 @@ function toggleMobileMore(){
 }
 
 function switchTab(tab){
-  ['home','agendar','lista','calendario','pacientes','profissionais','configuracoes','financeiro','procedimentos_fin','materiais_fin','estoque_fin','vendas_fin','venda_rapida','resgate','invisalign_apresentacao'].forEach(t=>{
+  ['home','agendar','lista','calendario','pacientes','profissionais','configuracoes','financeiro','procedimentos_fin','materiais_fin','estoque_fin','vendas_fin','venda_rapida','resgate','invisalign_apresentacao','admin'].forEach(t=>{
     const el=document.getElementById('tab-'+t);
     if(el) el.style.display = t===tab?'':'none';
   });
@@ -2848,7 +3031,7 @@ function switchTab(tab){
     calendario:'Calendário de atendimentos', pacientes:'Cadastro de pacientes',
     profissionais:'Equipe e profissionais', financeiro:'Painel financeiro', procedimentos_fin:'Procedimentos e precificação',
     materiais_fin:'Materiais e insumos', estoque_fin:'Controle de estoque', vendas_fin:'Vendas e orçamentos',
-    venda_rapida:'Venda Rápida', resgate:'Resgate de pacientes', invisalign_apresentacao:'Alinhador Transparente', configuracoes:'Configurações da clínica'
+    venda_rapida:'Venda Rápida', resgate:'Resgate de pacientes', invisalign_apresentacao:'Alinhador Transparente', configuracoes:'Configurações da clínica', admin:'Painel Administrativo'
   };
   const _subEl = document.getElementById('header-subtitulo');
   if(_subEl) _subEl.textContent = _tituloAba[tab] || 'Agendamentos e Prontuários Odontológicos';
@@ -2864,6 +3047,7 @@ function switchTab(tab){
   if(tab==='home') renderHomeStats();
   if(tab==='configuracoes') renderConfiguracoes();
   if(tab==='resgate') renderResgate();
+  if(tab==='admin') loadAdminPanel();
   if(tab==='venda_rapida'){
     // No mobile, foca busca automaticamente
     setTimeout(()=>{ const _s=document.getElementById('vr-search-m'); if(_s&&window.innerWidth<=768) _s.focus(); },200);
