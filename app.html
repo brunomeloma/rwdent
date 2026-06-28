@@ -12092,7 +12092,7 @@ function abrirBuscaGlobal(){
   ol.classList.add('show');
   const inp = document.getElementById('search-global-input');
   inp.value=''; inp.focus();
-  document.getElementById('search-global-results').innerHTML='<div style="padding:16px;text-align:center;color:var(--rose-text);font-size:13px;">Digite para buscar pacientes, procedimentos ou agendamentos</div>';
+  document.getElementById('search-global-results').innerHTML='<div style="padding:16px;text-align:center;color:var(--rose-text);font-size:13px;">Digite para buscar pacientes, procedimentos, materiais, agendamentos ou vendas</div>';
   _buscaGlobalIdx=-1;
 }
 function fecharBuscaGlobal(){
@@ -12101,21 +12101,33 @@ function fecharBuscaGlobal(){
 function buscaGlobalFiltrar(){
   const q = _norm(document.getElementById('search-global-input').value);
   const res = document.getElementById('search-global-results');
-  if(!q){ res.innerHTML='<div style="padding:16px;text-align:center;color:var(--rose-text);font-size:13px;">Digite para buscar...</div>'; return; }
+  if(!q){ res.innerHTML='<div style="padding:16px;text-align:center;color:var(--rose-text);font-size:13px;">Digite para buscar pacientes, procedimentos, materiais, agendamentos ou vendas</div>'; return; }
   const items = [];
-  pacientes.filter(p=>_norm(p.nome).includes(q)||(p.cpf||'').includes(q)||(p.telefone||'').includes(q)).slice(0,5).forEach(p=>{
-    items.push({icon:'ti-user',label:escapeHtml(p.nome),sub:escapeHtml(p.telefone||'Sem telefone'),action:`fecharBuscaGlobal();switchTab('pacientes');setTimeout(()=>selectPatient(${p.id}),150)`});
+  pacientes.filter(p=>!p.arquivado&&(_norm(p.nome).includes(q)||(p.cpf||'').replace(/\D/g,'').includes(q.replace(/\D/g,''))||(p.telefone||'').replace(/\D/g,'').includes(q.replace(/\D/g,'')))).slice(0,5).forEach(p=>{
+    items.push({cat:'Pacientes',icon:'ti-user',label:escapeHtml(p.nome),sub:escapeHtml(p.telefone||p.cpf||''),action:`fecharBuscaGlobal();switchTab('pacientes');setTimeout(()=>selectPatient(${p.id}),150)`});
   });
-  procs.filter(p=>_norm(p.nome).includes(q)).slice(0,4).forEach(p=>{
-    items.push({icon:'ti-medical-cross',label:escapeHtml(p.nome),sub:fmtBRL(p.precoFinal||0),action:`fecharBuscaGlobal();switchTab('procedimentos_fin')`});
+  procs.filter(p=>p.ativo!==false&&_norm(p.nome).includes(q)).slice(0,4).forEach(p=>{
+    items.push({cat:'Procedimentos',icon:'ti-medical-cross',label:escapeHtml(p.nome),sub:fmtBRL(p.precoFinal||0),action:`fecharBuscaGlobal();switchTab('procedimentos_fin')`});
+  });
+  mats.filter(m=>!m.arquivado&&_norm(m.nome).includes(q)).slice(0,4).forEach(m=>{
+    items.push({cat:'Materiais',icon:'ti-package',label:escapeHtml(m.nome),sub:m.unidade?escapeHtml(m.unidade):'Material',action:`fecharBuscaGlobal();switchTab('estoque_fin')`});
   });
   const hoje = new Date().toISOString().slice(0,10);
   agendamentos.filter(a=>a.data>=hoje&&(_norm(a.nome||'').includes(q)||_norm(a.procedimento||'').includes(q))).slice(0,4).forEach(a=>{
-    items.push({icon:'ti-calendar',label:escapeHtml(a.nome||''),sub:`${formatDate(a.data)} ${(a.horario||'').slice(0,5)}`,action:`fecharBuscaGlobal();switchTab('lista')`});
+    items.push({cat:'Agenda',icon:'ti-calendar',label:escapeHtml(a.nome||''),sub:`${formatDate(a.data)} ${(a.horario||'').slice(0,5)} — ${escapeHtml(a.procedimento||'')}`,action:`fecharBuscaGlobal();switchTab('lista')`});
+  });
+  vendas.filter(v=>_norm(v.pacienteNome||'').includes(q)||(_norm((v.itens||[]).map(i=>i.nome||'').join(' '))).includes(q)).slice(0,4).forEach(v=>{
+    const st = v.status==='finalizada'?'Finalizada':v.status==='orcamento'?'Orçamento':'Venda';
+    items.push({cat:'Vendas',icon:'ti-receipt',label:escapeHtml(v.pacienteNome||'Venda'),sub:`${st} — ${fmtBRL(v.total||0)}`,action:`fecharBuscaGlobal();switchTab('vendas_fin')`});
   });
   if(!items.length){ res.innerHTML='<div style="padding:16px;text-align:center;color:var(--rose-text);font-size:13px;">Nenhum resultado encontrado</div>'; return; }
   _buscaGlobalIdx=-1;
-  res.innerHTML=items.map((it,i)=>`<div class="search-result-item" data-idx="${i}" onclick="${it.action}"><i class="ti ${it.icon}" style="font-size:18px;color:var(--rose);"></i><div style="flex:1;min-width:0;"><div style="font-weight:600;font-size:13px;">${it.label}</div><div style="font-size:11px;color:var(--rose-text);">${it.sub}</div></div><i class="ti ti-chevron-right" style="font-size:14px;color:var(--rose-light);"></i></div>`).join('');
+  let lastCat='';
+  res.innerHTML=items.map((it,i)=>{
+    let hdr='';
+    if(it.cat!==lastCat){ lastCat=it.cat; hdr=`<div style="padding:6px 14px 2px;font-size:10px;font-weight:700;text-transform:uppercase;color:var(--rose);letter-spacing:.5px;">${it.cat}</div>`; }
+    return hdr+`<div class="search-result-item" data-idx="${i}" onclick="${it.action}"><i class="ti ${it.icon}" style="font-size:18px;color:var(--rose);"></i><div style="flex:1;min-width:0;"><div style="font-weight:600;font-size:13px;">${it.label}</div><div style="font-size:11px;color:var(--rose-text);">${it.sub}</div></div><i class="ti ti-chevron-right" style="font-size:14px;color:var(--rose-light);"></i></div>`;
+  }).join('');
 }
 function buscaGlobalNav(e){
   const items = document.querySelectorAll('.search-result-item');
