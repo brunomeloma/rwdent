@@ -44,10 +44,14 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#fdf0eb;display:flex;min
   background:radial-gradient(circle,rgba(122,48,32,.08) 0%,transparent 70%);border-radius:50%;
 }
 
-.brand-logo{position:relative;z-index:1;margin-bottom:16px;}
-.brand-logo svg{filter:drop-shadow(0 8px 24px rgba(122,48,32,.18));}
+.brand-logo{
+  position:relative;z-index:1;margin-bottom:16px;
+  width:90px;height:90px;background:rgba(255,255,255,.6);border-radius:22px;
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:0 8px 28px rgba(122,48,32,.12);backdrop-filter:blur(8px);
+  border:1px solid rgba(212,115,90,.1);
+}
 .brand-title{font-size:2.2rem;font-weight:900;color:var(--rose-dark);letter-spacing:-1px;position:relative;z-index:1;}
-.brand-title span{color:#4f9cf9;}
 .brand-subtitle{font-size:.95rem;color:var(--rose-text);margin-top:6px;position:relative;z-index:1;opacity:.85;}
 
 .brand-features{
@@ -152,28 +156,15 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#fdf0eb;display:flex;min
   <!-- LADO ESQUERDO — BRANDING -->
   <div class="login-brand">
     <div class="brand-logo">
-      <svg width="80" height="80" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
-        <defs>
-          <linearGradient id="rwbg" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0%" stop-color="#1a1a2e"/>
-            <stop offset="100%" stop-color="#16213e"/>
-          </linearGradient>
-          <linearGradient id="rwtooth" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stop-color="#ffffff"/>
-            <stop offset="100%" stop-color="#d4e8ff"/>
-          </linearGradient>
-        </defs>
-        <rect width="200" height="200" rx="28" fill="url(#rwbg)"/>
-        <rect width="200" height="5" rx="4" fill="#4f9cf9"/>
-        <path d="M100 48 C82 48 70 58 70 73 C70 84 74 90 74 100 C74 116 80 133 88 133 C93 133 96 126 100 118 C104 126 107 133 112 133 C120 133 126 116 126 100 C126 90 130 84 130 73 C130 58 118 48 100 48 Z" fill="url(#rwtooth)"/>
-        <path d="M85 128 C82 140 78 150 76 160" fill="none" stroke="#ffffff" stroke-width="3.5" stroke-linecap="round" opacity="0.7"/>
-        <path d="M94 132 C92 144 91 154 90 164" fill="none" stroke="#ffffff" stroke-width="3.5" stroke-linecap="round" opacity="0.7"/>
-        <path d="M115 128 C118 140 122 150 124 160" fill="none" stroke="#ffffff" stroke-width="3.5" stroke-linecap="round" opacity="0.7"/>
-        <path d="M106 132 C108 144 109 154 110 164" fill="none" stroke="#ffffff" stroke-width="3.5" stroke-linecap="round" opacity="0.7"/>
-        <circle cx="90" cy="68" r="4" fill="#4f9cf9" opacity="0.8"/>
+      <svg width="52" height="52" viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg">
+        <line x1="18" y1="14" x2="54" y2="14" stroke="var(--rose-dark)" stroke-width="4" stroke-linecap="round"/>
+        <line x1="22" y1="14" x2="22" y2="62" stroke="var(--rose-dark)" stroke-width="4" stroke-linecap="round"/>
+        <line x1="33" y1="14" x2="33" y2="62" stroke="var(--rose-dark)" stroke-width="4" stroke-linecap="round"/>
+        <path d="M33 14 Q58 14 58 33 Q58 51 33 51" fill="none" stroke="var(--rose-dark)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+        <line x1="33" y1="51" x2="56" y2="62" stroke="var(--rose-dark)" stroke-width="4" stroke-linecap="round"/>
       </svg>
     </div>
-    <div class="brand-title">RW<span>Dent</span></div>
+    <div class="brand-title">RWDent</div>
     <div class="brand-subtitle">Gestão Odontológica Inteligente</div>
 
     <div class="brand-features">
