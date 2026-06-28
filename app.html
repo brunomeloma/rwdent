@@ -2615,14 +2615,14 @@ async function checkClinicaApproval(){
     .eq('user_id', currentUser.id)
     .single();
   if(!cli){
-    errEl.textContent='Clínica não encontrada. Faça seu cadastro na página inicial.';
-    errEl.className='login-err show';
-    await _sb.auth.signOut(); currentUser=null; return false;
+    await _sb.auth.signOut(); currentUser=null;
+    window.location.replace('index.html?msg=sem_clinica');
+    return false;
   }
   if(cli.status !== 'aprovado'){
-    errEl.textContent='Seu cadastro ainda está aguardando aprovação pelo administrador.';
-    errEl.className='login-err show';
-    await _sb.auth.signOut(); currentUser=null; return false;
+    await _sb.auth.signOut(); currentUser=null;
+    window.location.replace('index.html?msg=pendente');
+    return false;
   }
   clinicaId   = cli.id;
   clinicaData = cli;
@@ -2707,11 +2707,7 @@ function _sessionStartTimer(){
           if(elapsed > DEMO_24H){
             localStorage.removeItem('rwdent-demo');
             await _sb.auth.signOut();
-            currentUser=null;
-            document.getElementById('app').style.display='none';
-            document.getElementById('login-screen').style.display='flex';
-            const errEl=document.getElementById('login-err');
-            if(errEl){errEl.textContent='Seu período de demonstração de 24h expirou. Assine o plano para continuar.';errEl.className='login-err show';}
+            window.location.replace('index.html?msg=demo_expirado');
             return;
           }
           document.body.classList.add('demo-mode');
@@ -2728,8 +2724,8 @@ function _sessionStartTimer(){
   } catch(e){
     console.warn('Erro sessão:', e.message);
   }
-  // Sem sessão — mostra login
-  document.getElementById('login-screen').style.display='flex';
+  // Sem sessão — redireciona para login
+  window.location.replace('index.html');
 })();
 
 // ══════════════════════════════════════════════════════

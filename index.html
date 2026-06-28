@@ -399,6 +399,22 @@ document.addEventListener('keydown', e => {
   }
 });
 
+// Mensagens vindas do app.html (redirect)
+(()=>{
+  const params = new URLSearchParams(window.location.search);
+  const msg = params.get('msg');
+  if(msg){
+    const errEl = document.getElementById('login-err');
+    const msgs = {
+      demo_expirado: 'Seu período de demonstração de 24h expirou. Assine o plano para continuar.',
+      sem_clinica: 'Clínica não encontrada. Faça seu cadastro.',
+      pendente: 'Seu cadastro ainda está aguardando aprovação.'
+    };
+    if(msgs[msg] && errEl){ errEl.textContent = msgs[msg]; errEl.classList.add('show'); }
+    history.replaceState(null, '', 'index.html');
+  }
+})();
+
 // Demo auto-login
 (async()=>{
   const params = new URLSearchParams(window.location.search);
