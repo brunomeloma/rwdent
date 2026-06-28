@@ -6808,8 +6808,8 @@ function calcPrecoManut(manutId, recalcInst){
   if(!inst.precoFinal) return null;
   const pct = Number(cfg.pct_manut)||15;
   const parcelaInst = parseFloat((inst.precoFinal * pct / 100).toFixed(2));
-  const custoManut = custoProc(manut);
-  return parseFloat((custoManut + parcelaInst).toFixed(2));
+  const precoManut = calcPrecoFinal(manut);
+  return parseFloat((precoManut + parcelaInst).toFixed(2));
 }
 
 // ── PAINEL FINANCEIRO ──
@@ -7123,8 +7123,6 @@ async function recalcularProc(id){
   if(ins.length){
     p.insumos = parseFloat(ins.reduce((acc,item)=>{const m=mats.find(x=>x.id===item.matId);return acc+(m?m.custo*item.qtd:0);},0).toFixed(2));
   }
-  p.margem = cfg.margem;
-  p._margemManual = false;
   p.horaClin = parseFloat(((p.tempo/60)*calcHora()).toFixed(2));
   p._precoManual = false;
   const antes = p.precoFinal;
