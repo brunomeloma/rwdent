@@ -12103,7 +12103,8 @@ function buscaGlobalFiltrar(){
   const res = document.getElementById('search-global-results');
   if(!q){ res.innerHTML='<div style="padding:16px;text-align:center;color:var(--rose-text);font-size:13px;">Digite para buscar pacientes, procedimentos, materiais, agendamentos ou vendas</div>'; return; }
   const items = [];
-  pacientes.filter(p=>!p.arquivado&&(_norm(p.nome).includes(q)||(p.cpf||'').replace(/\D/g,'').includes(q.replace(/\D/g,''))||(p.telefone||'').replace(/\D/g,'').includes(q.replace(/\D/g,'')))).slice(0,10).forEach(p=>{
+  const qDigits = q.replace(/\D/g,'');
+  pacientes.filter(p=>!p.arquivado&&(_norm(p.nome).includes(q)||(qDigits.length>=2&&((p.cpf||'').replace(/\D/g,'').includes(qDigits)||(p.telefone||'').replace(/\D/g,'').includes(qDigits))))).slice(0,10).forEach(p=>{
     items.push({cat:'Pacientes',icon:'ti-user',label:escapeHtml(p.nome),sub:escapeHtml(p.telefone||p.cpf||''),action:`fecharBuscaGlobal();switchTab('pacientes');setTimeout(()=>selectPatient(${p.id}),150)`});
   });
   procs.filter(p=>p.ativo!==false&&_norm(p.nome).includes(q)).slice(0,15).forEach(p=>{
