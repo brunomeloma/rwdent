@@ -2294,12 +2294,12 @@ select, textarea {
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-bottom:16px;">
           <div style="background:linear-gradient(135deg,#d4735a,#7a3020);border-radius:16px;padding:22px;color:#fff;text-align:center;">
             <div style="font-size:11px;font-weight:700;opacity:.85;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">Tratamento Completo</div>
-            <div style="font-size:2rem;font-weight:900;line-height:1;">R$ 9.800</div>
+            <div id="alin-preco-total" style="font-size:2rem;font-weight:900;line-height:1;">R$ 9.800</div>
             <div style="font-size:11px;opacity:.8;margin-top:6px;">Inclui todos os alinhadores + consultas</div>
           </div>
           <div style="background:var(--rose-lighter);border:2px solid var(--rose-light);border-radius:16px;padding:22px;text-align:center;">
             <div style="font-size:11px;font-weight:700;color:var(--rose-text);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">Refinamento (se precisar)</div>
-            <div style="font-size:2rem;font-weight:900;color:var(--rose-dark);line-height:1;">R$ 1.200</div>
+            <div id="alin-preco-refin" style="font-size:2rem;font-weight:900;color:var(--rose-dark);line-height:1;">R$ 1.200</div>
             <div style="font-size:11px;color:var(--rose-text);margin-top:6px;">Cobrado só se necessário ao final</div>
           </div>
         </div>
@@ -2308,13 +2308,13 @@ select, textarea {
           <div style="font-size:12px;font-weight:700;color:var(--rose-dark);margin-bottom:10px;">📊 Exemplo de parcelamento</div>
           <div style="display:flex;flex-direction:column;gap:6px;">
             <div style="display:flex;justify-content:space-between;font-size:13px;padding:7px 10px;background:#fff;border-radius:8px;">
-              <span>Entrada</span><strong style="color:var(--rose-dark);">R$ 2.000</strong>
+              <span>Entrada</span><strong id="alin-entrada" style="color:var(--rose-dark);">R$ 2.000</strong>
             </div>
             <div style="display:flex;justify-content:space-between;font-size:13px;padding:7px 10px;background:#fff;border-radius:8px;">
-              <span>Restante (R$ 7.800) em 10x</span><strong style="color:var(--rose-dark);">R$ 780/mês</strong>
+              <span id="alin-parcela-desc">Restante (R$ 7.800) em 10x</span><strong id="alin-parcela-valor" style="color:var(--rose-dark);">R$ 780/mês</strong>
             </div>
             <div style="display:flex;justify-content:space-between;font-size:13px;padding:7px 10px;background:#fff;border-radius:8px;">
-              <span>Refinamento (se necessário)</span><strong style="color:var(--rose-dark);">R$ 1.200 à parte</strong>
+              <span>Refinamento (se necessário)</span><strong id="alin-refin-apart" style="color:var(--rose-dark);">R$ 1.200 à parte</strong>
             </div>
           </div>
         </div>
@@ -2333,7 +2333,7 @@ select, textarea {
           <div style="background:#fffbf0;border:1.5px solid #ffe082;border-radius:12px;padding:14px;">
             <div style="font-size:11px;font-weight:700;color:#856404;margin-bottom:10px;text-transform:uppercase;">⚠️ Separado</div>
             <div style="font-size:12px;color:#3a2a00;line-height:1.8;">
-              • Refinamento (R$ 1.200)<br>
+              • Refinamento (<span id="alin-refin-sep">R$ 1.200</span>)<br>
               • Exames complementares<br>
               • Contenção pós-tratamento
             </div>
@@ -3000,6 +3000,35 @@ function toggleFaq(i){
   ico.style.transform=open?'rotate(180deg)':'';
 }
 
+function atualizarPrecosAlinhador(){
+  const fmtBRL = v => 'R$ '+Number(v).toLocaleString('pt-BR',{minimumFractionDigits:0,maximumFractionDigits:0});
+  const proc207 = procs.find(p=>p.id===207);
+  const proc214 = procs.find(p=>p.id===214);
+  const total = proc207 ? (proc207.precoFinal||0) : 0;
+  const refin = proc214 ? (proc214.precoFinal||0) : 0;
+  if(total>0){
+    const el=document.getElementById('alin-preco-total');
+    if(el) el.textContent=fmtBRL(total);
+    const entrada=Math.round(total*0.2);
+    const restante=total-entrada;
+    const parcelas=10;
+    const valorParc=Math.round(restante/parcelas);
+    const elE=document.getElementById('alin-entrada');
+    if(elE) elE.textContent=fmtBRL(entrada);
+    const elPD=document.getElementById('alin-parcela-desc');
+    if(elPD) elPD.textContent='Restante ('+fmtBRL(restante)+') em '+parcelas+'x';
+    const elPV=document.getElementById('alin-parcela-valor');
+    if(elPV) elPV.textContent=fmtBRL(valorParc)+'/mês';
+  }
+  if(refin>0){
+    const el=document.getElementById('alin-preco-refin');
+    if(el) el.textContent=fmtBRL(refin);
+    const elA=document.getElementById('alin-refin-apart');
+    if(elA) elA.textContent=fmtBRL(refin)+' à parte';
+    const elS=document.getElementById('alin-refin-sep');
+    if(elS) elS.textContent=fmtBRL(refin);
+  }
+}
 
 // ── TOPNAV DROPDOWNS ──
 function tnToggle(id){
@@ -3073,6 +3102,10 @@ function switchTab(tab){
   if(tab==='configuracoes') renderConfiguracoes();
   if(tab==='resgate') renderResgate();
   if(tab==='admin') loadAdminPanel();
+  if(tab==='invisalign_apresentacao'){
+    if(!_financeiroCarregado){ loadFinanceiro().then(()=>atualizarPrecosAlinhador()); }
+    else atualizarPrecosAlinhador();
+  }
   if(tab==='venda_rapida'){
     // No mobile, foca busca automaticamente
     setTimeout(()=>{ const _s=document.getElementById('vr-search-m'); if(_s&&window.innerWidth<=768) _s.focus(); },200);
