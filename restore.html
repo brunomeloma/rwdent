@@ -97,11 +97,22 @@ $('btn-dry').addEventListener('click', () => {
   if(problems.length) problems.forEach((p) => log('⚠ ' + p)); else log('OK. O arquivo parece compatível com o importador.');
   if(currentClinic && backup?.clinica?.id && String(currentClinic.id) !== String(backup.clinica.id)) log('⚠ Atenção: o ID da clínica logada é diferente do ID no backup. A importação vai usar a clínica logada para evitar restaurar em conta errada.');
 });
+const _report = { ok:0, fail:0, items:{} };
 async function upsertTable(table, rows, label){
-  if(!rows.length){ log(label + ': nada para importar.'); return; }
+  if(!rows.length){ log(label + ': nada para importar.'); _report.items[label]={total:0,status:'skip'}; return; }
   const { error } = await _sb.from(table).upsert(rows, { onConflict: 'id' });
-  if(error) throw new Error(label + ': ' + error.message);
+  if(error){ _report.fail+=rows.length; _report.items[label]={total:rows.length,status:'error',msg:error.message}; throw new Error(label + ': ' + error.message); }
+  _report.ok+=rows.length; _report.items[label]={total:rows.length,status:'ok'};
   log(label + ': ' + rows.length + ' registro(s) importado(s).');
+}
+function showReport(){
+  const el = $('summary');
+  el.classList.remove('hidden');
+  const ico = (s) => s==='ok'?'<span style="color:#2e7d32;">OK</span>':s==='error'?'<span style="color:#dc2626;">ERRO</span>':'<span style="color:#856404;">Vazio</span>';
+  el.innerHTML = `<div class="stat" style="grid-column:1/-1;text-align:left;"><strong style="font-size:16px;display:block;margin-bottom:8px;">${_report.fail?'Importação com erros':'Importação concluída'}</strong>
+    <div style="font-size:13px;line-height:2;">${Object.entries(_report.items).map(([k,v])=>`${ico(v.status)} <strong>${k}</strong>: ${v.total} registro(s)${v.msg?' — '+v.msg:''}`).join('<br/>')}</div>
+    <div style="margin-top:8px;font-size:12px;color:var(--rose-text);">Total importados: <strong>${_report.ok}</strong> | Falhas: <strong style="color:#dc2626;">${_report.fail}</strong></div>
+  </div>`;
 }
 async function importBackup(){
   const problems = validateBackup();
@@ -109,20 +120,22 @@ async function importBackup(){
   if(!currentClinic){ resetLog('Importação bloqueada: usuário/clínica não carregados.'); return; }
   $('btn-import').disabled = true;
   $('btn-dry').disabled = true;
+  _report.ok=0; _report.fail=0; _report.items={};
   resetLog('Iniciando importação segura...');
   try {
     const clinicId = currentClinic.id;
     await upsertTable('profissionais', cleanRows(backup.profissionais, ['created_at']).map((p) => ({ ...p, clinica_id: clinicId })), 'Profissionais');
-    await upsertTable('pacientes', cleanRows(backup.pacientes, ['prontuarios', 'anamnese', 'created_at']).map((p) => ({ ...p, clinica_id: clinicId })), 'Pacientes');
+    await upsertTable('pacientes', cleanRows(backup.pacientes, ['prontuarios', 'anamnese', 'procedimentos_dentes', 'created_at']).map((p) => ({ ...p, clinica_id: clinicId })), 'Pacientes');
     const prontuarios = asArray(backup.pacientes).flatMap((p) => asArray(p.prontuarios).map((r) => ({ ...r, clinica_id: clinicId, paciente_id: p.id })));
     await upsertTable('prontuarios', cleanRows(prontuarios, ['created_at']), 'Prontuários');
     const anamneses = asArray(backup.pacientes).filter((p) => p.anamnese).map((p) => ({ paciente_id: p.id, clinica_id: clinicId, dados: p.anamnese }));
-    if(anamneses.length){ const { error } = await _sb.from('anamneses').upsert(anamneses, { onConflict: 'paciente_id' }); if(error) throw new Error('Anamneses: ' + error.message); log('Anamneses: ' + anamneses.length + ' registro(s) importado(s).'); } else log('Anamneses: nada para importar.');
+    if(anamneses.length){ const { error } = await _sb.from('anamneses').upsert(anamneses, { onConflict: 'paciente_id' }); if(error){ _report.fail+=anamneses.length; _report.items['Anamneses']={total:anamneses.length,status:'error',msg:error.message}; throw new Error('Anamneses: ' + error.message); } _report.ok+=anamneses.length; _report.items['Anamneses']={total:anamneses.length,status:'ok'}; log('Anamneses: ' + anamneses.length + ' registro(s) importado(s).'); } else { log('Anamneses: nada para importar.'); _report.items['Anamneses']={total:0,status:'skip'}; }
     await upsertTable('agendamentos', cleanRows(backup.agendamentos, ['created_at']).map((a) => ({ ...a, clinica_id: clinicId })), 'Agendamentos');
     const fin = backup.financeiro || {};
     const financeiroRow = { clinica_id: clinicId, procs: fin.procs || [], mats: fin.mats || [], estoque: fin.estoque || {}, proc_insumos: fin.procInsumos || fin.proc_insumos || {}, vendas: fin.vendas || [], combos: fin.combos || [], taxas_cfg: fin.taxasCfg || fin.taxas_cfg || fin.taxas || {}, cfg: fin.cfg || {}, desc_cfg: fin.descCfg || fin.desc_cfg || {} };
     const { error: finError } = await _sb.from('financeiro_config').upsert([financeiroRow], { onConflict: 'clinica_id' });
-    if(finError) throw new Error('Financeiro: ' + finError.message);
+    if(finError){ _report.fail++; _report.items['Financeiro']={total:1,status:'error',msg:finError.message}; throw new Error('Financeiro: ' + finError.message); }
+    _report.ok++; _report.items['Financeiro']={total:1,status:'ok'};
     log('Financeiro: procedimentos, materiais, estoque e configurações importados.');
     const procDentes = asArray(backup.pacientes).flatMap((p) => asArray(p.procedimentos_dentes || p.odontograma).map((r) => ({ ...r, clinica_id: clinicId, paciente_id: p.id })));
     if(procDentes.length){ await upsertTable('procedimentos_dentes', cleanRows(procDentes, ['created_at']), 'Odontograma'); }
@@ -130,7 +143,7 @@ async function importBackup(){
   } catch(e) {
     log('\nERRO: ' + e.message);
     log('Nada foi apagado automaticamente. Confira o que já importou antes de tentar novamente.');
-  } finally { updateButtons(); }
+  } finally { showReport(); updateButtons(); }
 }
 $('btn-import').addEventListener('click', importBackup);
 initAuth();

@@ -1400,6 +1400,9 @@ select, textarea {
         </div>
       </div>
 
+      <!-- ── ALERTAS DE ESTOQUE ── -->
+      <div id="home-estoque-alertas" style="display:none;margin-top:16px;"></div>
+
     </div>
 
     <!-- AGENDAR -->
@@ -1530,6 +1533,7 @@ select, textarea {
             autocomplete="off" />
           <div id="pac-dropdown" style="display:none;position:absolute;top:calc(100% + 4px);left:0;right:0;background:#fff;border:1.5px solid var(--rose-light);border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.10);z-index:200;max-height:340px;overflow-y:auto;"></div>
         </div>
+        <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--rose-text);margin-top:6px;cursor:pointer;"><input type="checkbox" id="pac-mostrar-arquivados" onchange="renderPatientDropdown()" style="accent-color:var(--rose);"/> Mostrar pacientes arquivados</label>
         <div class="patient-list" id="lista-pacientes" style="display:none;"></div>
       </div>
       <div id="painel-paciente" style="display:none;"></div>
@@ -2480,6 +2484,7 @@ select, textarea {
 
           <hr style="border-color:var(--rose-light);margin:24px 0;"/>
           <h2 style="font-size:13px;font-weight:700;color:var(--rose-dark);margin-bottom:14px;display:flex;align-items:center;gap:8px;text-transform:uppercase;letter-spacing:.5px;"><i class="ti ti-database-export"></i> Backup</h2>
+          <div id="ultimo-backup-info" style="font-size:12px;color:var(--rose-text);margin-bottom:10px;display:flex;align-items:center;gap:6px;"></div>
           <div style="display:flex;gap:10px;flex-wrap:wrap;">
             <button class="btn-secondary" onclick="exportarBackup()" style="padding:8px 16px;font-size:13px;"><i class="ti ti-download"></i> Exportar todos os dados (JSON)</button>
           </div>
@@ -2969,6 +2974,14 @@ async function loadAll(){
         }));
       }
     } catch(e){ /* tabela pode não existir ainda, usa anamnese do próprio paciente */ }
+    try {
+      const { data: links } = await _sb.from('anamnese_links').select('token,paciente_id,expires_at,used_at,created_at').eq('clinica_id', clinicaId).order('created_at',{ascending:false});
+      if(links && links.length){
+        const linkMap = {};
+        links.forEach(l=>{ if(!linkMap[l.paciente_id]) linkMap[l.paciente_id] = l; });
+        pacientes = pacientes.map(p=>({ ...p, _anamneseLink: linkMap[p.id]||null }));
+      }
+    } catch(e){ /* tabela pode não existir */ }
     await loadFinanceiro();
     initApp();
   } catch(e){
@@ -3236,6 +3249,20 @@ function renderHomeStats(){
         </div>`;
       }).join('');
     }
+  }
+
+  // Alertas de estoque baixo
+  const estAlertEl = document.getElementById('home-estoque-alertas');
+  if(estAlertEl && mats.length){
+    const criticos = mats.filter(m=>!m.arquivado&&getEstStatus(m.id)==='danger');
+    const atencao = mats.filter(m=>!m.arquivado&&getEstStatus(m.id)==='warn');
+    if(criticos.length || atencao.length){
+      let html = '<div class="card" style="border:1.5px solid '+(criticos.length?'#fca5a5':'#ffe082')+';"><h3 style="font-size:13px;color:'+(criticos.length?'#dc2626':'#856404')+';margin-bottom:10px;display:flex;align-items:center;gap:6px;"><i class="ti ti-alert-triangle"></i> Estoque com atenção</h3>';
+      if(criticos.length){ html+='<div style="font-size:12px;color:#dc2626;font-weight:600;margin-bottom:6px;">Nível crítico ('+criticos.length+'):</div>'; criticos.slice(0,5).forEach(m=>{ const e=estoque[m.id]||{}; html+='<div style="font-size:12px;padding:4px 0;color:#3a2020;">• '+escapeHtml(m.nome)+' — <strong style="color:#dc2626;">'+(e.atual||0)+' '+(m.unid||'un')+'</strong> (mín: '+(e.min||0)+')</div>'; }); }
+      if(atencao.length){ html+='<div style="font-size:12px;color:#856404;font-weight:600;margin-bottom:6px;'+(criticos.length?'margin-top:8px;':'')+'">Atenção ('+atencao.length+'):</div>'; atencao.slice(0,5).forEach(m=>{ const e=estoque[m.id]||{}; html+='<div style="font-size:12px;padding:4px 0;color:#3a2020;">• '+escapeHtml(m.nome)+' — <strong style="color:#856404;">'+(e.atual||0)+' '+(m.unid||'un')+'</strong></div>'; }); }
+      html+='<button class="btn-secondary" onclick="switchTab(\'estoque_fin\')" style="margin-top:10px;font-size:11px;padding:6px 12px;"><i class="ti ti-box"></i> Ver estoque completo</button></div>';
+      estAlertEl.innerHTML=html; estAlertEl.style.display='';
+    } else { estAlertEl.style.display='none'; estAlertEl.innerHTML=''; }
   }
 }
 
@@ -3688,10 +3715,12 @@ function renderPatientDropdown(){
   if(!input || !dropdown) return;
   const busca = input.value.toLowerCase().trim();
   if(!busca){ dropdown.style.display='none'; return; }
+  const _mostrarArq = document.getElementById('pac-mostrar-arquivados')?.checked;
   const filtrados = pacientes.filter(p =>
-    _norm(p.nome).includes(_norm(busca)) ||
+    (_mostrarArq || !p.arquivado) &&
+    (_norm(p.nome).includes(_norm(busca)) ||
     (p.cpf||'').includes(busca) ||
-    (p.telefone||'').includes(busca)
+    (p.telefone||'').includes(busca))
   ).slice(0,10);
   if(!filtrados.length){
     dropdown.innerHTML = `<div style="padding:14px;text-align:center;font-size:13px;color:var(--rose-text);"><i class="ti ti-user-off"></i> Nenhum paciente encontrado.</div>`;
@@ -3703,7 +3732,7 @@ function renderPatientDropdown(){
       onmouseover="this.style.background='#fdf0ec'" onmouseout="this.style.background=''">
       <div style="width:36px;height:36px;border-radius:10px;background:#${hashColor(p.nome)};display:grid;place-items:center;color:#fff;font-weight:800;font-size:13px;flex-shrink:0;">${initials(p.nome)}</div>
       <div style="flex:1;min-width:0;">
-        <div style="font-size:13px;font-weight:700;color:var(--rose-dark);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(p.nome)}</div>
+        <div style="font-size:13px;font-weight:700;color:var(--rose-dark);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(p.nome)}${p.arquivado?' <span style="background:#fca5a5;color:#7f1d1d;font-size:9px;padding:1px 6px;border-radius:4px;font-weight:700;">ARQUIVADO</span>':''}</div>
         <div style="font-size:11px;color:var(--rose-text);">${escapeHtml(p.telefone||'Sem telefone')}${p.cpf?' · '+escapeHtml(p.cpf):''}</div>
       </div>
       <i class="ti ti-chevron-right" style="color:var(--rose-light);font-size:15px;flex-shrink:0;"></i>
@@ -3761,6 +3790,7 @@ function renderPatientDetail(abaAtiva){
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
           <button class="btn-secondary" style="background:#e8f5e9;border-color:#a5d6a7;color:#2e7d32;" onclick="agendarDoProntuario(${p.id})"><i class="ti ti-calendar-plus"></i> Agendar</button>
           <button class="btn-secondary" onclick="editPatient(${p.id})"><i class="ti ti-pencil"></i> Editar</button>
+          ${p.arquivado ? `<button class="btn-secondary" style="background:#e8f5e9;border-color:#a5d6a7;color:#2e7d32;" onclick="restaurarPaciente(${p.id})"><i class="ti ti-refresh"></i> Restaurar</button>` : `<button class="btn-secondary" style="color:#dc2626;border-color:#fca5a5;" onclick="arquivarPaciente(${p.id})"><i class="ti ti-archive"></i> Arquivar</button>`}
           <button class="btn-secondary" onclick="voltarListaPacientes()"><i class="ti ti-arrow-left"></i> Voltar</button>
         </div>
       </div>
@@ -3835,9 +3865,20 @@ function renderPatientDetail(abaAtiva){
       <div id="pac-aba-anamnese" style="display:${abaAtiva==='anamnese'?'':'none'};">
         <div style="margin-top:14px;" id="pac-anam-body">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px;">
-            <span style="font-size:13px;font-weight:700;color:var(--rose-dark);"><i class="ti ti-clipboard-heart"></i> Anamnese</span>
+            <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+              <span style="font-size:13px;font-weight:700;color:var(--rose-dark);"><i class="ti ti-clipboard-heart"></i> Anamnese</span>
+              ${(()=>{
+                const hasData = p.anamnese && Object.keys(p.anamnese).length>0;
+                if(hasData) return '<span style="background:#e8f5e9;color:#2e7d32;font-size:10px;padding:2px 8px;border-radius:6px;font-weight:700;">RECEBIDA</span>';
+                const linkInfo = p._anamneseLink;
+                if(linkInfo && linkInfo.used_at) return '<span style="background:#e8f5e9;color:#2e7d32;font-size:10px;padding:2px 8px;border-radius:6px;font-weight:700;">RECEBIDA</span>';
+                if(linkInfo && new Date(linkInfo.expires_at) < new Date()) return '<span style="background:#fef3c7;color:#92400e;font-size:10px;padding:2px 8px;border-radius:6px;font-weight:700;">EXPIRADA</span>';
+                if(linkInfo) return '<span style="background:#dbeafe;color:#1e40af;font-size:10px;padding:2px 8px;border-radius:6px;font-weight:700;">ENVIADA</span>';
+                return '<span style="background:#fef3c7;color:#92400e;font-size:10px;padding:2px 8px;border-radius:6px;font-weight:700;">PENDENTE</span>';
+              })()}
+            </div>
             <div style="display:flex;gap:8px;flex-wrap:wrap;">
-              <button class="btn-secondary" onclick="anamneseEnviarWhatsApp(${p.id})" style="background:#25d366;color:#fff;border-color:#25d366;font-size:12px;padding:6px 12px;border-radius:8px;"><i class="ti ti-brand-whatsapp"></i> Enviar por WhatsApp</button>
+              <button class="btn-secondary" onclick="anamneseEnviarWhatsApp(${p.id})" style="background:#25d366;color:#fff;border-color:#25d366;font-size:12px;padding:6px 12px;border-radius:8px;"><i class="ti ti-brand-whatsapp"></i> ${p._anamneseLink?'Reenviar':'Enviar'} por WhatsApp</button>
               <button class="btn-primary" onclick="anamneseSalvar(${p.id})"><i class="ti ti-device-floppy"></i> Salvar</button>
             </div>
           </div>
@@ -4467,6 +4508,7 @@ async function anamneseSalvar(pacId){
   // Atualiza objeto local
   const idx = pacientes.findIndex(p=>p.id===pacId);
   if(idx>=0) pacientes[idx].anamnese = anamnese;
+  logAtividade('Anamnese salva', pacientes[idx]?.nome||pacId);
   showToast('Anamnese salva!');
 }
 
@@ -4479,9 +4521,11 @@ async function anamneseEnviarWhatsApp(pacId){
     .select('token').single();
   if(!error && tokenRow){
     link = `${window.location.origin}/anamnese.html?token=${tokenRow.token}`;
+    p._anamneseLink = { token: tokenRow.token, paciente_id: pacId, expires_at: new Date(Date.now()+48*3600000).toISOString(), used_at: null, created_at: new Date().toISOString() };
   } else {
     link = `${window.location.origin}/anamnese.html?clinica=${clinicaId}&paciente=${pacId}`;
   }
+  logAtividade('Anamnese enviada', p.nome||pacId);
   const msg = `Ola${p.nome ? ', ' + p.nome.split(' ')[0] : ''}! Para agilizar seu atendimento, preencha sua ficha de saude antes da consulta: ${link}`;
   navigator.clipboard.writeText(link).then(() => {
     showToast('Link copiado!');
@@ -4537,27 +4581,35 @@ async function savePatientEdit(id){
   const p=pacientes.find(pt=>pt.id===id);
   if(p) Object.assign(p,dados);
   resetPatientForm(); togglePatientForm();
+  logAtividade('Paciente editado', dados.nome||id);
   renderPatients(); renderPatientDetail();
   showToast('Paciente atualizado.');
 }
 
-async function removerPaciente(id){
-  if(!confirm('Remover paciente e todos seus dados?')) return;
+async function arquivarPaciente(id){
+  if(!confirm('Arquivar este paciente?\n\nOs dados serão preservados mas o paciente não aparecerá mais nas listas. Você poderá restaurá-lo depois.')) return;
   showLoading(true);
-  const _delTables = ['prontuarios','agendamentos','plano_tratamento','atendimentos_odonto','procedimentos_dentes','anamneses'];
-  for(const _t of _delTables){
-    const {error:_eD}=await _sb.from(_t).delete().eq('paciente_id',id);
-    if(_eD){ showLoading(false); showToast(`Erro ao limpar ${_t}: `+_eD.message,'error'); return; }
-  }
-  const { error } = await _sb.from('pacientes').delete().eq('id',id);
+  const { error } = await _sb.from('pacientes').update({ arquivado: true, arquivado_em: new Date().toISOString() }).eq('id',id);
   showLoading(false);
   if(error){ showToast('Erro: '+error.message,'error'); return; }
-  pacientes=pacientes.filter(p=>p.id!==id);
-  agendamentos=agendamentos.filter(a=>a.paciente_id!==id);
+  const p = pacientes.find(pt=>pt.id===id);
+  if(p){ p.arquivado=true; p.arquivado_em=new Date().toISOString(); }
+  logAtividade('Paciente arquivado', p?.nome||id);
   selectedPatientId=null;
   renderPatients(); renderHomeStats();
   document.getElementById('painel-paciente').style.display='none';
-  showToast('Paciente removido.');
+  showToast('Paciente arquivado.');
+}
+async function restaurarPaciente(id){
+  showLoading(true);
+  const { error } = await _sb.from('pacientes').update({ arquivado: false, arquivado_em: null }).eq('id',id);
+  showLoading(false);
+  if(error){ showToast('Erro: '+error.message,'error'); return; }
+  const p = pacientes.find(pt=>pt.id===id);
+  if(p){ p.arquivado=false; p.arquivado_em=null; }
+  logAtividade('Paciente restaurado', p?.nome||id);
+  renderPatients(); renderHomeStats();
+  showToast('Paciente restaurado!');
 }
 
 
@@ -7301,14 +7353,14 @@ async function saveProc(){
 async function deleteProc(id){
   const _pDel = procs.find(x=>x.id===id);
   const _nomeDel = _pDel?.nome||'este procedimento';
-  if(!confirm('Excluir "'+_nomeDel+'"?\n\nAtenção: procedimentos já usados em planos ou orçamentos continuarão nos registros históricos, mas não poderão ser recalculados.')) return;
-  procs = procs.filter(x=>x.id!==id);
-  delete procInsumos[id];
+  if(!confirm('Arquivar "'+_nomeDel+'"?\n\nO procedimento será desativado e escondido da lista, mas preservado nos registros históricos.')) return;
+  if(_pDel) _pDel.ativo = false;
   showLoading(true);
   const _eDel=await saveFinanceiro();
   showLoading(false);
+  logAtividade('Procedimento arquivado', _nomeDel);
   renderProcs();
-  if(!_eDel) showToast('Removido.');
+  if(!_eDel) showToast('Procedimento arquivado.');
 }
 async function recalcularProc(id){
   const p = procs.find(x=>x.id===id); if(!p) return;
@@ -7530,16 +7582,23 @@ async function saveMat(){
   if(!_eM) showToast('Material salvo! Custos atualizados.');
 }
 async function deleteMat(id){
-  if(!confirm('Excluir este material? Será removido do estoque e dos insumos dos procedimentos.')) return;
-  mats = mats.filter(x=>x.id!==id);
-  delete estoque[id];
-  for(const k in procInsumos){ procInsumos[k]=(procInsumos[k]||[]).filter(x=>x.matId!==id); }
+  if(!confirm('Arquivar este material?\n\nEle será escondido das listas mas poderá ser restaurado depois.')) return;
+  const m = mats.find(x=>x.id===id);
+  if(m) m.arquivado = true;
   showLoading(true);
   const _eMD=await saveFinanceiro();
   showLoading(false);
+  logAtividade('Material arquivado', m?.nome||id);
   renderMats(); renderEstoque();
-  recalcularInsumos(true);
-  if(!_eMD) showToast('Material excluído.');
+  if(!_eMD) showToast('Material arquivado.');
+}
+function restaurarMat(id){
+  const m = mats.find(x=>x.id===id);
+  if(m) m.arquivado = false;
+  logAtividade('Material restaurado', m?.nome||id);
+  saveFinanceiro();
+  renderMats(); renderEstoque();
+  showToast('Material restaurado!');
 }
 function filterMats(){ renderMats(); }
 function setCat(c){ activeCat=c; renderMats(); }
@@ -7557,7 +7616,7 @@ function renderMats(){
     const cur=matCatSel.value;
     matCatSel.innerHTML='<option value="">Todas as categorias</option>'+cats.map(c=>`<option value="${c}"${c===cur?' selected':''}>${c}</option>`).join('');
   }
-  let list = mats.filter(m=>(!activeCat||m.cat===activeCat)&&(!catF||m.cat===catF)&&(!q||_norm(m.nome).includes(_norm(q))));
+  let list = mats.filter(m=>!m.arquivado&&(!activeCat||m.cat===activeCat)&&(!catF||m.cat===catF)&&(!q||_norm(m.nome).includes(_norm(q))));
   if(ordem==='az') list=[...list].sort((a,b)=>a.nome.localeCompare(b.nome,'pt-BR'));
   else if(ordem==='za') list=[...list].sort((a,b)=>b.nome.localeCompare(a.nome,'pt-BR'));
   else if(ordem==='cat') list=[...list].sort((a,b)=>(a.cat||'').localeCompare(b.cat||'','pt-BR')||a.nome.localeCompare(b.nome,'pt-BR'));
@@ -7597,12 +7656,15 @@ function updateEstDelBtn(){
   if(btn) btn.style.display = estSelected.size > 0 ? '' : 'none';
 }
 async function deleteEstSelecionados(){
-  if(!confirm(`Excluir ${estSelected.size} material(is)?`)) return;
-  estSelected.forEach(id=>{ mats=mats.filter(x=>x.id!==id); delete estoque[id]; });
+  if(!confirm(`Arquivar ${estSelected.size} material(is)?\n\nEles serão escondidos das listas mas poderão ser restaurados depois.`)) return;
+  const nomes = [];
+  estSelected.forEach(id=>{ const m=mats.find(x=>x.id===id); if(m){ m.arquivado=true; nomes.push(m.nome); } });
   estSelected.clear();
   showLoading(true); const _eDelEst=await saveFinanceiro(); showLoading(false);
-  if(_eDelEst){ showToast('Erro ao excluir materiais: '+_eDelEst.message,'error'); return; }
+  if(_eDelEst){ showToast('Erro ao arquivar materiais: '+_eDelEst.message,'error'); return; }
+  logAtividade('Material arquivado', nomes.join(', '));
   renderMats(); renderEstoque(); updateEstDelBtn();
+  showToast('Materiais arquivados.');
 }
 function openEstEdit(id){
   const m = mats.find(x=>x.id===id); if(!m) return;
@@ -7638,7 +7700,7 @@ function renderEstoque(){
   const q   = (document.getElementById('est-search')||{value:''}).value.toLowerCase();
   const sf  = (document.getElementById('est-status-filter')||{value:''}).value;
   const ordemEst = (document.getElementById('est-ordem')||{value:'az'}).value;
-  let list  = mats.filter(m=>(!q||_norm(m.nome).includes(_norm(q)))&&(!sf||getEstStatus(m.id)===sf));
+  let list  = mats.filter(m=>!m.arquivado&&(!q||_norm(m.nome).includes(_norm(q)))&&(!sf||getEstStatus(m.id)===sf));
   if(ordemEst==='az') list=[...list].sort((a,b)=>a.nome.localeCompare(b.nome,'pt-BR'));
   else if(ordemEst==='za') list=[...list].sort((a,b)=>b.nome.localeCompare(a.nome,'pt-BR'));
   else if(ordemEst==='cat') list=[...list].sort((a,b)=>(a.cat||'').localeCompare(b.cat||'','pt-BR')||a.nome.localeCompare(b.nome,'pt-BR'));
@@ -11630,6 +11692,7 @@ async function renderConfiguracoes(){
   document.getElementById('cfg-margem').value   = cfg.margem   ?? 100;
   document.getElementById('cfg-pct-manut').value = cfg.pct_manut ?? 15;
   cfgAtualizarPreviewHora();
+  atualizarUltimoBackup();
 }
 
 function cfgAtualizarPreviewHora(){
@@ -11829,9 +11892,24 @@ async function exportarBackup(){
     a.download = `rwdent-backup-${new Date().toISOString().slice(0,10)}.json`;
     a.click();
     URL.revokeObjectURL(url);
+    localStorage.setItem('rwdent-ultimo-backup', new Date().toISOString());
+    logAtividade('Backup exportado', `${pacientes.length} pacientes, ${agendamentos.length} agendamentos`);
+    atualizarUltimoBackup();
     showToast('Backup exportado com sucesso!');
   } catch(e){ showToast('Erro ao exportar: '+e.message,'error'); }
   showLoading(false);
+}
+function atualizarUltimoBackup(){
+  const el = document.getElementById('ultimo-backup-info');
+  if(!el) return;
+  const dt = localStorage.getItem('rwdent-ultimo-backup');
+  if(dt){
+    const d = new Date(dt);
+    const dias = Math.floor((Date.now()-d.getTime())/(1000*60*60*24));
+    el.innerHTML = `<i class="ti ti-check" style="color:#2e7d32;"></i> Último backup: ${d.toLocaleDateString('pt-BR')} às ${d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}` + (dias>7?` <span style="color:#dc2626;font-weight:700;">(${dias} dias atrás — recomendamos fazer backup)</span>`:'');
+  } else {
+    el.innerHTML = '<i class="ti ti-alert-triangle" style="color:#dc2626;"></i> <span style="color:#dc2626;font-weight:600;">Nenhum backup registrado — exporte seus dados!</span>';
+  }
 }
 
 // ── NOTIFICAÇÕES DE CONSULTA ──
@@ -11997,22 +12075,35 @@ function relProdutividade(){
 
 // ── LOG DE ATIVIDADES ──
 function logAtividade(acao, detalhe){
+  const entry = { data: new Date().toISOString(), acao, detalhe: (detalhe||'').slice(0,200), usuario: currentUser?.email||'', clinica_id: clinicaId||null };
   const logs = JSON.parse(localStorage.getItem('rwdent-log')||'[]');
-  logs.unshift({ data: new Date().toISOString(), acao, detalhe: (detalhe||'').slice(0,200) });
+  logs.unshift(entry);
   localStorage.setItem('rwdent-log', JSON.stringify(logs.slice(0,500)));
+  if(clinicaId && _sb){
+    _sb.from('log_atividades').insert([{ clinica_id: clinicaId, usuario: currentUser?.email||'', acao, detalhe: (detalhe||'').slice(0,200) }]).then(()=>{});
+  }
 }
-function verLogAtividades(){
-  const logs = JSON.parse(localStorage.getItem('rwdent-log')||'[]');
+async function verLogAtividades(){
+  let logs = JSON.parse(localStorage.getItem('rwdent-log')||'[]');
+  if(clinicaId && _sb){
+    const { data } = await _sb.from('log_atividades').select('*').eq('clinica_id', clinicaId).order('created_at',{ascending:false}).limit(200);
+    if(data && data.length){
+      logs = data.map(r=>({ data: r.created_at, acao: r.acao, detalhe: r.detalhe, usuario: r.usuario }));
+    }
+  }
+  const _icoMap = { 'Paciente adicionado':'ti-user-plus', 'Paciente editado':'ti-pencil', 'Paciente arquivado':'ti-archive', 'Paciente restaurado':'ti-refresh', 'Agendamento criado':'ti-calendar-plus', 'Agendamento criado (calendário)':'ti-calendar-plus', 'Venda finalizada':'ti-cash', 'Procedimento salvo':'ti-dental', 'Procedimento arquivado':'ti-archive', 'Backup exportado':'ti-download', 'Backup importado':'ti-database-import', 'Material arquivado':'ti-archive', 'Material restaurado':'ti-refresh', 'Anamnese enviada':'ti-send', 'Anamnese salva':'ti-clipboard-check', 'Anamnese recebida':'ti-clipboard-check', 'Profissional adicionado':'ti-user-plus', 'Config WhatsApp salva':'ti-brand-whatsapp', 'WhatsApp manual':'ti-brand-whatsapp' };
   let html = `<div style="padding:20px;"><h3 style="color:var(--rose-dark);margin-bottom:16px;"><i class="ti ti-history"></i> Log de atividades</h3>`;
   if(!logs.length){ html+='<p style="color:var(--rose-text);font-size:13px;">Nenhuma atividade registrada.</p>'; }
   else {
-    html+='<div style="max-height:400px;overflow-y:auto;">';
-    logs.slice(0,100).forEach(l=>{
+    html+='<div style="max-height:500px;overflow-y:auto;">';
+    logs.slice(0,200).forEach(l=>{
       const dt = new Date(l.data);
-      const fmt = dt.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})+' '+dt.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
-      html+=`<div style="display:flex;gap:10px;padding:8px 0;border-bottom:1px solid var(--rose-light);font-size:12px;">
-        <span style="color:var(--rose-text);min-width:85px;">${fmt}</span>
-        <span style="font-weight:600;color:var(--rose-dark);">${escapeHtml(l.acao)}</span>
+      const fmt = dt.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'2-digit'})+' '+dt.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+      const ico = _icoMap[l.acao]||'ti-activity';
+      html+=`<div style="display:flex;gap:10px;padding:8px 0;border-bottom:1px solid var(--rose-light);font-size:12px;align-items:center;">
+        <i class="ti ${ico}" style="font-size:14px;color:var(--rose);flex-shrink:0;"></i>
+        <span style="color:var(--rose-text);min-width:95px;flex-shrink:0;">${fmt}</span>
+        <span style="font-weight:600;color:var(--rose-dark);white-space:nowrap;">${escapeHtml(l.acao)}</span>
         <span style="color:var(--rose-text);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(l.detalhe||'')}</span>
       </div>`;
     });
@@ -12022,7 +12113,7 @@ function verLogAtividades(){
   const modal = document.createElement('div');
   modal.className='cal-modal-bg show';
   modal.onclick=e=>{if(e.target===modal)modal.remove();};
-  modal.innerHTML=`<div class="cal-modal" onclick="event.stopPropagation()" style="max-width:550px;max-height:80vh;overflow:auto;">${html}<div style="padding:0 20px 20px;text-align:right;"><button class="btn-secondary" onclick="this.closest('.cal-modal-bg').remove()">Fechar</button></div></div>`;
+  modal.innerHTML=`<div class="cal-modal" onclick="event.stopPropagation()" style="max-width:650px;max-height:80vh;overflow:auto;">${html}<div style="padding:0 20px 20px;text-align:right;"><button class="btn-secondary" onclick="this.closest('.cal-modal-bg').remove()">Fechar</button></div></div>`;
   document.body.appendChild(modal);
 }
 
