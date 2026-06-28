@@ -1,48 +1,11 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<!--
-  ============================================================
-  SQL necessário para permitir inserções anônimas (RLS):
-
-  -- Permite que pacientes sem login preencham a anamnese via link público
-  CREATE POLICY "anon_insert_anamnese"
-    ON anamneses
-    FOR INSERT
-    TO anon
-    WITH CHECK (true);
-
-  -- Permite que pacientes sem login atualizem sua própria anamnese
-  CREATE POLICY "anon_update_anamnese"
-    ON anamneses
-    FOR UPDATE
-    TO anon
-    USING (true)
-    WITH CHECK (true);
-
-  -- Permite leitura anônima para verificar se já existe anamnese
-  CREATE POLICY "anon_select_anamnese"
-    ON anamneses
-    FOR SELECT
-    TO anon
-    USING (true);
-
-  -- Permite leitura anônima do nome do paciente e da clínica
-  CREATE POLICY "anon_select_paciente_nome"
-    ON pacientes
-    FOR SELECT
-    TO anon
-    USING (true);
-
-  CREATE POLICY "anon_select_clinica_nome"
-    ON clinicas
-    FOR SELECT
-    TO anon
-    USING (true);
-  ============================================================
--->
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<meta http-equiv="X-Content-Type-Options" content="nosniff">
 <title>Ficha de Saúde — RWDent</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
@@ -704,16 +667,16 @@ let currentStep = 1;
 const totalSteps = 4;
 let pacienteId = null;
 let clinicaId  = null;
+let anamneseToken = null;
 
 // ── Init ──
 document.addEventListener('DOMContentLoaded', init);
 
 async function init() {
   const params = new URLSearchParams(window.location.search);
-  pacienteId = params.get('paciente');
-  clinicaId  = params.get('clinica');
+  anamneseToken = params.get('token');
 
-  if (!pacienteId || !clinicaId) {
+  if (!anamneseToken) {
     showError();
     return;
   }
@@ -721,35 +684,27 @@ async function init() {
   showLoading(true);
 
   try {
-    // Fetch clinic and patient names
-    const [clinicaRes, pacienteRes] = await Promise.all([
-      _sb.from('clinicas').select('nome_cli').eq('id', clinicaId).single(),
-      _sb.from('pacientes').select('nome').eq('id', pacienteId).single()
-    ]);
+    const { data: rows, error } = await _sb.rpc('rwdent_get_anamnese_context', {
+      p_token: anamneseToken
+    });
 
-    if (clinicaRes.data) {
-      document.getElementById('clinic-name').textContent = clinicaRes.data.nome_cli || 'Clinica';
-    }
-    if (pacienteRes.data) {
-      const badge = document.getElementById('patient-name');
-      badge.textContent = pacienteRes.data.nome;
-      badge.style.display = 'inline-block';
-    }
-
-    if (!clinicaRes.data || !pacienteRes.data) {
+    const context = Array.isArray(rows) ? rows[0] : rows;
+    if (error || !context) {
       showLoading(false);
       showError();
       return;
     }
 
-    // Check if anamnese already exists and pre-fill
-    const { data: existing } = await _sb.from('anamneses')
-      .select('dados')
-      .eq('paciente_id', pacienteId)
-      .single();
+    pacienteId = context.paciente_id;
+    clinicaId = context.clinica_id;
+    document.getElementById('clinic-name').textContent = context.clinica_nome || 'Clinica';
 
-    if (existing && existing.dados) {
-      prefillForm(existing.dados);
+    const badge = document.getElementById('patient-name');
+    badge.textContent = context.paciente_nome || 'Paciente';
+    badge.style.display = 'inline-block';
+
+    if (context.dados) {
+      prefillForm(context.dados);
     }
 
   } catch (e) {
@@ -918,11 +873,10 @@ async function submitForm() {
 
   showLoading(true);
 
-  const { error } = await _sb.from('anamneses')
-    .upsert(
-      { paciente_id: pacienteId, clinica_id: clinicaId, dados: anamnese },
-      { onConflict: 'paciente_id' }
-    );
+  const { error } = await _sb.rpc('rwdent_submit_anamnese', {
+    p_token: anamneseToken,
+    p_dados: anamnese
+  });
 
   showLoading(false);
 
