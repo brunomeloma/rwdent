@@ -1176,7 +1176,7 @@ select, textarea {
 .dark-mode .search-box{background:#1e1612!important;}
 .dark-mode .search-result-item{border-color:#4a3830!important;}
 .search-box input{width:100%;border:none;padding:18px 20px;font-size:16px;font-family:inherit;outline:none;background:transparent;color:inherit;}
-.search-results{max-height:340px;overflow-y:auto;}
+.search-results{max-height:60vh;overflow-y:auto;}
 .search-result-item{display:flex;align-items:center;gap:12px;padding:12px 20px;cursor:pointer;border-top:1px solid var(--rose-light);transition:background .15s;}
 .search-result-item:hover,.search-result-item.active{background:var(--rose-lighter);}
 
@@ -12103,20 +12103,20 @@ function buscaGlobalFiltrar(){
   const res = document.getElementById('search-global-results');
   if(!q){ res.innerHTML='<div style="padding:16px;text-align:center;color:var(--rose-text);font-size:13px;">Digite para buscar pacientes, procedimentos, materiais, agendamentos ou vendas</div>'; return; }
   const items = [];
-  pacientes.filter(p=>!p.arquivado&&(_norm(p.nome).includes(q)||(p.cpf||'').replace(/\D/g,'').includes(q.replace(/\D/g,''))||(p.telefone||'').replace(/\D/g,'').includes(q.replace(/\D/g,'')))).slice(0,5).forEach(p=>{
+  pacientes.filter(p=>!p.arquivado&&(_norm(p.nome).includes(q)||(p.cpf||'').replace(/\D/g,'').includes(q.replace(/\D/g,''))||(p.telefone||'').replace(/\D/g,'').includes(q.replace(/\D/g,'')))).slice(0,10).forEach(p=>{
     items.push({cat:'Pacientes',icon:'ti-user',label:escapeHtml(p.nome),sub:escapeHtml(p.telefone||p.cpf||''),action:`fecharBuscaGlobal();switchTab('pacientes');setTimeout(()=>selectPatient(${p.id}),150)`});
   });
-  procs.filter(p=>p.ativo!==false&&_norm(p.nome).includes(q)).slice(0,4).forEach(p=>{
+  procs.filter(p=>p.ativo!==false&&_norm(p.nome).includes(q)).slice(0,15).forEach(p=>{
     items.push({cat:'Procedimentos',icon:'ti-medical-cross',label:escapeHtml(p.nome),sub:fmtBRL(p.precoFinal||0),action:`fecharBuscaGlobal();switchTab('procedimentos_fin')`});
   });
-  mats.filter(m=>!m.arquivado&&_norm(m.nome).includes(q)).slice(0,4).forEach(m=>{
+  mats.filter(m=>!m.arquivado&&_norm(m.nome).includes(q)).slice(0,10).forEach(m=>{
     items.push({cat:'Materiais',icon:'ti-package',label:escapeHtml(m.nome),sub:m.unidade?escapeHtml(m.unidade):'Material',action:`fecharBuscaGlobal();switchTab('estoque_fin')`});
   });
   const hoje = new Date().toISOString().slice(0,10);
-  agendamentos.filter(a=>a.data>=hoje&&(_norm(a.nome||'').includes(q)||_norm(a.procedimento||'').includes(q))).slice(0,4).forEach(a=>{
+  agendamentos.filter(a=>a.data>=hoje&&(_norm(a.nome||'').includes(q)||_norm(a.procedimento||'').includes(q))).slice(0,10).forEach(a=>{
     items.push({cat:'Agenda',icon:'ti-calendar',label:escapeHtml(a.nome||''),sub:`${formatDate(a.data)} ${(a.horario||'').slice(0,5)} — ${escapeHtml(a.procedimento||'')}`,action:`fecharBuscaGlobal();switchTab('lista')`});
   });
-  vendas.filter(v=>_norm(v.pacienteNome||'').includes(q)||(_norm((v.itens||[]).map(i=>i.nome||'').join(' '))).includes(q)).slice(0,4).forEach(v=>{
+  vendas.filter(v=>_norm(v.pacienteNome||'').includes(q)||(_norm((v.itens||[]).map(i=>i.nome||'').join(' '))).includes(q)).slice(0,10).forEach(v=>{
     const st = v.status==='finalizada'?'Finalizada':v.status==='orcamento'?'Orçamento':'Venda';
     items.push({cat:'Vendas',icon:'ti-receipt',label:escapeHtml(v.pacienteNome||'Venda'),sub:`${st} — ${fmtBRL(v.total||0)}`,action:`fecharBuscaGlobal();switchTab('vendas_fin')`});
   });
