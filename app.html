@@ -326,14 +326,14 @@ button{font-family:inherit;}
 
 
 /* ── ODONTOGRAMA ── */
-.odonto-arcada{display:flex;justify-content:flex-start;gap:2px;overflow-x:auto;padding:6px 2px;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
+.odonto-arcada{display:flex;justify-content:flex-start;align-items:flex-end;gap:2px;overflow-x:auto;padding:6px 2px;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
 .odonto-arcada::-webkit-scrollbar{display:none;}
 .odonto-arcada .odonto-quadrant-gap{width:14px;flex-shrink:0;}
 .odonto-dente-wrap{display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;flex-shrink:0;padding:2px;border-radius:8px;transition:background .15s;}
 .odonto-dente-wrap:hover{background:rgba(212,115,90,.07);}
 .odonto-dente-wrap:hover .odonto-tooth-svg{transform:scale(1.1);filter:drop-shadow(0 2px 4px rgba(0,0,0,.15));}
 .odonto-dente-wrap.selected .odonto-tooth-svg{filter:drop-shadow(0 0 6px rgba(212,115,90,.5)) drop-shadow(0 0 12px rgba(212,115,90,.25));}
-.odonto-tooth-svg{transition:all .2s ease;width:36px;height:auto;}
+.odonto-tooth-svg{transition:all .2s ease;height:72px;width:auto;}
 .odonto-dente-num{font-size:9px;font-weight:700;color:var(--rose-text);line-height:1;margin:1px 0;}
 .odonto-dente-icon{font-size:13px;line-height:1;}
 .odonto-leg{display:inline-flex;align-items:center;gap:4px;font-size:10px;color:var(--rose-text);white-space:nowrap;}
@@ -630,7 +630,7 @@ button{font-family:inherit;}
 
   /* Odontograma */
   .odonto-arcada{overflow-x:auto;}
-  .odonto-tooth-svg{width:32px;}
+  .odonto-tooth-svg{height:48px;}
   .odonto-dente-num{font-size:8px;}
   .odonto-arcada .odonto-quadrant-gap{width:10px;}
 
@@ -4887,18 +4887,18 @@ const TOOTH_COND_COLORS = {
   outro:      { fill:'#f5f5f5', stroke:'#9e9e9e' }
 };
 const TOOTH_SPRITE = {
-  18:{x:0,y:0,w:47,h:140},17:{x:47,y:0,w:46,h:140},16:{x:93,y:0,w:47,h:140},
-  15:{x:140,y:0,w:38,h:140},14:{x:178,y:0,w:40,h:140},13:{x:218,y:0,w:38,h:140},
-  12:{x:256,y:0,w:34,h:140},11:{x:290,y:0,w:45,h:140},
-  21:{x:347,y:0,w:42,h:140},22:{x:389,y:0,w:33,h:140},23:{x:422,y:0,w:38,h:140},
-  24:{x:460,y:0,w:36,h:140},25:{x:496,y:0,w:39,h:140},26:{x:535,y:0,w:43,h:140},
-  27:{x:578,y:0,w:46,h:140},28:{x:624,y:0,w:51,h:140},
-  48:{x:0,y:302,w:47,h:151},47:{x:47,y:302,w:46,h:151},46:{x:93,y:302,w:47,h:151},
-  45:{x:140,y:302,w:38,h:151},44:{x:178,y:302,w:40,h:151},43:{x:218,y:302,w:38,h:151},
-  42:{x:256,y:302,w:34,h:151},41:{x:290,y:302,w:45,h:151},
-  31:{x:347,y:302,w:42,h:151},32:{x:389,y:302,w:33,h:151},33:{x:422,y:302,w:38,h:151},
-  34:{x:460,y:302,w:36,h:151},35:{x:496,y:302,w:39,h:151},36:{x:535,y:302,w:43,h:151},
-  37:{x:578,y:302,w:46,h:151},38:{x:624,y:302,w:51,h:151}
+  18:{x:0,y:0,w:47,h:125},17:{x:47,y:0,w:46,h:125},16:{x:93,y:0,w:47,h:125},
+  15:{x:140,y:0,w:38,h:125},14:{x:178,y:0,w:40,h:125},13:{x:218,y:0,w:38,h:125},
+  12:{x:256,y:0,w:34,h:125},11:{x:290,y:0,w:45,h:125},
+  21:{x:347,y:0,w:42,h:125},22:{x:389,y:0,w:33,h:125},23:{x:422,y:0,w:38,h:125},
+  24:{x:460,y:0,w:36,h:125},25:{x:496,y:0,w:39,h:125},26:{x:535,y:0,w:43,h:125},
+  27:{x:578,y:0,w:46,h:125},28:{x:624,y:0,w:51,h:125},
+  48:{x:0,y:320,w:47,h:133},47:{x:47,y:320,w:46,h:133},46:{x:93,y:320,w:47,h:133},
+  45:{x:140,y:320,w:38,h:133},44:{x:178,y:320,w:40,h:133},43:{x:218,y:320,w:38,h:133},
+  42:{x:256,y:320,w:34,h:133},41:{x:290,y:320,w:45,h:133},
+  31:{x:347,y:320,w:42,h:133},32:{x:389,y:320,w:33,h:133},33:{x:422,y:320,w:38,h:133},
+  34:{x:460,y:320,w:36,h:133},35:{x:496,y:320,w:39,h:133},36:{x:535,y:320,w:43,h:133},
+  37:{x:578,y:320,w:46,h:133},38:{x:624,y:320,w:51,h:133}
 };
 
 function getToothType(num) {
