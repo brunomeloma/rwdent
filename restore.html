@@ -120,10 +120,12 @@ async function importBackup(){
     if(anamneses.length){ const { error } = await _sb.from('anamneses').upsert(anamneses, { onConflict: 'paciente_id' }); if(error) throw new Error('Anamneses: ' + error.message); log('Anamneses: ' + anamneses.length + ' registro(s) importado(s).'); } else log('Anamneses: nada para importar.');
     await upsertTable('agendamentos', cleanRows(backup.agendamentos, ['created_at']).map((a) => ({ ...a, clinica_id: clinicId })), 'Agendamentos');
     const fin = backup.financeiro || {};
-    const financeiroRow = { clinica_id: clinicId, procs: fin.procs || [], mats: fin.mats || [], estoque: fin.estoque || {}, proc_insumos: fin.procInsumos || fin.proc_insumos || {}, vendas: fin.vendas || [], combos: fin.combos || [], taxas: fin.taxasCfg || fin.taxas || {} };
+    const financeiroRow = { clinica_id: clinicId, procs: fin.procs || [], mats: fin.mats || [], estoque: fin.estoque || {}, proc_insumos: fin.procInsumos || fin.proc_insumos || {}, vendas: fin.vendas || [], combos: fin.combos || [], taxas_cfg: fin.taxasCfg || fin.taxas_cfg || fin.taxas || {}, cfg: fin.cfg || {}, desc_cfg: fin.descCfg || fin.desc_cfg || {} };
     const { error: finError } = await _sb.from('financeiro_config').upsert([financeiroRow], { onConflict: 'clinica_id' });
     if(finError) throw new Error('Financeiro: ' + finError.message);
     log('Financeiro: procedimentos, materiais, estoque e configurações importados.');
+    const procDentes = asArray(backup.pacientes).flatMap((p) => asArray(p.procedimentos_dentes || p.odontograma).map((r) => ({ ...r, clinica_id: clinicId, paciente_id: p.id })));
+    if(procDentes.length){ await upsertTable('procedimentos_dentes', cleanRows(procDentes, ['created_at']), 'Odontograma'); }
     log('\nImportação concluída. Recarregue app.html e confira pacientes, estoque, agenda e financeiro.');
   } catch(e) {
     log('\nERRO: ' + e.message);

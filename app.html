@@ -4470,16 +4470,22 @@ async function anamneseSalvar(pacId){
   showToast('Anamnese salva!');
 }
 
-function anamneseEnviarWhatsApp(pacId){
+async function anamneseEnviarWhatsApp(pacId){
   const p = pacientes.find(pt => pt.id === pacId);
   if(!p) return;
-  const link = `${window.location.origin}/anamnese.html?clinica=${clinicaId}&paciente=${pacId}`;
+  let link;
+  const { data: tokenRow, error } = await _sb.from('anamnese_links')
+    .insert([{ paciente_id: pacId, clinica_id: clinicaId }])
+    .select('token').single();
+  if(!error && tokenRow){
+    link = `${window.location.origin}/anamnese.html?token=${tokenRow.token}`;
+  } else {
+    link = `${window.location.origin}/anamnese.html?clinica=${clinicaId}&paciente=${pacId}`;
+  }
   const msg = `Ola${p.nome ? ', ' + p.nome.split(' ')[0] : ''}! Para agilizar seu atendimento, preencha sua ficha de saude antes da consulta: ${link}`;
-  // Copy link to clipboard
   navigator.clipboard.writeText(link).then(() => {
     showToast('Link copiado!');
   }).catch(() => {});
-  // Open WhatsApp with pre-filled message
   const tel = (p.telefone || '').replace(/\D/g, '');
   const waUrl = tel
     ? `https://wa.me/${tel.startsWith('55') ? tel : '55' + tel}?text=${encodeURIComponent(msg)}`
@@ -11804,10 +11810,14 @@ function toggleDarkMode(){
 async function exportarBackup(){
   showLoading(true);
   try {
+    const { data: allProcDentes } = await _sb.from('procedimentos_dentes').select('*').eq('clinica_id', clinicaId);
+    const procDentesMap = {};
+    (allProcDentes||[]).forEach(r => { (procDentesMap[r.paciente_id] = procDentesMap[r.paciente_id] || []).push(r); });
+    const pacientesComOdonto = pacientes.map(p => ({ ...p, procedimentos_dentes: procDentesMap[p.id] || [] }));
     const backup = {
       exportadoEm: new Date().toISOString(),
       clinica: clinicaData,
-      pacientes: pacientes,
+      pacientes: pacientesComOdonto,
       agendamentos: agendamentos,
       profissionais: profissionais,
       financeiro: { procs, mats, estoque, procInsumos, vendas, combos, cfg, taxasCfg, descCfg, pagPac }
