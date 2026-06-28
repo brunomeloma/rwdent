@@ -333,7 +333,7 @@ button{font-family:inherit;}
 .odonto-dente-wrap:hover{background:rgba(212,115,90,.07);}
 .odonto-dente-wrap:hover .odonto-tooth-svg{transform:scale(1.1);filter:drop-shadow(0 2px 4px rgba(0,0,0,.15));}
 .odonto-dente-wrap.selected .odonto-tooth-svg{filter:drop-shadow(0 0 6px rgba(212,115,90,.5)) drop-shadow(0 0 12px rgba(212,115,90,.25));}
-.odonto-tooth-svg{transition:all .2s ease;width:38px;height:auto;}
+.odonto-tooth-svg{transition:all .2s ease;width:36px;height:auto;}
 .odonto-dente-num{font-size:9px;font-weight:700;color:var(--rose-text);line-height:1;margin:1px 0;}
 .odonto-dente-icon{font-size:13px;line-height:1;}
 .odonto-leg{display:inline-flex;align-items:center;gap:4px;font-size:10px;color:var(--rose-text);white-space:nowrap;}
@@ -4909,54 +4909,90 @@ function isUpperTooth(num) {
 function getToothSVG(num, cond, extraStyle) {
   const type = getToothType(num);
   const upper = isUpperTooth(num);
-  const colors = TOOTH_COND_COLORS[cond] || TOOTH_COND_COLORS.higido;
+  const c = TOOTH_COND_COLORS[cond] || TOOTH_COND_COLORS.higido;
   const isExtr = cond === 'extraido';
-  const opacity = isExtr ? 0.45 : 1;
+  const o = isExtr ? 0.4 : 1;
+  const u = num % 10;
+  const rf = cond==='higido'?'#f0e6df':c.fill;
+  const rs = cond==='higido'?'#b8a89e':c.stroke;
+  let s='', W, H;
 
-  // SVG paths: drawn with root pointing UP, crown at bottom.
-  // For upper teeth we keep as-is (root up = anatomically correct for upper jaw display).
-  // For lower teeth we flip vertically.
-  let crownPath, rootPath, vbW, vbH;
-
-  switch(type) {
-    case 'incisor':
-      vbW = 30; vbH = 56;
-      // Slim single root, flat shovel-shaped crown
-      rootPath = 'M13,0 C13,0 11,14 11,20 L19,20 C19,14 17,0 15,0 Z';
-      crownPath = 'M8,20 C6,22 5,28 5,33 C5,40 7,48 8,51 C9,53 11,55 15,55 C19,55 21,53 22,51 C23,48 25,40 25,33 C25,28 24,22 22,20 Z';
-      break;
-    case 'canine':
-      vbW = 32; vbH = 60;
-      // Longer single root, pointed crown
-      rootPath = 'M14,0 C14,0 12,16 11,22 L21,22 C20,16 18,0 16,0 Z';
-      crownPath = 'M8,22 C6,25 5,30 5,35 C5,42 7,48 10,53 C12,56 14,59 16,59 C18,59 20,56 22,53 C25,48 27,42 27,35 C27,30 26,25 24,22 Z';
-      break;
-    case 'premolar':
-      vbW = 34; vbH = 56;
-      // Two roots splitting, bicuspid crown
-      rootPath = 'M12,0 C12,0 10,10 10,16 L14,18 L15,10 C15,6 14,0 13,0 Z M22,0 C21,0 20,6 19,10 L20,18 L24,16 C24,10 22,0 22,0 Z';
-      crownPath = 'M7,18 C5,21 4,26 4,31 C4,37 5,42 7,46 C8,48 10,51 12,52 C14,53 16,54 17,54 C18,54 20,53 22,52 C24,51 26,48 27,46 C29,42 30,37 30,31 C30,26 29,21 27,18 L17,17 Z';
-      break;
-    case 'molar':
-      vbW = 40; vbH = 56;
-      // Three roots (two buccal, one palatal), wide multi-cusp crown
-      rootPath = 'M11,0 C11,0 9,8 8,14 L13,16 L13,8 C13,4 12,0 11,0 Z M20,0 C19,0 19,6 19,10 L21,16 L23,10 C23,6 22,0 21,0 Z M30,0 C29,0 28,4 28,8 L28,16 L33,14 C32,8 30,0 30,0 Z';
-      crownPath = 'M5,16 C3,19 2,24 2,30 C2,36 3,41 5,45 C7,48 9,51 12,53 C15,54 18,55 20,55 C22,55 25,54 28,53 C31,51 33,48 35,45 C37,41 38,36 38,30 C38,24 37,19 35,16 Z';
-      break;
+  if(type==='incisor'){
+    const lat = (u===2);
+    W=lat?22:26; H=52;
+    const cw=lat?14:18, cx=(W-cw)/2, rw=lat?5:6, rx=(W-rw)/2;
+    // Root
+    s+=`<path d="M${rx+1},1 Q${W/2},0 ${rx+rw-1},1 Q${rx+rw+1},8 ${rx+rw},16 L${rx+rw+1},22 L${rx-1},22 L${rx},16 Q${rx-1},8 ${rx+1},1Z" fill="${rf}" stroke="${rs}" stroke-width="1.2" opacity="${o*0.65}" stroke-linejoin="round"/>`;
+    // Crown - wider rectangular shape
+    s+=`<path d="M${rx-1},22 Q${cx-1},23 ${cx},25 Q${cx-1},30 ${cx},35 Q${cx},40 ${cx+1},44 Q${cx+2},48 ${cx+4},50 Q${W/2-1},52 ${W/2},52 Q${W/2+1},52 ${cx+cw-4},50 Q${cx+cw-2},48 ${cx+cw-1},44 Q${cx+cw},40 ${cx+cw},35 Q${cx+cw+1},30 ${cx+cw},25 Q${cx+cw+1},23 ${rx+rw+1},22Z" fill="${c.fill}" stroke="${c.stroke}" stroke-width="1.5" opacity="${o}" stroke-linejoin="round"/>`;
+    // Incisal edge
+    s+=`<path d="M${cx+2},49 Q${W/2},51.5 ${cx+cw-2},49" fill="none" stroke="${c.stroke}" stroke-width="0.8" opacity="${o*0.45}"/>`;
+    if(!lat){s+=`<line x1="${W/2-2}" y1="27" x2="${W/2-2}" y2="45" stroke="${c.stroke}" stroke-width="0.4" opacity="${o*0.12}"/><line x1="${W/2+2}" y1="27" x2="${W/2+2}" y2="45" stroke="${c.stroke}" stroke-width="0.4" opacity="${o*0.12}"/>`;}
+  } else if(type==='canine'){
+    W=24; H=58;
+    // Root - long tapered
+    s+=`<path d="M10,1 Q12,0 14,1 Q15,8 15,16 Q15,22 14.5,26 L9.5,26 Q9,22 9,16 Q9,8 10,1Z" fill="${rf}" stroke="${rs}" stroke-width="1.2" opacity="${o*0.65}" stroke-linejoin="round"/>`;
+    // Crown - pointed
+    s+=`<path d="M9.5,26 Q5,28 3.5,33 Q2,38 2.5,43 Q3,47 5,51 Q7,54 9,56 Q11,57.5 12,58 Q13,57.5 15,56 Q17,54 19,51 Q21,47 21.5,43 Q22,38 20.5,33 Q19,28 14.5,26Z" fill="${c.fill}" stroke="${c.stroke}" stroke-width="1.5" opacity="${o}" stroke-linejoin="round"/>`;
+    // Cusp tip
+    s+=`<path d="M8,55 Q10,57 12,57.5 Q14,57 16,55" fill="none" stroke="${c.stroke}" stroke-width="0.8" opacity="${o*0.45}"/>`;
+    s+=`<path d="M7,44 Q9.5,38 12,31" fill="none" stroke="${c.stroke}" stroke-width="0.5" opacity="${o*0.2}"/>`;
+    s+=`<path d="M17,44 Q14.5,38 12,31" fill="none" stroke="${c.stroke}" stroke-width="0.5" opacity="${o*0.2}"/>`;
+  } else if(type==='premolar'){
+    W=26; H=52;
+    const p2=(u===5);
+    // Root(s)
+    if(p2){
+      s+=`<path d="M11,1 Q13,0 15,1 Q16,7 16,13 Q16,18 15.5,21 L10.5,21 Q10,18 10,13 Q10,7 11,1Z" fill="${rf}" stroke="${rs}" stroke-width="1.2" opacity="${o*0.65}" stroke-linejoin="round"/>`;
+    } else {
+      s+=`<path d="M8,1 Q9.5,0 10.5,1 Q11.5,5 12,10 L12,16 L14,16 L14,10 Q14.5,5 15.5,1 Q16.5,0 18,1 Q19,6 19,12 Q18.5,17 17.5,20 L8.5,20 Q7.5,17 7,12 Q7,6 8,1Z" fill="${rf}" stroke="${rs}" stroke-width="1.2" opacity="${o*0.65}" stroke-linejoin="round"/>`;
+    }
+    const y=p2?21:20;
+    // Crown - two cusps visible at occlusal edge
+    s+=`<path d="M${p2?'10.5':'8.5'},${y} Q4,${y+2} 2.5,${y+7} Q1.5,${y+12} 2,${y+17} Q2.5,${y+21} 4,${y+24} Q6,${y+27} 9,${y+28.5} L10,${y+29} Q11,${y+30} 13,${y+30} Q15,${y+30} 16,${y+29} L17,${y+28.5} Q20,${y+27} 22,${y+24} Q23.5,${y+21} 24,${y+17} Q24.5,${y+12} 23.5,${y+7} Q22,${y+2} ${p2?'15.5':'17.5'},${y}Z" fill="${c.fill}" stroke="${c.stroke}" stroke-width="1.5" opacity="${o}" stroke-linejoin="round"/>`;
+    // Two cusp tips
+    s+=`<path d="M5,${y+23} Q8,${y+26} 10,${y+28} L10,${y+29}" fill="none" stroke="${c.stroke}" stroke-width="0.7" opacity="${o*0.35}"/>`;
+    s+=`<path d="M21,${y+23} Q18,${y+26} 16,${y+28} L16,${y+29}" fill="none" stroke="${c.stroke}" stroke-width="0.7" opacity="${o*0.35}"/>`;
+    // Central fissure
+    s+=`<path d="M6,${y+22} Q9,${y+19} 13,${y+16} Q17,${y+19} 20,${y+22}" fill="none" stroke="${c.stroke}" stroke-width="0.7" opacity="${o*0.3}"/>`;
+    s+=`<line x1="13" y1="${y+6}" x2="13" y2="${y+16}" stroke="${c.stroke}" stroke-width="0.4" opacity="${o*0.15}"/>`;
+  } else {
+    W=36; H=52;
+    const t3=(u===8), t1=(u===6);
+    // Roots
+    if(t3){
+      s+=`<path d="M13,2 Q15,0 21,0 Q23,0 23,2 Q24,7 24,13 Q24,17 23,20 L13,20 Q12,17 12,13 Q12,7 13,2Z" fill="${rf}" stroke="${rs}" stroke-width="1.2" opacity="${o*0.65}" stroke-linejoin="round"/>`;
+    } else {
+      // Mesial root
+      s+=`<path d="M7,2 Q8.5,0 10,2 Q11,6 11.5,11 Q11.5,15 11,17 L7,18 Q6,15 6,11 Q6,6 7,2Z" fill="${rf}" stroke="${rs}" stroke-width="1" opacity="${o*0.6}" stroke-linejoin="round"/>`;
+      // Palatal root
+      s+=`<path d="M15.5,3 Q17,1.5 18.5,3 Q19,7 19,12 L19.5,18 L15,18 L15,12 Q15,7 15.5,3Z" fill="${rf}" stroke="${rs}" stroke-width="0.9" opacity="${o*0.5}" stroke-linejoin="round"/>`;
+      // Distal root
+      s+=`<path d="M26,2 Q27.5,0 29,2 Q30,6 30,11 Q30,15 29,17 L25,18 Q24.5,15 24.5,11 Q24.5,6 26,2Z" fill="${rf}" stroke="${rs}" stroke-width="1" opacity="${o*0.6}" stroke-linejoin="round"/>`;
+      // Furcation area fill
+      s+=`<path d="M11,17 L7,18 L6,20 L30,20 L29,17 L25,18 L19.5,18 L15,18 L11,17Z" fill="${rf}" stroke="none" opacity="${o*0.5}"/>`;
+    }
+    const y=t3?20:20;
+    // Crown - wide and bulky with anatomical cusps
+    s+=`<path d="M${t3?'13':'6'},${y} Q2,${y+2} 1,${y+7} Q0,${y+12} 0.5,${y+17} Q1,${y+21} 3,${y+24} Q5,${y+27} 8,${y+29} Q12,${y+31} 18,${y+31} Q24,${y+31} 28,${y+29} Q31,${y+27} 33,${y+24} Q35,${y+21} 35.5,${y+17} Q36,${y+12} 35,${y+7} Q34,${y+2} ${t3?'23':'30'},${y}Z" fill="${c.fill}" stroke="${c.stroke}" stroke-width="1.5" opacity="${o}" stroke-linejoin="round"/>`;
+    // Fissure pattern
+    if(t1){
+      s+=`<path d="M6,${y+22} Q10,${y+18} 18,${y+14} Q26,${y+18} 30,${y+22}" fill="none" stroke="${c.stroke}" stroke-width="0.8" opacity="${o*0.3}"/>`;
+      s+=`<line x1="18" y1="${y+6}" x2="18" y2="${y+20}" stroke="${c.stroke}" stroke-width="0.5" opacity="${o*0.2}"/>`;
+      s+=`<path d="M8,${y+14} Q13,${y+11} 18,${y+11} Q23,${y+11} 28,${y+14}" fill="none" stroke="${c.stroke}" stroke-width="0.5" opacity="${o*0.15}"/>`;
+    } else {
+      s+=`<path d="M6,${y+21} Q11,${y+17} 18,${y+14} Q25,${y+17} 30,${y+21}" fill="none" stroke="${c.stroke}" stroke-width="0.8" opacity="${o*0.3}"/>`;
+      s+=`<line x1="18" y1="${y+6}" x2="18" y2="${y+19}" stroke="${c.stroke}" stroke-width="0.5" opacity="${o*0.2}"/>`;
+    }
+    // Cusp bumps at occlusal edge
+    s+=`<path d="M5,${y+27} Q7,${y+29.5} 10,${y+30}" fill="none" stroke="${c.stroke}" stroke-width="0.6" opacity="${o*0.3}"/>`;
+    s+=`<path d="M31,${y+27} Q29,${y+29.5} 26,${y+30}" fill="none" stroke="${c.stroke}" stroke-width="0.6" opacity="${o*0.3}"/>`;
   }
 
-  // Build the SVG - for lower teeth, flip vertically
-  const transform = upper ? '' : `transform="scale(1,-1) translate(0,-${vbH})"`;
+  const tr = upper ? '' : `transform="scale(1,-1) translate(0,-${H})"`;
+  const xm = isExtr ? `<line x1="${W*0.1}" y1="${H*0.05}" x2="${W*0.9}" y2="${H*0.95}" stroke="#777" stroke-width="2.5" stroke-linecap="round" opacity="0.6"/><line x1="${W*0.9}" y1="${H*0.05}" x2="${W*0.1}" y2="${H*0.95}" stroke="#777" stroke-width="2.5" stroke-linecap="round" opacity="0.6"/>` : '';
 
-  const svgContent = `
-    <g ${transform}>
-      <path d="${rootPath}" fill="${colors.fill}" stroke="${colors.stroke}" stroke-width="1.2" opacity="${opacity * 0.6}"/>
-      <path d="${crownPath}" fill="${colors.fill}" stroke="${colors.stroke}" stroke-width="1.5" opacity="${opacity}"/>
-      ${isExtr ? `<line x1="${vbW*0.2}" y1="${vbH*0.15}" x2="${vbW*0.8}" y2="${vbH*0.85}" stroke="#999" stroke-width="2" stroke-linecap="round"/>
-      <line x1="${vbW*0.8}" y1="${vbH*0.15}" x2="${vbW*0.2}" y2="${vbH*0.85}" stroke="#999" stroke-width="2" stroke-linecap="round"/>` : ''}
-    </g>`;
-
-  return `<svg class="odonto-tooth-svg" viewBox="0 0 ${vbW} ${vbH}" xmlns="http://www.w3.org/2000/svg" style="${extraStyle||''}">${svgContent}</svg>`;
+  return `<svg class="odonto-tooth-svg" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="${extraStyle||''}"><g ${tr}>${s}${xm}</g></svg>`;
 }
 
 function renderArcada(containerId, dentes){
