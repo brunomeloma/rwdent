@@ -5,6 +5,7 @@
 -- - This script is intentionally non-destructive: no DROP, TRUNCATE, or DELETE.
 -- - Run after backing up the database.
 -- - Adjust table/column names if your schema differs.
+-- - It preserves existing patients, stock, prices, appointments, and financial data.
 
 -- ============================================================
 -- 1. Helper: clinics owned by the logged-in user
@@ -23,8 +24,10 @@ as $$
 $$;
 
 -- ============================================================
--- 2. Optional admin allow-list table
+-- 2. Admin allow-list table
 -- ============================================================
+-- The JavaScript ADMIN_EMAILS array is only UI convenience. Real admin
+-- authorization should live in the database.
 
 create table if not exists public.admin_users (
   user_id uuid primary key references auth.users(id) on delete cascade,
@@ -63,7 +66,8 @@ $$;
 -- 3. RLS templates for clinic-owned tables
 -- ============================================================
 -- These policies assume each table has a clinica_id column.
--- Uncomment and run table by table after confirming the schema.
+-- Apply table by table after confirming the schema.
+-- Do not remove old policies until normal login/admin flows are tested.
 
 -- alter table public.pacientes enable row level security;
 -- create policy if not exists "pacientes_owner_select"
@@ -89,6 +93,7 @@ $$;
 -- ============================================================
 -- Current public links should not rely only on paciente_id and clinica_id.
 -- This table lets the app generate one random token per form link.
+-- Anonymous users should not read this table directly.
 
 create table if not exists public.anamnese_links (
   token uuid primary key default gen_random_uuid(),
@@ -101,7 +106,6 @@ create table if not exists public.anamnese_links (
 
 alter table public.anamnese_links enable row level security;
 
--- Authenticated clinic users can create and inspect their own links.
 create policy if not exists "anamnese_links_owner_select"
   on public.anamnese_links for select to authenticated
   using (clinica_id in (select public.rwdent_user_clinica_ids()) or public.rwdent_is_admin());
@@ -110,11 +114,73 @@ create policy if not exists "anamnese_links_owner_insert"
   on public.anamnese_links for insert to authenticated
   with check (clinica_id in (select public.rwdent_user_clinica_ids()) or public.rwdent_is_admin());
 
--- Anonymous patients may read only a valid, non-expired token row by exact token filter.
--- Supabase still requires the client query to filter by token.
-create policy if not exists "anamnese_links_anon_valid_select"
-  on public.anamnese_links for select to anon
-  using (expires_at > now());
+-- No anon SELECT policy on anamnese_links. Public reads go through RPC below.
+
+create or replace function public.rwdent_get_anamnese_context(p_token uuid)
+returns table (
+  paciente_id bigint,
+  clinica_id bigint,
+  paciente_nome text,
+  clinica_nome text,
+  dados jsonb
+)
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select
+    al.paciente_id,
+    al.clinica_id,
+    p.nome as paciente_nome,
+    c.nome_cli as clinica_nome,
+    a.dados
+  from public.anamnese_links al
+  join public.pacientes p on p.id = al.paciente_id and p.clinica_id = al.clinica_id
+  join public.clinicas c on c.id = al.clinica_id
+  left join public.anamneses a on a.paciente_id = al.paciente_id and a.clinica_id = al.clinica_id
+  where al.token = p_token
+    and al.expires_at > now()
+  limit 1;
+$$;
+
+create or replace function public.rwdent_submit_anamnese(p_token uuid, p_dados jsonb)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_paciente_id bigint;
+  v_clinica_id bigint;
+begin
+  select paciente_id, clinica_id
+    into v_paciente_id, v_clinica_id
+  from public.anamnese_links
+  where token = p_token
+    and expires_at > now()
+  limit 1;
+
+  if v_paciente_id is null or v_clinica_id is null then
+    raise exception 'Invalid or expired anamnese link';
+  end if;
+
+  insert into public.anamneses (paciente_id, clinica_id, dados)
+  values (v_paciente_id, v_clinica_id, p_dados)
+  on conflict (paciente_id)
+  do update set
+    clinica_id = excluded.clinica_id,
+    dados = excluded.dados;
+
+  update public.anamnese_links
+  set used_at = now()
+  where token = p_token;
+end;
+$$;
+
+-- Allow the public anamnese page to use only the safe RPC surface.
+grant execute on function public.rwdent_get_anamnese_context(uuid) to anon;
+grant execute on function public.rwdent_submit_anamnese(uuid, jsonb) to anon;
 
 -- ============================================================
 -- 5. Helpful indexes, non-destructive
