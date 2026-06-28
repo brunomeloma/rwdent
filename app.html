@@ -1359,6 +1359,7 @@ select, textarea {
       </div>
     </div>
     <div class="topnav-right">
+      <button class="topnav-item" onclick="abrirBuscaGlobal()" title="Buscar (Ctrl+K)" style="padding:6px 8px;"><i class="ti ti-search" style="font-size:17px;"></i></button>
       <button class="topnav-item" data-tab="configuracoes" onclick="switchTab('configuracoes')" title="Configurações" style="padding:6px 8px;"><i class="ti ti-settings" style="font-size:17px;"></i></button>
       <div class="topnav-avatar" id="logout-avatar" onclick="doLogout()" title="Sair">RW</div>
     </div>
@@ -2574,6 +2575,7 @@ select, textarea {
       <div class="mobile-more-handle"></div>
       <div class="mobile-more-title">Menu</div>
       <div class="mobile-more-grid">
+        <button onclick="toggleMobileMore();abrirBuscaGlobal()"><i class="ti ti-search"></i>Buscar</button>
         <button onclick="switchTab('agendar');toggleMobileMore()"><i class="ti ti-calendar-plus"></i>Agendar</button>
         <button onclick="switchTab('calendario');toggleMobileMore()"><i class="ti ti-calendar-month"></i>Calendário</button>
         <button onclick="switchTab('financeiro');toggleMobileMore()"><i class="ti ti-chart-bar"></i>Financeiro</button>
