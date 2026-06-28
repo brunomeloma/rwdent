@@ -1400,6 +1400,18 @@ select, textarea {
         </div>
       </div>
 
+      <!-- ── PAGAMENTOS PENDENTES + ANAMNESES ── -->
+      <div class="home-tables-row" style="margin-top:16px;">
+        <div class="card home-table-card">
+          <h3 class="home-table-title"><i class="ti ti-alert-circle" style="color:#e65100;"></i> Pagamentos pendentes</h3>
+          <div id="home-pag-pendentes"><div class="home-empty">Nenhum pagamento pendente.</div></div>
+        </div>
+        <div class="card home-table-card">
+          <h3 class="home-table-title"><i class="ti ti-clipboard-check" style="color:#2e7d32;"></i> Anamneses recebidas</h3>
+          <div id="home-anamneses-recebidas"><div class="home-empty">Nenhuma anamnese recente.</div></div>
+        </div>
+      </div>
+
       <!-- ── ALERTAS DE ESTOQUE ── -->
       <div id="home-estoque-alertas" style="display:none;margin-top:16px;"></div>
 
@@ -2095,7 +2107,11 @@ select, textarea {
 
     <div id="tab-vendas_fin" class="content" style="display:none;">
       <div class="card">
-        <div class="section-header"><h2><i class="ti ti-receipt"></i> Vendas e Orçamentos</h2></div>
+        <div class="section-header">
+          <h2><i class="ti ti-receipt"></i> Vendas e Orçamentos</h2>
+          <button class="btn-secondary" onclick="toggleContasReceber()" style="font-size:12px;"><i class="ti ti-report-money"></i> Contas a receber</button>
+        </div>
+        <div id="contas-receber-panel" style="display:none;margin-bottom:20px;"></div>
         <div id="vendas-metrics" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:16px;"></div>
         <div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;align-items:center;">
           <input type="text" id="venda-search" placeholder="Buscar venda..." oninput="renderVendas()" style="flex:1;min-width:150px;"/>
@@ -3169,7 +3185,7 @@ function renderHomeStats(){
   const hoje_count = agendamentos.filter(a=>a.data===hoje_str).length;
   const semana_end = new Date(); semana_end.setDate(semana_end.getDate()+7);
   const semana_count = agendamentos.filter(a=>a.data>=hoje_str && a.data<=toLocalISO(semana_end)).length;
-  const confirmadas = agendamentos.filter(a=>a.data===hoje_str && (agGetStatus(a)||'').toLowerCase()==='compareceu').length;
+  const confirmadas = agendamentos.filter(a=>a.data===hoje_str && ['compareceu','confirmado'].includes((agGetStatus(a)||'').toLowerCase())).length;
 
   const _mesStat = hoje_str.slice(0,7);
   const _fatMes = vendas.filter(v=>v.status==='finalizada'&&(v.data||v.dataFinal||'').slice(0,7)===_mesStat).reduce((a,v)=>a+(Number(v.total)||0),0);
@@ -3248,6 +3264,47 @@ function renderHomeStats(){
           <button class="home-btn-ver" onclick="verPacienteHome('${p.id}')" style="min-height:36px;padding:6px 14px;border-radius:8px;">Ver</button>
         </div>`;
       }).join('');
+    }
+  }
+
+  // Pagamentos pendentes
+  const pagPendEl = document.getElementById('home-pag-pendentes');
+  if(pagPendEl){
+    const _vendaPago = v => (v.pagamentos||[]).reduce((s,p)=>s+p.valor,0);
+    const pendentes = vendas.filter(v=>v.status==='finalizada'&&_vendaPago(v)<(v.total||0));
+    if(!pendentes.length){
+      pagPendEl.innerHTML='<div class="home-empty">Nenhum pagamento pendente.</div>';
+    } else {
+      const sorted = pendentes.sort((a,b)=>((a.dataFinal||a.data||'').localeCompare(b.dataFinal||b.data||'')));
+      pagPendEl.innerHTML = sorted.slice(0,5).map(v=>{
+        const saldo = (v.total||0)-_vendaPago(v);
+        const pac = pacientes.find(p=>p.id===v.pacienteId);
+        const dt = v.dataFinal||v.data||'';
+        return `<div class="home-table-row">
+          <div>
+            <div class="home-table-name">${escapeHtml(pac?.nome||v.pacienteNome||'—')}</div>
+            <div class="home-table-sub">${dt?new Date(dt).toLocaleDateString('pt-BR'):'—'}</div>
+          </div>
+          <span style="font-weight:700;color:#dc2626;font-size:13px;white-space:nowrap;">${fmtBRL(saldo)}</span>
+        </div>`;
+      }).join('')+(pendentes.length>5?`<div style="text-align:center;padding:6px;"><button class="btn-secondary" style="font-size:11px;" onclick="switchTab('vendas_fin')">Ver todos (${pendentes.length})</button></div>`:'');
+    }
+  }
+
+  // Anamneses recebidas recentemente
+  const anamEl = document.getElementById('home-anamneses-recebidas');
+  if(anamEl){
+    const comAnam = pacientes.filter(p=>p.anamnese&&Object.keys(p.anamnese).length>0)
+      .sort((a,b)=>new Date(b.updated_at||b.created_at||0)-new Date(a.updated_at||a.created_at||0))
+      .slice(0,5);
+    if(!comAnam.length){
+      anamEl.innerHTML='<div class="home-empty">Nenhuma anamnese recente.</div>';
+    } else {
+      anamEl.innerHTML = comAnam.map(p=>`<div class="home-table-row">
+        <div class="home-table-name">${escapeHtml(p.nome)}</div>
+        <span class="home-badge confirmada" style="font-size:10px;">Recebida</span>
+        <button class="home-btn-ver" onclick="verPacienteHome('${p.id}')" style="min-height:36px;padding:6px 14px;border-radius:8px;">Ver</button>
+      </div>`).join('');
     }
   }
 
@@ -3478,6 +3535,12 @@ function renderLista(){
       ? '<span class="fin-badge danger" style="font-size:9px;margin-left:6px;">NÃO VEIO</span>'
       : status==='compareceu'
       ? '<span class="fin-badge ok" style="font-size:9px;margin-left:6px;">COMPARECEU</span>'
+      : status==='confirmado'
+      ? '<span class="fin-badge" style="font-size:9px;margin-left:6px;background:#dbeafe;color:#1e40af;">CONFIRMADO</span>'
+      : status==='remarcado'
+      ? '<span class="fin-badge" style="font-size:9px;margin-left:6px;background:#fef3c7;color:#92400e;">REMARCADO</span>'
+      : status==='cancelado'
+      ? '<span class="fin-badge danger" style="font-size:9px;margin-left:6px;">CANCELADO</span>'
       : '';
     return `
     <div class="appt-item">
@@ -3487,6 +3550,7 @@ function renderLista(){
         <div class="detail">${escapeHtml(a.procedimento||'Consulta')} · ${escapeHtml(a.prof_nome)} · ${escapeHtml(a.telefone||'Sem telefone')}</div>
       </div>
       <span class="appt-badge badge-main">${escapeHtml((a.prof_nome||'').split(' ')[0])}</span>
+      <button class="btn-secondary" style="padding:6px 10px;background:${status==='confirmado'?'#1e40af':'#fff'};color:${status==='confirmado'?'#fff':'#1e40af'};border-color:#1e40af;" onclick="calMarcarPresenca(${a.id},'confirmado')" title="Confirmar presença"><i class="ti ti-circle-check"></i></button>
       <button class="btn-secondary" style="padding:6px 10px;background:${status==='compareceu'?'#2e7d32':'#fff'};color:${status==='compareceu'?'#fff':'#2e7d32'};border-color:#2e7d32;" onclick="calMarcarPresenca(${a.id},'compareceu')" title="Marcar que veio"><i class="ti ti-check"></i></button>
       <button class="btn-secondary" style="padding:6px 10px;background:${status==='faltou'?'#dc2626':'#fff'};color:${status==='faltou'?'#fff':'#dc2626'};border-color:#dc2626;" onclick="calMarcarPresenca(${a.id},'faltou')" title="Marcar que não veio"><i class="ti ti-x"></i></button>
       ${a.telefone ? `<button class="btn-secondary" style="padding:6px 10px;background:#25d366;color:#fff;border-color:#25d366;" onclick="enviarConfirmacaoWpp('${escapeHtml(a.telefone).replace(/'/g,'&#39;')}','${escapeHtml(a.nome).replace(/'/g,'&#39;')}','${escapeHtml(a.data).replace(/'/g,'&#39;')}','${escapeHtml(a.horario).replace(/'/g,'&#39;')}','${escapeHtml(a.procedimento||'Consulta').replace(/'/g,'&#39;')}')" title="Confirmar via WhatsApp"><i class="ti ti-brand-whatsapp"></i></button>` : ''}
@@ -3807,6 +3871,7 @@ function renderPatientDetail(abaAtiva){
         <button class="pac-tab ${abaAtiva==='financeiro'?'active':''}" onclick="renderPatientDetail('financeiro')"><i class="ti ti-cash"></i> Financeiro</button>
         <button class="pac-tab ${abaAtiva==='termo'?'active':''}" onclick="renderPatientDetail('termo')"><i class="ti ti-file-signature"></i> Termo</button>
         <button class="pac-tab ${abaAtiva==='galeria'?'active':''}" onclick="renderPatientDetail('galeria')"><i class="ti ti-photo"></i> Galeria</button>
+        <button class="pac-tab ${abaAtiva==='timeline'?'active':''}" onclick="renderPatientDetail('timeline')"><i class="ti ti-timeline-event"></i> Timeline</button>
       </div>
 
       <!-- ABA: DADOS -->
@@ -4428,6 +4493,13 @@ function renderPatientDetail(abaAtiva){
         </div>
       </div>
 
+      <!-- ABA: TIMELINE -->
+      <div id="pac-aba-timeline" style="display:${abaAtiva==='timeline'?'':'none'};">
+        <div style="margin-top:14px;" id="pac-timeline-body">
+          <div style="text-align:center;color:var(--rose-text);padding:20px;font-size:13px;">Carregando...</div>
+        </div>
+      </div>
+
     </div>
   `;
 
@@ -4439,6 +4511,7 @@ function renderPatientDetail(abaAtiva){
   if(abaAtiva==='plano'){ pacCarregarPlano(p.id); }
   if(abaAtiva==='galeria') galeriaCarregar(p.id);
   if(abaAtiva==='financeiro') pagPacRender(p.id);
+  if(abaAtiva==='timeline') renderTimeline(p.id);
   requestAnimationFrame(()=>window.scrollTo({top:0,behavior:'instant'}));
 }
 
@@ -4777,6 +4850,12 @@ function calOpenEvent(e, id){
     ? '<span class="fin-badge danger" style="font-size:10px;">NÃO VEIO</span>'
     : status==='compareceu'
     ? '<span class="fin-badge ok" style="font-size:10px;">COMPARECEU</span>'
+    : status==='confirmado'
+    ? '<span class="fin-badge" style="font-size:10px;background:#dbeafe;color:#1e40af;">CONFIRMADO</span>'
+    : status==='remarcado'
+    ? '<span class="fin-badge" style="font-size:10px;background:#fef3c7;color:#92400e;">REMARCADO</span>'
+    : status==='cancelado'
+    ? '<span class="fin-badge danger" style="font-size:10px;">CANCELADO</span>'
     : '';
   bg.innerHTML=`<div class="cal-modal" onclick="event.stopPropagation()">
     <div class="cal-modal-head" style="background:${a.prof_cor||'var(--rose)'};">
@@ -4788,9 +4867,14 @@ function calOpenEvent(e, id){
       <div class="row"><i class="ti ti-user-check"></i><span>${escapeHtml(a.prof_nome)}</span></div>
       <div class="row"><i class="ti ti-phone"></i><span>${escapeHtml(a.telefone||'Sem telefone')}</span></div>
       ${agParseObs(a.obs).texto?`<div class="row"><i class="ti ti-notes"></i><span>${escapeHtml(agParseObs(a.obs).texto)}</span></div>`:''}
-      <div style="display:flex;gap:8px;margin-top:14px;">
+      <div style="display:flex;gap:6px;margin-top:14px;flex-wrap:wrap;">
+        <button class="btn-secondary" style="flex:1;background:${status==='confirmado'?'#1e40af':'#fff'};color:${status==='confirmado'?'#fff':'#1e40af'};border-color:#1e40af;" onclick="calMarcarPresenca(${a.id},'confirmado')"><i class="ti ti-circle-check"></i> Confirmado</button>
         <button class="btn-secondary" style="flex:1;background:${status==='compareceu'?'#2e7d32':'#fff'};color:${status==='compareceu'?'#fff':'#2e7d32'};border-color:#2e7d32;" onclick="calMarcarPresenca(${a.id},'compareceu')"><i class="ti ti-check"></i> Veio</button>
-        <button class="btn-secondary" style="flex:1;background:${status==='faltou'?'#dc2626':'#fff'};color:${status==='faltou'?'#fff':'#dc2626'};border-color:#dc2626;" onclick="calMarcarPresenca(${a.id},'faltou')"><i class="ti ti-x"></i> Não veio</button>
+        <button class="btn-secondary" style="flex:1;background:${status==='faltou'?'#dc2626':'#fff'};color:${status==='faltou'?'#fff':'#dc2626'};border-color:#dc2626;" onclick="calMarcarPresenca(${a.id},'faltou')"><i class="ti ti-x"></i> Faltou</button>
+      </div>
+      <div style="display:flex;gap:6px;margin-top:6px;">
+        <button class="btn-secondary" style="flex:1;font-size:11px;${status==='remarcado'?'background:#fef3c7;color:#92400e;border-color:#fbbf24;':''}" onclick="calMarcarPresenca(${a.id},'remarcado')"><i class="ti ti-calendar-event"></i> Remarcado</button>
+        <button class="btn-secondary" style="flex:1;font-size:11px;${status==='cancelado'?'background:#fee2e2;color:#dc2626;border-color:#fca5a5;':''}" onclick="calMarcarPresenca(${a.id},'cancelado')"><i class="ti ti-calendar-off"></i> Cancelado</button>
       </div>
       <a href="${buildGoogleCalendarUrl(a.nome, a.data, a.horario, a.procedimento||'Consulta', a.prof_nome, agParseObs(a.obs).texto)}" target="_blank" style="display:flex;align-items:center;justify-content:center;gap:8px;margin-top:10px;background:#4285f4;color:#fff;border-radius:10px;padding:9px 14px;font-size:13px;font-weight:700;text-decoration:none;">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="24" height="24" rx="4" fill="white"/><path d="M17.5 7.5h-11A1.5 1.5 0 0 0 5 9v9a1.5 1.5 0 0 0 1.5 1.5h11A1.5 1.5 0 0 0 19 18V9a1.5 1.5 0 0 0-1.5-1.5Z" stroke="#4285f4" stroke-width="1.4"/><path d="M8 7.5V6M16 7.5V6M5 11h14" stroke="#4285f4" stroke-width="1.4" stroke-linecap="round"/><rect x="8" y="13" width="2.5" height="2.5" rx=".5" fill="#ea4335"/></svg>
@@ -6470,7 +6554,7 @@ function renderRelatorio(){
       <div><div style="font-size:13px;font-weight:700;color:var(--rose-dark);margin-bottom:10px;"><i class="ti ti-list-numbers"></i> Top procedimentos</div>${barProcs}</div>
       <div><div style="font-size:13px;font-weight:700;color:var(--rose-dark);margin-bottom:10px;"><i class="ti ti-user-dollar"></i> Por profissional</div>${listProf}</div>
     </div>
-    <div style="background:var(--rose-lighter);border-radius:12px;padding:14px 16px;">
+    <div style="background:var(--rose-lighter);border-radius:12px;padding:14px 16px;margin-bottom:20px;">
       <div style="font-size:13px;font-weight:700;color:var(--rose-dark);margin-bottom:6px;"><i class="ti ti-chart-line"></i> Taxa de comparecimento</div>
       <div style="display:flex;justify-content:space-between;font-size:13px;color:var(--rose-text);flex-wrap:wrap;gap:6px;">
         <span>Compareceram: <strong style="color:#2e7d32;">${compareceu}</strong></span>
@@ -6479,7 +6563,33 @@ function renderRelatorio(){
         <span style="font-weight:800;color:${corTaxa};">${taxaComp}%</span>
       </div>
       <div style="background:var(--rose-light);border-radius:8px;height:12px;margin-top:8px;"><div style="background:${corTaxa};border-radius:8px;height:12px;width:${taxaComp}%;"></div></div>
-    </div>`;
+    </div>
+    ${(()=>{
+      const _vendaPago = v => (v.pagamentos||[]).reduce((s,p)=>s+p.valor,0);
+      const inadPer = finPer.filter(v=>_vendaPago(v)<(v.total||0));
+      const inadTotal = inadPer.reduce((a,v)=>a+((v.total||0)-_vendaPago(v)),0);
+      const contMat={};
+      finPer.forEach(v=>(v.itens||[]).forEach(it=>{
+        const proc=procs.find(p=>p.nome===it.nome||p.id===it.procId);
+        if(proc){(procInsumos[proc.id]||[]).forEach(ins=>{const m=mats.find(x=>x.id===ins.matId);if(m)contMat[m.nome]=(contMat[m.nome]||0)+(ins.qtd||1)*(it.qtd||1);});}
+      }));
+      const topMats=Object.entries(contMat).sort((a,b)=>b[1]-a[1]).slice(0,5);
+      const matBarMax=topMats[0]?.[1]||1;
+      return `<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;">
+        <div>
+          <div style="font-size:13px;font-weight:700;color:var(--rose-dark);margin-bottom:10px;"><i class="ti ti-alert-triangle" style="color:#e65100;"></i> Inadimplência</div>
+          ${inadPer.length?`
+            <div style="font-size:12px;color:var(--rose-text);margin-bottom:8px;">${inadPer.length} venda(s) com saldo devedor</div>
+            <div style="font-size:20px;font-weight:800;color:#dc2626;margin-bottom:10px;">${fmtBRL(inadTotal)}</div>
+            ${inadPer.slice(0,5).map(v=>{const pac=pacientes.find(p=>p.id===v.pacienteId);return `<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--rose-light);font-size:12px;"><span style="max-width:60%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(pac?.nome||v.pacienteNome||'—')}</span><strong style="color:#dc2626;">${fmtBRL((v.total||0)-_vendaPago(v))}</strong></div>`;}).join('')}
+          `:`<div style="color:#2e7d32;font-size:13px;"><i class="ti ti-circle-check"></i> Sem inadimplência no período.</div>`}
+        </div>
+        <div>
+          <div style="font-size:13px;font-weight:700;color:var(--rose-dark);margin-bottom:10px;"><i class="ti ti-flask"></i> Materiais mais usados</div>
+          ${topMats.length?topMats.map(([nome,qtd])=>`<div style="margin-bottom:8px;"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:2px;"><span style="max-width:70%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escapeHtml(nome)}">${escapeHtml(nome)}</span><span style="color:var(--rose-dark);font-weight:700;">${qtd}x</span></div><div style="background:var(--rose-light);border-radius:4px;height:5px;"><div style="background:#7b1fa2;border-radius:4px;height:5px;width:${Math.round(qtd/matBarMax*100)}%;"></div></div></div>`).join(''):`<div style="color:var(--rose-text);font-size:13px;">Sem dados de materiais no período.</div>`}
+        </div>
+      </div>`;
+    })()}`;
 }
 
 let fioCallback = null;
@@ -10868,9 +10978,23 @@ function pacModoApresentacao(vendaId, pacId){
             </div>`).join('')}
         </div>
       </div>
-      ${v.obs?`<div style="background:#fff8e1;border-radius:10px;padding:14px;font-size:13px;color:#7a5c00;"><strong>Observações:</strong> ${escapeHtml(v.obs)}</div>`:''}
+      ${v.obs?`<div style="background:#fff8e1;border-radius:10px;padding:14px;font-size:13px;color:#7a5c00;margin-bottom:20px;"><strong>Observações:</strong> ${escapeHtml(v.obs)}</div>`:''}
+      <div style="display:flex;gap:10px;justify-content:center;" class="apres-acoes no-print">
+        <button onclick="apresPrintPDF()" style="background:var(--rose);color:#fff;border:none;border-radius:10px;padding:12px 24px;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:8px;"><i class="ti ti-file-type-pdf"></i> Salvar PDF</button>
+        <button onclick="document.getElementById('apres-modal').remove()" style="background:#fff;color:var(--rose-dark);border:1.5px solid var(--rose-light);border-radius:10px;padding:12px 24px;font-size:14px;font-weight:700;cursor:pointer;">Fechar</button>
+      </div>
     </div>`;
   document.body.appendChild(modal);
+}
+function apresPrintPDF(){
+  const modal = document.getElementById('apres-modal');
+  if(!modal) return;
+  const style = document.createElement('style');
+  style.id='apres-print-style';
+  style.textContent='@media print{body>*{display:none!important;}#apres-modal{display:block!important;position:static!important;background:#fff!important;}.apres-close,.no-print{display:none!important;}}';
+  document.head.appendChild(style);
+  window.print();
+  setTimeout(()=>document.getElementById('apres-print-style')?.remove(),1000);
 }
 
 // ── Enviar orçamento por WhatsApp ──
@@ -10895,6 +11019,8 @@ function pacOrcWhatsApp(vendaId, pacId){
 
   const base = telefone ? `https://wa.me/55${telefone}` : 'https://wa.me/';
   const url = base + '?text=' + encodeURIComponent(msg);
+  if(!v.statusResposta){ v.statusResposta='pensando'; v.enviadoEm=new Date().toISOString(); saveFinanceiro(); }
+  logAtividade('Orçamento enviado', `${pac?.nome||'—'} — ${fmtBRL(totalFinal)}`);
   window.open(url, '_blank');
 }
 
@@ -12200,6 +12326,59 @@ async function calSaveNewAppt(){
 }
 
 // ══════════════════════════════════════════════════════
+// CONTAS A RECEBER (painel global)
+// ══════════════════════════════════════════════════════
+function toggleContasReceber(){
+  const panel = document.getElementById('contas-receber-panel');
+  if(!panel) return;
+  if(panel.style.display!=='none'){ panel.style.display='none'; return; }
+  const _vPago = v => (v.pagamentos||[]).reduce((s,p)=>s+p.valor,0);
+  const pendentes = vendas.filter(v=>v.status==='finalizada'&&_vPago(v)<(v.total||0));
+  const totalDevedor = pendentes.reduce((a,v)=>a+((v.total||0)-_vPago(v)),0);
+  const totalGeral = pendentes.reduce((a,v)=>a+(v.total||0),0);
+  const totalPago = pendentes.reduce((a,v)=>a+_vPago(v),0);
+  const porPac = {};
+  pendentes.forEach(v=>{
+    const k = v.pacienteId||0;
+    if(!porPac[k]) porPac[k]={nome:v.pacienteNome||'—',pacId:k,total:0,pago:0,vendas:[]};
+    porPac[k].total+=(v.total||0); porPac[k].pago+=_vPago(v); porPac[k].vendas.push(v);
+  });
+  const lista = Object.values(porPac).sort((a,b)=>(b.total-b.pago)-(a.total-a.pago));
+  let html = `
+    <div style="border:1.5px solid var(--rose-light);border-radius:14px;overflow:hidden;background:#fff;">
+      <div style="background:var(--rose-lighter);padding:16px;border-bottom:1px solid var(--rose-light);">
+        <div style="font-size:14px;font-weight:800;color:var(--rose-dark);margin-bottom:10px;"><i class="ti ti-report-money"></i> Contas a receber</div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;">
+          <div style="text-align:center;"><div style="font-size:11px;color:var(--rose-text);">Total</div><div style="font-size:18px;font-weight:800;color:var(--rose-dark);">${fmtBRL(totalGeral)}</div></div>
+          <div style="text-align:center;"><div style="font-size:11px;color:var(--rose-text);">Recebido</div><div style="font-size:18px;font-weight:800;color:#2e7d32;">${fmtBRL(totalPago)}</div></div>
+          <div style="text-align:center;"><div style="font-size:11px;color:var(--rose-text);">A receber</div><div style="font-size:18px;font-weight:800;color:#dc2626;">${fmtBRL(totalDevedor)}</div></div>
+        </div>
+      </div>
+      <div style="max-height:400px;overflow-y:auto;">`;
+  if(!lista.length){
+    html+='<div style="padding:24px;text-align:center;color:var(--rose-text);font-size:13px;"><i class="ti ti-circle-check" style="font-size:28px;display:block;margin-bottom:6px;color:#2e7d32;"></i>Sem contas pendentes.</div>';
+  } else {
+    lista.forEach(p=>{
+      const saldo = p.total-p.pago;
+      const pac = pacientes.find(x=>x.id===p.pacId);
+      html+=`<div style="padding:12px 16px;border-bottom:1px solid var(--rose-light);">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+          <div style="font-weight:700;color:#3a2020;font-size:13px;cursor:pointer;" onclick="switchTab('pacientes');setTimeout(()=>selectPatient(${p.pacId}),200);setTimeout(()=>renderPatientDetail('financeiro'),400);">${escapeHtml(pac?.nome||p.nome)} <i class="ti ti-chevron-right" style="font-size:10px;opacity:.4;"></i></div>
+          <span style="font-weight:800;color:#dc2626;font-size:14px;">${fmtBRL(saldo)}</span>
+        </div>
+        <div style="display:flex;gap:16px;font-size:11px;color:var(--rose-text);">
+          <span>Total: ${fmtBRL(p.total)}</span>
+          <span>Pago: ${fmtBRL(p.pago)}</span>
+          <span>${p.vendas.length} venda(s)</span>
+        </div>
+      </div>`;
+    });
+  }
+  html+='</div></div>';
+  panel.innerHTML=html; panel.style.display='';
+}
+
+// ══════════════════════════════════════════════════════
 // GALERIA DE FOTOS / RADIOGRAFIAS
 // ══════════════════════════════════════════════════════
 let _galeriaFotos = [];
@@ -12210,6 +12389,70 @@ let _galeriaPacId = null;
 const GALERIA_BUCKET = 'galeria';
 
 async function _galeriaEnsureBucket(){ return true; }
+
+// ── TIMELINE DO PACIENTE ──
+function renderTimeline(pacId){
+  const container = document.getElementById('pac-timeline-body');
+  if(!container) return;
+  const p = pacientes.find(pt=>pt.id===pacId);
+  if(!p){ container.innerHTML=''; return; }
+  const events = [];
+  events.push({date:p.created_at||'',type:'cadastro',icon:'ti-user-plus',color:'#7b1fa2',title:'Cadastro do paciente',detail:''});
+  if(p.anamnese && Object.keys(p.anamnese).length>0){
+    events.push({date:p.updated_at||p.created_at||'',type:'anamnese',icon:'ti-clipboard-heart',color:'#2e7d32',title:'Anamnese preenchida',detail:p.anamnese.queixa?'Queixa: '+p.anamnese.queixa.slice(0,80):''});
+  }
+  if(p._anamneseLink){
+    events.push({date:p._anamneseLink.created_at||'',type:'link',icon:'ti-send',color:'#1e40af',title:'Link de anamnese enviado',detail:p._anamneseLink.used_at?'Preenchido pelo paciente':'Aguardando preenchimento'});
+  }
+  agendamentos.filter(a=>a.paciente_id===pacId).forEach(a=>{
+    const st = (agGetStatus(a)||'').toLowerCase();
+    const stLabel = st==='compareceu'?'Compareceu':st==='faltou'?'Faltou':st==='confirmado'?'Confirmado':st==='cancelado'?'Cancelado':st==='remarcado'?'Remarcado':'Agendado';
+    const stColor = st==='compareceu'?'#2e7d32':st==='faltou'?'#dc2626':st==='confirmado'?'#1e40af':'#e08a20';
+    events.push({date:a.data+'T'+(a.horario||'00:00'),type:'agendamento',icon:'ti-calendar',color:stColor,title:`Consulta: ${a.procedimento||'Geral'}`,detail:`${a.prof_nome||''} — ${stLabel}`});
+  });
+  vendas.filter(v=>v.pacienteId===pacId).forEach(v=>{
+    const desc = (v.itens||[]).map(i=>i.nome).filter(Boolean).join(', ')||'Venda';
+    if(v.status==='orcamento'){
+      const stResp = v.statusResposta==='aprovado_pac'?'Aprovado':v.statusResposta==='recusado'?'Recusado':v.statusResposta==='pensando'?'Pensando':'Aguardando';
+      events.push({date:v.data||'',type:'orcamento',icon:'ti-receipt',color:'#e08a20',title:'Orçamento: '+desc.slice(0,60),detail:`${fmtBRL(v.total||0)} — ${stResp}`});
+    } else if(v.status==='finalizada'){
+      events.push({date:v.dataFinal||v.data||'',type:'venda',icon:'ti-cash',color:'#2e7d32',title:'Venda: '+desc.slice(0,60),detail:fmtBRL(v.total||0)});
+      (v.pagamentos||[]).forEach(pg=>{
+        events.push({date:pg.data||v.dataFinal||v.data||'',type:'pagamento',icon:'ti-coin',color:'#1565c0',title:'Pagamento recebido',detail:`${fmtBRL(pg.valor)} — ${pg.forma==='pix'?'PIX':pg.forma==='credito'?'Cartão':pg.forma==='debito'?'Débito':'Dinheiro'}`});
+      });
+    }
+  });
+  (p.prontuarios||[]).forEach(pr=>{
+    events.push({date:pr.data||pr.created_at||'',type:'prontuario',icon:'ti-stethoscope',color:'#d4735a',title:pr.procedimento||'Procedimento',detail:`${pr.prof_nome||''} ${pr.dente?'Dente '+pr.dente:''}`});
+  });
+  events.sort((a,b)=>new Date(b.date||0)-new Date(a.date||0));
+  if(!events.length){
+    container.innerHTML='<div style="text-align:center;color:var(--rose-text);padding:30px;font-size:13px;">Nenhum evento registrado.</div>';
+    return;
+  }
+  let lastMonth='';
+  let html='<div style="position:relative;padding-left:28px;">';
+  html+='<div style="position:absolute;left:10px;top:0;bottom:0;width:2px;background:var(--rose-light);"></div>';
+  events.forEach(ev=>{
+    const dt = ev.date ? new Date(ev.date) : null;
+    const month = dt ? dt.toLocaleDateString('pt-BR',{month:'long',year:'numeric'}) : '';
+    if(month && month!==lastMonth){
+      lastMonth=month;
+      html+=`<div style="font-size:11px;font-weight:700;color:var(--rose);text-transform:uppercase;letter-spacing:.5px;margin:16px 0 8px -28px;padding-left:28px;">${month}</div>`;
+    }
+    const dtFmt = dt ? dt.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})+(dt.getHours()?` ${dt.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}`:'') : '—';
+    html+=`<div style="position:relative;margin-bottom:12px;padding:10px 14px;background:#fff;border:1px solid var(--rose-light);border-radius:10px;">
+      <div style="position:absolute;left:-23px;top:12px;width:12px;height:12px;border-radius:50%;background:${ev.color};border:2px solid #fff;box-shadow:0 0 0 1px var(--rose-light);"></div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px;">
+        <span style="font-size:13px;font-weight:700;color:${ev.color};display:flex;align-items:center;gap:6px;"><i class="ti ${ev.icon}" style="font-size:14px;"></i> ${escapeHtml(ev.title)}</span>
+        <span style="font-size:11px;color:var(--rose-text);white-space:nowrap;margin-left:8px;">${dtFmt}</span>
+      </div>
+      ${ev.detail?`<div style="font-size:12px;color:var(--rose-text);margin-top:2px;">${escapeHtml(ev.detail)}</div>`:''}
+    </div>`;
+  });
+  html+='</div>';
+  container.innerHTML=html;
+}
 
 // ── FINANCEIRO PACIENTE ──
 // Reads from vendas (finalized sales with outstanding balance)
