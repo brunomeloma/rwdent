@@ -11,7 +11,7 @@ ALTER TABLE pacientes ADD COLUMN IF NOT EXISTS arquivado_em timestamptz;
 -- 2. Tabela de log de atividades (persistente)
 CREATE TABLE IF NOT EXISTS log_atividades (
   id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-  clinica_id bigint REFERENCES clinicas(id),
+  clinica_id uuid REFERENCES clinicas(id),
   usuario text,
   acao text NOT NULL,
   detalhe text,
