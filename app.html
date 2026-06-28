@@ -636,6 +636,8 @@ button{font-family:inherit;}
   /* Venda Rápida */
   .vr-desktop { display:none !important; }
   .vr-mobile  { display:flex !important; }
+  .vendas-subtab{padding:10px 14px;font-size:12px;}
+  .ap-img{height:160px;}
 
   /* Paciente */
   #painel-paciente { scroll-margin-top: 0; }
@@ -1180,6 +1182,36 @@ select, textarea {
 .search-result-item{display:flex;align-items:center;gap:12px;padding:12px 20px;cursor:pointer;border-top:1px solid var(--rose-light);transition:background .15s;}
 .search-result-item:hover,.search-result-item.active{background:var(--rose-lighter);}
 
+/* ── VENDAS SUB-TABS ── */
+.vendas-subtab{padding:12px 20px;font-size:13px;font-weight:700;color:var(--rose-text);background:none;border:none;border-bottom:3px solid transparent;cursor:pointer;display:flex;align-items:center;gap:6px;transition:all .2s;}
+.vendas-subtab:hover{color:var(--rose-dark);background:var(--rose-lighter);}
+.vendas-subtab.active{color:var(--rose-dark);border-bottom-color:var(--rose);}
+
+/* ── APARELHOS CARDS ── */
+.ap-card{background:#fff;border-radius:16px;border:1.5px solid var(--rose-light);overflow:hidden;transition:box-shadow .2s,transform .2s;}
+.ap-card:hover{box-shadow:0 8px 24px rgba(0,0,0,.1);transform:translateY(-2px);}
+.ap-img{width:100%;height:200px;object-fit:cover;}
+.ap-body{padding:16px;}
+.ap-title{font-size:14px;font-weight:900;color:var(--rose-dark);letter-spacing:.3px;}
+.ap-subtitle{font-size:12px;color:var(--rose-text);margin-top:2px;}
+.ap-badge{display:inline-block;padding:4px 12px;border-radius:16px;font-size:11px;font-weight:700;margin-top:8px;}
+.ap-ratings{display:flex;flex-direction:column;gap:6px;margin:12px 0;}
+.ap-rat{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--rose-text);}
+.ap-rat span:first-child{width:70px;font-weight:600;}
+.ap-rat span:last-child{width:28px;text-align:right;font-weight:700;color:var(--rose-dark);}
+.ap-bar{flex:1;height:8px;background:var(--rose-lighter);border-radius:4px;overflow:hidden;}
+.ap-bar-fill{height:100%;background:linear-gradient(90deg,var(--rose),var(--rose-dark));border-radius:4px;transition:width .4s;}
+.ap-section{margin-top:10px;}
+.ap-section-title{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--rose);margin-bottom:6px;}
+.ap-item{font-size:12px;line-height:1.6;color:#333;}
+.ap-item.warn{color:#e65100;}
+.ap-table{width:100%;border-collapse:collapse;font-size:13px;min-width:700px;}
+.ap-table th{background:var(--rose-dark);color:#fff;padding:10px 12px;text-align:center;font-size:11px;font-weight:700;}
+.ap-table th:first-child{background:#1a5276;text-align:left;}
+.ap-table td{padding:10px 12px;text-align:center;border-bottom:1px solid var(--rose-lighter);}
+.ap-table td:first-child{text-align:left;font-weight:700;color:var(--rose-dark);}
+.ap-table tr:nth-child(even){background:var(--rose-lighter);}
+
 /* ── ADMIN PANEL ── */
 .admin-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:20px;}
 .admin-stat-card{background:#fff;border-radius:14px;border:1px solid var(--rose-light);padding:18px;text-align:center;box-shadow:0 2px 12px rgba(212,115,90,.06);}
@@ -1316,8 +1348,8 @@ select, textarea {
     <div class="topnav-links">
       <!-- Início -->
       <button class="topnav-item" data-tab="home" onclick="switchTab('home')"><i class="ti ti-home"></i> Início</button>
-      <!-- Venda Rápida -->
-      <button class="topnav-item" data-tab="venda_rapida" onclick="switchTab('venda_rapida')"><i class="ti ti-shopping-cart"></i> Venda Rápida</button>
+      <!-- Vendas -->
+      <button class="topnav-item" data-tab="venda_rapida" onclick="switchTab('venda_rapida')"><i class="ti ti-shopping-cart"></i> Vendas</button>
       <!-- Pacientes -->
       <button class="topnav-item" data-tab="pacientes" onclick="switchTab('pacientes')"><i class="ti ti-users"></i> Pacientes</button>
       <!-- Agenda (dropdown) -->
@@ -1875,8 +1907,251 @@ select, textarea {
     ══════════════════════════════════════════════════ -->
     <div id="tab-venda_rapida" class="content" style="display:none;padding:0;">
 
+      <!-- SUB-ABAS VENDAS -->
+      <div style="display:flex;gap:0;border-bottom:2px solid var(--rose-light);background:#fff;padding:0 16px;flex-shrink:0;" id="vendas-subtabs">
+        <button class="vendas-subtab active" onclick="vendasSubTab('aparelhos')"><i class="ti ti-dental"></i> Aparelhos</button>
+        <button class="vendas-subtab" onclick="vendasSubTab('alinhador')"><i class="ti ti-sparkles"></i> Alinhador Invisível</button>
+        <button class="vendas-subtab" onclick="vendasSubTab('vr')"><i class="ti ti-shopping-cart"></i> Venda Rápida</button>
+      </div>
+
+      <!-- SUB-ABA: APARELHOS -->
+      <div id="vendas-sub-aparelhos" style="overflow-y:auto;max-height:calc(100vh - 120px);padding:20px;">
+        <div style="text-align:center;margin-bottom:24px;">
+          <h2 style="font-size:22px;font-weight:900;color:var(--rose-dark);margin:0;">Qual Aparelho É Ideal Para Você?</h2>
+          <p style="font-size:13px;color:var(--rose-text);margin-top:6px;">Compare os tipos de aparelho — vantagens, estética e tecnologia de cada um.</p>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:20px;margin-bottom:30px;">
+
+          <!-- Card 1: Metálico Tradicional -->
+          <div class="ap-card">
+            <img src="img/aparelhos/metalico_tradicional.jpg" alt="Aparelho Metálico Tradicional" class="ap-img"/>
+            <div class="ap-body">
+              <div class="ap-title">APARELHO METÁLICO TRADICIONAL</div>
+              <div class="ap-subtitle">O Clássico que Funciona</div>
+              <div class="ap-badge" style="background:#e8f5e9;color:#2e7d32;">✔ Melhor custo-benefício</div>
+              <div class="ap-ratings">
+                <div class="ap-rat"><span>Estética</span><div class="ap-bar"><div class="ap-bar-fill" style="width:40%;"></div></div><span>2/5</span></div>
+                <div class="ap-rat"><span>Conforto</span><div class="ap-bar"><div class="ap-bar-fill" style="width:60%;"></div></div><span>3/5</span></div>
+                <div class="ap-rat"><span>Velocidade</span><div class="ap-bar"><div class="ap-bar-fill" style="width:60%;"></div></div><span>3/5</span></div>
+                <div class="ap-rat"><span>Discrição</span><div class="ap-bar"><div class="ap-bar-fill" style="width:20%;"></div></div><span>1/5</span></div>
+              </div>
+              <div class="ap-section"><div class="ap-section-title">VANTAGENS</div>
+                <div class="ap-item ok">✅ Mais econômico do mercado</div>
+                <div class="ap-item ok">✅ Alta eficiência — indicado para todos os casos</div>
+                <div class="ap-item ok">✅ Durável e resistente ao longo do tratamento</div>
+                <div class="ap-item ok">✅ Ótimo custo-benefício</div>
+              </div>
+              <div class="ap-section"><div class="ap-section-title">PONTOS DE ATENÇÃO</div>
+                <div class="ap-item warn">⚠️ Mais visível ao sorrir</div>
+                <div class="ap-item warn">⚠️ Requer higiene redobrada</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 2: Estético Cerâmico -->
+          <div class="ap-card">
+            <img src="img/aparelhos/estetico_ceramico.jpg" alt="Aparelho Estético Cerâmico" class="ap-img"/>
+            <div class="ap-body">
+              <div class="ap-title">APARELHO ESTÉTICO CERÂMICO</div>
+              <div class="ap-subtitle">Discrição com Eficiência</div>
+              <div class="ap-badge" style="background:#e3f2fd;color:#1565c0;">✔ Equilíbrio entre preço e estética</div>
+              <div class="ap-ratings">
+                <div class="ap-rat"><span>Estética</span><div class="ap-bar"><div class="ap-bar-fill" style="width:60%;"></div></div><span>3/5</span></div>
+                <div class="ap-rat"><span>Conforto</span><div class="ap-bar"><div class="ap-bar-fill" style="width:60%;"></div></div><span>3/5</span></div>
+                <div class="ap-rat"><span>Velocidade</span><div class="ap-bar"><div class="ap-bar-fill" style="width:60%;"></div></div><span>3/5</span></div>
+                <div class="ap-rat"><span>Discrição</span><div class="ap-bar"><div class="ap-bar-fill" style="width:60%;"></div></div><span>3/5</span></div>
+              </div>
+              <div class="ap-section"><div class="ap-section-title">VANTAGENS</div>
+                <div class="ap-item ok">✅ Brackets na cor do dente — muito mais discreto</div>
+                <div class="ap-item ok">✅ Mesma eficiência do aparelho fixo</div>
+                <div class="ap-item ok">✅ Ótimo para quem quer estética sem abrir mão de eficiência</div>
+                <div class="ap-item ok">✅ Material cerâmico resistente e biocompatível</div>
+              </div>
+              <div class="ap-section"><div class="ap-section-title">PONTOS DE ATENÇÃO</div>
+                <div class="ap-item warn">⚠️ Pode manchar com café ou vinho</div>
+                <div class="ap-item warn">⚠️ Investimento acima do metálico</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 3: Estético de Safira -->
+          <div class="ap-card">
+            <img src="img/aparelhos/estetico_safira.jpg" alt="Aparelho Estético de Safira" class="ap-img"/>
+            <div class="ap-body">
+              <div class="ap-title">APARELHO ESTÉTICO DE SAFIRA</div>
+              <div class="ap-subtitle">Estética Premium</div>
+              <div class="ap-badge" style="background:#fce4ec;color:#c62828;">✔ Máxima estética em aparelho fixo</div>
+              <div class="ap-ratings">
+                <div class="ap-rat"><span>Estética</span><div class="ap-bar"><div class="ap-bar-fill" style="width:80%;"></div></div><span>4/5</span></div>
+                <div class="ap-rat"><span>Conforto</span><div class="ap-bar"><div class="ap-bar-fill" style="width:60%;"></div></div><span>3/5</span></div>
+                <div class="ap-rat"><span>Velocidade</span><div class="ap-bar"><div class="ap-bar-fill" style="width:60%;"></div></div><span>3/5</span></div>
+                <div class="ap-rat"><span>Discrição</span><div class="ap-bar"><div class="ap-bar-fill" style="width:80%;"></div></div><span>4/5</span></div>
+              </div>
+              <div class="ap-section"><div class="ap-section-title">VANTAGENS</div>
+                <div class="ap-item ok">✅ Cristal de safira pura — praticamente invisível</div>
+                <div class="ap-item ok">✅ Não mancha com café, vinho ou alimentos coloridos</div>
+                <div class="ap-item ok">✅ Material de altíssima qualidade e biocompatível</div>
+                <div class="ap-item ok">✅ Brilho natural que se mistura ao esmalte do dente</div>
+              </div>
+              <div class="ap-section"><div class="ap-section-title">PONTOS DE ATENÇÃO</div>
+                <div class="ap-item warn">⚠️ Maior investimento entre os fixos estéticos</div>
+                <div class="ap-item warn">⚠️ Fio ainda levemente visível de perto</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 4: Metálico Autoligado -->
+          <div class="ap-card">
+            <img src="img/aparelhos/metalico_autoligado.jpg" alt="Aparelho Metálico Autoligado" class="ap-img"/>
+            <div class="ap-body">
+              <div class="ap-title">APARELHO METÁLICO AUTOLIGADO</div>
+              <div class="ap-subtitle">Tecnologia + Velocidade</div>
+              <div class="ap-badge" style="background:#fff3e0;color:#e65100;">⚡ Tratamento mais rápido</div>
+              <div class="ap-ratings">
+                <div class="ap-rat"><span>Estética</span><div class="ap-bar"><div class="ap-bar-fill" style="width:40%;"></div></div><span>2/5</span></div>
+                <div class="ap-rat"><span>Conforto</span><div class="ap-bar"><div class="ap-bar-fill" style="width:80%;"></div></div><span>4/5</span></div>
+                <div class="ap-rat"><span>Velocidade</span><div class="ap-bar"><div class="ap-bar-fill" style="width:100%;"></div></div><span>5/5</span></div>
+                <div class="ap-rat"><span>Discrição</span><div class="ap-bar"><div class="ap-bar-fill" style="width:40%;"></div></div><span>2/5</span></div>
+              </div>
+              <div class="ap-section"><div class="ap-section-title">VANTAGENS</div>
+                <div class="ap-item ok">✅ Tratamento até 30% mais rápido que o convencional</div>
+                <div class="ap-item ok">✅ Menos consultas de manutenção — mais liberdade</div>
+                <div class="ap-item ok">✅ Sistema sem elásticos — muito mais conforto</div>
+                <div class="ap-item ok">✅ Indicado para casos moderados a complexos</div>
+              </div>
+              <div class="ap-section"><div class="ap-section-title">PONTOS DE ATENÇÃO</div>
+                <div class="ap-item warn">⚠️ Mais visível que os aparelhos estéticos</div>
+                <div class="ap-item warn">⚠️ Investimento acima do metálico tradicional</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 5: Estético Autoligado -->
+          <div class="ap-card">
+            <img src="img/aparelhos/estetico_autoligado.jpg" alt="Aparelho Estético Autoligado" class="ap-img"/>
+            <div class="ap-body">
+              <div class="ap-title">APARELHO ESTÉTICO AUTOLIGADO</div>
+              <div class="ap-subtitle">O Melhor dos Dois Mundos</div>
+              <div class="ap-badge" style="background:#f3e5f5;color:#7b1fa2;">⚡ Rápido + Discreto</div>
+              <div class="ap-ratings">
+                <div class="ap-rat"><span>Estética</span><div class="ap-bar"><div class="ap-bar-fill" style="width:80%;"></div></div><span>4/5</span></div>
+                <div class="ap-rat"><span>Conforto</span><div class="ap-bar"><div class="ap-bar-fill" style="width:80%;"></div></div><span>4/5</span></div>
+                <div class="ap-rat"><span>Velocidade</span><div class="ap-bar"><div class="ap-bar-fill" style="width:100%;"></div></div><span>5/5</span></div>
+                <div class="ap-rat"><span>Discrição</span><div class="ap-bar"><div class="ap-bar-fill" style="width:80%;"></div></div><span>4/5</span></div>
+              </div>
+              <div class="ap-section"><div class="ap-section-title">VANTAGENS</div>
+                <div class="ap-item ok">✅ Discreto E mais rápido ao mesmo tempo</div>
+                <div class="ap-item ok">✅ Sistema sem elásticos — muito menos atrito</div>
+                <div class="ap-item ok">✅ Menos visitas ao consultório durante o tratamento</div>
+                <div class="ap-item ok">✅ Alta tecnologia aliada à estética premium</div>
+              </div>
+              <div class="ap-section"><div class="ap-section-title">PONTOS DE ATENÇÃO</div>
+                <div class="ap-item warn">⚠️ Maior investimento entre os aparelhos fixos</div>
+                <div class="ap-item warn">⚠️ Indicação depende de avaliação clínica individual</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 6: Invisalign -->
+          <div class="ap-card">
+            <img src="img/aparelhos/invisalign.jpg" alt="Invisalign" class="ap-img"/>
+            <div class="ap-body">
+              <div class="ap-title">INVISALIGN&reg;</div>
+              <div class="ap-subtitle">O Alinhador Invisível — Premium</div>
+              <div class="ap-badge" style="background:#e0f7fa;color:#00695c;">✨ Máxima estética e conforto</div>
+              <div class="ap-ratings">
+                <div class="ap-rat"><span>Estética</span><div class="ap-bar"><div class="ap-bar-fill" style="width:100%;"></div></div><span>5/5</span></div>
+                <div class="ap-rat"><span>Conforto</span><div class="ap-bar"><div class="ap-bar-fill" style="width:100%;"></div></div><span>5/5</span></div>
+                <div class="ap-rat"><span>Velocidade</span><div class="ap-bar"><div class="ap-bar-fill" style="width:80%;"></div></div><span>4/5</span></div>
+                <div class="ap-rat"><span>Discrição</span><div class="ap-bar"><div class="ap-bar-fill" style="width:100%;"></div></div><span>5/5</span></div>
+              </div>
+              <div class="ap-section"><div class="ap-section-title">VANTAGENS</div>
+                <div class="ap-item ok">✅ 100% invisível — ninguém percebe que está em tratamento</div>
+                <div class="ap-item ok">✅ Removível: come, bebe e escova normalmente</div>
+                <div class="ap-item ok">✅ Zero brackets e fios — máximo conforto</div>
+                <div class="ap-item ok">✅ Resultado final planejado por computador 3D</div>
+              </div>
+              <div class="ap-section"><div class="ap-section-title">PONTOS DE ATENÇÃO</div>
+                <div class="ap-item warn">⚠️ Maior investimento de todos os tipos</div>
+                <div class="ap-item warn">⚠️ Indicado para casos leves a moderados</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- TABELA COMPARATIVA -->
+        <div class="card" style="overflow-x:auto;margin-top:10px;">
+          <h3 style="font-size:18px;font-weight:900;color:var(--rose-dark);margin-bottom:16px;text-align:center;">Comparativo Completo — Todos os Aparelhos</h3>
+          <table class="ap-table">
+            <thead><tr>
+              <th>CRITÉRIO</th><th>Metálico</th><th>Met. Autoligado</th><th>Cerâmico</th><th>Safira</th><th>Est. Autoligado</th><th>Alinhador invisível</th>
+            </tr></thead>
+            <tbody>
+              <tr><td>💰 Instalação</td><td>R$ 599,99</td><td>R$ 1.599,99</td><td>R$ 1.990,00</td><td>R$ 2.999,90</td><td>R$ 3.199,99</td><td>R$ 9.990,00</td></tr>
+              <tr><td>🔧 Manutenção/mês</td><td>R$ 150</td><td>R$ 250</td><td>R$ 300</td><td>R$ 470,00</td><td>R$ 500</td><td>Refinamento<br>R$ 1.200</td></tr>
+              <tr><td>🔩 Bracket (peça)</td><td>R$ 35</td><td>R$ 60</td><td>R$ 80</td><td>R$ 120</td><td>R$ 140</td><td>—</td></tr>
+              <tr><td>👁️ Estética</td><td>⭐⭐</td><td>⭐⭐</td><td>⭐⭐⭐</td><td>⭐⭐⭐⭐</td><td>⭐⭐⭐⭐</td><td>⭐⭐⭐⭐⭐</td></tr>
+              <tr><td>😊 Conforto</td><td>⭐⭐⭐</td><td>⭐⭐⭐⭐</td><td>⭐⭐⭐</td><td>⭐⭐⭐</td><td>⭐⭐⭐⭐</td><td>⭐⭐⭐⭐⭐</td></tr>
+              <tr><td>🔗 Removível</td><td>Não</td><td>Não</td><td>Não</td><td>Não</td><td>Não</td><td>Sim ✅</td></tr>
+              <tr><td>⏱️ Velocidade</td><td>Normal</td><td>Mais Rápido</td><td>Normal</td><td>Normal</td><td>Mais Rápido</td><td>12–18m</td></tr>
+            </tbody>
+          </table>
+          <p style="text-align:center;font-size:11px;color:var(--rose-text);margin-top:10px;">★ Valores baseados na tabela de precificação do consultório • Preços sujeitos a avaliação clínica individual</p>
+        </div>
+      </div>
+
+      <!-- SUB-ABA: ALINHADOR INVISÍVEL -->
+      <div id="vendas-sub-alinhador" style="display:none;overflow-y:auto;max-height:calc(100vh - 120px);padding:20px;">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:20px;max-width:700px;margin:0 auto;">
+          <img src="img/aparelhos/invisalign.jpg" alt="Invisalign" style="width:100%;max-width:400px;border-radius:16px;box-shadow:0 8px 24px rgba(0,0,0,.12);"/>
+          <div style="text-align:center;">
+            <h2 style="font-size:24px;font-weight:900;color:var(--rose-dark);margin:0;">INVISALIGN&reg;</h2>
+            <p style="font-size:15px;color:var(--rose-text);margin-top:4px;">O Alinhador Invisível — Premium</p>
+            <div style="display:inline-block;background:#e0f7fa;color:#00695c;padding:6px 16px;border-radius:20px;font-size:13px;font-weight:700;margin-top:10px;">✨ Máxima estética e conforto</div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;width:100%;">
+            <div class="ap-card" style="margin:0;">
+              <div class="ap-body">
+                <div class="ap-ratings">
+                  <div class="ap-rat"><span>Estética</span><div class="ap-bar"><div class="ap-bar-fill" style="width:100%;background:#00897b;"></div></div><span>5/5</span></div>
+                  <div class="ap-rat"><span>Conforto</span><div class="ap-bar"><div class="ap-bar-fill" style="width:100%;background:#00897b;"></div></div><span>5/5</span></div>
+                  <div class="ap-rat"><span>Velocidade</span><div class="ap-bar"><div class="ap-bar-fill" style="width:80%;background:#00897b;"></div></div><span>4/5</span></div>
+                  <div class="ap-rat"><span>Discrição</span><div class="ap-bar"><div class="ap-bar-fill" style="width:100%;background:#00897b;"></div></div><span>5/5</span></div>
+                </div>
+              </div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:8px;">
+              <div style="background:#e8f5e9;border-radius:12px;padding:14px;">
+                <div style="font-size:11px;font-weight:700;color:#2e7d32;text-transform:uppercase;margin-bottom:6px;">Valores</div>
+                <div style="font-size:13px;color:#1b5e20;line-height:1.8;">
+                  💰 Instalação: <strong>R$ 9.990,00</strong><br>
+                  🔧 Refinamento: <strong>R$ 1.200</strong><br>
+                  🔗 Removível: <strong>Sim ✅</strong><br>
+                  ⏱️ Duração: <strong>12–18 meses</strong>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div style="width:100%;">
+            <div class="ap-section"><div class="ap-section-title" style="color:#00695c;">VANTAGENS</div>
+              <div class="ap-item ok">✅ 100% invisível — ninguém percebe que está em tratamento</div>
+              <div class="ap-item ok">✅ Removível: come, bebe e escova normalmente</div>
+              <div class="ap-item ok">✅ Zero brackets e fios — máximo conforto</div>
+              <div class="ap-item ok">✅ Resultado final planejado por computador 3D</div>
+            </div>
+            <div class="ap-section"><div class="ap-section-title" style="color:#e65100;">PONTOS DE ATENÇÃO</div>
+              <div class="ap-item warn">⚠️ Maior investimento de todos os tipos</div>
+              <div class="ap-item warn">⚠️ Indicado para casos leves a moderados</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SUB-ABA: VENDA RÁPIDA -->
+      <div id="vendas-sub-vr" style="display:none;">
+
       <!-- VERSÃO DESKTOP (grid 2 colunas) -->
-      <div class="vr-desktop" style="display:grid;grid-template-columns:1fr 420px;height:calc(100vh - 72px);overflow:hidden;">
+      <div class="vr-desktop" style="display:grid;grid-template-columns:1fr 420px;height:calc(100vh - 120px);overflow:hidden;">
 
         <!-- ── ESQUERDA: Procedimentos ── -->
         <div style="display:flex;flex-direction:column;overflow:hidden;padding:20px 16px 20px 20px;gap:14px;">
@@ -2103,6 +2378,7 @@ select, textarea {
           </button>
         </div>
       </div>
+      </div><!-- /vendas-sub-vr -->
     </div>
 
 
@@ -3116,7 +3392,7 @@ function switchTab(tab){
     calendario:'Calendário de atendimentos', pacientes:'Cadastro de pacientes',
     profissionais:'Equipe e profissionais', financeiro:'Painel financeiro', procedimentos_fin:'Procedimentos e precificação',
     materiais_fin:'Materiais e insumos', estoque_fin:'Controle de estoque', vendas_fin:'Vendas e orçamentos',
-    venda_rapida:'Venda Rápida', resgate:'Resgate de pacientes', invisalign_apresentacao:'Alinhador Transparente', configuracoes:'Configurações da clínica', admin:'Painel Administrativo'
+    venda_rapida:'Vendas', resgate:'Resgate de pacientes', invisalign_apresentacao:'Alinhador Transparente', configuracoes:'Configurações da clínica', admin:'Painel Administrativo'
   };
   const _subEl = document.getElementById('header-subtitulo');
   if(_subEl) _subEl.textContent = _tituloAba[tab] || 'Agendamentos e Prontuários Odontológicos';
@@ -8954,6 +9230,15 @@ async function vrFinalizarMobile(){
   if(document.getElementById('vr-obs-m')) document.getElementById('vr-obs-m').value='';
   vrCalcTotalMobile();
   showToast('✅ Venda finalizada e salva!');
+}
+
+function vendasSubTab(tab){
+  document.querySelectorAll('.vendas-subtab').forEach(b=>b.classList.remove('active'));
+  document.querySelector(`.vendas-subtab[onclick*="'${tab}'"]`)?.classList.add('active');
+  document.getElementById('vendas-sub-aparelhos').style.display = tab==='aparelhos'?'':'none';
+  document.getElementById('vendas-sub-alinhador').style.display = tab==='alinhador'?'':'none';
+  document.getElementById('vendas-sub-vr').style.display = tab==='vr'?'':'none';
+  if(tab==='vr'){ vrInit(); vrInitMobile(); }
 }
 
 function vrInitMobile(){
