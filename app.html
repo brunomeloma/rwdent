@@ -326,27 +326,15 @@ button{font-family:inherit;}
 
 
 /* ── ODONTOGRAMA ── */
-.odonto-arcada{display:flex;justify-content:flex-start;gap:2px;overflow-x:auto;padding:4px 2px;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
+.odonto-arcada{display:flex;justify-content:flex-start;gap:2px;overflow-x:auto;padding:6px 2px;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
 .odonto-arcada::-webkit-scrollbar{display:none;}
-.odonto-dente-wrap{display:flex;flex-direction:column;align-items:center;gap:1px;cursor:pointer;flex-shrink:0;}
-.odonto-dente-wrap:hover .odonto-dente-box{border-color:var(--rose);transform:scale(1.08);}
-.odonto-dente-wrap.selected .odonto-dente-box{border-color:var(--rose);box-shadow:0 0 0 2px rgba(212,115,90,.3);}
-.odonto-dente-box{
-  width:28px;height:28px;border-radius:5px;border:2px solid var(--rose-light);
-  background:#fff;display:flex;align-items:center;justify-content:center;
-  transition:all .15s;position:relative;
-}
-.odonto-dente-box.higido{background:#fff;}
-.odonto-dente-box.carie{background:#ffcdd2;border-color:#e57373;}
-.odonto-dente-box.restaurado{background:#c8e6c9;border-color:#66bb6a;}
-.odonto-dente-box.extraido{background:#eeeeee;border-color:#bdbdbd;opacity:.55;}
-.odonto-dente-box.canal{background:#fff9c4;border-color:#fdd835;}
-.odonto-dente-box.coroa{background:#bbdefb;border-color:#42a5f5;}
-.odonto-dente-box.implante{background:#e1bee7;border-color:#ab47bc;}
-.odonto-dente-box.fratura{background:#ffccbc;border-color:#ff7043;}
-.odonto-dente-box.selante{background:#b2ebf2;border-color:#26c6da;}
-.odonto-dente-box.outro{background:#f5f5f5;border-color:#9e9e9e;}
-.odonto-dente-num{font-size:8px;font-weight:700;color:var(--rose-text);line-height:1;}
+.odonto-arcada .odonto-quadrant-gap{width:14px;flex-shrink:0;}
+.odonto-dente-wrap{display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;flex-shrink:0;padding:2px;border-radius:8px;transition:background .15s;}
+.odonto-dente-wrap:hover{background:rgba(212,115,90,.07);}
+.odonto-dente-wrap:hover .odonto-tooth-svg{transform:scale(1.1);filter:drop-shadow(0 2px 4px rgba(0,0,0,.15));}
+.odonto-dente-wrap.selected .odonto-tooth-svg{filter:drop-shadow(0 0 6px rgba(212,115,90,.5)) drop-shadow(0 0 12px rgba(212,115,90,.25));}
+.odonto-tooth-svg{transition:all .2s ease;width:38px;height:auto;}
+.odonto-dente-num{font-size:9px;font-weight:700;color:var(--rose-text);line-height:1;margin:1px 0;}
 .odonto-dente-icon{font-size:13px;line-height:1;}
 .odonto-leg{display:inline-flex;align-items:center;gap:4px;font-size:10px;color:var(--rose-text);white-space:nowrap;}
 .odonto-leg-dot{width:10px;height:10px;border-radius:2px;border:1.5px solid;}
@@ -642,6 +630,9 @@ button{font-family:inherit;}
 
   /* Odontograma */
   .odonto-arcada{overflow-x:auto;}
+  .odonto-tooth-svg{width:32px;}
+  .odonto-dente-num{font-size:8px;}
+  .odonto-arcada .odonto-quadrant-gap{width:10px;}
 
   /* Sim orçamento */
   .sim-orcamento-item{font-size:13px;}
@@ -3778,7 +3769,10 @@ function renderPatientDetail(abaAtiva){
         <div style="margin-top:14px;" id="pac-anam-body">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px;">
             <span style="font-size:13px;font-weight:700;color:var(--rose-dark);"><i class="ti ti-clipboard-heart"></i> Anamnese</span>
-            <button class="btn-primary" onclick="anamneseSalvar(${p.id})"><i class="ti ti-device-floppy"></i> Salvar</button>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+              <button class="btn-secondary" onclick="anamneseEnviarWhatsApp(${p.id})" style="background:#25d366;color:#fff;border-color:#25d366;font-size:12px;padding:6px 12px;border-radius:8px;"><i class="ti ti-brand-whatsapp"></i> Enviar por WhatsApp</button>
+              <button class="btn-primary" onclick="anamneseSalvar(${p.id})"><i class="ti ti-device-floppy"></i> Salvar</button>
+            </div>
           </div>
 
           <!-- ── SEÇÃO 1: ANAMNESE ── -->
@@ -4409,6 +4403,23 @@ async function anamneseSalvar(pacId){
   showToast('Anamnese salva!');
 }
 
+function anamneseEnviarWhatsApp(pacId){
+  const p = pacientes.find(pt => pt.id === pacId);
+  if(!p) return;
+  const link = `${window.location.origin}/anamnese.html?clinica=${clinicaId}&paciente=${pacId}`;
+  const msg = `Ola${p.nome ? ', ' + p.nome.split(' ')[0] : ''}! Para agilizar seu atendimento, preencha sua ficha de saude antes da consulta: ${link}`;
+  // Copy link to clipboard
+  navigator.clipboard.writeText(link).then(() => {
+    showToast('Link copiado!');
+  }).catch(() => {});
+  // Open WhatsApp with pre-filled message
+  const tel = (p.telefone || '').replace(/\D/g, '');
+  const waUrl = tel
+    ? `https://wa.me/${tel.startsWith('55') ? tel : '55' + tel}?text=${encodeURIComponent(msg)}`
+    : `https://wa.me/?text=${encodeURIComponent(msg)}`;
+  window.open(waUrl, '_blank');
+}
+
 function editPatient(id){
   const p=pacientes.find(pt=>pt.id===id);
   if(!p) return;
@@ -4862,21 +4873,109 @@ function renderOdontogramaMain(){
   ['odonto-d-prof','odonto-atend-prof'].forEach(id=>{ const el=document.getElementById(id); if(el) el.innerHTML=opts; });
 }
 
+/* ── Tooth SVG paths by type ── */
+const TOOTH_COND_COLORS = {
+  higido:     { fill:'#ffffff', stroke:'#c0b0a8' },
+  carie:      { fill:'#ffcdd2', stroke:'#e57373' },
+  restaurado: { fill:'#c8e6c9', stroke:'#66bb6a' },
+  extraido:   { fill:'#eeeeee', stroke:'#bdbdbd' },
+  canal:      { fill:'#fff9c4', stroke:'#fdd835' },
+  coroa:      { fill:'#bbdefb', stroke:'#42a5f5' },
+  implante:   { fill:'#e1bee7', stroke:'#ab47bc' },
+  fratura:    { fill:'#ffccbc', stroke:'#ff7043' },
+  selante:    { fill:'#b2ebf2', stroke:'#26c6da' },
+  outro:      { fill:'#f5f5f5', stroke:'#9e9e9e' }
+};
+
+function getToothType(num) {
+  const u = num % 10;
+  if (num >= 51 && num <= 85) {
+    // Deciduous teeth
+    if (u === 1 || u === 2) return 'incisor';
+    if (u === 3) return 'canine';
+    return 'molar';
+  }
+  if (u === 1 || u === 2) return 'incisor';
+  if (u === 3) return 'canine';
+  if (u === 4 || u === 5) return 'premolar';
+  return 'molar';
+}
+
+function isUpperTooth(num) {
+  const q = Math.floor(num / 10);
+  return q === 1 || q === 2 || q === 5 || q === 6;
+}
+
+function getToothSVG(num, cond, extraStyle) {
+  const type = getToothType(num);
+  const upper = isUpperTooth(num);
+  const colors = TOOTH_COND_COLORS[cond] || TOOTH_COND_COLORS.higido;
+  const isExtr = cond === 'extraido';
+  const opacity = isExtr ? 0.45 : 1;
+
+  // SVG paths: drawn with root pointing UP, crown at bottom.
+  // For upper teeth we keep as-is (root up = anatomically correct for upper jaw display).
+  // For lower teeth we flip vertically.
+  let crownPath, rootPath, vbW, vbH;
+
+  switch(type) {
+    case 'incisor':
+      vbW = 30; vbH = 56;
+      // Slim single root, flat shovel-shaped crown
+      rootPath = 'M13,0 C13,0 11,14 11,20 L19,20 C19,14 17,0 15,0 Z';
+      crownPath = 'M8,20 C6,22 5,28 5,33 C5,40 7,48 8,51 C9,53 11,55 15,55 C19,55 21,53 22,51 C23,48 25,40 25,33 C25,28 24,22 22,20 Z';
+      break;
+    case 'canine':
+      vbW = 32; vbH = 60;
+      // Longer single root, pointed crown
+      rootPath = 'M14,0 C14,0 12,16 11,22 L21,22 C20,16 18,0 16,0 Z';
+      crownPath = 'M8,22 C6,25 5,30 5,35 C5,42 7,48 10,53 C12,56 14,59 16,59 C18,59 20,56 22,53 C25,48 27,42 27,35 C27,30 26,25 24,22 Z';
+      break;
+    case 'premolar':
+      vbW = 34; vbH = 56;
+      // Two roots splitting, bicuspid crown
+      rootPath = 'M12,0 C12,0 10,10 10,16 L14,18 L15,10 C15,6 14,0 13,0 Z M22,0 C21,0 20,6 19,10 L20,18 L24,16 C24,10 22,0 22,0 Z';
+      crownPath = 'M7,18 C5,21 4,26 4,31 C4,37 5,42 7,46 C8,48 10,51 12,52 C14,53 16,54 17,54 C18,54 20,53 22,52 C24,51 26,48 27,46 C29,42 30,37 30,31 C30,26 29,21 27,18 L17,17 Z';
+      break;
+    case 'molar':
+      vbW = 40; vbH = 56;
+      // Three roots (two buccal, one palatal), wide multi-cusp crown
+      rootPath = 'M11,0 C11,0 9,8 8,14 L13,16 L13,8 C13,4 12,0 11,0 Z M20,0 C19,0 19,6 19,10 L21,16 L23,10 C23,6 22,0 21,0 Z M30,0 C29,0 28,4 28,8 L28,16 L33,14 C32,8 30,0 30,0 Z';
+      crownPath = 'M5,16 C3,19 2,24 2,30 C2,36 3,41 5,45 C7,48 9,51 12,53 C15,54 18,55 20,55 C22,55 25,54 28,53 C31,51 33,48 35,45 C37,41 38,36 38,30 C38,24 37,19 35,16 Z';
+      break;
+  }
+
+  // Build the SVG - for lower teeth, flip vertically
+  const transform = upper ? '' : `transform="scale(1,-1) translate(0,-${vbH})"`;
+
+  const svgContent = `
+    <g ${transform}>
+      <path d="${rootPath}" fill="${colors.fill}" stroke="${colors.stroke}" stroke-width="1.2" opacity="${opacity * 0.6}"/>
+      <path d="${crownPath}" fill="${colors.fill}" stroke="${colors.stroke}" stroke-width="1.5" opacity="${opacity}"/>
+      ${isExtr ? `<line x1="${vbW*0.2}" y1="${vbH*0.15}" x2="${vbW*0.8}" y2="${vbH*0.85}" stroke="#999" stroke-width="2" stroke-linecap="round"/>
+      <line x1="${vbW*0.8}" y1="${vbH*0.15}" x2="${vbW*0.2}" y2="${vbH*0.85}" stroke="#999" stroke-width="2" stroke-linecap="round"/>` : ''}
+    </g>`;
+
+  return `<svg class="odonto-tooth-svg" viewBox="0 0 ${vbW} ${vbH}" xmlns="http://www.w3.org/2000/svg" style="${extraStyle||''}">${svgContent}</svg>`;
+}
+
 function renderArcada(containerId, dentes){
   const c = document.getElementById(containerId);
   if(!c) return;
-  c.innerHTML = dentes.map(num => {
+  // Determine midpoint for quadrant gap
+  const mid = Math.floor(dentes.length / 2);
+  c.innerHTML = dentes.map((num, i) => {
     const d = odontoDentes[num] || {};
     const cond = d.condicao || 'higido';
     const sel = odontoSelDente===num ? ' selected' : '';
     const title = d.procedimento ? `${num}: ${d.procedimento}` : `Dente ${num}`;
-    return `<div class="odonto-dente-wrap${sel}" onclick="odontoClicarDente(${num})" title="${escapeHtml(title)}">
-      <div class="odonto-dente-num">${num}</div>
-      <div class="odonto-dente-box ${cond}">
-        ${cond==='extraido'?'<span style="font-size:11px;color:#999;">✕</span>':
-          cond==='higido'?'':
-          `<span style="font-size:9px;font-weight:700;color:#555;">${COND_PT[cond]?.charAt(0)||'?'}</span>`}
-      </div>
+    const upper = isUpperTooth(num);
+    const gap = (i === mid) ? '<div class="odonto-quadrant-gap"></div>' : '';
+    const numDiv = `<div class="odonto-dente-num">${num}</div>`;
+    return `${gap}<div class="odonto-dente-wrap${sel}" onclick="odontoClicarDente(${num})" title="${escapeHtml(title)}">
+      ${upper ? numDiv : ''}
+      ${getToothSVG(num, cond)}
+      ${upper ? '' : numDiv}
     </div>`;
   }).join('');
 }
@@ -5258,7 +5357,8 @@ function pacRenderArcadas(){
 function pacRenderArcada(id, dentes){
   const c = document.getElementById(id);
   if(!c) return;
-  c.innerHTML = dentes.map(num => {
+  const mid = Math.floor(dentes.length / 2);
+  c.innerHTML = dentes.map((num, i) => {
     const r    = pacDentesRascunho[num];
     const d    = pacDentesMap[num] || {};
     const cond = r ? r.condicao : (d.condicao || 'higido');
@@ -5266,12 +5366,15 @@ function pacRenderArcada(id, dentes){
     const hasPending = !!r;
     const tip  = r ? `Dente ${num}: ${r.procs.map(p=>p.nome).join(', ')||'rascunho'} (não salvo)` :
                  d.procedimento ? `${num}: ${d.procedimento}` : `Dente ${num}`;
-    const icon = cond==='extraido'?'<span style="font-size:10px;color:#999;">✕</span>':
-                 cond!=='higido'?`<span style="font-size:8px;font-weight:700;color:#555;">${PAC_COND_PT[cond]?.charAt(0)||'?'}</span>`:'';
-    return `<div class="odonto-dente-wrap${sel}" onclick="pacClicarDente(${num})" title="${escapeHtml(tip)}" style="position:relative;">
-      <div class="odonto-dente-num">${num}</div>
-      <div class="odonto-dente-box ${cond}" style="${hasPending?'outline:2px solid #f59e0b;outline-offset:1px;':''}">${icon}</div>
-      ${hasPending?'<div style="position:absolute;top:-3px;right:-3px;width:7px;height:7px;background:#f59e0b;border-radius:50%;border:1px solid #fff;"></div>':''}
+    const upper = isUpperTooth(num);
+    const pendingStyle = hasPending ? 'filter:drop-shadow(0 0 4px rgba(245,158,11,.6));' : '';
+    const gap = (i === mid) ? '<div class="odonto-quadrant-gap"></div>' : '';
+    const numDiv = `<div class="odonto-dente-num">${num}</div>`;
+    return `${gap}<div class="odonto-dente-wrap${sel}" onclick="pacClicarDente(${num})" title="${escapeHtml(tip)}" style="position:relative;">
+      ${upper ? numDiv : ''}
+      ${getToothSVG(num, cond, pendingStyle)}
+      ${upper ? '' : numDiv}
+      ${hasPending?'<div style="position:absolute;top:-3px;right:-3px;width:8px;height:8px;background:#f59e0b;border-radius:50%;border:1.5px solid #fff;z-index:1;"></div>':''}
     </div>`;
   }).join('');
 }

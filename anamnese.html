@@ -1,0 +1,961 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<!--
+  ============================================================
+  SQL necessário para permitir inserções anônimas (RLS):
+
+  -- Permite que pacientes sem login preencham a anamnese via link público
+  CREATE POLICY "anon_insert_anamnese"
+    ON anamneses
+    FOR INSERT
+    TO anon
+    WITH CHECK (true);
+
+  -- Permite que pacientes sem login atualizem sua própria anamnese
+  CREATE POLICY "anon_update_anamnese"
+    ON anamneses
+    FOR UPDATE
+    TO anon
+    USING (true)
+    WITH CHECK (true);
+
+  -- Permite leitura anônima para verificar se já existe anamnese
+  CREATE POLICY "anon_select_anamnese"
+    ON anamneses
+    FOR SELECT
+    TO anon
+    USING (true);
+
+  -- Permite leitura anônima do nome do paciente e da clínica
+  CREATE POLICY "anon_select_paciente_nome"
+    ON pacientes
+    FOR SELECT
+    TO anon
+    USING (true);
+
+  CREATE POLICY "anon_select_clinica_nome"
+    ON clinicas
+    FOR SELECT
+    TO anon
+    USING (true);
+  ============================================================
+-->
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Ficha de Saúde — RWDent</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root {
+    --rose: #d4735a;
+    --rose-light: #f0cfc4;
+    --rose-lighter: #fdf0eb;
+    --rose-dark: #7a3020;
+    --rose-text: #5a3a30;
+    --bg: #faf7f5;
+    --card: #ffffff;
+    --shadow: 0 2px 12px rgba(122,48,32,.08);
+    --radius: 14px;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    background: var(--bg);
+    color: var(--rose-text);
+    min-height: 100dvh;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ── Header ── */
+  .header {
+    background: linear-gradient(135deg, var(--rose) 0%, var(--rose-dark) 100%);
+    padding: 24px 20px 20px;
+    text-align: center;
+    color: #fff;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .header-logo {
+    width: 48px; height: 48px;
+    background: rgba(255,255,255,.18);
+    border-radius: 14px;
+    display: inline-flex; align-items: center; justify-content: center;
+    margin-bottom: 8px;
+  }
+  .header h1 { font-size: 18px; font-weight: 700; margin-bottom: 2px; }
+  .header .subtitle { font-size: 13px; opacity: .85; }
+  .patient-badge {
+    display: inline-block;
+    background: rgba(255,255,255,.2);
+    border-radius: 20px;
+    padding: 4px 14px;
+    font-size: 13px;
+    font-weight: 600;
+    margin-top: 10px;
+    backdrop-filter: blur(4px);
+  }
+
+  /* ── Progress bar ── */
+  .progress-bar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    padding: 16px 20px 8px;
+    max-width: 480px;
+    margin: 0 auto;
+  }
+  .progress-step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex: 1;
+    position: relative;
+  }
+  .progress-step .dot {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    background: var(--rose-light);
+    color: var(--rose);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 700;
+    transition: all .3s;
+    position: relative;
+    z-index: 2;
+  }
+  .progress-step.active .dot {
+    background: var(--rose);
+    color: #fff;
+    box-shadow: 0 0 0 4px rgba(212,115,90,.2);
+  }
+  .progress-step.done .dot {
+    background: #3dbd6f;
+    color: #fff;
+  }
+  .progress-step .label {
+    font-size: 10px;
+    font-weight: 600;
+    color: #b8a098;
+    margin-top: 5px;
+    text-align: center;
+    text-transform: uppercase;
+    letter-spacing: .3px;
+    transition: color .3s;
+  }
+  .progress-step.active .label,
+  .progress-step.done .label { color: var(--rose-dark); }
+  .progress-line {
+    flex: 1;
+    height: 3px;
+    background: var(--rose-light);
+    margin: 0 -4px;
+    margin-bottom: 18px;
+    transition: background .3s;
+    position: relative;
+    z-index: 1;
+  }
+  .progress-line.done { background: #3dbd6f; }
+
+  /* ── Container & Cards ── */
+  .container { max-width: 520px; margin: 0 auto; padding: 0 16px 100px; }
+  .section {
+    display: none;
+    animation: fadeIn .35s ease;
+  }
+  .section.active { display: block; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+  .card {
+    background: var(--card);
+    border: 1.5px solid var(--rose-light);
+    border-radius: var(--radius);
+    padding: 18px;
+    margin-bottom: 14px;
+    box-shadow: var(--shadow);
+  }
+  .card-title {
+    font-size: 13px;
+    font-weight: 800;
+    color: var(--rose-dark);
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    margin-bottom: 14px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--rose-light);
+  }
+
+  /* ── Form elements ── */
+  .form-group { margin-bottom: 14px; }
+  .form-group label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--rose-dark);
+    margin-bottom: 5px;
+  }
+  textarea, input[type="text"], input[type="number"] {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1.5px solid var(--rose-light);
+    border-radius: 10px;
+    font-size: 15px;
+    color: var(--rose-text);
+    background: var(--rose-lighter);
+    outline: none;
+    transition: border-color .2s;
+    font-family: inherit;
+  }
+  textarea:focus, input[type="text"]:focus, input[type="number"]:focus {
+    border-color: var(--rose);
+  }
+  textarea { resize: vertical; min-height: 60px; }
+
+  /* ── Radio / Checkbox groups ── */
+  .radio-group, .checkbox-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 4px;
+  }
+  .radio-group label, .checkbox-grid label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 14px;
+    font-weight: 400;
+    text-transform: none;
+    letter-spacing: 0;
+    cursor: pointer;
+    padding: 8px 14px;
+    border-radius: 10px;
+    background: var(--rose-lighter);
+    border: 1.5px solid transparent;
+    transition: all .2s;
+  }
+  .radio-group label:has(input:checked),
+  .checkbox-grid label:has(input:checked) {
+    border-color: var(--rose);
+    background: rgba(212,115,90,.1);
+  }
+  .radio-group input[type="radio"],
+  .checkbox-grid input[type="checkbox"] {
+    width: 16px; height: 16px;
+    accent-color: var(--rose);
+    flex-shrink: 0;
+    cursor: pointer;
+  }
+  .checkbox-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(155px, 1fr));
+    gap: 6px;
+  }
+  .checkbox-grid label {
+    padding: 8px 10px;
+    font-size: 13px;
+  }
+
+  /* ── Conditional fields ── */
+  .conditional { display: none; margin-top: 8px; }
+  .conditional.show { display: block; }
+
+  /* ── Buttons ── */
+  .btn-bar {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+    padding: 16px;
+    position: fixed;
+    bottom: 0;
+    left: 0; right: 0;
+    background: rgba(250,247,245,.96);
+    backdrop-filter: blur(10px);
+    border-top: 1px solid var(--rose-light);
+    justify-content: center;
+    z-index: 100;
+    max-width: 520px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+  .btn {
+    padding: 12px 28px;
+    border: none;
+    border-radius: 12px;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all .2s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-family: inherit;
+  }
+  .btn-primary {
+    background: linear-gradient(135deg, var(--rose) 0%, var(--rose-dark) 100%);
+    color: #fff;
+    flex: 1;
+  }
+  .btn-primary:active { transform: scale(.97); }
+  .btn-secondary {
+    background: var(--rose-lighter);
+    color: var(--rose-dark);
+    border: 1.5px solid var(--rose-light);
+  }
+  .btn:disabled { opacity: .5; cursor: not-allowed; }
+
+  /* ── Success screen ── */
+  .success-screen {
+    display: none;
+    text-align: center;
+    padding: 60px 20px;
+    animation: fadeIn .5s ease;
+  }
+  .success-screen.active { display: block; }
+  .success-check {
+    width: 80px; height: 80px;
+    background: #3dbd6f;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 20px;
+    animation: popIn .5s cubic-bezier(.17,.89,.32,1.25);
+  }
+  @keyframes popIn { from { transform: scale(0); } to { transform: scale(1); } }
+  .success-check svg { width: 40px; height: 40px; }
+  .success-screen h2 { font-size: 22px; color: var(--rose-dark); margin-bottom: 8px; }
+  .success-screen p { font-size: 15px; color: #8a7a72; line-height: 1.5; }
+
+  /* ── Loading overlay ── */
+  .loading-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(250,247,245,.85);
+    backdrop-filter: blur(6px);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .loading-overlay.active { display: flex; }
+  .spinner {
+    width: 40px; height: 40px;
+    border: 4px solid var(--rose-light);
+    border-top-color: var(--rose);
+    border-radius: 50%;
+    animation: spin .8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-overlay span { font-size: 14px; color: var(--rose-dark); font-weight: 600; }
+
+  /* ── Error screen ── */
+  .error-screen {
+    display: none;
+    text-align: center;
+    padding: 80px 20px;
+  }
+  .error-screen.active { display: block; }
+  .error-screen h2 { font-size: 20px; color: var(--rose-dark); margin-bottom: 8px; }
+  .error-screen p { font-size: 14px; color: #8a7a72; }
+
+  /* ── Grid helpers ── */
+  .grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+  @media (max-width: 400px) {
+    .grid-2 { grid-template-columns: 1fr; }
+  }
+
+  /* ── Toast ── */
+  .toast {
+    position: fixed;
+    bottom: 80px;
+    left: 50%; transform: translateX(-50%);
+    background: #e74c3c;
+    color: #fff;
+    padding: 10px 20px;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    z-index: 2000;
+    opacity: 0;
+    transition: opacity .3s;
+    pointer-events: none;
+  }
+  .toast.show { opacity: 1; }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <div class="header-logo">
+    <svg width="32" height="32" viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg">
+      <line x1="18" y1="14" x2="54" y2="14" stroke="#fff" stroke-width="4" stroke-linecap="round"/>
+      <line x1="22" y1="14" x2="22" y2="62" stroke="#fff" stroke-width="4" stroke-linecap="round"/>
+      <line x1="33" y1="14" x2="33" y2="62" stroke="#fff" stroke-width="4" stroke-linecap="round"/>
+      <path d="M33 14 Q58 14 58 33 Q58 51 33 51" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+      <line x1="33" y1="51" x2="56" y2="62" stroke="#fff" stroke-width="4" stroke-linecap="round"/>
+    </svg>
+  </div>
+  <h1>Ficha de Saude</h1>
+  <div class="subtitle" id="clinic-name">Carregando...</div>
+  <div class="patient-badge" id="patient-name" style="display:none;"></div>
+</div>
+
+<!-- Progress Bar -->
+<div class="progress-bar" id="progress-bar">
+  <div class="progress-step active" data-step="1">
+    <div class="dot">1</div>
+    <div class="label">Queixa</div>
+  </div>
+  <div class="progress-line" id="pline-1"></div>
+  <div class="progress-step" data-step="2">
+    <div class="dot">2</div>
+    <div class="label">Historico</div>
+  </div>
+  <div class="progress-line" id="pline-2"></div>
+  <div class="progress-step" data-step="3">
+    <div class="dot">3</div>
+    <div class="label">Bucal</div>
+  </div>
+  <div class="progress-line" id="pline-3"></div>
+  <div class="progress-step" data-step="4">
+    <div class="dot">4</div>
+    <div class="label">Extras</div>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- ══════════════ STEP 1: Queixa Principal ══════════════ -->
+  <div class="section active" id="step-1">
+    <div class="card">
+      <div class="card-title">Queixa Principal</div>
+      <div class="form-group">
+        <label>Qual o motivo da sua consulta?</label>
+        <textarea id="an-queixa" rows="3" placeholder="Descreva o que voce esta sentindo ou o motivo da consulta..."></textarea>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Pressao Arterial</div>
+      <div class="form-group">
+        <label>Sua pressao arterial e:</label>
+        <div class="radio-group">
+          <label><input type="radio" name="an-pa-tipo" value="alta"> Alta</label>
+          <label><input type="radio" name="an-pa-tipo" value="baixa"> Baixa</label>
+          <label><input type="radio" name="an-pa-tipo" value="normal" checked> Normal</label>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Valor da PA (se souber)</label>
+        <input type="text" id="an-pa" placeholder="Ex: 120/80">
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════ STEP 2: Historico Medico ══════════════ -->
+  <div class="section" id="step-2">
+    <div class="card">
+      <div class="card-title">Medicacao e Alergias</div>
+      <div class="form-group">
+        <label>Faz uso de alguma medicacao?</label>
+        <div class="radio-group">
+          <label><input type="radio" name="an-med" value="sim" onchange="toggleConditional('med-qual', true)"> Sim</label>
+          <label><input type="radio" name="an-med" value="nao" checked onchange="toggleConditional('med-qual', false)"> Nao</label>
+        </div>
+        <div class="conditional" id="med-qual">
+          <input type="text" id="an-med-qual" placeholder="Qual medicacao?">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Possui alguma alergia?</label>
+        <div class="radio-group">
+          <label><input type="radio" name="an-alergia" value="sim" onchange="toggleConditional('alergia-qual', true)"> Sim</label>
+          <label><input type="radio" name="an-alergia" value="nao" checked onchange="toggleConditional('alergia-qual', false)"> Nao</label>
+        </div>
+        <div class="conditional" id="alergia-qual">
+          <input type="text" id="an-alergia-qual" placeholder="Qual alergia?">
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Doencas</div>
+      <div class="form-group">
+        <label>Voce sofre ou ja sofreu alguma dessas doencas?</label>
+        <div class="checkbox-grid">
+          <label><input type="checkbox" id="an-d-anemia"> Anemia</label>
+          <label><input type="checkbox" id="an-d-diabete"> Diabete</label>
+          <label><input type="checkbox" id="an-d-respiratoria"> Respiratoria</label>
+          <label><input type="checkbox" id="an-d-osteoporose"> Osteoporose</label>
+          <label><input type="checkbox" id="an-d-sifilis"> Sifilis</label>
+          <label><input type="checkbox" id="an-d-hiv"> HIV</label>
+          <label><input type="checkbox" id="an-d-epilepsia"> Epilepsia</label>
+          <label><input type="checkbox" id="an-d-cancer"> Cancer</label>
+          <label><input type="checkbox" id="an-d-cardiaco"> Prob. cardiacos</label>
+          <label><input type="checkbox" id="an-d-febreReumatica"> Febre reumatica</label>
+          <label><input type="checkbox" id="an-d-hemorragia"> Hemorragia</label>
+          <label><input type="checkbox" id="an-d-hepatite"> Hepatite</label>
+          <label><input type="checkbox" id="an-d-hipertensao"> Hipertensao</label>
+          <label><input type="checkbox" id="an-d-endocrino"> Endocrino</label>
+          <label><input type="checkbox" id="an-d-herpes"> Herpes</label>
+          <label><input type="checkbox" id="an-d-endocardite"> Endocardite</label>
+          <label><input type="checkbox" id="an-d-tuberculose"> Tuberculose</label>
+          <label><input type="checkbox" id="an-d-afta"> Afta</label>
+          <label><input type="checkbox" id="an-d-distPsicologico"> Dist. psicologicos</label>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Deseja especificar algo sobre as doencas?</label>
+        <textarea id="an-doenca-esp" rows="2" placeholder="Detalhes adicionais..."></textarea>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Cirurgias e Sangramento</div>
+      <div class="grid-2">
+        <div class="form-group">
+          <label>Ja passou por alguma cirurgia?</label>
+          <div class="radio-group">
+            <label><input type="radio" name="an-cirurgia" value="sim"> Sim</label>
+            <label><input type="radio" name="an-cirurgia" value="nao" checked> Nao</label>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Quando se fere, o sangramento e:</label>
+          <div class="radio-group">
+            <label><input type="radio" name="an-sangramento" value="normal" checked> Normal</label>
+            <label><input type="radio" name="an-sangramento" value="excessivo"> Excessivo</label>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Como e sua cicatrizacao?</label>
+          <div class="radio-group">
+            <label><input type="radio" name="an-cicatriz" value="normal" checked> Normal</label>
+            <label><input type="radio" name="an-cicatriz" value="complicada"> Complicada</label>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════ STEP 3: Saude Bucal ══════════════ -->
+  <div class="section" id="step-3">
+    <div class="card">
+      <div class="card-title">Saude Bucal</div>
+
+      <div class="form-group">
+        <label>Ja teve reacao com anestesico local?</label>
+        <div class="radio-group">
+          <label><input type="radio" name="an-anest" value="sim"> Sim</label>
+          <label><input type="radio" name="an-anest" value="nao" checked> Nao</label>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Sente dor nos dentes ou gengiva?</label>
+        <div class="radio-group">
+          <label><input type="radio" name="an-dordente" value="sim"> Sim</label>
+          <label><input type="radio" name="an-dordente" value="nao" checked> Nao</label>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Tem sangramento gengival?</label>
+        <div class="radio-group">
+          <label><input type="radio" name="an-sangGeng" value="sim" onchange="toggleConditional('sangGeng-quando', true)"> Sim</label>
+          <label><input type="radio" name="an-sangGeng" value="nao" checked onchange="toggleConditional('sangGeng-quando', false)"> Nao</label>
+        </div>
+        <div class="conditional" id="sangGeng-quando">
+          <input type="text" id="an-sangGeng-quando" placeholder="Quando? Ex: ao escovar, espontaneo...">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Sente gosto ruim ou boca seca?</label>
+        <div class="radio-group">
+          <label><input type="radio" name="an-bocaseca" value="sim"> Sim</label>
+          <label><input type="radio" name="an-bocaseca" value="nao" checked> Nao</label>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Dor no maxilar ou ouvido?</label>
+        <div class="radio-group">
+          <label><input type="radio" name="an-dormaxilar" value="sim"> Sim</label>
+          <label><input type="radio" name="an-dormaxilar" value="nao" checked> Nao</label>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Usa fio dental?</label>
+        <div class="radio-group">
+          <label><input type="radio" name="an-fio" value="sim"> Sim</label>
+          <label><input type="radio" name="an-fio" value="nao" checked> Nao</label>
+          <label><input type="radio" name="an-fio" value="asvezes"> As vezes</label>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="form-group">
+          <label>Escovacoes por dia</label>
+          <input type="number" id="an-escovacoes" min="0" max="10" placeholder="Ex: 3">
+        </div>
+        <div class="form-group">
+          <label>Ultimo tratamento</label>
+          <input type="text" id="an-ultimo-trat" placeholder="Ex: ha 6 meses, limpeza...">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════ STEP 4: Informacoes Adicionais ══════════════ -->
+  <div class="section" id="step-4">
+    <div class="card">
+      <div class="card-title">Informacoes Adicionais</div>
+
+      <div class="form-group">
+        <label>Tem habitos parafuncionais? (bruxismo, roer unhas, etc.)</label>
+        <div class="radio-group">
+          <label><input type="radio" name="an-parasFunc" value="sim"> Sim</label>
+          <label><input type="radio" name="an-parasFunc" value="nao" checked> Nao</label>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Possui tatuagem?</label>
+        <div class="radio-group">
+          <label><input type="radio" name="an-tatuagem" value="sim"> Sim</label>
+          <label><input type="radio" name="an-tatuagem" value="nao" checked> Nao</label>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>E fumante?</label>
+        <div class="radio-group">
+          <label><input type="radio" name="an-fumante" value="sim"> Sim</label>
+          <label><input type="radio" name="an-fumante" value="nao" checked> Nao</label>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Esta gestante?</label>
+        <div class="radio-group">
+          <label><input type="radio" name="an-gestante" value="sim" onchange="toggleConditional('gestante-semana', true)"> Sim</label>
+          <label><input type="radio" name="an-gestante" value="nao" checked onchange="toggleConditional('gestante-semana', false)"> Nao</label>
+        </div>
+        <div class="conditional" id="gestante-semana">
+          <input type="text" id="an-gestante-semana" placeholder="Periodo (semanas)">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Antecedentes familiares</label>
+        <textarea id="an-antec-fam" rows="2" placeholder="Doencas relevantes na familia..."></textarea>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════ Success Screen ══════════════ -->
+  <div class="success-screen" id="success-screen">
+    <div class="success-check">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="20 6 9 17 4 12"></polyline>
+      </svg>
+    </div>
+    <h2>Ficha enviada com sucesso!</h2>
+    <p>Obrigado por preencher sua ficha de saude.<br>Sua clinica ja tem acesso aos dados.<br><br>Voce ja pode fechar esta pagina.</p>
+  </div>
+</div>
+
+<!-- Button bar -->
+<div class="btn-bar" id="btn-bar">
+  <button class="btn btn-secondary" id="btn-prev" onclick="navigate(-1)" style="display:none;">Voltar</button>
+  <button class="btn btn-primary" id="btn-next" onclick="navigate(1)">Proximo &rarr;</button>
+</div>
+
+<!-- Loading -->
+<div class="loading-overlay" id="loading">
+  <div class="spinner"></div>
+  <span>Carregando...</span>
+</div>
+
+<!-- Error screen -->
+<div class="error-screen" id="error-screen">
+  <h2>Link invalido</h2>
+  <p>Este link parece estar incorreto ou expirado.<br>Entre em contato com sua clinica para receber um novo link.</p>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+const SUPABASE_URL      = 'https://xdncwmxjdqiwykbcaddd.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhkbmN3bXhqZHFpd3lrYmNhZGRkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEyMjMwNDMsImV4cCI6MjA5Njc5OTA0M30.9qBm7G2xg-DifQu5NPrcNIw6YG0dbVkZ725I4WhG6yM';
+
+const _sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+let currentStep = 1;
+const totalSteps = 4;
+let pacienteId = null;
+let clinicaId  = null;
+
+// ── Init ──
+document.addEventListener('DOMContentLoaded', init);
+
+async function init() {
+  const params = new URLSearchParams(window.location.search);
+  pacienteId = params.get('paciente');
+  clinicaId  = params.get('clinica');
+
+  if (!pacienteId || !clinicaId) {
+    showError();
+    return;
+  }
+
+  showLoading(true);
+
+  try {
+    // Fetch clinic and patient names
+    const [clinicaRes, pacienteRes] = await Promise.all([
+      _sb.from('clinicas').select('nome_cli').eq('id', clinicaId).single(),
+      _sb.from('pacientes').select('nome').eq('id', pacienteId).single()
+    ]);
+
+    if (clinicaRes.data) {
+      document.getElementById('clinic-name').textContent = clinicaRes.data.nome_cli || 'Clinica';
+    }
+    if (pacienteRes.data) {
+      const badge = document.getElementById('patient-name');
+      badge.textContent = pacienteRes.data.nome;
+      badge.style.display = 'inline-block';
+    }
+
+    if (!clinicaRes.data || !pacienteRes.data) {
+      showLoading(false);
+      showError();
+      return;
+    }
+
+    // Check if anamnese already exists and pre-fill
+    const { data: existing } = await _sb.from('anamneses')
+      .select('dados')
+      .eq('paciente_id', pacienteId)
+      .single();
+
+    if (existing && existing.dados) {
+      prefillForm(existing.dados);
+    }
+
+  } catch (e) {
+    console.error(e);
+    showLoading(false);
+    showError();
+    return;
+  }
+
+  showLoading(false);
+}
+
+function prefillForm(d) {
+  // Text / number fields
+  setVal('an-queixa', d.queixa);
+  setVal('an-pa', d.pa);
+  setVal('an-med-qual', d.medicacaoQual);
+  setVal('an-alergia-qual', d.alergiaQual);
+  setVal('an-doenca-esp', d.doencaEsp);
+  setVal('an-sangGeng-quando', d.sangGengQuando);
+  setVal('an-gestante-semana', d.gestanteSemana);
+  setVal('an-escovacoes', d.escovacoes);
+  setVal('an-ultimo-trat', d.ultimoTrat);
+  setVal('an-antec-fam', d.antecFam);
+
+  // Radios
+  setRadio('an-pa-tipo', d.paTipo);
+  setRadio('an-med', d.medicacao);
+  setRadio('an-alergia', d.alergia);
+  setRadio('an-cirurgia', d.cirurgia);
+  setRadio('an-sangramento', d.sangramento);
+  setRadio('an-cicatriz', d.cicatriz);
+  setRadio('an-anest', d.anestesia);
+  setRadio('an-dordente', d.dorDente);
+  setRadio('an-sangGeng', d.sangGeng);
+  setRadio('an-bocaseca', d.bocaSeca);
+  setRadio('an-dormaxilar', d.dorMaxilar);
+  setRadio('an-parasFunc', d.parasFunc);
+  setRadio('an-tatuagem', d.tatuagem);
+  setRadio('an-fumante', d.fumante);
+  setRadio('an-gestante', d.gestante);
+  setRadio('an-fio', d.fio);
+
+  // Checkboxes (doencas)
+  if (d.doencas) {
+    Object.entries(d.doencas).forEach(([k, v]) => {
+      const el = document.getElementById('an-d-' + k);
+      if (el) el.checked = !!v;
+    });
+  }
+
+  // Show conditional fields if needed
+  if (d.medicacao === 'sim') toggleConditional('med-qual', true);
+  if (d.alergia === 'sim') toggleConditional('alergia-qual', true);
+  if (d.sangGeng === 'sim') toggleConditional('sangGeng-quando', true);
+  if (d.gestante === 'sim') toggleConditional('gestante-semana', true);
+}
+
+function setVal(id, v) {
+  const el = document.getElementById(id);
+  if (el && v) el.value = v;
+}
+
+function setRadio(name, v) {
+  if (!v) return;
+  const el = document.querySelector(`input[name="${name}"][value="${v}"]`);
+  if (el) el.checked = true;
+}
+
+// ── Navigation ──
+function navigate(dir) {
+  const nextStep = currentStep + dir;
+  if (nextStep < 1) return;
+  if (nextStep > totalSteps) {
+    submitForm();
+    return;
+  }
+  goToStep(nextStep);
+}
+
+function goToStep(step) {
+  // Hide current
+  document.getElementById('step-' + currentStep).classList.remove('active');
+  // Show next
+  currentStep = step;
+  document.getElementById('step-' + currentStep).classList.add('active');
+  updateProgress();
+  updateButtons();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function updateProgress() {
+  document.querySelectorAll('.progress-step').forEach(el => {
+    const s = parseInt(el.dataset.step);
+    el.classList.remove('active', 'done');
+    if (s === currentStep) el.classList.add('active');
+    else if (s < currentStep) el.classList.add('done');
+  });
+  for (let i = 1; i < totalSteps; i++) {
+    const line = document.getElementById('pline-' + i);
+    if (line) {
+      line.classList.toggle('done', i < currentStep);
+    }
+  }
+}
+
+function updateButtons() {
+  document.getElementById('btn-prev').style.display = currentStep === 1 ? 'none' : '';
+  const btnNext = document.getElementById('btn-next');
+  if (currentStep === totalSteps) {
+    btnNext.innerHTML = 'Enviar &#10003;';
+  } else {
+    btnNext.innerHTML = 'Proximo &rarr;';
+  }
+}
+
+// ── Toggle conditional fields ──
+function toggleConditional(id, show) {
+  const el = document.getElementById(id);
+  if (el) el.classList.toggle('show', show);
+}
+
+// ── Submit ──
+async function submitForm() {
+  const radio = (name) => document.querySelector(`input[name="${name}"]:checked`)?.value || '';
+  const val   = (id)   => document.getElementById(id)?.value || '';
+  const chk   = (id)   => document.getElementById(id)?.checked || false;
+
+  const anamnese = {
+    queixa        : val('an-queixa'),
+    medicacao     : radio('an-med'),
+    medicacaoQual : val('an-med-qual'),
+    alergia       : radio('an-alergia'),
+    alergiaQual   : val('an-alergia-qual'),
+    paTipo        : radio('an-pa-tipo'),
+    pa            : val('an-pa'),
+    doencas: {
+      anemia: chk('an-d-anemia'), diabete: chk('an-d-diabete'), respiratoria: chk('an-d-respiratoria'),
+      osteoporose: chk('an-d-osteoporose'), sifilis: chk('an-d-sifilis'), hiv: chk('an-d-hiv'),
+      epilepsia: chk('an-d-epilepsia'), cancer: chk('an-d-cancer'), cardiaco: chk('an-d-cardiaco'),
+      febreReumatica: chk('an-d-febreReumatica'), hemorragia: chk('an-d-hemorragia'), hepatite: chk('an-d-hepatite'),
+      hipertensao: chk('an-d-hipertensao'), endocrino: chk('an-d-endocrino'), herpes: chk('an-d-herpes'),
+      endocardite: chk('an-d-endocardite'), tuberculose: chk('an-d-tuberculose'), afta: chk('an-d-afta'),
+      distPsicologico: chk('an-d-distPsicologico')
+    },
+    doencaEsp      : val('an-doenca-esp'),
+    cirurgia       : radio('an-cirurgia'),
+    sangramento    : radio('an-sangramento'),
+    cicatriz       : radio('an-cicatriz'),
+    gestante       : radio('an-gestante'),
+    gestanteSemana : val('an-gestante-semana'),
+    anestesia      : radio('an-anest'),
+    dorDente       : radio('an-dordente'),
+    sangGeng       : radio('an-sangGeng'),
+    sangGengQuando : val('an-sangGeng-quando'),
+    bocaSeca       : radio('an-bocaseca'),
+    dorMaxilar     : radio('an-dormaxilar'),
+    parasFunc      : radio('an-parasFunc'),
+    tatuagem       : radio('an-tatuagem'),
+    fumante        : radio('an-fumante'),
+    fio            : radio('an-fio'),
+    escovacoes     : val('an-escovacoes'),
+    ultimoTrat     : val('an-ultimo-trat'),
+    antecFam       : val('an-antec-fam'),
+  };
+
+  showLoading(true);
+
+  const { error } = await _sb.from('anamneses')
+    .upsert(
+      { paciente_id: pacienteId, clinica_id: clinicaId, dados: anamnese },
+      { onConflict: 'paciente_id' }
+    );
+
+  showLoading(false);
+
+  if (error) {
+    console.error('Erro ao salvar:', error);
+    showToast('Erro ao salvar. Tente novamente.');
+    return;
+  }
+
+  // Show success
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.getElementById('progress-bar').style.display = 'none';
+  document.getElementById('btn-bar').style.display = 'none';
+  document.getElementById('success-screen').classList.add('active');
+}
+
+// ── Helpers ──
+function showLoading(on) {
+  document.getElementById('loading').classList.toggle('active', on);
+}
+
+function showError() {
+  document.getElementById('progress-bar').style.display = 'none';
+  document.getElementById('btn-bar').style.display = 'none';
+  document.getElementById('error-screen').classList.add('active');
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3500);
+}
+</script>
+</body>
+</html>
