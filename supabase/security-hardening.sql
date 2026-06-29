@@ -6,7 +6,7 @@ create extension if not exists pgcrypto;
 
 -- Clinics owned by the logged-in user.
 create or replace function public.rwdent_user_clinica_ids()
-returns setof bigint
+returns setof uuid
 language sql
 stable
 security definer
@@ -61,7 +61,7 @@ $$;
 create table if not exists public.anamnese_links (
   token uuid primary key default gen_random_uuid(),
   paciente_id bigint not null references public.pacientes(id) on delete cascade,
-  clinica_id bigint not null references public.clinicas(id) on delete cascade,
+  clinica_id uuid not null references public.clinicas(id) on delete cascade,
   expires_at timestamptz not null default (now() + interval '7 days'),
   used_at timestamptz,
   created_at timestamptz not null default now()
@@ -102,7 +102,7 @@ end $$;
 create or replace function public.rwdent_get_anamnese_context(p_token uuid)
 returns table (
   paciente_id bigint,
-  clinica_id bigint,
+  clinica_id uuid,
   paciente_nome text,
   clinica_nome text,
   dados jsonb
@@ -136,7 +136,7 @@ set search_path = public
 as $$
 declare
   v_paciente_id bigint;
-  v_clinica_id bigint;
+  v_clinica_id uuid;
 begin
   select paciente_id, clinica_id
     into v_paciente_id, v_clinica_id
@@ -165,13 +165,45 @@ $$;
 grant execute on function public.rwdent_get_anamnese_context(uuid) to anon;
 grant execute on function public.rwdent_submit_anamnese(uuid, jsonb) to anon;
 
+-- Admin RLS: admins can SELECT and UPDATE all clinicas (for approve/reject/renew).
+-- Normal users only see their own clinic.
+do $$
+begin
+  if not exists (
+    select 1 from pg_policies
+    where schemaname = 'public'
+      and tablename = 'clinicas'
+      and policyname = 'clinicas_admin_select'
+  ) then
+    create policy "clinicas_admin_select"
+      on public.clinicas
+      for select
+      to authenticated
+      using (user_id = auth.uid() or public.rwdent_is_admin());
+  end if;
+
+  if not exists (
+    select 1 from pg_policies
+    where schemaname = 'public'
+      and tablename = 'clinicas'
+      and policyname = 'clinicas_admin_update'
+  ) then
+    create policy "clinicas_admin_update"
+      on public.clinicas
+      for update
+      to authenticated
+      using (user_id = auth.uid() or public.rwdent_is_admin());
+  end if;
+end $$;
+
+-- Seed admin users (run once; safe to re-run).
+insert into public.admin_users (user_id, email)
+values
+  ('09f21b22-76c8-4aee-8af4-9fc292ff08d4', 'admin1@rwdent.com'),
+  ('b39d8b67-0610-4708-9733-104db7f0307b', 'admin2@rwdent.com')
+on conflict (user_id) do nothing;
+
 create index if not exists idx_clinicas_user_id on public.clinicas(user_id);
 create index if not exists idx_anamnese_links_clinica_id on public.anamnese_links(clinica_id);
 create index if not exists idx_anamnese_links_paciente_id on public.anamnese_links(paciente_id);
 create index if not exists idx_anamnese_links_expires_at on public.anamnese_links(expires_at);
-
--- Optional indexes. Run only if these tables exist with clinica_id/data columns.
--- create index if not exists idx_pacientes_clinica_id on public.pacientes(clinica_id);
--- create index if not exists idx_agendamentos_clinica_id_data on public.agendamentos(clinica_id, data);
--- create index if not exists idx_profissionais_clinica_id on public.profissionais(clinica_id);
--- create index if not exists idx_anamneses_clinica_id on public.anamneses(clinica_id);

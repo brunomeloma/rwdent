@@ -3033,6 +3033,8 @@ let _adminFilterStatus = 'todos';
 
 async function loadAdminPanel(){
   if(!_ADMIN_IDS.includes(currentUser?.id)) return;
+  const { data: isDbAdmin } = await _sb.rpc('rwdent_is_admin');
+  if(!isDbAdmin){ showToast('Acesso admin negado pelo servidor.','error'); return; }
   showLoading(true);
   const { data, error } = await _sb.from('clinicas').select('*').order('created_at',{ascending:false});
   showLoading(false);
@@ -4874,7 +4876,8 @@ async function anamneseEnviarWhatsApp(pacId){
     link = `${window.location.origin}/anamnese.html?token=${tokenRow.token}`;
     p._anamneseLink = { token: tokenRow.token, paciente_id: pacId, expires_at: new Date(Date.now()+48*3600000).toISOString(), used_at: null, created_at: new Date().toISOString() };
   } else {
-    link = `${window.location.origin}/anamnese.html?clinica=${clinicaId}&paciente=${pacId}`;
+    showToast('Erro ao gerar link seguro. Verifique se a tabela anamnese_links existe no Supabase.','error');
+    return;
   }
   logAtividade('Anamnese enviada', p.nome||pacId);
   const msg = `Ola${p.nome ? ', ' + p.nome.split(' ')[0] : ''}! Para agilizar seu atendimento, preencha sua ficha de saude antes da consulta: ${link}`;

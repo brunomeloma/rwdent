@@ -675,10 +675,8 @@ document.addEventListener('DOMContentLoaded', init);
 async function init() {
   const params = new URLSearchParams(window.location.search);
   anamneseToken = params.get('token');
-  pacienteId = params.get('paciente');
-  clinicaId  = params.get('clinica');
 
-  if (!anamneseToken && (!pacienteId || !clinicaId)) {
+  if (!anamneseToken) {
     showError();
     return;
   }
@@ -686,54 +684,27 @@ async function init() {
   showLoading(true);
 
   try {
-    if (anamneseToken) {
-      const { data: rows, error } = await _sb.rpc('rwdent_get_anamnese_context', {
-        p_token: anamneseToken
-      });
+    const { data: rows, error } = await _sb.rpc('rwdent_get_anamnese_context', {
+      p_token: anamneseToken
+    });
 
-      const context = Array.isArray(rows) ? rows[0] : rows;
-      if (error || !context) {
-        showLoading(false);
-        showError();
-        return;
-      }
+    const context = Array.isArray(rows) ? rows[0] : rows;
+    if (error || !context) {
+      showLoading(false);
+      showError();
+      return;
+    }
 
-      pacienteId = context.paciente_id;
-      clinicaId = context.clinica_id;
-      document.getElementById('clinic-name').textContent = context.clinica_nome || 'Clinica';
+    pacienteId = context.paciente_id;
+    clinicaId = context.clinica_id;
+    document.getElementById('clinic-name').textContent = context.clinica_nome || 'Clinica';
 
-      const badge = document.getElementById('patient-name');
-      badge.textContent = context.paciente_nome || 'Paciente';
-      badge.style.display = 'inline-block';
+    const badge = document.getElementById('patient-name');
+    badge.textContent = context.paciente_nome || 'Paciente';
+    badge.style.display = 'inline-block';
 
-      if (context.dados) {
-        prefillForm(context.dados);
-      }
-    } else {
-      const [clinicaRes, pacienteRes] = await Promise.all([
-        _sb.from('clinicas').select('nome_cli').eq('id', clinicaId).single(),
-        _sb.from('pacientes').select('nome').eq('id', pacienteId).single()
-      ]);
-
-      if (!clinicaRes.data || !pacienteRes.data) {
-        showLoading(false);
-        showError();
-        return;
-      }
-
-      document.getElementById('clinic-name').textContent = clinicaRes.data.nome_cli || 'Clinica';
-      const badge = document.getElementById('patient-name');
-      badge.textContent = pacienteRes.data.nome;
-      badge.style.display = 'inline-block';
-
-      const { data: existing } = await _sb.from('anamneses')
-        .select('dados')
-        .eq('paciente_id', pacienteId)
-        .single();
-
-      if (existing && existing.dados) {
-        prefillForm(existing.dados);
-      }
+    if (context.dados) {
+      prefillForm(context.dados);
     }
 
   } catch (e) {
@@ -902,16 +873,10 @@ async function submitForm() {
 
   showLoading(true);
 
-  const { error } = anamneseToken
-    ? await _sb.rpc('rwdent_submit_anamnese', {
-        p_token: anamneseToken,
-        p_dados: anamnese
-      })
-    : await _sb.from('anamneses')
-        .upsert(
-          { paciente_id: pacienteId, clinica_id: clinicaId, dados: anamnese },
-          { onConflict: 'paciente_id' }
-        );
+  const { error } = await _sb.rpc('rwdent_submit_anamnese', {
+    p_token: anamneseToken,
+    p_dados: anamnese
+  });
 
   showLoading(false);
 
