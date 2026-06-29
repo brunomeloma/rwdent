@@ -4874,7 +4874,7 @@ async function anamneseEnviarWhatsApp(pacId){
     .select('token').single();
   if(!error && tokenRow){
     link = `${window.location.origin}/anamnese.html?token=${tokenRow.token}`;
-    p._anamneseLink = { token: tokenRow.token, paciente_id: pacId, expires_at: new Date(Date.now()+48*3600000).toISOString(), used_at: null, created_at: new Date().toISOString() };
+    p._anamneseLink = { token: tokenRow.token, paciente_id: pacId, expires_at: new Date(Date.now()+7*24*3600000).toISOString(), used_at: null, created_at: new Date().toISOString() };
   } else {
     showToast('Erro ao gerar link seguro. Verifique se a tabela anamnese_links existe no Supabase.','error');
     return;
