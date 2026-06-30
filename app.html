@@ -6657,7 +6657,8 @@ async function injetarNovosMatsOrto(){
     {"id": 175, "nome": "Braquete Autoligado Metálico (peça avulsa)", "cat": "Ortodontia", "unid": "unid", "qtde": 1, "preco": 16.00, "custo": 16.00},
     {"id": 176, "nome": "Braquete Porcelana (peça avulsa)", "cat": "Ortodontia", "unid": "unid", "qtde": 1, "preco": 37.50, "custo": 37.50},
     {"id": 177, "nome": "Braquete Safira (peça avulsa)", "cat": "Ortodontia", "unid": "unid", "qtde": 1, "preco": 44.50, "custo": 44.50},
-    {"id": 178, "nome": "Braquete Autoligado Estético (peça avulsa)", "cat": "Ortodontia", "unid": "unid", "qtde": 1, "preco": 49.00, "custo": 49.00}
+    {"id": 178, "nome": "Braquete Autoligado Estético (peça avulsa)", "cat": "Ortodontia", "unid": "unid", "qtde": 1, "preco": 49.00, "custo": 49.00},
+    {"id": 179, "nome": "Sugador Descartável", "cat": "Geral", "unid": "unid", "qtde": 100, "preco": 25.00, "custo": 0.25}
   ];
   // Procedimentos de instalação/manutenção de aparelho. IDs na faixa 200+ para nunca
   // colidir com DEFAULT_PROCS_FIN (1-102) nem com os materiais (91-172).
@@ -6693,10 +6694,10 @@ async function injetarNovosMatsOrto(){
   // máscara, microbrush). Reaproveita os kits já cadastrados (43, 44, 45) quando existem.
   const NOVOS_PROC_INSUMOS = {
     // Instalação por kit completo (só os tipos que não existem nos originais 43/44/51)
-    202: [{matId:167,qtd:1},{matId:48,qtd:0.5},{matId:74,qtd:0.3},{matId:76,qtd:1},{matId:8,qtd:1},{matId:34,qtd:2},{matId:35,qtd:1},{matId:37,qtd:5}], // Porcelana
-    203: [{matId:168,qtd:1},{matId:48,qtd:0.5},{matId:74,qtd:0.3},{matId:76,qtd:1},{matId:8,qtd:1},{matId:34,qtd:2},{matId:35,qtd:1},{matId:37,qtd:5}], // Safira
-    204: [{matId:169,qtd:1},{matId:48,qtd:0.5},{matId:74,qtd:0.3},{matId:76,qtd:1},{matId:8,qtd:1},{matId:34,qtd:2},{matId:35,qtd:1},{matId:37,qtd:5}], // Autoligado estético
-    207: [{matId:172,qtd:1},{matId:8,qtd:1},{matId:34,qtd:1}], // Alinhador Transparente — o alinhador (matId 170) entra como custo de "laboratório" (R$4.500), não como insumo, para não ser contado em dobro
+    202: [{matId:167,qtd:1},{matId:48,qtd:0.5},{matId:74,qtd:0.3},{matId:76,qtd:1},{matId:8,qtd:1},{matId:34,qtd:2},{matId:35,qtd:1},{matId:37,qtd:5},{matId:179,qtd:1}], // Porcelana
+    203: [{matId:168,qtd:1},{matId:48,qtd:0.5},{matId:74,qtd:0.3},{matId:76,qtd:1},{matId:8,qtd:1},{matId:34,qtd:2},{matId:35,qtd:1},{matId:37,qtd:5},{matId:179,qtd:1}], // Safira
+    204: [{matId:169,qtd:1},{matId:48,qtd:0.5},{matId:74,qtd:0.3},{matId:76,qtd:1},{matId:8,qtd:1},{matId:34,qtd:2},{matId:35,qtd:1},{matId:37,qtd:5},{matId:179,qtd:1}], // Autoligado estético
+    207: [{matId:172,qtd:1},{matId:8,qtd:1},{matId:34,qtd:1},{matId:179,qtd:1}], // Alinhador Transparente — o alinhador (matId 170) entra como custo de "laboratório" (R$4.500), não como insumo, para não ser contado em dobro
     // Manutenção mensal por tipo — troca de arco + ligadura (quando usa) + EPI completo
     // EPI: babador (8), luva (34), máscara (35)
     // Elástico id 75 = pacote ~1040 unid; 28 ligaduras por sessão = qtd 0.027
@@ -6710,12 +6711,12 @@ async function injetarNovosMatsOrto(){
     // Recolagem: 1 peça avulsa (kit ÷ 20) + um pouco de adesivo + EPI mínimo.
     // NUNCA usar o kit inteiro (matId 43/44/45/167/168/169) aqui — isso cobraria o
     // paciente pelo aparelho completo de novo. A peça avulsa é o material certo.
-    215: [{matId:173,qtd:1},{matId:48,qtd:0.05},{matId:8,qtd:1},{matId:34,qtd:1}], // Metálico Tradicional
-    216: [{matId:174,qtd:1},{matId:48,qtd:0.05},{matId:8,qtd:1},{matId:34,qtd:1}], // Cerâmico
-    217: [{matId:175,qtd:1},{matId:48,qtd:0.05},{matId:8,qtd:1},{matId:34,qtd:1}], // Autoligado Metálico
-    218: [{matId:176,qtd:1},{matId:48,qtd:0.05},{matId:8,qtd:1},{matId:34,qtd:1}], // Porcelana
-    219: [{matId:177,qtd:1},{matId:48,qtd:0.05},{matId:8,qtd:1},{matId:34,qtd:1}], // Safira
-    220: [{matId:178,qtd:1},{matId:48,qtd:0.05},{matId:8,qtd:1},{matId:34,qtd:1}]  // Autoligado Estético
+    215: [{matId:173,qtd:1},{matId:48,qtd:0.05},{matId:8,qtd:1},{matId:34,qtd:1},{matId:179,qtd:1}], // Metálico Tradicional
+    216: [{matId:174,qtd:1},{matId:48,qtd:0.05},{matId:8,qtd:1},{matId:34,qtd:1},{matId:179,qtd:1}], // Cerâmico
+    217: [{matId:175,qtd:1},{matId:48,qtd:0.05},{matId:8,qtd:1},{matId:34,qtd:1},{matId:179,qtd:1}], // Autoligado Metálico
+    218: [{matId:176,qtd:1},{matId:48,qtd:0.05},{matId:8,qtd:1},{matId:34,qtd:1},{matId:179,qtd:1}], // Porcelana
+    219: [{matId:177,qtd:1},{matId:48,qtd:0.05},{matId:8,qtd:1},{matId:34,qtd:1},{matId:179,qtd:1}], // Safira
+    220: [{matId:178,qtd:1},{matId:48,qtd:0.05},{matId:8,qtd:1},{matId:34,qtd:1},{matId:179,qtd:1}]  // Autoligado Estético
   };
   // Custo de laboratório (alinhador transparente é fabricado fora — não é "insumo" de estoque
   // consumido na consulta, é encomendado por caso, então entra como laboratório).
@@ -6739,6 +6740,7 @@ async function injetarNovosMatsOrto(){
     cfg.migr_manut_v2 = true;
     migrou = true;
     // Recalcula preços de manutenção como % da instalação
+
     const _INST_MANUT_V2 = {44:208, 202:209, 203:210, 204:211, 43:212, 51:213, 207:214, 37:38};
     const _pct_v2 = cfg.pct_manut || 15;
     Object.entries(_INST_MANUT_V2).forEach(([instId, manutId])=>{
@@ -6748,6 +6750,23 @@ async function injetarNovosMatsOrto(){
         _manut.precoFinal = parseFloat((_inst.precoFinal * _pct_v2 / 100).toFixed(2));
       }
     });
+  }
+
+  // ── MIGRAÇÃO v3: adiciona sugador a todos os procedimentos existentes exceto manutenção
+  if(!cfg.migr_sugador_v1){
+    const _SUG_ID = 179;
+    const _SEM_SUG = new Set([13,38,45,208,209,210,211,212,213,214]);
+    Object.keys(procInsumos).forEach(function(pid){
+      const id = Number(pid);
+      if(_SEM_SUG.has(id)) return;
+      const lista = procInsumos[id];
+      if(!Array.isArray(lista)) return;
+      if(!lista.some(function(i){ return i.matId===_SUG_ID; })){
+        lista.push({matId:_SUG_ID,qtd:1});
+      }
+    });
+    cfg.migr_sugador_v1 = true;
+    migrou = true;
   }
 
   let alterou = migrou;
@@ -8839,6 +8858,8 @@ const DEFAULT_PROC_INSUMOS_DATA = {
   101:[{matId:33,qtd:2},{matId:10,qtd:1},{matId:6,qtd:1},{matId:86,qtd:1},{matId:27,qtd:1},{matId:30,qtd:6},{matId:8,qtd:1},{matId:34,qtd:2}],
   102:[{matId:88,qtd:1},{matId:49,qtd:2},{matId:30,qtd:2},{matId:8,qtd:1},{matId:34,qtd:1},{matId:35,qtd:1}],
 };
+// IDs 13 (Manutenção de Facetas), 38 (Manutenção Mensal Orto genérica), 45 (Manutenção — Troca de Fio) não recebem sugador
+(function(){const _s=new Set([13,38,45]);Object.keys(DEFAULT_PROC_INSUMOS_DATA).forEach(function(k){if(!_s.has(Number(k)))DEFAULT_PROC_INSUMOS_DATA[k].push({matId:179,qtd:1});});})();
 
 // Procedimentos padrão completos (51 procedimentos do Pétala)
 const DEFAULT_PROCS_FIN = [
