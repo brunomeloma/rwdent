@@ -1911,8 +1911,8 @@ select, textarea {
 
       <!-- SUB-ABAS VENDAS -->
       <div style="display:flex;gap:0;border-bottom:2px solid var(--rose-light);background:#fff;padding:0 16px;flex-shrink:0;" id="vendas-subtabs">
-        <button class="vendas-subtab active" onclick="vendasSubTab('aparelhos')"><i class="ti ti-dental"></i> Aparelhos</button>
-        <button class="vendas-subtab" onclick="vendasSubTab('alinhador')"><i class="ti ti-sparkles"></i> Alinhador Invisível</button>
+        <button class="vendas-subtab rhaiza-only" onclick="vendasSubTab('aparelhos')"><i class="ti ti-dental"></i> Aparelhos</button>
+        <button class="vendas-subtab rhaiza-only" onclick="vendasSubTab('alinhador')"><i class="ti ti-sparkles"></i> Alinhador Invisível</button>
         <button class="vendas-subtab" onclick="vendasSubTab('vr')"><i class="ti ti-shopping-cart"></i> Venda Rápida</button>
       </div>
 
@@ -2909,6 +2909,7 @@ let editingPatientId = null;
 let currentUser = null;
 let clinicaId = null;       // ID da clínica do usuário logado (multi-tenant)
 let clinicaData = null;     // Dados completos da clínica
+let _isRhaizaClinic = false; // Recursos exclusivos da clínica Rhaiza
 const _ADMIN_IDS = ['09f21b22-76c8-4aee-8af4-9fc292ff08d4','b39d8b67-0610-4708-9733-104db7f0307b'];
 
 // Calendário state
@@ -3014,9 +3015,10 @@ async function checkClinicaApproval(){
   // Atualiza nome da clínica na interface
   const el = document.getElementById('header-clinica');
   if(el) el.textContent = cli.nome_cli || 'Minha Clínica';
-  // Alinhador Transparente só aparece para a clínica principal
+  // Recursos exclusivos da Rhaiza: alinhadores e aparelhos
   const _isMainClinic = cli.user_id === 'b39d8b67-0610-4708-9733-104db7f0307b';
-  document.querySelectorAll('[data-tab="invisalign_apresentacao"], [onclick*="invisalign"]').forEach(b=>{
+  _isRhaizaClinic = _isMainClinic;
+  document.querySelectorAll('[data-tab="invisalign_apresentacao"], [onclick*="invisalign"], .rhaiza-only').forEach(b=>{
     b.style.display = _isMainClinic ? '' : 'none';
   });
   // Admin panel — apenas para o administrador
@@ -3378,6 +3380,7 @@ function toggleMobileMore(){
 }
 
 function switchTab(tab){
+  if(tab==='invisalign_apresentacao' && !_isRhaizaClinic) tab='home';
   ['home','agendar','lista','calendario','pacientes','profissionais','configuracoes','financeiro','procedimentos_fin','materiais_fin','estoque_fin','vendas_fin','venda_rapida','resgate','invisalign_apresentacao','admin'].forEach(t=>{
     const el=document.getElementById('tab-'+t);
     if(el) el.style.display = t===tab?'':'none';
@@ -3418,6 +3421,8 @@ function switchTab(tab){
     else atualizarPrecosAlinhador();
   }
   if(tab==='venda_rapida'){
+    // Para não-Rhaiza, garante que abre na aba Venda Rápida (não Aparelhos)
+    if(!_isRhaizaClinic) vendasSubTab('vr');
     // No mobile, foca busca automaticamente
     setTimeout(()=>{ const _s=document.getElementById('vr-search-m'); if(_s&&window.innerWidth<=768) _s.focus(); },200);
   }
@@ -9275,6 +9280,7 @@ async function vrFinalizarMobile(){
 }
 
 function vendasSubTab(tab){
+  if(!_isRhaizaClinic && (tab==='aparelhos'||tab==='alinhador')) tab='vr';
   document.querySelectorAll('.vendas-subtab').forEach(b=>b.classList.remove('active'));
   document.querySelector(`.vendas-subtab[onclick*="'${tab}'"]`)?.classList.add('active');
   document.getElementById('vendas-sub-aparelhos').style.display = tab==='aparelhos'?'':'none';
