@@ -1,88 +1,74 @@
-const { OpenAI }      = require('openai');
 const { createClient } = require('@supabase/supabase-js');
 
+const GEMINI_MODEL    = 'gemini-1.5-flash';
+const GEMINI_URL      = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
 const MAX_HISTORY     = 12;
 const MAX_CONTENT_LEN = 800;
 const MAX_TOOL_ROUNDS = 5;
 
 // ══════════════════════════════════════════════
-// FERRAMENTAS (tool calling OpenAI)
+// DECLARAÇÕES DE FUNÇÃO (formato nativo Gemini)
 // ══════════════════════════════════════════════
-const TOOLS = [
+const FUNCTION_DECLARATIONS = [
   {
-    type: 'function',
-    function: {
-      name: 'buscar_paciente',
-      description: 'Busca pacientes por nome ou telefone. Leitura — não requer confirmação.',
-      parameters: {
-        type: 'object',
-        properties: {
-          query: { type: 'string', description: 'Nome (parcial) ou telefone do paciente' }
-        },
-        required: ['query']
+    name: 'buscar_paciente',
+    description: 'Busca pacientes por nome ou telefone. Leitura — não requer confirmação.',
+    parameters: {
+      type: 'object',
+      properties: {
+        query: { type: 'string', description: 'Nome (parcial) ou telefone do paciente' }
+      },
+      required: ['query']
+    }
+  },
+  {
+    name: 'listar_pacientes',
+    description: 'Lista os pacientes cadastrados na clínica. Leitura — não requer confirmação.',
+    parameters: {
+      type: 'object',
+      properties: {
+        limite: { type: 'integer', description: 'Quantidade (padrão: 10, máximo: 20)' }
       }
     }
   },
   {
-    type: 'function',
-    function: {
-      name: 'listar_pacientes',
-      description: 'Lista os pacientes cadastrados na clínica. Leitura — não requer confirmação.',
-      parameters: {
-        type: 'object',
-        properties: {
-          limite: { type: 'integer', description: 'Quantidade (padrão: 10, máximo: 20)' }
-        }
+    name: 'cadastrar_paciente',
+    description: 'Cadastra um novo paciente. ESCRITA — só chame após confirmação explícita do usuário.',
+    parameters: {
+      type: 'object',
+      properties: {
+        nome:            { type: 'string', description: 'Nome completo' },
+        telefone:        { type: 'string', description: 'Telefone (somente números)' },
+        email:           { type: 'string', description: 'E-mail (opcional)' },
+        data_nascimento: { type: 'string', description: 'Data de nascimento YYYY-MM-DD (opcional)' }
+      },
+      required: ['nome']
+    }
+  },
+  {
+    name: 'buscar_agenda_dia',
+    description: 'Retorna os agendamentos de um dia. Leitura — não requer confirmação.',
+    parameters: {
+      type: 'object',
+      properties: {
+        data: { type: 'string', description: 'Data YYYY-MM-DD (omitir = hoje)' }
       }
     }
   },
   {
-    type: 'function',
-    function: {
-      name: 'cadastrar_paciente',
-      description: 'Cadastra um novo paciente. ESCRITA — só chame após confirmação explícita do usuário.',
-      parameters: {
-        type: 'object',
-        properties: {
-          nome:            { type: 'string', description: 'Nome completo' },
-          telefone:        { type: 'string', description: 'Telefone (somente números)' },
-          email:           { type: 'string', description: 'E-mail (opcional)' },
-          data_nascimento: { type: 'string', description: 'Data de nascimento YYYY-MM-DD (opcional)' }
-        },
-        required: ['nome']
-      }
-    }
-  },
-  {
-    type: 'function',
-    function: {
-      name: 'buscar_agenda_dia',
-      description: 'Retorna os agendamentos de um dia. Leitura — não requer confirmação.',
-      parameters: {
-        type: 'object',
-        properties: {
-          data: { type: 'string', description: 'Data YYYY-MM-DD (omitir = hoje)' }
-        }
-      }
-    }
-  },
-  {
-    type: 'function',
-    function: {
-      name: 'criar_agendamento',
-      description: 'Cria um novo agendamento. ESCRITA — só chame após confirmação explícita do usuário.',
-      parameters: {
-        type: 'object',
-        properties: {
-          nome:         { type: 'string',  description: 'Nome do paciente' },
-          paciente_id:  { type: 'integer', description: 'ID do paciente (se conhecido)' },
-          telefone:     { type: 'string',  description: 'Telefone do paciente' },
-          data:         { type: 'string',  description: 'Data YYYY-MM-DD' },
-          horario:      { type: 'string',  description: 'Horário HH:MM' },
-          procedimento: { type: 'string',  description: 'Procedimento ou motivo da consulta' }
-        },
-        required: ['nome', 'data', 'horario']
-      }
+    name: 'criar_agendamento',
+    description: 'Cria um novo agendamento. ESCRITA — só chame após confirmação explícita do usuário.',
+    parameters: {
+      type: 'object',
+      properties: {
+        nome:         { type: 'string',  description: 'Nome do paciente' },
+        paciente_id:  { type: 'integer', description: 'ID do paciente (se conhecido)' },
+        telefone:     { type: 'string',  description: 'Telefone do paciente' },
+        data:         { type: 'string',  description: 'Data YYYY-MM-DD' },
+        horario:      { type: 'string',  description: 'Horário HH:MM' },
+        procedimento: { type: 'string',  description: 'Procedimento ou motivo da consulta' }
+      },
+      required: ['nome', 'data', 'horario']
     }
   }
 ];
@@ -204,7 +190,6 @@ async function runTool(name, args, sb, clinicId) {
       const horario = String(args.horario || '').trim();
       if (!nome || !data || !horario) throw new Error('Nome, data e horário são obrigatórios.');
 
-      // Busca o profissional principal da clínica
       const { data: profs } = await sb
         .from('profissionais')
         .select('id, nome, cor')
@@ -240,6 +225,26 @@ async function runTool(name, args, sb, clinicId) {
 }
 
 // ══════════════════════════════════════════════
+// CHAMADA GEMINI REST
+// ══════════════════════════════════════════════
+async function callGemini(apiKey, payload) {
+  const url = `${GEMINI_URL}?key=${apiKey}`;
+  const resp = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+
+  if (!resp.ok) {
+    const text = await resp.text().catch(() => '');
+    const snippet = text.slice(0, 300);
+    throw new Error(`HTTP ${resp.status}${snippet ? ': ' + snippet : ' (sem corpo)'}`);
+  }
+
+  return resp.json();
+}
+
+// ══════════════════════════════════════════════
 // HANDLER PRINCIPAL
 // ══════════════════════════════════════════════
 module.exports = async function handler(req, res) {
@@ -253,9 +258,9 @@ module.exports = async function handler(req, res) {
   if (!Array.isArray(messages) || messages.length === 0)
     return res.status(400).json({ error: 'Requisição inválida.' });
 
-  // ── Verificar autenticação e obter clinicId ──
-  let clinicId   = null;
-  let authedSb   = null;
+  // ── Autenticação e clinicId ──
+  let clinicId = null;
+  let authedSb = null;
 
   if (accessToken && process.env.SUPABASE_URL && process.env.SUPABASE_ANON_KEY) {
     try {
@@ -277,72 +282,84 @@ module.exports = async function handler(req, res) {
     } catch (_) {}
   }
 
-  // Monta histórico para OpenAI
-  const history = messages
+  // ── Converter histórico para formato Gemini ──
+  // Gemini usa role "user"/"model" (não "assistant")
+  // system_instruction é separado das contents
+  const contents = messages
     .slice(-MAX_HISTORY)
     .filter(m => m && ['user', 'assistant'].includes(m.role) && typeof m.content === 'string')
-    .map(m => ({ role: m.role, content: m.content.slice(0, MAX_CONTENT_LEN) }));
+    .map(m => ({
+      role: m.role === 'assistant' ? 'model' : 'user',
+      parts: [{ text: m.content.slice(0, MAX_CONTENT_LEN) }]
+    }));
 
-  if (!history.length || history[history.length - 1].role !== 'user')
+  if (!contents.length || contents[contents.length - 1].role !== 'user')
     return res.status(400).json({ error: 'Requisição inválida.' });
 
-  const GEMINI_MODEL = 'gemini-1.5-flash';
-  const openai = new OpenAI({
-    apiKey:  process.env.GEMINI_API_KEY,
-    baseURL: 'https://generativelanguage.googleapis.com/v1beta/openai/'
-  });
+  const withTools = !!(clinicId && authedSb);
 
-  // Ferramentas só disponíveis se autenticado
-  const tools = (clinicId && authedSb) ? TOOLS : undefined;
+  const payload = {
+    system_instruction: { parts: [{ text: buildSystemPrompt(context) }] },
+    contents,
+    generationConfig: { maxOutputTokens: 500, temperature: 0.3 }
+  };
 
-  let oaiMessages = [
-    { role: 'system', content: buildSystemPrompt(context) },
-    ...history
-  ];
+  if (withTools) {
+    payload.tools = [{ function_declarations: FUNCTION_DECLARATIONS }];
+  }
 
-  console.log(`[AI] provider=gemini model=${GEMINI_MODEL} tools=${tools ? TOOLS.length : 0} clinicId=${clinicId}`);
+  console.log(`[AI] provider=gemini model=${GEMINI_MODEL} tools=${withTools} clinicId=${clinicId}`);
 
   try {
     let rounds = 0;
-    let response;
+    let geminiData;
 
     while (rounds++ < MAX_TOOL_ROUNDS) {
-      response = await openai.chat.completions.create({
-        model:        GEMINI_MODEL,
-        messages:     oaiMessages,
-        tools:        tools || undefined,
-        tool_choice:  tools ? 'auto' : undefined,
-        max_tokens:   500,
-        temperature:  0.3
-      });
+      geminiData = await callGemini(process.env.GEMINI_API_KEY, payload);
 
-      const choice = response.choices[0];
-      if (choice.finish_reason !== 'tool_calls') break;
+      const candidate = geminiData.candidates?.[0];
+      if (!candidate) throw new Error('Resposta vazia do modelo.');
 
-      oaiMessages.push(choice.message);
+      const parts = candidate.content?.parts || [];
+      const fnCalls = parts.filter(p => p.functionCall);
 
-      for (const tc of (choice.message.tool_calls || [])) {
+      // Sem chamadas de ferramenta → resposta final
+      if (!fnCalls.length) break;
+
+      // Adiciona resposta do modelo (com functionCalls) ao histórico
+      payload.contents.push({ role: 'model', parts });
+
+      // Executa cada ferramenta e coleta respostas
+      const responseParts = [];
+      for (const part of fnCalls) {
+        const { name, args } = part.functionCall;
         let result;
         try {
           if (!clinicId || !authedSb) {
             result = 'Erro: sessão expirada. Recarregue a página.';
           } else {
-            const args = JSON.parse(tc.function.arguments || '{}');
-            result = await runTool(tc.function.name, args, authedSb, clinicId);
+            result = await runTool(name, args || {}, authedSb, clinicId);
           }
         } catch (e) {
           result = `Erro: ${e.message}`;
         }
-        oaiMessages.push({ role: 'tool', tool_call_id: tc.id, content: result });
+        console.log(`[AI] tool=${name} result_len=${String(result).length}`);
+        responseParts.push({
+          functionResponse: { name, response: { content: result } }
+        });
       }
+
+      // Envia respostas das ferramentas como mensagem "user" (formato Gemini)
+      payload.contents.push({ role: 'user', parts: responseParts });
     }
 
-    const reply = response.choices[0].message.content?.trim() || 'Ação executada.';
+    const finalParts = geminiData.candidates?.[0]?.content?.parts || [];
+    const reply = finalParts.find(p => p.text)?.text?.trim() || 'Ação executada.';
     return res.status(200).json({ reply });
 
   } catch (err) {
-    const detail = err?.status ? `HTTP ${err.status}: ${err?.message || ''}` : (err?.message || String(err));
-    console.error(`[AI] provider=gemini model=${GEMINI_MODEL} error: ${detail}`);
+    const detail = err?.message || String(err);
+    console.error(`[AI] provider=gemini model=${GEMINI_MODEL} ERRO: ${detail}`);
     return res.status(500).json({ error: `Erro ao processar (${detail}). Tente novamente.` });
   }
 };
