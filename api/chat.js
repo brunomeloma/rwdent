@@ -1,6 +1,16 @@
 const { OpenAI } = require('openai');
 
-const SYSTEM_PROMPT = `Você é o Assistente Rhaiza, assistente virtual da Clínica Odontológica da Dra. Rhaiza Barroso.
+const MAX_HISTORY = 10;
+const MAX_CONTENT_LENGTH = 800;
+
+function buildSystemPrompt(ctx) {
+  const clinicName  = String(ctx?.clinicName  || 'Clínica Odontológica').slice(0, 80);
+  const dentistName = String(ctx?.dentistName || 'Dentista').slice(0, 60);
+  const wppLine     = ctx?.phone
+    ? `- Quando fizer sentido, convide para agendar pelo WhatsApp: https://wa.me/55${ctx.phone.replace(/\D/g,'')}`
+    : '- Quando fizer sentido, convide para agendar uma consulta.';
+
+  return `Você é o Assistente IA da ${clinicName}, clínica odontológica de ${dentistName}.
 
 Diretrizes obrigatórias:
 - Responda SEMPRE em português do Brasil.
@@ -8,14 +18,12 @@ Diretrizes obrigatórias:
 - NUNCA dê diagnóstico definitivo.
 - NUNCA prescreva nem sugira medicação ou dosagem.
 - Sempre lembre que sua orientação NÃO substitui avaliação odontológica presencial.
-- Em caso de dor forte, trauma, inchaço, febre ou sangramento, oriente buscar atendimento odontológico URGENTE imediatamente — deixe isso bem claro.
-- Quando fizer sentido no contexto, convide o usuário para agendar pelo WhatsApp: https://wa.me/5599982706186
-- Foque apenas em temas odontológicos: consultas, limpeza, clareamento, ortodontia, implantes, facetas, tratamento de canal, odontopediatria, urgências e dúvidas gerais sobre saúde bucal.
-- Para perguntas completamente fora da área odontológica, redirecione gentilmente.
-- Respostas curtas e objetivas (no máximo 4 parágrafos). Prefira marcadores quando listar itens.`;
-
-const MAX_HISTORY = 10;
-const MAX_CONTENT_LENGTH = 800;
+- Em caso de dor forte, trauma, inchaço, febre ou sangramento, oriente buscar atendimento odontológico URGENTE imediatamente.
+${wppLine}
+- Foque em temas odontológicos: consultas, limpeza, clareamento, ortodontia, implantes, facetas, canal, odontopediatria, urgências e saúde bucal em geral.
+- Para perguntas fora da área, redirecione gentilmente.
+- Respostas curtas e objetivas (no máximo 4 parágrafos). Use marcadores quando listar itens.`;
+}
 
 module.exports = async function handler(req, res) {
   res.setHeader('Content-Type', 'application/json');
@@ -29,13 +37,12 @@ module.exports = async function handler(req, res) {
     return res.status(500).json({ error: 'Serviço temporariamente indisponível.' });
   }
 
-  const { messages } = req.body || {};
+  const { messages, context } = req.body || {};
 
   if (!Array.isArray(messages) || messages.length === 0) {
     return res.status(400).json({ error: 'Requisição inválida.' });
   }
 
-  // Sanitize and limit history
   const history = messages
     .slice(-MAX_HISTORY)
     .filter(m => m && (m.role === 'user' || m.role === 'assistant') && typeof m.content === 'string')
@@ -53,7 +60,7 @@ module.exports = async function handler(req, res) {
 
     const completion = await openai.chat.completions.create({
       model: 'gpt-4o-mini',
-      messages: [{ role: 'system', content: SYSTEM_PROMPT }, ...history],
+      messages: [{ role: 'system', content: buildSystemPrompt(context) }, ...history],
       max_tokens: 450,
       temperature: 0.7,
     });
@@ -66,7 +73,7 @@ module.exports = async function handler(req, res) {
   } catch (err) {
     console.error('OpenAI error:', err?.message || err);
     return res.status(500).json({
-      error: 'Erro ao processar sua mensagem. Tente novamente ou fale direto pelo WhatsApp.'
+      error: 'Erro ao processar sua mensagem. Tente novamente em instantes.'
     });
   }
 };

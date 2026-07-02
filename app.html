@@ -13441,5 +13441,235 @@ document.addEventListener('keydown', e=>{
   </div>
 </div>
 
+
+<!-- ══════════════════════════════════════════════
+     ASSISTENTE IA — Sistema de Gestão RWDent
+══════════════════════════════════════════════ -->
+<style>
+#ai-btn{
+  position:fixed;bottom:24px;right:24px;z-index:9999;
+  width:54px;height:54px;border-radius:50%;
+  background:linear-gradient(135deg,var(--rose,#d4735a),var(--rose-dark,#7a3020));
+  border:none;cursor:pointer;
+  box-shadow:0 4px 18px rgba(212,115,90,.45);
+  display:flex;align-items:center;justify-content:center;
+  transition:transform .22s,box-shadow .22s;
+  color:#fff;font-size:22px;
+}
+#ai-btn:hover{transform:scale(1.1);box-shadow:0 6px 26px rgba(212,115,90,.55);}
+#ai-btn .ai-notif{
+  position:absolute;top:-1px;right:-1px;
+  width:14px;height:14px;border-radius:50%;
+  background:#e53e3e;border:2px solid #fff;
+  animation:aipulse 2s infinite;
+}
+@keyframes aipulse{0%,100%{transform:scale(1);}50%{transform:scale(1.25);}}
+
+#ai-box{
+  position:fixed;bottom:88px;right:24px;z-index:9998;
+  width:340px;max-width:calc(100vw - 32px);
+  background:#fff;border-radius:16px;
+  box-shadow:0 8px 40px rgba(122,48,32,.16),0 2px 12px rgba(0,0,0,.08);
+  display:flex;flex-direction:column;overflow:hidden;
+  transform:scale(.92) translateY(20px);opacity:0;pointer-events:none;
+  transition:transform .26s cubic-bezier(.34,1.56,.64,1),opacity .2s;
+  max-height:min(540px, calc(100vh - 110px));
+}
+#ai-box.open{transform:scale(1) translateY(0);opacity:1;pointer-events:auto;}
+
+.ai-head{
+  background:linear-gradient(135deg,var(--rose-dark,#7a3020),var(--rose,#d4735a));
+  padding:12px 14px;display:flex;align-items:center;gap:10px;flex-shrink:0;
+}
+.ai-head-av{
+  width:36px;height:36px;border-radius:50%;flex-shrink:0;
+  background:rgba(255,255,255,.18);
+  display:flex;align-items:center;justify-content:center;
+  font-size:17px;color:#fff;
+}
+.ai-head-info{flex:1;min-width:0;}
+.ai-head-name{font-size:13px;font-weight:800;color:#fff;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.ai-head-status{font-size:10.5px;color:rgba(255,255,255,.8);display:flex;align-items:center;gap:4px;margin-top:2px;}
+.ai-head-status::before{content:'';width:6px;height:6px;border-radius:50%;background:#4ade80;flex-shrink:0;}
+.ai-head-close{background:none;border:none;color:rgba(255,255,255,.7);font-size:18px;cursor:pointer;padding:2px;line-height:1;transition:color .15s;}
+.ai-head-close:hover{color:#fff;}
+
+.ai-msgs{
+  flex:1;overflow-y:auto;padding:12px 10px;
+  display:flex;flex-direction:column;gap:9px;
+  scroll-behavior:smooth;
+}
+.ai-msgs::-webkit-scrollbar{width:3px;}
+.ai-msgs::-webkit-scrollbar-thumb{background:#f0cfc4;border-radius:3px;}
+.ai-msg{display:flex;gap:7px;max-width:92%;}
+.ai-msg.bot{align-self:flex-start;}
+.ai-msg.usr{align-self:flex-end;flex-direction:row-reverse;}
+.ai-msg-av{width:26px;height:26px;border-radius:50%;flex-shrink:0;margin-top:2px;
+  background:linear-gradient(135deg,#d4735a,#7a3020);
+  display:flex;align-items:center;justify-content:center;font-size:12px;color:#fff;}
+.ai-bubble{padding:8px 11px;border-radius:13px;font-size:12.5px;line-height:1.55;}
+.ai-msg.bot .ai-bubble{background:#fdf0eb;color:#3a1a10;border-radius:3px 13px 13px 13px;}
+.ai-msg.usr .ai-bubble{background:linear-gradient(135deg,#d4735a,#a05040);color:#fff;border-radius:13px 3px 13px 13px;}
+.ai-bubble a{color:inherit;font-weight:700;text-decoration:underline;}
+
+.ai-typing-bubble{display:flex;align-items:center;gap:4px;padding:3px 2px;}
+.ai-typing-bubble span{width:6px;height:6px;border-radius:50%;background:#d4735a;opacity:.55;animation:aidot 1.3s ease-in-out infinite;}
+.ai-typing-bubble span:nth-child(2){animation-delay:.2s;}
+.ai-typing-bubble span:nth-child(3){animation-delay:.4s;}
+@keyframes aidot{0%,80%,100%{transform:translateY(0);opacity:.55;}40%{transform:translateY(-6px);opacity:1;}}
+
+.ai-disclaimer{font-size:9.5px;color:#b09080;text-align:center;padding:3px 10px 7px;flex-shrink:0;line-height:1.4;}
+.ai-foot{display:flex;gap:5px;padding:7px 10px 10px;border-top:1px solid #fae0d8;flex-shrink:0;}
+#ai-input{
+  flex:1;border:1.5px solid #f0cfc4;border-radius:20px;
+  padding:7px 12px;font-size:12.5px;outline:none;
+  font-family:inherit;color:#3a1a10;background:#fff;
+  transition:border-color .18s;
+}
+#ai-input:focus{border-color:#d4735a;}
+#ai-input::placeholder{color:#c0a090;}
+#ai-input:disabled{background:#faf0ec;cursor:not-allowed;}
+#ai-send{
+  width:34px;height:34px;border-radius:50%;
+  background:linear-gradient(135deg,#d4735a,#a05040);
+  border:none;color:#fff;font-size:15px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;transition:transform .18s,box-shadow .18s;
+  box-shadow:0 2px 7px rgba(212,115,90,.35);
+}
+#ai-send:hover{transform:scale(1.08);}
+#ai-send:disabled{opacity:.45;cursor:not-allowed;transform:none!important;}
+
+@media(max-width:480px){
+  #ai-box{right:10px;bottom:80px;width:calc(100vw - 20px);}
+  #ai-btn{right:10px;bottom:14px;width:50px;height:50px;}
+}
+</style>
+
+<!-- Botão flutuante -->
+<button id="ai-btn" onclick="aiToggle()" aria-label="Assistente IA">
+  <i class="ti ti-sparkles" id="ai-btn-icon"></i>
+  <span class="ai-notif" id="ai-notif"></span>
+</button>
+
+<!-- Janela do chat -->
+<div id="ai-box" role="dialog" aria-label="Assistente IA">
+  <div class="ai-head">
+    <div class="ai-head-av"><i class="ti ti-robot"></i></div>
+    <div class="ai-head-info">
+      <p class="ai-head-name" id="ai-head-name">Assistente IA</p>
+      <div class="ai-head-status">Online</div>
+    </div>
+    <button class="ai-head-close" onclick="aiToggle()" aria-label="Fechar"><i class="ti ti-x"></i></button>
+  </div>
+  <div class="ai-msgs" id="ai-msgs"></div>
+  <p class="ai-disclaimer">⚕️ Não substitui avaliação clínica presencial.</p>
+  <div class="ai-foot">
+    <input id="ai-input" type="text" placeholder="Pergunte algo..." maxlength="300"
+      onkeydown="if(event.key==='Enter')aiSend()"/>
+    <button id="ai-send" onclick="aiSend()" aria-label="Enviar"><i class="ti ti-send"></i></button>
+  </div>
+</div>
+
+<script>
+(function(){
+  let aiOpened = false, aiFirstOpen = true, aiLoading = false;
+  const aiHistory = [];
+
+  function getCtx(){
+    return {
+      clinicName:  (clinicaData?.nome_cli  || '').trim() || 'Clínica',
+      dentistName: (clinicaData?.nome_resp || '').trim() || 'Dentista',
+      phone:       (clinicaData?.telefone  || '').replace(/\D/g,'') || ''
+    };
+  }
+
+  window.aiToggle = function(){
+    aiOpened = !aiOpened;
+    const box   = document.getElementById('ai-box');
+    const icon  = document.getElementById('ai-btn-icon');
+    const notif = document.getElementById('ai-notif');
+    box.classList.toggle('open', aiOpened);
+    icon.className = aiOpened ? 'ti ti-x' : 'ti ti-sparkles';
+    if(notif) notif.style.display = 'none';
+    if(aiOpened && aiFirstOpen){
+      aiFirstOpen = false;
+      const ctx = getCtx();
+      document.getElementById('ai-head-name').textContent = 'IA — ' + ctx.clinicName;
+      setTimeout(()=>{
+        aiAddMsg('bot', `Olá! 😊 Sou o assistente IA da ${ctx.clinicName}.\n\nComo posso ajudar?`);
+      }, 320);
+    }
+  };
+
+  window.aiSend = function(){
+    if(aiLoading) return;
+    const inp  = document.getElementById('ai-input');
+    const text = inp.value.trim();
+    if(!text) return;
+    inp.value = '';
+    aiAddMsg('usr', escHtml(text));
+    aiHistory.push({ role:'user', content: text });
+    aiCallApi();
+  };
+
+  function aiAddMsg(type, html){
+    const msgs = document.getElementById('ai-msgs');
+    const div  = document.createElement('div');
+    div.className = 'ai-msg ' + type;
+    if(type === 'bot'){
+      div.innerHTML = `<div class="ai-msg-av"><i class="ti ti-robot"></i></div><div class="ai-bubble">${html.replace(/\n/g,'<br>')}</div>`;
+    } else {
+      div.innerHTML = `<div class="ai-bubble">${html}</div>`;
+    }
+    msgs.appendChild(div);
+    msgs.scrollTop = msgs.scrollHeight;
+  }
+
+  function aiShowTyping(){
+    const msgs = document.getElementById('ai-msgs');
+    const div  = document.createElement('div');
+    div.className = 'ai-msg bot'; div.id = 'ai-typing';
+    div.innerHTML = `<div class="ai-msg-av"><i class="ti ti-robot"></i></div><div class="ai-bubble"><div class="ai-typing-bubble"><span></span><span></span><span></span></div></div>`;
+    msgs.appendChild(div);
+    msgs.scrollTop = msgs.scrollHeight;
+  }
+  function aiHideTyping(){ const t=document.getElementById('ai-typing'); if(t)t.remove(); }
+
+  function setEnabled(on){
+    document.getElementById('ai-input').disabled = !on;
+    document.getElementById('ai-send').disabled  = !on;
+  }
+
+  async function aiCallApi(){
+    aiLoading = true;
+    setEnabled(false);
+    aiShowTyping();
+    try {
+      const res = await fetch('/api/chat',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ messages: aiHistory, context: getCtx() })
+      });
+      aiHideTyping();
+      if(!res.ok){ const e=await res.json().catch(()=>({})); throw new Error(e.error||'Erro '+res.status); }
+      const data  = await res.json();
+      const reply = data.reply || 'Não consegui responder agora. Tente novamente.';
+      aiHistory.push({ role:'assistant', content: reply });
+      aiAddMsg('bot', escHtml(reply).replace(/\n/g,'<br>'));
+    } catch(e){
+      aiHideTyping();
+      aiAddMsg('bot','Ops, problema ao conectar. 😕 Tente novamente em instantes.');
+    } finally {
+      aiLoading = false;
+      setEnabled(true);
+      document.getElementById('ai-input').focus();
+    }
+  }
+
+  function escHtml(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+})();
+</script>
+<!-- ── fim assistente IA ── -->
 </body>
 </html>
