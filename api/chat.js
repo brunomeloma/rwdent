@@ -177,18 +177,19 @@ module.exports = async function handler(req, res) {
     console.log('[AI] auth: SUPABASE_URL ou SUPABASE_ANON_KEY ausente');
   } else {
     try {
-      authedSb = createClient(
-        supabaseUrl,
-        supabaseAnon,
-        { global: { headers: { Authorization: `Bearer ${cleanToken}` } } }
-      );
-      const { data: { user }, error: authErr } = await authedSb.auth.getUser();
+      // Valida o JWT passando o token explicitamente (correto para Supabase v2 no servidor)
+      const sb = createClient(supabaseUrl, supabaseAnon);
+      const { data: { user }, error: authErr } = await sb.auth.getUser(cleanToken);
       if (authErr) {
         console.log(`[AI] auth error: ${authErr.message}`);
       } else if (!user) {
         console.log('[AI] auth: usuário não encontrado para o token');
       } else {
         console.log(`[AI] auth: user=${user.id}`);
+        // Cria cliente autenticado para as queries do banco
+        authedSb = createClient(supabaseUrl, supabaseAnon, {
+          global: { headers: { Authorization: `Bearer ${cleanToken}` } }
+        });
         const { data: cli, error: cliErr } = await authedSb
           .from('clinicas')
           .select('id')
