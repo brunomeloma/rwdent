@@ -2991,6 +2991,7 @@ async function doLogin(){
   document.getElementById('login-screen').style.display='none';
   document.getElementById('app').style.display='block';
   _sessionStartTimer();
+  window.aiOnLogin?.();
 }
 
 async function checkClinicaApproval(){
@@ -3182,6 +3183,7 @@ async function doLogout(){
   document.getElementById('app').style.display='none';
   document.getElementById('login-screen').style.display='flex';
   document.getElementById('login-pass').value='';
+  window.aiOnLogout?.();
 }
 
 // Timeout de inatividade — desloga após 30 min sem interação
@@ -3229,6 +3231,7 @@ function _sessionStartTimer(){
         document.getElementById('login-screen').style.display='none';
         document.getElementById('app').style.display='block';
         _sessionStartTimer();
+        window.aiOnLogin?.();
         return;
       }
     }
@@ -13443,258 +13446,305 @@ document.addEventListener('keydown', e=>{
 
 
 <!-- ══════════════════════════════════════════════
-     ASSISTENTE IA — Sistema de Gestão RWDent
+     ASSISTENTE IA — RWDent (oculto até login)
 ══════════════════════════════════════════════ -->
 <style>
+/* Botão flutuante — oculto por padrão, exibido após login */
 #ai-btn{
-  position:fixed;bottom:24px;right:24px;z-index:9999;
-  width:54px;height:54px;border-radius:50%;
-  background:linear-gradient(135deg,var(--rose,#d4735a),var(--rose-dark,#7a3020));
+  display:none;
+  position:fixed;bottom:22px;right:20px;z-index:9200;
+  width:48px;height:48px;border-radius:50%;
+  background:linear-gradient(135deg,#d4735a,#8a3520);
   border:none;cursor:pointer;
-  box-shadow:0 4px 18px rgba(212,115,90,.45);
-  display:flex;align-items:center;justify-content:center;
-  transition:transform .22s,box-shadow .22s;
-  color:#fff;font-size:22px;
+  box-shadow:0 3px 14px rgba(212,115,90,.5);
+  align-items:center;justify-content:center;
+  color:#fff;font-size:20px;
+  transition:transform .2s,box-shadow .2s;
 }
-#ai-btn:hover{transform:scale(1.1);box-shadow:0 6px 26px rgba(212,115,90,.55);}
-#ai-btn .ai-notif{
-  position:absolute;top:-1px;right:-1px;
-  width:14px;height:14px;border-radius:50%;
-  background:#e53e3e;border:2px solid #fff;
-  animation:aipulse 2s infinite;
-}
-@keyframes aipulse{0%,100%{transform:scale(1);}50%{transform:scale(1.25);}}
+#ai-btn.ai-visible{display:flex;}
+#ai-btn:hover{transform:scale(1.08);box-shadow:0 5px 20px rgba(212,115,90,.6);}
 
+/* Janela do chat */
 #ai-box{
-  position:fixed;bottom:88px;right:24px;z-index:9998;
-  width:340px;max-width:calc(100vw - 32px);
-  background:#fff;border-radius:16px;
-  box-shadow:0 8px 40px rgba(122,48,32,.16),0 2px 12px rgba(0,0,0,.08);
-  display:flex;flex-direction:column;overflow:hidden;
-  transform:scale(.92) translateY(20px);opacity:0;pointer-events:none;
-  transition:transform .26s cubic-bezier(.34,1.56,.64,1),opacity .2s;
-  max-height:min(540px, calc(100vh - 110px));
+  display:none;
+  position:fixed;bottom:80px;right:20px;z-index:9199;
+  width:316px;max-width:calc(100vw - 24px);
+  background:#fff;border-radius:14px;
+  box-shadow:0 6px 32px rgba(90,30,10,.14),0 1px 8px rgba(0,0,0,.07);
+  flex-direction:column;overflow:hidden;
+  transform:translateY(10px) scale(.97);opacity:0;
+  transition:transform .22s ease,opacity .18s ease;
+  max-height:min(420px,calc(100vh - 100px));
 }
-#ai-box.open{transform:scale(1) translateY(0);opacity:1;pointer-events:auto;}
+#ai-box.ai-visible{display:flex;}
+#ai-box.ai-open{transform:translateY(0) scale(1);opacity:1;}
 
-.ai-head{
-  background:linear-gradient(135deg,var(--rose-dark,#7a3020),var(--rose,#d4735a));
-  padding:12px 14px;display:flex;align-items:center;gap:10px;flex-shrink:0;
+/* Header */
+.ai-hd{
+  background:linear-gradient(135deg,#8a3520,#d4735a);
+  padding:10px 12px;display:flex;align-items:center;gap:9px;flex-shrink:0;
 }
-.ai-head-av{
-  width:36px;height:36px;border-radius:50%;flex-shrink:0;
-  background:rgba(255,255,255,.18);
+.ai-hd-ico{
+  width:30px;height:30px;border-radius:50%;flex-shrink:0;
+  background:rgba(255,255,255,.2);
   display:flex;align-items:center;justify-content:center;
-  font-size:17px;color:#fff;
+  font-size:14px;color:#fff;
 }
-.ai-head-info{flex:1;min-width:0;}
-.ai-head-name{font-size:13px;font-weight:800;color:#fff;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.ai-head-status{font-size:10.5px;color:rgba(255,255,255,.8);display:flex;align-items:center;gap:4px;margin-top:2px;}
-.ai-head-status::before{content:'';width:6px;height:6px;border-radius:50%;background:#4ade80;flex-shrink:0;}
-.ai-head-close{background:none;border:none;color:rgba(255,255,255,.7);font-size:18px;cursor:pointer;padding:2px;line-height:1;transition:color .15s;}
-.ai-head-close:hover{color:#fff;}
+.ai-hd-info{flex:1;min-width:0;}
+.ai-hd-title{font-size:12.5px;font-weight:700;color:#fff;margin:0;line-height:1.2;}
+.ai-hd-sub{font-size:10px;color:rgba(255,255,255,.75);display:flex;align-items:center;gap:3px;margin-top:1px;}
+.ai-hd-sub::before{content:'';width:5px;height:5px;border-radius:50%;background:#4ade80;flex-shrink:0;}
+.ai-hd-close{background:none;border:none;color:rgba(255,255,255,.7);font-size:17px;cursor:pointer;padding:2px;line-height:1;transition:color .15s;}
+.ai-hd-close:hover{color:#fff;}
 
+/* Área de mensagens */
 .ai-msgs{
-  flex:1;overflow-y:auto;padding:12px 10px;
-  display:flex;flex-direction:column;gap:9px;
+  flex:1;overflow-y:auto;padding:10px 10px;
+  display:flex;flex-direction:column;gap:8px;
   scroll-behavior:smooth;
 }
 .ai-msgs::-webkit-scrollbar{width:3px;}
-.ai-msgs::-webkit-scrollbar-thumb{background:#f0cfc4;border-radius:3px;}
-.ai-msg{display:flex;gap:7px;max-width:92%;}
+.ai-msgs::-webkit-scrollbar-thumb{background:#eecfc4;border-radius:3px;}
+
+.ai-msg{display:flex;gap:6px;max-width:90%;}
 .ai-msg.bot{align-self:flex-start;}
 .ai-msg.usr{align-self:flex-end;flex-direction:row-reverse;}
-.ai-msg-av{width:26px;height:26px;border-radius:50%;flex-shrink:0;margin-top:2px;
-  background:linear-gradient(135deg,#d4735a,#7a3020);
-  display:flex;align-items:center;justify-content:center;font-size:12px;color:#fff;}
-.ai-bubble{padding:8px 11px;border-radius:13px;font-size:12.5px;line-height:1.55;}
-.ai-msg.bot .ai-bubble{background:#fdf0eb;color:#3a1a10;border-radius:3px 13px 13px 13px;}
-.ai-msg.usr .ai-bubble{background:linear-gradient(135deg,#d4735a,#a05040);color:#fff;border-radius:13px 3px 13px 13px;}
-.ai-bubble a{color:inherit;font-weight:700;text-decoration:underline;}
 
-.ai-typing-bubble{display:flex;align-items:center;gap:4px;padding:3px 2px;}
-.ai-typing-bubble span{width:6px;height:6px;border-radius:50%;background:#d4735a;opacity:.55;animation:aidot 1.3s ease-in-out infinite;}
-.ai-typing-bubble span:nth-child(2){animation-delay:.2s;}
-.ai-typing-bubble span:nth-child(3){animation-delay:.4s;}
-@keyframes aidot{0%,80%,100%{transform:translateY(0);opacity:.55;}40%{transform:translateY(-6px);opacity:1;}}
+.ai-av{
+  width:24px;height:24px;border-radius:50%;flex-shrink:0;margin-top:2px;
+  background:linear-gradient(135deg,#d4735a,#8a3520);
+  display:flex;align-items:center;justify-content:center;font-size:11px;color:#fff;
+}
+.ai-bub{padding:7px 10px;border-radius:12px;font-size:12.5px;line-height:1.5;word-break:break-word;}
+.ai-msg.bot .ai-bub{background:#fdf0eb;color:#2a1008;border-radius:3px 12px 12px 12px;}
+.ai-msg.usr .ai-bub{background:linear-gradient(135deg,#d4735a,#a04030);color:#fff;border-radius:12px 3px 12px 12px;}
 
-.ai-disclaimer{font-size:9.5px;color:#b09080;text-align:center;padding:3px 10px 7px;flex-shrink:0;line-height:1.4;}
-.ai-foot{display:flex;gap:5px;padding:7px 10px 10px;border-top:1px solid #fae0d8;flex-shrink:0;}
+/* Typing dots */
+.ai-dots{display:flex;align-items:center;gap:3px;padding:3px 0;}
+.ai-dots span{
+  width:5px;height:5px;border-radius:50%;background:#d4735a;opacity:.5;
+  animation:adot 1.2s ease-in-out infinite;
+}
+.ai-dots span:nth-child(2){animation-delay:.18s;}
+.ai-dots span:nth-child(3){animation-delay:.36s;}
+@keyframes adot{0%,80%,100%{transform:translateY(0);opacity:.5;}40%{transform:translateY(-5px);opacity:1;}}
+
+/* Chips de sugestão */
+.ai-chips{display:flex;flex-wrap:wrap;gap:4px;padding:0 10px 8px;flex-shrink:0;}
+.ai-chip{
+  background:#fff7f5;border:1px solid #eec4b4;color:#8a3520;
+  font-size:10.5px;font-weight:600;padding:3px 9px;border-radius:14px;
+  cursor:pointer;transition:all .15s;white-space:nowrap;font-family:inherit;
+}
+.ai-chip:hover{background:#fde8df;border-color:#d4735a;}
+
+/* Footer com input */
+.ai-foot{
+  display:flex;align-items:center;gap:6px;
+  padding:7px 10px 9px;border-top:1px solid #fce4da;flex-shrink:0;
+}
 #ai-input{
-  flex:1;border:1.5px solid #f0cfc4;border-radius:20px;
-  padding:7px 12px;font-size:12.5px;outline:none;
-  font-family:inherit;color:#3a1a10;background:#fff;
-  transition:border-color .18s;
+  flex:1;border:1.5px solid #f0cfc4;border-radius:18px;
+  padding:6px 12px;font-size:12.5px;outline:none;
+  font-family:inherit;color:#2a1008;background:#fff;
+  transition:border-color .15s;
 }
 #ai-input:focus{border-color:#d4735a;}
-#ai-input::placeholder{color:#c0a090;}
-#ai-input:disabled{background:#faf0ec;cursor:not-allowed;}
+#ai-input::placeholder{color:#c0a090;font-size:12px;}
+#ai-input:disabled{background:#faf5f3;cursor:not-allowed;}
 #ai-send{
-  width:34px;height:34px;border-radius:50%;
-  background:linear-gradient(135deg,#d4735a,#a05040);
-  border:none;color:#fff;font-size:15px;cursor:pointer;
+  width:32px;height:32px;border-radius:50%;flex-shrink:0;
+  background:linear-gradient(135deg,#d4735a,#a04030);
+  border:none;color:#fff;font-size:14px;cursor:pointer;
   display:flex;align-items:center;justify-content:center;
-  flex-shrink:0;transition:transform .18s,box-shadow .18s;
-  box-shadow:0 2px 7px rgba(212,115,90,.35);
+  box-shadow:0 2px 6px rgba(212,115,90,.4);
+  transition:transform .15s,opacity .15s;
 }
 #ai-send:hover{transform:scale(1.08);}
-#ai-send:disabled{opacity:.45;cursor:not-allowed;transform:none!important;}
-
-.ai-chips{display:flex;flex-wrap:wrap;gap:5px;padding:0 10px 8px;flex-shrink:0;}
-.ai-chip{
-  background:#fff;border:1.5px solid #f0cfc4;color:#a05040;
-  font-size:11px;font-weight:600;padding:4px 10px;border-radius:18px;
-  cursor:pointer;transition:all .16s;white-space:nowrap;font-family:inherit;
-}
-.ai-chip:hover{background:#fdf0eb;border-color:#d4735a;color:#7a3020;}
+#ai-send:disabled{opacity:.4;cursor:not-allowed;transform:none!important;}
 
 @media(max-width:480px){
-  #ai-box{right:10px;bottom:80px;width:calc(100vw - 20px);}
-  #ai-btn{right:10px;bottom:14px;width:50px;height:50px;}
+  #ai-box{right:8px;bottom:76px;width:calc(100vw - 16px);}
+  #ai-btn{right:10px;bottom:18px;}
 }
 </style>
 
-<!-- Botão flutuante -->
-<button id="ai-btn" onclick="aiToggle()" aria-label="Assistente IA">
+<!-- Botão flutuante (oculto até login) -->
+<button id="ai-btn" onclick="aiToggle()" aria-label="Assistente IA" title="Ajuda RWDent">
   <i class="ti ti-sparkles" id="ai-btn-icon"></i>
-  <span class="ai-notif" id="ai-notif"></span>
 </button>
 
-<!-- Janela do chat -->
-<div id="ai-box" role="dialog" aria-label="Assistente IA">
-  <div class="ai-head">
-    <div class="ai-head-av"><i class="ti ti-robot"></i></div>
-    <div class="ai-head-info">
-      <p class="ai-head-name" id="ai-head-name">Assistente IA</p>
-      <div class="ai-head-status">Online</div>
+<!-- Janela do chat (oculta até login) -->
+<div id="ai-box" role="dialog" aria-label="Ajuda RWDent">
+  <div class="ai-hd">
+    <div class="ai-hd-ico"><i class="ti ti-robot"></i></div>
+    <div class="ai-hd-info">
+      <p class="ai-hd-title">Ajuda RWDent</p>
+      <div class="ai-hd-sub">Online</div>
     </div>
-    <button class="ai-head-close" onclick="aiToggle()" aria-label="Fechar"><i class="ti ti-x"></i></button>
+    <button class="ai-hd-close" onclick="aiToggle()" aria-label="Fechar"><i class="ti ti-x"></i></button>
   </div>
   <div class="ai-msgs" id="ai-msgs"></div>
   <div class="ai-chips" id="ai-chips">
-    <button class="ai-chip" onclick="aiChip('Como cadastro um paciente?')">👥 Cadastrar paciente</button>
-    <button class="ai-chip" onclick="aiChip('Como faço um agendamento?')">📅 Agendar consulta</button>
+    <button class="ai-chip" onclick="aiChip('Liste meus pacientes')">👥 Pacientes</button>
+    <button class="ai-chip" onclick="aiChip('Como faço um agendamento?')">📅 Agenda</button>
     <button class="ai-chip" onclick="aiChip('Onde fica o odontograma?')">🦷 Odontograma</button>
-    <button class="ai-chip" onclick="aiChip('Como adiciono um procedimento?')">➕ Procedimentos</button>
     <button class="ai-chip" onclick="aiChip('Como vejo o financeiro?')">💰 Financeiro</button>
   </div>
   <div class="ai-foot">
-    <input id="ai-input" type="text" placeholder="Ex: como cadastro um paciente?" maxlength="300"
-      onkeydown="if(event.key==='Enter')aiSend()"/>
+    <input id="ai-input" type="text" placeholder="Pergunte algo…" maxlength="300"
+      onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();aiSend();}"/>
     <button id="ai-send" onclick="aiSend()" aria-label="Enviar"><i class="ti ti-send"></i></button>
   </div>
 </div>
 
 <script>
 (function(){
-  let aiOpened = false, aiFirstOpen = true, aiLoading = false;
-  const aiHistory = [];
+  'use strict';
+  let _open = false, _firstOpen = true, _busy = false;
+  const _hist = [];
 
-  function getCtx(){
-    return {
-      clinicName:  (clinicaData?.nome_cli  || '').trim() || 'Clínica',
-      dentistName: (clinicaData?.nome_resp || '').trim() || 'Dentista',
-      phone:       (clinicaData?.telefone  || '').replace(/\D/g,'') || ''
-    };
-  }
+  /* ── Exposto globalmente para o fluxo de login/logout ── */
+  window.aiOnLogin = function(){
+    document.getElementById('ai-btn').classList.add('ai-visible');
+  };
+  window.aiOnLogout = function(){
+    const btn = document.getElementById('ai-btn');
+    const box = document.getElementById('ai-box');
+    btn.classList.remove('ai-visible');
+    box.classList.remove('ai-visible','ai-open');
+    document.getElementById('ai-btn-icon').className = 'ti ti-sparkles';
+    _open = false; _firstOpen = true; _busy = false;
+    _hist.length = 0;
+    document.getElementById('ai-msgs').innerHTML = '';
+    const chips = document.getElementById('ai-chips');
+    if(chips) chips.style.display = '';
+  };
 
+  /* ── Toggle abrir/fechar ── */
   window.aiToggle = function(){
-    aiOpened = !aiOpened;
-    const box   = document.getElementById('ai-box');
-    const icon  = document.getElementById('ai-btn-icon');
-    const notif = document.getElementById('ai-notif');
-    box.classList.toggle('open', aiOpened);
-    icon.className = aiOpened ? 'ti ti-x' : 'ti ti-sparkles';
-    if(notif) notif.style.display = 'none';
-    if(aiOpened && aiFirstOpen){
-      aiFirstOpen = false;
-      const ctx = getCtx();
-      document.getElementById('ai-head-name').textContent = 'Ajuda — RWDent';
-      setTimeout(()=>{
-        aiAddMsg('bot', `Olá, ${ctx.dentistName.split(' ')[0]}! 👋\n\nSou seu assistente do RWDent. Pode perguntar qualquer coisa sobre o sistema:\n\n• Como cadastrar pacientes\n• Como usar a agenda\n• Onde fica o odontograma\n• Como lançar procedimentos\n• E muito mais!`);
-      }, 320);
+    const box  = document.getElementById('ai-box');
+    const icon = document.getElementById('ai-btn-icon');
+    _open = !_open;
+    if(_open){
+      box.classList.add('ai-visible');
+      requestAnimationFrame(()=>{ box.classList.add('ai-open'); });
+      icon.className = 'ti ti-x';
+      if(_firstOpen){ _firstOpen = false; _sendWelcome(); }
+      setTimeout(()=>{ document.getElementById('ai-input').focus(); }, 200);
+    } else {
+      box.classList.remove('ai-open');
+      icon.className = 'ti ti-sparkles';
+      setTimeout(()=>{ box.classList.remove('ai-visible'); }, 220);
     }
   };
 
+  function _sendWelcome(){
+    const nome = (clinicaData?.nome_resp||'').split(' ')[0] || 'Doutor(a)';
+    _addMsg('bot', `Olá, ${_esc(nome)}! 👋 Sou sua assistente no RWDent.<br><br>Posso <strong>listar pacientes</strong>, <strong>buscar um paciente</strong> ou <strong>cadastrar</strong> um novo. Para outras dúvidas do sistema, é só perguntar!`);
+  }
+
+  /* ── Chips de sugestão ── */
   window.aiChip = function(text){
-    if(aiLoading) return;
+    if(_busy) return;
     document.getElementById('ai-input').value = text;
     aiSend();
   };
 
+  /* ── Enviar mensagem ── */
   window.aiSend = function(){
-    if(aiLoading) return;
+    if(_busy) return;
     const inp  = document.getElementById('ai-input');
     const text = inp.value.trim();
     if(!text) return;
     inp.value = '';
     const chips = document.getElementById('ai-chips');
     if(chips) chips.style.display = 'none';
-    aiAddMsg('usr', escHtml(text));
-    aiHistory.push({ role:'user', content: text });
-    aiCallApi();
+    _addMsg('usr', _esc(text));
+    _hist.push({ role:'user', content: text });
+    _call();
   };
 
-  function aiAddMsg(type, html){
-    const msgs = document.getElementById('ai-msgs');
-    const div  = document.createElement('div');
-    div.className = 'ai-msg ' + type;
-    if(type === 'bot'){
-      div.innerHTML = `<div class="ai-msg-av"><i class="ti ti-robot"></i></div><div class="ai-bubble">${html.replace(/\n/g,'<br>')}</div>`;
-    } else {
-      div.innerHTML = `<div class="ai-bubble">${html}</div>`;
-    }
-    msgs.appendChild(div);
-    msgs.scrollTop = msgs.scrollHeight;
+  /* ── Adicionar mensagem na UI ── */
+  function _addMsg(type, html){
+    const box = document.getElementById('ai-msgs');
+    const d   = document.createElement('div');
+    d.className = 'ai-msg ' + type;
+    d.innerHTML = type === 'bot'
+      ? `<div class="ai-av"><i class="ti ti-robot"></i></div><div class="ai-bub">${html}</div>`
+      : `<div class="ai-bub">${html}</div>`;
+    box.appendChild(d);
+    box.scrollTop = box.scrollHeight;
   }
 
-  function aiShowTyping(){
-    const msgs = document.getElementById('ai-msgs');
-    const div  = document.createElement('div');
-    div.className = 'ai-msg bot'; div.id = 'ai-typing';
-    div.innerHTML = `<div class="ai-msg-av"><i class="ti ti-robot"></i></div><div class="ai-bubble"><div class="ai-typing-bubble"><span></span><span></span><span></span></div></div>`;
-    msgs.appendChild(div);
-    msgs.scrollTop = msgs.scrollHeight;
+  function _showTyping(){
+    const box = document.getElementById('ai-msgs');
+    const d   = document.createElement('div');
+    d.className = 'ai-msg bot'; d.id = 'ai-typing';
+    d.innerHTML = `<div class="ai-av"><i class="ti ti-robot"></i></div><div class="ai-bub"><div class="ai-dots"><span></span><span></span><span></span></div></div>`;
+    box.appendChild(d); box.scrollTop = box.scrollHeight;
   }
-  function aiHideTyping(){ const t=document.getElementById('ai-typing'); if(t)t.remove(); }
+  function _hideTyping(){ const t=document.getElementById('ai-typing'); if(t)t.remove(); }
 
-  function setEnabled(on){
+  function _setEnabled(on){
     document.getElementById('ai-input').disabled = !on;
     document.getElementById('ai-send').disabled  = !on;
   }
 
-  async function aiCallApi(){
-    aiLoading = true;
-    setEnabled(false);
-    aiShowTyping();
+  /* ── Chamada ao backend ── */
+  async function _call(){
+    _busy = true; _setEnabled(false); _showTyping();
     try {
-      // Pega token de sessão atual para autenticar ações no backend
       const { data:{ session } } = await _sb.auth.getSession();
-      const accessToken = session?.access_token || '';
-
-      const res = await fetch('/api/chat',{
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ messages: aiHistory, context: getCtx(), accessToken })
+      if(!session){ throw new Error('LOGIN_EXPIRED'); }
+      const ctx = {
+        clinicName:  (clinicaData?.nome_cli  || '').trim() || 'Clínica',
+        dentistName: (clinicaData?.nome_resp || '').trim() || 'Profissional'
+      };
+      const res = await fetch('/api/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type':  'application/json',
+          'Authorization': `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({ messages: _hist, context: ctx })
       });
-      aiHideTyping();
-      if(!res.ok){ const e=await res.json().catch(()=>({})); throw new Error(e.error||'Erro '+res.status); }
-      const data  = await res.json();
-      const reply = data.reply || 'Não consegui responder agora. Tente novamente.';
-      aiHistory.push({ role:'assistant', content: reply });
-      aiAddMsg('bot', escHtml(reply).replace(/\n/g,'<br>'));
+      _hideTyping();
+      if(!res.ok){
+        const body = await res.json().catch(()=>({}));
+        throw new Error(body.error || `Erro ${res.status}`);
+      }
+      const { reply } = await res.json();
+      const text = reply || 'Não consegui responder agora. Tente novamente.';
+      _hist.push({ role:'assistant', content: text });
+      _addMsg('bot', _esc(text).replace(/\n/g,'<br>'));
     } catch(e){
-      aiHideTyping();
-      const msg = e?.message || 'Não consegui conectar ao servidor.';
-      aiAddMsg('bot', `⚠️ ${msg}`);
+      _hideTyping();
+      const msg = _friendlyError(e?.message || '');
+      _addMsg('bot', `⚠️ ${msg}`);
     } finally {
-      aiLoading = false;
-      setEnabled(true);
+      _busy = false; _setEnabled(true);
       document.getElementById('ai-input').focus();
     }
   }
 
-  function escHtml(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  /* ── Mensagens amigáveis (sem JSON técnico) ── */
+  function _friendlyError(raw){
+    if(!raw) return 'Erro inesperado. Tente novamente.';
+    if(raw === 'LOGIN_EXPIRED' || /sessão|expirou|login/i.test(raw))
+      return 'Sua sessão expirou. Por favor, faça login novamente.';
+    if(/chave.*inválida|api_key|key.*invalid|gemini.*inválid/i.test(raw))
+      return 'A IA está temporariamente indisponível. Tente novamente mais tarde.';
+    if(/Failed to fetch|NetworkError|network/i.test(raw))
+      return 'Sem conexão com o servidor. Verifique sua internet.';
+    if(/Erro 5[0-9]{2}|HTTP 5[0-9]{2}/i.test(raw))
+      return 'O servidor encontrou um problema. Tente novamente em instantes.';
+    if(raw.length > 120 || raw.startsWith('{') || raw.startsWith('['))
+      return 'Não consegui processar a resposta. Tente novamente.';
+    return raw;
+  }
+
+  function _esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 })();
 </script>
 <!-- ── fim assistente IA ── -->

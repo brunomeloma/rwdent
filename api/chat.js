@@ -1,15 +1,26 @@
 const { createClient } = require('@supabase/supabase-js');
 
-const GEMINI_MODEL    = 'gemini-1.5-flash';
-const GEMINI_URL      = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
-const MAX_HISTORY     = 12;
-const MAX_CONTENT_LEN = 800;
-const MAX_TOOL_ROUNDS = 5;
+const GEMINI_MODEL = 'gemini-1.5-flash';
+const GEMINI_URL   = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
+
+const MAX_HISTORY     = 10;
+const MAX_CONTENT_LEN = 600;
+const MAX_TOOL_ROUNDS = 4;
 
 // ══════════════════════════════════════════════
-// DECLARAÇÕES DE FUNÇÃO (formato nativo Gemini)
+// FERRAMENTAS (3 ativas: listar, buscar, cadastrar)
 // ══════════════════════════════════════════════
 const FUNCTION_DECLARATIONS = [
+  {
+    name: 'listar_pacientes',
+    description: 'Lista os pacientes cadastrados na clínica. Leitura — não requer confirmação.',
+    parameters: {
+      type: 'object',
+      properties: {
+        limite: { type: 'integer', description: 'Quantidade (padrão: 10, máximo: 20)' }
+      }
+    }
+  },
   {
     name: 'buscar_paciente',
     description: 'Busca pacientes por nome ou telefone. Leitura — não requer confirmação.',
@@ -22,18 +33,8 @@ const FUNCTION_DECLARATIONS = [
     }
   },
   {
-    name: 'listar_pacientes',
-    description: 'Lista os pacientes cadastrados na clínica. Leitura — não requer confirmação.',
-    parameters: {
-      type: 'object',
-      properties: {
-        limite: { type: 'integer', description: 'Quantidade (padrão: 10, máximo: 20)' }
-      }
-    }
-  },
-  {
     name: 'cadastrar_paciente',
-    description: 'Cadastra um novo paciente. ESCRITA — só chame após confirmação explícita do usuário.',
+    description: 'Cadastra um novo paciente. ESCRITA — só chame após confirmação explícita do usuário (sim/pode/confirmo).',
     parameters: {
       type: 'object',
       properties: {
@@ -43,32 +44,6 @@ const FUNCTION_DECLARATIONS = [
         data_nascimento: { type: 'string', description: 'Data de nascimento YYYY-MM-DD (opcional)' }
       },
       required: ['nome']
-    }
-  },
-  {
-    name: 'buscar_agenda_dia',
-    description: 'Retorna os agendamentos de um dia. Leitura — não requer confirmação.',
-    parameters: {
-      type: 'object',
-      properties: {
-        data: { type: 'string', description: 'Data YYYY-MM-DD (omitir = hoje)' }
-      }
-    }
-  },
-  {
-    name: 'criar_agendamento',
-    description: 'Cria um novo agendamento. ESCRITA — só chame após confirmação explícita do usuário.',
-    parameters: {
-      type: 'object',
-      properties: {
-        nome:         { type: 'string',  description: 'Nome do paciente' },
-        paciente_id:  { type: 'integer', description: 'ID do paciente (se conhecido)' },
-        telefone:     { type: 'string',  description: 'Telefone do paciente' },
-        data:         { type: 'string',  description: 'Data YYYY-MM-DD' },
-        horario:      { type: 'string',  description: 'Horário HH:MM' },
-        procedimento: { type: 'string',  description: 'Procedimento ou motivo da consulta' }
-      },
-      required: ['nome', 'data', 'horario']
     }
   }
 ];
@@ -83,32 +58,22 @@ function buildSystemPrompt(ctx) {
     weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
   });
 
-  return `Você é a Assistente Operacional do RWDent — sistema de gestão odontológica da ${clinicName} (${dentistName}).
+  return `Você é a assistente do RWDent para a clínica "${clinicName}" (${dentistName}).
 Data de hoje: ${today}.
 
-Você conversa naturalmente E executa ações reais no sistema usando ferramentas.
-
 FERRAMENTAS DISPONÍVEIS:
-• buscar_paciente     → busca paciente por nome ou telefone
-• listar_pacientes    → lista pacientes cadastrados
-• cadastrar_paciente  → cadastra novo paciente  ⚠️ REQUER CONFIRMAÇÃO
-• buscar_agenda_dia   → mostra agenda do dia
-• criar_agendamento   → cria agendamento         ⚠️ REQUER CONFIRMAÇÃO
+• listar_pacientes  → lista pacientes da clínica (leitura, execute direto)
+• buscar_paciente   → busca por nome ou telefone (leitura, execute direto)
+• cadastrar_paciente → cadastra novo paciente (⚠️ ESCRITA — exige confirmação)
 
-REGRAS OBRIGATÓRIAS:
-1. Para LEITURA (buscar, listar, agenda): execute direto, sem pedir confirmação.
-2. Para ESCRITA (cadastrar, criar): SEMPRE apresente os dados e aguarde "sim"/"pode"/"confirmo" ANTES de chamar a ferramenta.
-3. Se o usuário disser "não", "cancela" ou "para": NÃO execute.
-4. Se faltar informação para criar/cadastrar: pergunte antes de chamar a ferramenta.
+REGRAS:
+1. listar e buscar: execute imediatamente sem pedir confirmação.
+2. cadastrar: SEMPRE apresente os dados ("Vou cadastrar:\n• Nome: X\n• Tel: Y\nConfirma?") e aguarde "sim"/"pode"/"confirmo" antes de chamar a ferramenta.
+3. Se faltar o nome do paciente, pergunte antes de cadastrar.
+4. Se encontrar pacientes com nomes parecidos ao buscar, liste as opções.
+5. Nunca apague dados. Nunca acesse dados de outras clínicas.
 
-EXEMPLO DE FLUXO CORRETO:
-Usuário: "cadastra a Maria, tel 99982706186"
-Você: "Posso cadastrar:\n• Nome: Maria\n• Telefone: 99982706186\n\nConfirma?"  ← NÃO chama ferramenta
-Usuário: "sim"
-Você: [chama cadastrar_paciente]  ← SÓ agora executa
-Você: "Paciente Maria cadastrada com sucesso! ✅"
-
-Responda sempre em português do Brasil. Seja breve, direto e humano.`;
+Responda em português do Brasil. Seja breve e direto.`;
 }
 
 // ══════════════════════════════════════════════
@@ -116,6 +81,20 @@ Responda sempre em português do Brasil. Seja breve, direto e humano.`;
 // ══════════════════════════════════════════════
 async function runTool(name, args, sb, clinicId) {
   switch (name) {
+
+    case 'listar_pacientes': {
+      const lim = Math.min(Math.max(Number(args.limite) || 10, 1), 20);
+      const { data, error } = await sb
+        .from('pacientes')
+        .select('id, nome, telefone')
+        .eq('clinica_id', clinicId)
+        .order('nome')
+        .limit(lim);
+      if (error) throw new Error(error.message);
+      if (!data?.length) return 'Nenhum paciente cadastrado ainda.';
+      return `${data.length} paciente(s):\n` +
+        data.map(p => `• ${p.nome} | ${p.telefone || 'sem telefone'}`).join('\n');
+    }
 
     case 'buscar_paciente': {
       const q = String(args.query || '').trim().slice(0, 100);
@@ -133,20 +112,6 @@ async function runTool(name, args, sb, clinicId) {
         data.map(p => `• [ID:${p.id}] ${p.nome} | ${p.telefone || 'sem telefone'}`).join('\n');
     }
 
-    case 'listar_pacientes': {
-      const lim = Math.min(Math.max(Number(args.limite) || 10, 1), 20);
-      const { data, error } = await sb
-        .from('pacientes')
-        .select('id, nome, telefone')
-        .eq('clinica_id', clinicId)
-        .order('nome')
-        .limit(lim);
-      if (error) throw new Error(error.message);
-      if (!data?.length) return 'Nenhum paciente cadastrado ainda.';
-      return `${data.length} paciente(s):\n` +
-        data.map(p => `• ${p.nome} | ${p.telefone || 'sem telefone'}`).join('\n');
-    }
-
     case 'cadastrar_paciente': {
       const nome = String(args.nome || '').trim().slice(0, 200);
       if (!nome) throw new Error('Nome do paciente é obrigatório.');
@@ -157,66 +122,12 @@ async function runTool(name, args, sb, clinicId) {
           telefone:        args.telefone        ? String(args.telefone).replace(/\D/g, '').slice(0, 20) : null,
           email:           args.email           ? String(args.email).slice(0, 200) : null,
           data_nascimento: args.data_nascimento || null,
-          clinica_id: clinicId
+          clinica_id:      clinicId
         }])
         .select('id, nome, telefone')
         .single();
       if (error) throw new Error(error.message);
-      return `✅ Paciente "${data.nome}" cadastrado(a) com sucesso! (ID: ${data.id})`;
-    }
-
-    case 'buscar_agenda_dia': {
-      const dataBusca = args.data || new Date().toISOString().split('T')[0];
-      const { data, error } = await sb
-        .from('agendamentos')
-        .select('id, nome, horario, procedimento, prof_nome, obs')
-        .eq('clinica_id', clinicId)
-        .eq('data', dataBusca)
-        .order('horario');
-      if (error) throw new Error(error.message);
-      if (!data?.length) return `Nenhum agendamento para ${dataBusca}.`;
-      const linhas = data.map(a => {
-        const st = a.obs?.includes('AGSTATUS:confirmado') ? 'confirmado'
-                 : a.obs?.includes('AGSTATUS:realizado')  ? 'realizado'
-                 : 'agendado';
-        return `• ${a.horario} — ${a.nome} | ${a.procedimento || 'Consulta'} [${st}]`;
-      });
-      return `Agenda de ${dataBusca} — ${data.length} consulta(s):\n${linhas.join('\n')}`;
-    }
-
-    case 'criar_agendamento': {
-      const nome    = String(args.nome    || '').trim().slice(0, 200);
-      const data    = String(args.data    || '').trim();
-      const horario = String(args.horario || '').trim();
-      if (!nome || !data || !horario) throw new Error('Nome, data e horário são obrigatórios.');
-
-      const { data: profs } = await sb
-        .from('profissionais')
-        .select('id, nome, cor')
-        .eq('clinica_id', clinicId)
-        .order('id')
-        .limit(1);
-      const prof = profs?.[0];
-
-      const { data: ag, error } = await sb
-        .from('agendamentos')
-        .insert([{
-          nome,
-          paciente_id:  args.paciente_id || null,
-          telefone:     args.telefone ? String(args.telefone).replace(/\D/g, '') : null,
-          data,
-          horario,
-          procedimento: args.procedimento ? String(args.procedimento).slice(0, 200) : 'Consulta',
-          obs:          '',
-          prof_id:      prof?.id   || null,
-          prof_nome:    prof?.nome || null,
-          prof_cor:     prof?.cor  || '#d4735a',
-          clinica_id:   clinicId
-        }])
-        .select('id, nome, data, horario')
-        .single();
-      if (error) throw new Error(error.message);
-      return `✅ Agendamento criado! ${ag.nome} — ${ag.data} às ${ag.horario}.`;
+      return `✅ Paciente "${data.nome}" cadastrado com sucesso! (ID: ${data.id})`;
     }
 
     default:
@@ -225,20 +136,24 @@ async function runTool(name, args, sb, clinicId) {
 }
 
 // ══════════════════════════════════════════════
-// CHAMADA GEMINI REST
+// CHAMADA GEMINI REST NATIVA
 // ══════════════════════════════════════════════
 async function callGemini(apiKey, payload) {
-  const url = `${GEMINI_URL}?key=${apiKey}`;
-  const resp = await fetch(url, {
-    method: 'POST',
+  const resp = await fetch(`${GEMINI_URL}?key=${apiKey}`, {
+    method:  'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload)
+    body:    JSON.stringify(payload)
   });
 
   if (!resp.ok) {
-    const text = await resp.text().catch(() => '');
-    const snippet = text.slice(0, 300);
-    throw new Error(`HTTP ${resp.status}${snippet ? ': ' + snippet : ' (sem corpo)'}`);
+    let body = '';
+    try { body = await resp.text(); } catch (_) {}
+
+    // Detecta chave inválida explicitamente
+    if (resp.status === 400 && (body.includes('API_KEY_INVALID') || body.includes('API key not valid'))) {
+      throw new Error('GEMINI_KEY_INVALID');
+    }
+    throw new Error(`HTTP ${resp.status}${body ? ': ' + body.slice(0, 200) : ''}`);
   }
 
   return resp.json();
@@ -251,14 +166,17 @@ module.exports = async function handler(req, res) {
   res.setHeader('Content-Type', 'application/json');
 
   if (req.method !== 'POST') return res.status(405).json({ error: 'Método não permitido.' });
-  if (!process.env.GEMINI_API_KEY) return res.status(500).json({ error: 'Serviço indisponível.' });
+  if (!process.env.GEMINI_API_KEY) return res.status(500).json({ error: 'Serviço de IA não configurado.' });
 
-  const { messages, context, accessToken } = req.body || {};
+  const { messages, context } = req.body || {};
 
   if (!Array.isArray(messages) || messages.length === 0)
     return res.status(400).json({ error: 'Requisição inválida.' });
 
-  // ── Autenticação e clinicId ──
+  // ── Autenticação via Authorization: Bearer <token> ──
+  const authHeader  = req.headers['authorization'] || '';
+  const accessToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : '';
+
   let clinicId = null;
   let authedSb = null;
 
@@ -282,14 +200,12 @@ module.exports = async function handler(req, res) {
     } catch (_) {}
   }
 
-  // ── Converter histórico para formato Gemini ──
-  // Gemini usa role "user"/"model" (não "assistant")
-  // system_instruction é separado das contents
+  // ── Histórico em formato Gemini (role: "user"/"model") ──
   const contents = messages
     .slice(-MAX_HISTORY)
     .filter(m => m && ['user', 'assistant'].includes(m.role) && typeof m.content === 'string')
     .map(m => ({
-      role: m.role === 'assistant' ? 'model' : 'user',
+      role:  m.role === 'assistant' ? 'model' : 'user',
       parts: [{ text: m.content.slice(0, MAX_CONTENT_LEN) }]
     }));
 
@@ -301,14 +217,14 @@ module.exports = async function handler(req, res) {
   const payload = {
     system_instruction: { parts: [{ text: buildSystemPrompt(context) }] },
     contents,
-    generationConfig: { maxOutputTokens: 500, temperature: 0.3 }
+    generationConfig: { maxOutputTokens: 400, temperature: 0.25 }
   };
 
   if (withTools) {
     payload.tools = [{ function_declarations: FUNCTION_DECLARATIONS }];
   }
 
-  console.log(`[AI] provider=gemini model=${GEMINI_MODEL} tools=${withTools} clinicId=${clinicId}`);
+  console.log(`[AI] provider=gemini model=${GEMINI_MODEL} tools=${withTools} clinic=${clinicId}`);
 
   try {
     let rounds = 0;
@@ -320,36 +236,33 @@ module.exports = async function handler(req, res) {
       const candidate = geminiData.candidates?.[0];
       if (!candidate) throw new Error('Resposta vazia do modelo.');
 
-      const parts = candidate.content?.parts || [];
-      const fnCalls = parts.filter(p => p.functionCall);
+      const parts    = candidate.content?.parts || [];
+      const fnCalls  = parts.filter(p => p.functionCall);
 
-      // Sem chamadas de ferramenta → resposta final
       if (!fnCalls.length) break;
 
-      // Adiciona resposta do modelo (com functionCalls) ao histórico
+      // Acrescenta resposta do modelo (com functionCalls) ao histórico
       payload.contents.push({ role: 'model', parts });
 
-      // Executa cada ferramenta e coleta respostas
+      // Executa ferramentas e envia respostas
       const responseParts = [];
       for (const part of fnCalls) {
         const { name, args } = part.functionCall;
         let result;
         try {
           if (!clinicId || !authedSb) {
-            result = 'Erro: sessão expirada. Recarregue a página.';
+            result = 'Sessão expirada. Peça ao usuário para recarregar a página.';
           } else {
             result = await runTool(name, args || {}, authedSb, clinicId);
           }
         } catch (e) {
-          result = `Erro: ${e.message}`;
+          result = `Erro na ferramenta: ${e.message}`;
         }
-        console.log(`[AI] tool=${name} result_len=${String(result).length}`);
-        responseParts.push({
-          functionResponse: { name, response: { content: result } }
-        });
+        console.log(`[AI] tool=${name} ok`);
+        responseParts.push({ functionResponse: { name, response: { content: result } } });
       }
 
-      // Envia respostas das ferramentas como mensagem "user" (formato Gemini)
+      // Gemini espera role "user" para respostas de função
       payload.contents.push({ role: 'user', parts: responseParts });
     }
 
@@ -359,7 +272,11 @@ module.exports = async function handler(req, res) {
 
   } catch (err) {
     const detail = err?.message || String(err);
-    console.error(`[AI] provider=gemini model=${GEMINI_MODEL} ERRO: ${detail}`);
-    return res.status(500).json({ error: `Erro ao processar (${detail}). Tente novamente.` });
+    if (detail === 'GEMINI_KEY_INVALID') {
+      console.error('[AI] GEMINI_KEY_INVALID — verifique a variável GEMINI_API_KEY na Vercel');
+      return res.status(500).json({ error: 'Chave da IA inválida. Verifique a variável GEMINI_API_KEY na Vercel.' });
+    }
+    console.error(`[AI] provider=gemini model=${GEMINI_MODEL} erro: ${detail}`);
+    return res.status(500).json({ error: 'Serviço de IA temporariamente indisponível. Tente novamente.' });
   }
 };
