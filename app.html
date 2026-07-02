@@ -355,6 +355,30 @@ button{font-family:inherit;}
 .odonto-pending-dot{position:absolute;top:-1px;right:0px;width:7px;height:7px;background:#f59e0b;border-radius:50%;border:1.5px solid #fff;z-index:2;}
 /* Dual-view tooth wrapper */
 .ot-views{display:flex;flex-direction:column;align-items:center;gap:2px;}
+.odonto-facegrid{
+  display:grid;grid-template-columns:repeat(3,9px);grid-template-rows:repeat(3,9px);
+  width:27px;height:27px;gap:0;flex-shrink:0;cursor:pointer;
+}
+.odonto-facecell{
+  border:1px solid #b9aaa1;background:#fff;box-sizing:border-box;
+  transition:background .12s,border-color .12s,transform .12s;
+}
+.odonto-facecell:hover{background:var(--rose-lighter);border-color:var(--rose);transform:scale(1.08);z-index:1;}
+.odonto-facecell.active{background:#3b82f6;border-color:#1d4ed8;}
+.odonto-facecell.disabled{background:transparent;border-color:transparent;pointer-events:none;}
+.odonto-tooth-modal-overlay{
+  position:fixed;inset:0;background:rgba(58,32,32,.38);z-index:1600;
+  align-items:flex-start;justify-content:center;padding:72px 16px 24px;overflow:auto;
+}
+.odonto-tooth-modal{
+  background:#fff;border:2px solid var(--rose);border-radius:14px;padding:16px;
+  width:min(680px,100%);box-shadow:0 20px 60px rgba(0,0,0,.24);
+}
+#pac-dente-panel{
+  position:fixed!important;top:72px!important;left:50%!important;transform:translateX(-50%)!important;
+  width:min(680px,calc(100vw - 32px))!important;max-height:calc(100vh - 96px)!important;
+  overflow:auto!important;background:#fff!important;z-index:1600!important;box-shadow:0 20px 60px rgba(0,0,0,.24)!important;
+}
 /* Upper arcada aligns to bottom, lower to top */
 .odonto-arcada#arc-sup .odonto-dente-wrap,
 .odonto-arcada#pac-arc-sup .odonto-dente-wrap,
@@ -1656,41 +1680,79 @@ select, textarea {
         </div>
 
         <!-- PAINEL DO DENTE SELECIONADO -->
-        <div class="card" id="odonto-dente-panel" style="display:none;border:2px solid var(--rose);">
+        <div id="odonto-dente-panel" class="odonto-tooth-modal-overlay" style="display:none;" onclick="if(event.target===this)odontoCancelarDente()">
+        <div class="odonto-tooth-modal" onclick="event.stopPropagation()">
           <h2><i class="ti ti-tooth"></i> Dente <span id="odonto-d-num"></span> — <span id="odonto-d-nome" style="font-weight:400;text-transform:none;"></span></h2>
+
+          <div style="margin-top:12px;">
+            <div style="font-size:11px;font-weight:700;color:var(--rose-text);text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px;">Problemas / condições</div>
+            <div style="display:flex;flex-wrap:wrap;gap:6px;" id="odonto-d-cond-btns">
+              <button type="button" data-od-main-cond-wrap="higido" onclick="odontoMainSetCond('higido')" style="padding:6px 10px;border:2px solid var(--rose-light);border-radius:9px;background:#fff;font-size:12px;font-weight:600;cursor:pointer;">Hígido</button>
+              <button type="button" data-od-main-cond-wrap="carie" onclick="odontoMainSetCond('carie')" style="padding:6px 10px;border:2px solid var(--rose-light);border-radius:9px;background:#fff;font-size:12px;font-weight:600;cursor:pointer;">Cárie</button>
+              <button type="button" data-od-main-cond-wrap="restaurado" onclick="odontoMainSetCond('restaurado')" style="padding:6px 10px;border:2px solid var(--rose-light);border-radius:9px;background:#fff;font-size:12px;font-weight:600;cursor:pointer;">Restaurado</button>
+              <button type="button" data-od-main-cond-wrap="extraido" onclick="odontoMainSetCond('extraido')" style="padding:6px 10px;border:2px solid var(--rose-light);border-radius:9px;background:#fff;font-size:12px;font-weight:600;cursor:pointer;">Extraído</button>
+              <button type="button" data-od-main-cond-wrap="canal" onclick="odontoMainSetCond('canal')" style="padding:6px 10px;border:2px solid var(--rose-light);border-radius:9px;background:#fff;font-size:12px;font-weight:600;cursor:pointer;">Canal</button>
+              <button type="button" data-od-main-cond-wrap="coroa" onclick="odontoMainSetCond('coroa')" style="padding:6px 10px;border:2px solid var(--rose-light);border-radius:9px;background:#fff;font-size:12px;font-weight:600;cursor:pointer;">Coroa</button>
+              <button type="button" data-od-main-cond-wrap="implante" onclick="odontoMainSetCond('implante')" style="padding:6px 10px;border:2px solid var(--rose-light);border-radius:9px;background:#fff;font-size:12px;font-weight:600;cursor:pointer;">Implante</button>
+              <button type="button" data-od-main-cond-wrap="fratura" onclick="odontoMainSetCond('fratura')" style="padding:6px 10px;border:2px solid var(--rose-light);border-radius:9px;background:#fff;font-size:12px;font-weight:600;cursor:pointer;">Fratura</button>
+              <button type="button" data-od-main-cond-wrap="selante" onclick="odontoMainSetCond('selante')" style="padding:6px 10px;border:2px solid var(--rose-light);border-radius:9px;background:#fff;font-size:12px;font-weight:600;cursor:pointer;">Selante</button>
+              <button type="button" data-od-main-cond-wrap="outro" onclick="odontoMainSetCond('outro')" style="padding:6px 10px;border:2px solid var(--rose-light);border-radius:9px;background:#fff;font-size:12px;font-weight:600;cursor:pointer;">Outro</button>
+            </div>
+            <input type="hidden" id="odonto-d-cond" value="higido"/>
+          </div>
+
+          <div style="margin-top:12px;">
+            <div style="font-size:11px;font-weight:700;color:var(--rose-text);text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px;">Faces <span style="font-weight:400;font-size:10px;">(opcional)</span></div>
+            <div style="display:flex;flex-wrap:wrap;gap:6px;" id="odonto-d-faces-btns">
+              <button type="button" data-odonto-face="Oclusal" onclick="odontoMainToggleFace('Oclusal')" style="padding:5px 12px;border:2px solid var(--rose-light);border-radius:8px;background:#fff;font-size:12px;font-weight:600;cursor:pointer;">Oclusal</button>
+              <button type="button" data-odonto-face="Vestibular" onclick="odontoMainToggleFace('Vestibular')" style="padding:5px 12px;border:2px solid var(--rose-light);border-radius:8px;background:#fff;font-size:12px;font-weight:600;cursor:pointer;">Vestibular</button>
+              <button type="button" data-odonto-face="Lingual" onclick="odontoMainToggleFace('Lingual')" style="padding:5px 12px;border:2px solid var(--rose-light);border-radius:8px;background:#fff;font-size:12px;font-weight:600;cursor:pointer;">Lingual</button>
+              <button type="button" data-odonto-face="Mesial" onclick="odontoMainToggleFace('Mesial')" style="padding:5px 12px;border:2px solid var(--rose-light);border-radius:8px;background:#fff;font-size:12px;font-weight:600;cursor:pointer;">Mesial</button>
+              <button type="button" data-odonto-face="Distal" onclick="odontoMainToggleFace('Distal')" style="padding:5px 12px;border:2px solid var(--rose-light);border-radius:8px;background:#fff;font-size:12px;font-weight:600;cursor:pointer;">Distal</button>
+              <button type="button" data-odonto-face="Incisal" onclick="odontoMainToggleFace('Incisal')" style="padding:5px 12px;border:2px solid var(--rose-light);border-radius:8px;background:#fff;font-size:12px;font-weight:600;cursor:pointer;">Incisal</button>
+              <button type="button" data-odonto-face="Cervical" onclick="odontoMainToggleFace('Cervical')" style="padding:5px 12px;border:2px solid var(--rose-light);border-radius:8px;background:#fff;font-size:12px;font-weight:600;cursor:pointer;">Cervical</button>
+            </div>
+          </div>
+
+          <div style="margin-top:12px;">
+            <div style="font-size:11px;font-weight:700;color:var(--rose-text);text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px;">Procedimentos</div>
+            <div style="position:relative;margin-bottom:8px;">
+              <input type="text" id="odonto-d-proc-search" placeholder="Pesquisar procedimento..."
+                oninput="odontoMainFiltrarProcs()"
+                onfocus="odontoMainFiltrarProcs();document.getElementById('odonto-d-proc-dd').style.display='block'"
+                onblur="setTimeout(()=>{const d=document.getElementById('odonto-d-proc-dd');if(d)d.style.display='none'},350)"
+                style="width:100%;padding:9px 12px;border:1.5px solid var(--rose-light);border-radius:10px;font-size:13px;background:#fff;box-sizing:border-box;"/>
+              <div id="odonto-d-proc-dd" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:1.5px solid var(--rose-light);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.15);z-index:300;max-height:220px;overflow-y:auto;margin-top:2px;">
+                <div id="odonto-d-proc-opts"></div>
+              </div>
+            </div>
+            <div id="odonto-d-proc-lista" style="display:flex;flex-direction:column;gap:4px;margin-bottom:4px;"></div>
+            <input type="hidden" id="odonto-d-proc"/>
+          </div>
+
+          <div style="margin-top:12px;">
+            <button type="button" class="btn-secondary" onclick="odontoMainToggleReplica()" style="font-size:12px;"><i class="ti ti-copy"></i> Replicar para outros dentes</button>
+            <div id="odonto-replica-box" style="display:none;margin-top:8px;border:1.5px solid var(--rose-light);border-radius:10px;padding:10px;background:var(--rose-lighter);">
+              <div style="font-size:11px;font-weight:700;color:var(--rose-text);text-transform:uppercase;margin-bottom:8px;">Escolha os dentes que recebem o mesmo registro</div>
+              <div id="odonto-replica-dentes" style="display:flex;flex-wrap:wrap;gap:5px;"></div>
+            </div>
+          </div>
+
           <div class="form-grid" style="margin-top:12px;">
             <div class="form-group full">
-              <label>Condição do dente</label>
-              <select id="odonto-d-cond">
-                <option value="higido">Hígido (saudável)</option>
-                <option value="carie">Cárie</option>
-                <option value="restaurado">Restaurado</option>
-                <option value="extraido">Extraído / Ausente</option>
-                <option value="canal">Tratamento de Canal</option>
-                <option value="coroa">Coroa / Prótese</option>
-                <option value="implante">Implante</option>
-                <option value="fratura">Fratura</option>
-                <option value="selante">Selante</option>
-                <option value="outro">Outro</option>
-              </select>
-            </div>
-            <div class="form-group full">
-              <label>Procedimento realizado neste dente</label>
-              <input type="text" id="odonto-d-proc" placeholder="Ex: Restauração MOD resina, Extração simples, Faceta..."/>
-            </div>
-            <div class="form-group full">
               <label>Observações</label>
-              <textarea id="odonto-d-obs" rows="2" placeholder="Detalhes, materiais, intercorrências..."></textarea>
+              <textarea id="odonto-d-obs" rows="2" placeholder="Materiais, intercorrências..."></textarea>
             </div>
             <div class="form-group">
               <label>Profissional</label>
               <select id="odonto-d-prof"></select>
             </div>
           </div>
-          <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:14px;">
+          <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:14px;flex-wrap:wrap;">
             <button class="btn-secondary" onclick="odontoCancelarDente()">Cancelar</button>
             <button class="btn-primary" onclick="odontoSalvarDente()"><i class="ti ti-check"></i> Salvar dente</button>
           </div>
+        </div>
         </div>
 
         <!-- REGISTRO GERAL DO ATENDIMENTO -->
@@ -5349,6 +5411,9 @@ let odontoPatId = null;
 let odontoSelDente = null;
 let odontoDentes = {};    // { num: { condicao, procedimento, obs } }
 let odontoAtends = [];    // atendimentos salvos
+let odontoMainFacesSel = [];
+let odontoMainProcs = [];
+let odontoMainReplica = [];
 
 function renderOdontogramaTab(){
   const sel = document.getElementById('odonto-pac-sel');
@@ -5501,9 +5566,31 @@ function getToothSVG(num, cond, extraStyle) {
   const c = TOOTH_COND_COLORS[cond] || TOOTH_COND_COLORS.higido;
   const isExtr = cond === 'extraido';
   const frontSVG = getFrontalSVG(type, upper, c, isExtr);
-  const oclSVG = getOclusalSVG(type, c);
   const wStyle = extraStyle ? `style="${extraStyle}"` : '';
-  return `<div class="ot-views" ${wStyle}>${frontSVG}${oclSVG}</div>`;
+  return `<div class="ot-views" ${wStyle}>${frontSVG}</div>`;
+}
+
+function odontoFaceGridHTML(num, selectedFaces, handlerName){
+  const faces = selectedFaces || [];
+  const isAnterior = [1,2,3].includes(num % 10);
+  const centro = isAnterior ? 'Incisal' : 'Oclusal';
+  const cells = [
+    ['disabled',''], ['Vestibular',''], ['disabled',''],
+    ['Mesial',''], [centro,''], ['Distal',''],
+    ['disabled',''], ['Lingual',''], ['disabled','']
+  ];
+  return `<div class="odonto-facegrid" title="Faces do dente ${num}">${
+    cells.map(([face])=>{
+      if(face==='disabled') return '<span class="odonto-facecell disabled"></span>';
+      const active = faces.includes(face) ? ' active' : '';
+      return `<button type="button" class="odonto-facecell${active}" onclick="${handlerName}(event,${num},'${face}')" title="${face}" aria-label="${face} do dente ${num}"></button>`;
+    }).join('')
+  }</div>`;
+}
+
+function odontoExtractFacesFromObs(obs){
+  const match = String(obs||'').match(/^Faces:\s*([^\n]+)\n?/i);
+  return match ? match[1].split(',').map(f=>f.trim()).filter(Boolean) : [];
 }
 
 function renderArcada(containerId, dentes){
@@ -5519,10 +5606,12 @@ function renderArcada(containerId, dentes){
     const gap = (i === mid) ? '<div class="odonto-quadrant-gap"></div>' : '';
     const numDiv = `<div class="ot-num">${num}</div>`;
     const toothHTML = getToothSVG(num, cond);
-    // Upper: number top → frontal → oclusal; Lower: oclusal → frontal → number
+    const faces = odontoSelDente===num ? odontoMainFacesSel : odontoExtractFacesFromObs(d.obs);
+    const faceHTML = odontoFaceGridHTML(num, faces, 'odontoFaceGridClick');
+    // Upper: frontal → number → faces; Lower: faces → number → frontal
     const inner = upper
-      ? `${numDiv}${toothHTML}`
-      : `${toothHTML}${numDiv}`;
+      ? `${toothHTML}${numDiv}${faceHTML}`
+      : `${faceHTML}${numDiv}${toothHTML}`;
     return `${gap}<div class="odonto-dente-wrap${sel}" onclick="odontoClicarDente(${num})" title="${escapeHtml(title)}">${inner}</div>`;
   }).join('');
 }
@@ -5544,6 +5633,149 @@ function renderLegenda(){
   ).join('');
 }
 
+function odontoMainSetCond(cond){
+  document.getElementById('odonto-d-cond').value = cond || 'higido';
+  document.querySelectorAll('[data-od-main-cond-wrap]').forEach(btn=>{
+    const active = btn.dataset.odMainCondWrap === cond;
+    btn.style.borderColor = active ? 'var(--rose)' : 'var(--rose-light)';
+    btn.style.background = active ? 'var(--rose)' : '#fff';
+    btn.style.color = active ? '#fff' : '#3a2020';
+  });
+}
+
+function odontoMainToggleFace(face){
+  const idx = odontoMainFacesSel.indexOf(face);
+  const btn = document.querySelector('[data-odonto-face="'+face+'"]');
+  if(idx>=0){
+    odontoMainFacesSel.splice(idx,1);
+    if(btn){ btn.style.borderColor='var(--rose-light)'; btn.style.background='#fff'; btn.style.color='#3a2020'; }
+  } else {
+    odontoMainFacesSel.push(face);
+    if(btn){ btn.style.borderColor='var(--rose)'; btn.style.background='var(--rose)'; btn.style.color='#fff'; }
+  }
+}
+
+function odontoMainResetFaces(faces){
+  odontoMainFacesSel = [];
+  document.querySelectorAll('[data-odonto-face]').forEach(btn=>{
+    btn.style.borderColor='var(--rose-light)'; btn.style.background='#fff'; btn.style.color='#3a2020';
+  });
+  (faces||[]).forEach(f=>odontoMainToggleFace(f));
+}
+
+function odontoMainFiltrarProcs(){
+  const q = _norm(document.getElementById('odonto-d-proc-search')?.value || '');
+  const opts = document.getElementById('odonto-d-proc-opts');
+  if(!opts) return;
+  if(!procs.length){
+    opts.innerHTML = "<div style='padding:12px;color:var(--rose-text);text-align:center;font-size:13px;'>Carregando procedimentos...</div>";
+    document.getElementById('odonto-d-proc-dd').style.display = 'block';
+    loadFinanceiro().then(()=>odontoMainFiltrarProcs());
+    return;
+  }
+  const lista = (q ? procs.filter(p=>_norm(p.nome).includes(q)) : procs)
+    .filter(p=>p.ativo!==false)
+    .slice(0,80);
+  if(!lista.length){
+    opts.innerHTML = "<div style='padding:12px;color:var(--rose-text);text-align:center;font-size:13px;'>Nenhum procedimento encontrado.</div>";
+    return;
+  }
+  const grupos = [...new Set(lista.map(p=>p.grupo || 'Procedimentos'))].sort();
+  let html = '';
+  grupos.forEach(g=>{
+    const itens = lista.filter(p=>(p.grupo || 'Procedimentos')===g);
+    html += `<div style="padding:5px 10px;font-size:10px;font-weight:700;color:var(--rose-text);text-transform:uppercase;background:var(--rose-lighter);">${escapeHtml(g)}</div>`;
+    itens.forEach(p=>{
+      const tag = procIsGlobal(p.nome)
+        ? '<span style="font-size:10px;background:#e3f2fd;color:#0c5460;border-radius:4px;padding:1px 5px;">Global</span>'
+        : '<span style="font-size:10px;background:#e8f5e9;color:#2e7d32;border-radius:4px;padding:1px 5px;">Por dente</span>';
+      html += `<div data-od-proc-id="${p.id}" style="padding:9px 14px;cursor:pointer;font-size:13px;border-bottom:1px solid var(--rose-light);display:flex;justify-content:space-between;align-items:center;gap:8px;">
+        <span>${escapeHtml(p.nome)} ${tag}</span>
+        <span style="color:var(--rose-dark);font-weight:700;white-space:nowrap;">${fmtBRL(p.precoFinal||0)}</span>
+      </div>`;
+    });
+  });
+  opts.innerHTML = html;
+  opts.querySelectorAll('[data-od-proc-id]').forEach(el=>{
+    el.onmouseover = function(){ this.style.background='var(--rose-lighter)'; };
+    el.onmouseout  = function(){ this.style.background='#fff'; };
+    el.onclick = function(){ odontoMainAddProc(parseInt(this.dataset.odProcId)); };
+  });
+  document.getElementById('odonto-d-proc-dd').style.display = 'block';
+}
+
+function odontoMainAddProc(procId){
+  const p = procs.find(x=>x.id===procId);
+  if(!p) return;
+  if(odontoMainProcs.find(x=>x.nome===p.nome)){ showToast('Procedimento já adicionado.','warn'); return; }
+  odontoMainProcs.push({nome:p.nome, preco:p.precoFinal||0, global:procIsGlobal(p.nome)});
+  const search = document.getElementById('odonto-d-proc-search');
+  if(search) search.value = '';
+  const dd = document.getElementById('odonto-d-proc-dd');
+  if(dd) dd.style.display = 'none';
+  odontoMainRenderProcs();
+}
+
+function odontoMainRemoveProc(idx){
+  odontoMainProcs.splice(idx,1);
+  odontoMainRenderProcs();
+}
+
+function odontoMainRenderProcs(){
+  const c = document.getElementById('odonto-d-proc-lista');
+  const hidden = document.getElementById('odonto-d-proc');
+  if(hidden) hidden.value = odontoMainProcs.map(p=>p.nome).join(', ');
+  if(!c) return;
+  if(!odontoMainProcs.length){
+    c.innerHTML = '<div style="font-size:12px;color:var(--rose-text);padding:4px 0;">Nenhum procedimento adicionado.</div>';
+    return;
+  }
+  c.innerHTML = odontoMainProcs.map((p,i)=>{
+    const tag = p.global
+      ? '<span style="font-size:10px;background:#e3f2fd;color:#0c5460;border-radius:4px;padding:1px 6px;">Global</span>'
+      : '<span style="font-size:10px;background:#e8f5e9;color:#2e7d32;border-radius:4px;padding:1px 6px;">Por dente</span>';
+    return `<div style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:var(--rose-lighter);border-radius:8px;font-size:13px;">
+      <span style="flex:1;">${escapeHtml(p.nome)} ${tag}</span>
+      <span style="font-weight:700;color:var(--rose-dark);">${fmtBRL(p.preco||0)}</span>
+      <button type="button" onclick="odontoMainRemoveProc(${i})" style="border:none;background:none;cursor:pointer;color:#b33;font-size:16px;padding:0 2px;">×</button>
+    </div>`;
+  }).join('');
+}
+
+function odontoMainToggleReplica(){
+  const box = document.getElementById('odonto-replica-box');
+  if(!box) return;
+  box.style.display = box.style.display==='none' ? '' : 'none';
+  odontoMainRenderReplica();
+}
+
+function odontoMainRenderReplica(){
+  const box = document.getElementById('odonto-replica-dentes');
+  if(!box) return;
+  const all = [...FDI_SUP, ...FDI_INF].filter(d=>d!==odontoSelDente);
+  box.innerHTML = all.map(num=>{
+    const active = odontoMainReplica.includes(num);
+    return `<button type="button" onclick="odontoMainToggleReplicaDente(${num})" data-odonto-replica="${num}" style="min-width:34px;height:30px;border:1.5px solid ${active?'var(--rose)':'var(--rose-light)'};border-radius:7px;background:${active?'var(--rose)':'#fff'};color:${active?'#fff':'#3a2020'};font-size:11px;font-weight:700;cursor:pointer;">${num}</button>`;
+  }).join('');
+}
+
+function odontoMainToggleReplicaDente(num){
+  const idx = odontoMainReplica.indexOf(num);
+  if(idx>=0) odontoMainReplica.splice(idx,1);
+  else odontoMainReplica.push(num);
+  odontoMainRenderReplica();
+}
+
+function odontoFaceGridClick(evt, num, face){
+  if(evt) evt.stopPropagation();
+  if(odontoSelDente !== num) odontoClicarDente(num);
+  setTimeout(()=>{
+    if(!odontoMainFacesSel.includes(face)) odontoMainToggleFace(face);
+    renderArcada('arc-sup', FDI_SUP);
+    renderArcada('arc-inf', FDI_INF);
+  },0);
+}
+
 function odontoClicarDente(num){
   if(odontoSelDente === num){
     odontoSelDente = null;
@@ -5556,20 +5788,45 @@ function odontoClicarDente(num){
   renderArcada('arc-sup', FDI_SUP);
   renderArcada('arc-inf', FDI_INF);
   const panel = document.getElementById('odonto-dente-panel');
-  panel.style.display = '';
+  panel.style.display = 'flex';
   document.getElementById('odonto-d-num').textContent = num;
   document.getElementById('odonto-d-nome').textContent = DENTE_NOME[num] || '';
   // Preenche com dados existentes
   const d = odontoDentes[num] || {};
-  document.getElementById('odonto-d-cond').value = d.condicao || 'higido';
-  document.getElementById('odonto-d-proc').value = d.procedimento || '';
-  document.getElementById('odonto-d-obs').value  = d.obs || '';
+  const obsRaw = d.obs || '';
+  let obsClean = obsRaw;
+  const faceMatch = obsRaw.match(/^Faces:\s*([^\n]+)\n?/i);
+  const facesExistentes = odontoExtractFacesFromObs(obsRaw);
+  if(faceMatch){
+    obsClean = obsRaw.replace(/^Faces:\s*[^\n]+\n?/i,'').trim();
+  }
+  odontoMainSetCond(d.condicao || 'higido');
+  odontoMainResetFaces(facesExistentes);
+  odontoMainProcs = (d.procedimento || '')
+    .split(',')
+    .map(s=>s.trim())
+    .filter(Boolean)
+    .map(nome=>{
+      const found = procs.find(p=>p.nome===nome);
+      return {nome, preco:found?.precoFinal||0, global:found?procIsGlobal(found.nome):false};
+    });
+  odontoMainRenderProcs();
+  const searchEl = document.getElementById('odonto-d-proc-search');
+  if(searchEl) searchEl.value = '';
+  odontoMainReplica = [];
+  const replicaBox = document.getElementById('odonto-replica-box');
+  if(replicaBox) replicaBox.style.display = 'none';
+  odontoMainRenderReplica();
+  document.getElementById('odonto-d-obs').value  = obsClean;
   panel.scrollIntoView({behavior:'smooth',block:'nearest'});
 }
 
 function odontoCancelarDente(){
   odontoSelDente = null;
   document.getElementById('odonto-dente-panel').style.display = 'none';
+  odontoMainFacesSel = [];
+  odontoMainProcs = [];
+  odontoMainReplica = [];
   renderArcada('arc-sup', FDI_SUP);
   renderArcada('arc-inf', FDI_INF);
 }
@@ -5577,34 +5834,39 @@ function odontoCancelarDente(){
 async function odontoSalvarDente(){
   if(!odontoSelDente || !odontoPatId){ showToast('Selecione um dente.','warn'); return; }
   const condicao     = document.getElementById('odonto-d-cond').value;
-  const procedimento = document.getElementById('odonto-d-proc').value.trim();
+  const facesTxt     = odontoMainFacesSel.length ? 'Faces: '+odontoMainFacesSel.join(', ') : '';
+  const procedimento = odontoMainProcs.map(p=>p.nome).join(', ');
   const obs          = document.getElementById('odonto-d-obs').value.trim();
   const profId       = document.getElementById('odonto-d-prof').value || null;
   const prof         = profissionais.find(p=>p.id==profId);
   const data         = document.getElementById('odonto-atend-data').value || hoje();
+  const obsFinal     = [facesTxt, obs].filter(Boolean).join('\n');
+  const dentesSalvar = [odontoSelDente, ...odontoMainReplica].filter((v,i,a)=>v && a.indexOf(v)===i);
   showLoading(true);
-  // Upsert: atualiza se já existe, cria se não existe
-  const existing = odontoDentes[odontoSelDente];
-  let error;
-  if(existing?.id){
-    ({ error } = await _sb.from('procedimentos_dentes').update({
-      condicao, procedimento, obs, data,
-      profissional_id: profId, profissional_nome: prof?.nome||''
-    }).eq('id', existing.id));
-  } else {
-    const { data: novo, error: e } = await _sb.from('procedimentos_dentes').insert([{
-      clinica_id: clinicaId, paciente_id: odontoPatId,
-      dente: odontoSelDente, condicao, procedimento, obs, data,
-      profissional_id: profId, profissional_nome: prof?.nome||''
-    }]).select().single();
-    error = e;
-    if(!error) odontoDentes[odontoSelDente] = novo;
+  let error = null;
+  for(const denteNum of dentesSalvar){
+    const existing = odontoDentes[denteNum];
+    if(existing?.id){
+      ({ error } = await _sb.from('procedimentos_dentes').update({
+        condicao, procedimento, obs: obsFinal, data,
+        profissional_id: profId, profissional_nome: prof?.nome||''
+      }).eq('id', existing.id));
+      if(!error) odontoDentes[denteNum] = {...existing, condicao, procedimento, obs: obsFinal};
+    } else {
+      const { data: novo, error: e } = await _sb.from('procedimentos_dentes').insert([{
+        clinica_id: clinicaId, paciente_id: odontoPatId,
+        dente: denteNum, condicao, procedimento, obs: obsFinal, data,
+        profissional_id: profId, profissional_nome: prof?.nome||''
+      }]).select().single();
+      error = e;
+      if(!error) odontoDentes[denteNum] = novo;
+    }
+    if(error) break;
   }
   showLoading(false);
   if(error){ showToast('Erro: '+error.message,'error'); return; }
-  if(existing) odontoDentes[odontoSelDente] = {...existing, condicao, procedimento, obs};
   odontoCancelarDente();
-  showToast('Dente salvo!');
+  showToast(dentesSalvar.length>1 ? 'Dentes salvos!' : 'Dente salvo!');
 }
 
 function odontoToggleForm(){
@@ -5918,9 +6180,12 @@ function pacRenderArcada(id, dentes){
     const gap = (i === mid) ? '<div class="odonto-quadrant-gap"></div>' : '';
     const numDiv = `<div class="ot-num">${num}</div>`;
     const toothHTML = getToothSVG(num, cond, pendingStyle);
+    const savedFaces = r ? r.faces : (d.face && d.face!=='–' ? d.face.split(',').map(f=>f.trim()).filter(Boolean) : odontoExtractFacesFromObs(d.obs));
+    const faces = pacDenteSel===num ? pacFacesSel : savedFaces;
+    const faceHTML = odontoFaceGridHTML(num, faces, 'pacFaceGridClick');
     const inner = upper
-      ? `${numDiv}${toothHTML}`
-      : `${toothHTML}${numDiv}`;
+      ? `${toothHTML}${numDiv}${faceHTML}`
+      : `${faceHTML}${numDiv}${toothHTML}`;
     const pendingDot = hasPending ? '<div class="odonto-pending-dot"></div>' : '';
     return `${gap}<div class="odonto-dente-wrap${sel}" onclick="pacClicarDente(${num})" title="${escapeHtml(tip)}">${pendingDot}${inner}</div>`;
   }).join('');
@@ -5984,7 +6249,7 @@ function pacClicarDente(num){
   document.querySelectorAll('[data-face]').forEach(b=>{
     b.style.borderColor='var(--rose-light)'; b.style.background='#fff'; b.style.color='#3a2020';
   });
-  const facesArr = rascunho ? rascunho.faces : (d.face && d.face!=='–' ? d.face.split(',').map(f=>f.trim()).filter(Boolean) : []);
+  const facesArr = rascunho ? rascunho.faces : (d.face && d.face!=='–' ? d.face.split(',').map(f=>f.trim()).filter(Boolean) : odontoExtractFacesFromObs(d.obs));
   facesArr.forEach(f=>pacToggleFace(f));
   document.getElementById('pac-d-faces').value = facesArr.join(',');
 
@@ -6004,7 +6269,8 @@ function pacClicarDente(num){
   // Obs
   const searchEl = document.getElementById('pac-d-proc-search');
   if(searchEl) searchEl.value = '';
-  document.getElementById('pac-d-obs').value = rascunho ? rascunho.obs : (d.obs || '');
+  const obsBase = rascunho ? rascunho.obs : (d.obs || '');
+  document.getElementById('pac-d-obs').value = String(obsBase).replace(/^Faces:\s*[^\n]+\n?/i,'').trim();
   panel.scrollIntoView({behavior:'smooth',block:'nearest'});
 }
 
@@ -6032,17 +6298,18 @@ async function pacSalvarDente(pacId){
     const faces       = r.faces.length ? r.faces.join(',') : '–';
     const procedimento= r.procs.map(p=>p.nome).join(', ');
     const obs         = r.obs || '';
+    const obsFinal    = [r.faces.length ? 'Faces: '+r.faces.join(', ') : '', obs].filter(Boolean).join('\n');
     const data        = hoje();
     const existing    = pacDentesMap[num];
 
     let error;
     if(existing?.id){
-      ({ error } = await _sb.from('procedimentos_dentes').update({ condicao, procedimento, obs, data }).eq('id', existing.id));
-      if(!error) pacDentesMap[num] = { ...existing, condicao, procedimento, obs };
+      ({ error } = await _sb.from('procedimentos_dentes').update({ condicao, procedimento, obs: obsFinal, data }).eq('id', existing.id));
+      if(!error) pacDentesMap[num] = { ...existing, condicao, procedimento, obs: obsFinal };
     } else {
       const { data: novo, error: e } = await _sb.from('procedimentos_dentes').insert([{
         clinica_id: clinicaId, paciente_id: pacId,
-        dente: num, condicao, procedimento, obs, data
+        dente: num, condicao, procedimento, obs: obsFinal, data
       }]).select().single();
       error = e;
       if(!error) pacDentesMap[num] = novo;
@@ -6253,6 +6520,15 @@ function pacToggleFace(face){
     if(btn){ btn.style.borderColor='var(--rose)'; btn.style.background='var(--rose)'; btn.style.color='#fff'; }
   }
   document.getElementById('pac-d-faces').value = pacFacesSel.join(',');
+}
+
+function pacFaceGridClick(evt, num, face){
+  if(evt) evt.stopPropagation();
+  if(pacDenteSel !== num) pacClicarDente(num);
+  setTimeout(()=>{
+    if(!pacFacesSel.includes(face)) pacToggleFace(face);
+    pacRenderArcadas();
+  },0);
 }
 
 function pacDenteFiltrarProcs(){
