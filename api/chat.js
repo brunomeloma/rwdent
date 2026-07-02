@@ -177,33 +177,34 @@ module.exports = async function handler(req, res) {
     console.log('[AI] auth: variáveis Supabase ausentes');
   } else {
     try {
-      // Usa RLS do Supabase: o JWT filtra automaticamente os dados do usuário
-      authedSb = createClient(supabaseUrl, supabaseAnon, {
-        global: { headers: { Authorization: `Bearer ${cleanToken}` } }
-      });
-      // Busca a clínica aprovada do usuário logado (RLS garante isolamento)
-      const { data: cli, error: cliErr } = await authedSb
-        .from('clinicas')
-        .select('id, user_id')
-        .eq('status', 'aprovado')
-        .limit(1)
-        .single();
-      if (cliErr) {
-        console.log(`[AI] clinica error: ${cliErr.message}`);
-        // Tenta auth explícita como fallback
-        const sbPlain = createClient(supabaseUrl, supabaseAnon);
-        const { data: { user }, error: authErr } = await sbPlain.auth.getUser(cleanToken);
-        if (!authErr && user) {
-          console.log(`[AI] fallback auth: user=${user.id}`);
-          const { data: cli2 } = await authedSb
-            .from('clinicas').select('id').eq('user_id', user.id).eq('status', 'aprovado').single();
-          if (cli2) { clinicId = cli2.id; console.log(`[AI] clinicId=${clinicId}`); }
+      // Valida o JWT e obtém o user_id real
+      const sbAnon = createClient(supabaseUrl, supabaseAnon);
+      const { data: { user }, error: authErr } = await sbAnon.auth.getUser(cleanToken);
+      if (authErr) {
+        console.log(`[AI] auth error: ${authErr.message}`);
+      } else if (!user) {
+        console.log('[AI] auth: nenhum usuário para o token');
+      } else {
+        console.log(`[AI] auth ok: user=${user.id}`);
+        // Cria cliente com o token do usuário para respeitar RLS
+        authedSb = createClient(supabaseUrl, supabaseAnon, {
+          global: { headers: { Authorization: `Bearer ${cleanToken}` } }
+        });
+        // Filtra explicitamente por user_id para garantir isolamento entre clínicas
+        const { data: cli, error: cliErr } = await authedSb
+          .from('clinicas')
+          .select('id')
+          .eq('user_id', user.id)
+          .eq('status', 'aprovado')
+          .single();
+        if (cliErr) {
+          console.log(`[AI] clinica error: ${cliErr.message}`);
+        } else if (cli) {
+          clinicId = cli.id;
+          console.log(`[AI] clinicId=${clinicId}`);
         } else {
-          console.log(`[AI] fallback auth error: ${authErr?.message}`);
+          console.log('[AI] clinica: não encontrada');
         }
-      } else if (cli) {
-        clinicId = cli.id;
-        console.log(`[AI] clinicId=${clinicId} user=${cli.user_id}`);
       }
     } catch (e) {
       console.log(`[AI] auth exception: ${e.message}`);
