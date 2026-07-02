@@ -14402,10 +14402,10 @@ document.addEventListener('keydown', e=>{
   </div>
   <div class="ai-msgs" id="ai-msgs"></div>
   <div class="ai-chips" id="ai-chips">
-    <button class="ai-chip" onclick="aiChip('Liste meus pacientes')">👥 Pacientes</button>
-    <button class="ai-chip" onclick="aiChip('Agende uma consulta')">📅 Agendar</button>
+    <button class="ai-chip" onclick="aiChip('Como faço um orçamento?')">🧾 Orçamento</button>
+    <button class="ai-chip" onclick="aiChip('Onde eu agendo uma consulta?')">📅 Agendar</button>
     <button class="ai-chip" onclick="aiChip('Onde fica o odontograma?')">🦷 Odontograma</button>
-    <button class="ai-chip" onclick="aiChip('Como vejo o financeiro?')">💰 Financeiro</button>
+    <button class="ai-chip" onclick="aiChip('Qual o preço da profilaxia?')">💵 Preços</button>
   </div>
   <div class="ai-foot">
     <input id="ai-input" type="text" placeholder="Pergunte algo…" maxlength="300"
@@ -14457,7 +14457,7 @@ document.addEventListener('keydown', e=>{
 
   function _sendWelcome(){
     const nome = (clinicaData?.nome_resp||'').split(' ')[0] || 'Doutor(a)';
-    _addMsg('bot', `Olá, ${_esc(nome)}! 👋 Sou sua assistente no RWDent.<br><br>Hoje eu posso <strong>listar</strong>, <strong>buscar</strong> e <strong>cadastrar</strong> pacientes, além de <strong>criar agendamentos</strong> com confirmação.`);
+    _addMsg('bot', `Olá, ${_esc(nome)}! 👋 Sou sua assistente no RWDent.<br><br>Posso tirar dúvidas de uso do sistema, mostrar onde ficam as telas, explicar orçamento/odontograma/agendamento e consultar preços de procedimentos. Também consigo buscar pacientes e criar agendamentos com sua confirmação.`);
   }
 
   /* ── Chips de sugestão ── */
@@ -14515,7 +14515,8 @@ document.addEventListener('keydown', e=>{
       if(!session){ throw new Error('LOGIN_EXPIRED'); }
       const ctx = {
         clinicName:  (clinicaData?.nome_cli  || '').trim() || 'Clínica',
-        dentistName: (clinicaData?.nome_resp || '').trim() || 'Profissional'
+        dentistName: (clinicaData?.nome_resp || '').trim() || 'Profissional',
+        procedures:  _safeProceduresContext()
       };
       const res = await fetch('/api/chat', {
         method: 'POST',
@@ -14577,6 +14578,24 @@ document.addEventListener('keydown', e=>{
     return safe.replace(/(https:\/\/calendar\.google\.com\/calendar\/render\?[^<\s]+)/g, url => {
       return `<a href="${url}" target="_blank" rel="noopener" style="color:#a04030;font-weight:700;text-decoration:underline;">Abrir Google Agenda</a>`;
     });
+  }
+
+  function _safeProceduresContext(){
+    try {
+      const list = (typeof procs !== 'undefined' && Array.isArray(procs)) ? procs : (Array.isArray(window.procs) ? window.procs : []);
+      if(!list.length) return [];
+      return list
+        .filter(p => p && p.nome)
+        .slice(0, 180)
+        .map(p => ({
+          nome: String(p.nome || '').slice(0, 120),
+          grupo: String(p.grupo || 'Procedimentos').slice(0, 80),
+          precoFinal: Number(p.precoFinal || 0),
+          tipo_cobranca: String(p.tipo_cobranca || '').slice(0, 30)
+        }));
+    } catch(e){
+      return [];
+    }
   }
 
   function _esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
