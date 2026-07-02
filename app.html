@@ -4222,6 +4222,40 @@ function voltarListaPacientes(){
 
 function selectPatient(id){ abrirPacienteDetalhe(id); }
 
+function pacPeriodontiaSvg(){
+  const sup = [
+    [18,28,118,12,18],[17,39,91,13,18],[16,55,68,15,17],[15,75,50,13,16],
+    [14,98,38,12,15],[13,122,28,11,18],[12,148,22,10,18],[11,176,18,11,19],
+    [21,204,18,11,19],[22,232,22,10,18],[23,258,28,11,18],[24,282,38,12,15],
+    [25,305,50,13,16],[26,325,68,15,17],[27,341,91,13,18],[28,352,118,12,18]
+  ];
+  const inf = [
+    [48,32,242,14,18],[47,48,266,14,18],[46,67,286,15,18],[45,90,304,13,16],
+    [44,114,316,12,15],[43,139,327,11,18],[42,164,336,10,18],[41,190,340,10,19],
+    [31,214,340,10,19],[32,240,336,10,18],[33,265,327,11,18],[34,290,316,12,15],
+    [35,314,304,13,16],[36,337,286,15,18],[37,356,266,14,18],[38,372,242,14,18]
+  ];
+  const tooth = ([n,x,y,rx,ry]) => `<g><ellipse class="tooth" cx="${x}" cy="${y}" rx="${rx}" ry="${ry}"/><text class="num" x="${x}" y="${y + (y < 180 ? -22 : 28)}" text-anchor="middle">${n}</text></g>`;
+  return `<svg class="perio-mouth" viewBox="0 0 400 380" role="img" aria-label="Registro periodontal por sextantes">
+    <path class="gum" d="M35 138 C46 48 142 14 200 14 C258 14 354 48 365 138 C370 172 350 198 316 202 C260 198 232 180 200 180 C168 180 140 198 84 202 C50 198 30 172 35 138 Z"/>
+    <path class="gum-soft" d="M70 137 C82 70 150 42 200 42 C250 42 318 70 330 137 C302 128 258 120 200 120 C142 120 98 128 70 137 Z"/>
+    <path class="gum" d="M35 238 C46 332 142 366 200 366 C258 366 354 332 365 238 C370 204 350 182 316 178 C260 182 232 200 200 200 C168 200 140 182 84 178 C50 182 30 204 35 238 Z"/>
+    <path class="gum-soft" d="M70 243 C82 310 150 338 200 338 C250 338 318 310 330 243 C302 252 258 260 200 260 C142 260 98 252 70 243 Z"/>
+    <path class="line" d="M200 180 L125 72 M200 180 L275 72 M200 200 L128 314 M200 200 L272 314"/>
+    ${sup.map(tooth).join('')}
+    ${inf.map(tooth).join('')}
+    <text class="label" x="200" y="91" text-anchor="middle">S1</text>
+    <text class="label" x="105" y="144" text-anchor="middle">S2</text>
+    <text class="label" x="295" y="144" text-anchor="middle">S3</text>
+    <text class="label" x="295" y="244" text-anchor="middle">S4</text>
+    <text class="label" x="200" y="292" text-anchor="middle">S5</text>
+    <text class="label" x="105" y="244" text-anchor="middle">S6</text>
+    <text class="num" x="200" y="10" text-anchor="middle">FRENTE</text>
+    <text class="num" x="18" y="193" text-anchor="middle">DIREITA</text>
+    <text class="num" x="382" y="193" text-anchor="middle">ESQUERDA</text>
+  </svg>`;
+}
+
 function renderPatientDetail(abaAtiva){
   abaAtiva = abaAtiva || 'info';
   const panel=document.getElementById('painel-paciente');
@@ -5532,7 +5566,7 @@ const DENTE_NOME = {
   81:'Dec. Inc. Central',82:'Dec. Inc. Lateral',83:'Dec. Canino',84:'Dec. Molar 1',85:'Dec. Molar 2'
 };
 const COND_PT = {higido:'Hígido',carie:'Cárie',restaurado:'Restaurado',extraido:'Extraído',canal:'Canal',coroa:'Coroa',implante:'Implante',fratura:'Fratura',selante:'Selante',outro:'Outro'};
-const COND_COR = {higido:'#fff',carie:'#ef5350',restaurado:'#43a047',extraido:'#9e9e9e',canal:'#ffb300',coroa:'#1e88e5',implante:'#8e24aa',fratura:'#fb8c00',selante:'#00acc1',outro:'#757575'};
+const COND_COR = {higido:'#fff',carie:'#ef5350',restaurado:'#2374c6',extraido:'#9e9e9e',canal:'#ffb300',coroa:'#1e88e5',implante:'#8e24aa',fratura:'#fb8c00',selante:'#00acc1',outro:'#757575'};
 const ODONTO_COND_OPTIONS = [
   {id:'ausente', label:'Ausente', code:'A', visual:'extraido'},
   {id:'higido_selado', label:'Hígido selado', code:'Hs', visual:'higido'},
@@ -5616,7 +5650,7 @@ const TOOTH_COND_COLORS = {
   //                    fill vivo      light(gradiente) stroke escuro    oclFill        raiz
   higido:     { fill:'#fffdf9', light:'#f5eee7', stroke:'#b89b8a', oclFill:'#fffaf4', root:'#d9b98f' },
   carie:      { fill:'#ef5350', light:'#ffcdd2', stroke:'#b71c1c', oclFill:'#ef5350', root:'#c9a080' },
-  restaurado: { fill:'#43a047', light:'#c8e6c9', stroke:'#1b5e20', oclFill:'#43a047', root:'#d9b98f' },
+  restaurado: { fill:'#2374c6', light:'#d8eaff', stroke:'#14599c', oclFill:'#2374c6', root:'#d9b98f' },
   extraido:   { fill:'#9e9e9e', light:'#eeeeee', stroke:'#424242', oclFill:'#9e9e9e', root:'#bdbdbd' },
   canal:      { fill:'#ffb300', light:'#fff8e1', stroke:'#e65100', oclFill:'#ffb300', root:'#d9b98f' },
   coroa:      { fill:'#1e88e5', light:'#bbdefb', stroke:'#0d47a1', oclFill:'#1e88e5', root:'#d9b98f' },
@@ -5663,7 +5697,39 @@ function toothDefs(id, c){
   </defs>`;
 }
 
-function getFrontalSVG(type, isUpper, c, isExtr) {
+function odontoFaceOverlaySVG(faceStatus){
+  const status = faceStatus || {};
+  const colorFor = (face) => status[face] === 'treated' ? '#2374c6' : status[face] === 'untreated' ? '#d63d46' : '';
+  const parts = [
+    ['Vestibular', 'M11 9 L29 9 L25 18 L15 18 Z'],
+    ['Mesial', 'M8 12 L16 18 L16 34 L9 39 C7 30 6 20 8 12 Z'],
+    ['Distal', 'M32 12 C34 20 33 30 31 39 L24 34 L24 18 Z'],
+    ['Oclusal', 'M15 18 L25 18 L24 34 L16 34 Z'],
+    ['Incisal', 'M15 18 L25 18 L24 34 L16 34 Z'],
+    ['Lingual', 'M16 34 L24 34 L29 40 L11 40 Z']
+  ];
+  return parts.map(([face, d])=>{
+    const fill = colorFor(face);
+    if(!fill) return '';
+    return `<path d="${d}" fill="${fill}" stroke="#fff" stroke-width=".7" opacity=".86"/>`;
+  }).join('');
+}
+
+function odontoCondSigla(cond){
+  return ({extraido:'EX',implante:'IMP',canal:'ENDO',coroa:'CR',fratura:'FX'})[cond] || '';
+}
+
+function odontoSiglaSVG(cond){
+  const sigla = odontoCondSigla(cond);
+  if(!sigla) return '';
+  const fs = sigla.length > 3 ? 6 : 7.5;
+  return `<g class="odonto-cond-sigla">
+    <rect x="8" y="20" width="24" height="11" rx="3" fill="rgba(255,255,255,.88)" stroke="#8f8f8f" stroke-width=".5"/>
+    <text x="20" y="28" text-anchor="middle" font-family="Arial, sans-serif" font-size="${fs}" font-weight="800" fill="#3a2020">${sigla}</text>
+  </g>`;
+}
+
+function getFrontalSVG(type, isUpper, c, isExtr, faceStatus, cond) {
   const id = `t${Math.random().toString(36).slice(2,8)}`;
   const defs = toothDefs(id, c);
   const crownFill = isExtr ? '#ece8e4' : `url(#${id}c)`;
@@ -5700,8 +5766,10 @@ function getFrontalSVG(type, isUpper, c, isExtr) {
     shine = `<path d="M9 13 C7 22 8 31 12 36" fill="none" stroke="#fff" stroke-width="2.3" opacity=".5" stroke-linecap="round"/>`;
   }
 
+  const overlay = odontoFaceOverlaySVG(faceStatus);
   const xmark = isExtr ? `<path d="M8 10 L30 38 M30 10 L8 38" stroke="#8f8f8f" stroke-width="3" stroke-linecap="round" opacity=".75"/>` : '';
-  return `<svg class="ot-front odonto-tooth-svg" viewBox="0 0 40 78" xmlns="http://www.w3.org/2000/svg" width="${sizeW}" height="66" aria-hidden="true">${defs}<g filter="url(#${id}s)">${root}${crown}${grooves}${shine}${xmark}</g></svg>`;
+  const sigla = odontoSiglaSVG(cond);
+  return `<svg class="ot-front odonto-tooth-svg" viewBox="0 0 40 78" xmlns="http://www.w3.org/2000/svg" width="${sizeW}" height="66" aria-hidden="true">${defs}<g filter="url(#${id}s)">${root}${crown}${overlay}${grooves}${shine}${xmark}${sigla}</g></svg>`;
 }
 
 function getOclusalSVG(type, c) {
@@ -5719,12 +5787,12 @@ function getOclusalSVG(type, c) {
   return `<svg class="ot-ocl" viewBox="0 0 44 26" xmlns="http://www.w3.org/2000/svg" width="36" height="21" aria-hidden="true">${defs}<path d="M8 5 C13 0 31 0 36 5 C42 11 40 21 32 24 C26 27 18 27 12 24 C4 21 2 11 8 5 Z" fill="url(#${id}g)" stroke="${c.stroke}" stroke-width="1.15"/><path d="M22 4 C24 10 30 10 35 13 C29 14 25 17 22 23 C19 17 15 14 9 13 C14 10 20 10 22 4 Z" fill="none" stroke="${c.stroke}" stroke-width=".85" opacity=".42" stroke-linecap="round"/><path d="M13 7 C16 9 18 10 22 10 M31 7 C28 9 26 10 22 10 M13 20 C16 17 18 16 22 16 M31 20 C28 17 26 16 22 16" fill="none" stroke="${c.stroke}" stroke-width=".65" opacity=".28" stroke-linecap="round"/></svg>`;
 }
 
-function getToothSVG(num, cond, extraStyle) {
+function getToothSVG(num, cond, extraStyle, faceStatus) {
   const type = getToothType(num);
   const upper = isUpperTooth(num);
   const c = TOOTH_COND_COLORS[cond] || TOOTH_COND_COLORS.higido;
   const isExtr = cond === 'extraido';
-  const frontSVG = getFrontalSVG(type, upper, c, isExtr);
+  const frontSVG = getFrontalSVG(type, upper, c, isExtr, faceStatus, cond);
   const wStyle = extraStyle ? `style="${extraStyle}"` : '';
   return `<div class="ot-views" ${wStyle}>${frontSVG}</div>`;
 }
@@ -5812,8 +5880,8 @@ function renderArcada(containerId, dentes){
     const upper = isUpperTooth(num);
     const gap = (i === mid) ? '<div class="odonto-quadrant-gap"></div>' : '';
     const numDiv = `<div class="ot-num">${num}</div>`;
-    const toothHTML = getToothSVG(num, cond);
     const faceStatus = odontoSelDente===num ? odontoMainFaceStatus : odontoExtractFaceStatusFromObs(d.obs);
+    const toothHTML = getToothSVG(num, cond, '', faceStatus);
     const faceHTML = odontoFaceGridHTML(num, faceStatus, 'odontoFaceGridClick');
     // Upper: frontal → number → faces; Lower: faces → number → frontal
     const inner = upper
@@ -5829,7 +5897,7 @@ function renderLegenda(){
   const itens = [
     ['higido','#fff','#b89b8a','Hígido'],
     ['carie','#ef5350','#b71c1c','Cárie'],
-    ['restaurado','#43a047','#1b5e20','Restaurado'],
+    ['restaurado','#2374c6','#14599c','Restaurado'],
     ['extraido','#9e9e9e','#424242','Extraído'],
     ['canal','#ffb300','#e65100','Canal'],
     ['coroa','#1e88e5','#0d47a1','Coroa'],
@@ -5878,9 +5946,8 @@ function odontoMainSetCond(cond){
 function odontoMainToggleFace(face){
   const current = odontoMainFaceStatus[face];
   const btn = document.querySelector('[data-odonto-face="'+face+'"]');
-  if(!current) odontoMainFaceStatus[face] = 'untreated';
-  else if(current === 'untreated') odontoMainFaceStatus[face] = 'treated';
-  else delete odontoMainFaceStatus[face];
+  if(current === 'treated') delete odontoMainFaceStatus[face];
+  else odontoMainFaceStatus[face] = 'treated';
   odontoMainFacesSel = Object.keys(odontoMainFaceStatus);
   if(btn) odontoMainPaintFaceButton(btn, odontoMainFaceStatus[face]);
   if(odontoSelDente){
@@ -6567,13 +6634,15 @@ function pacRenderArcada(id, dentes){
                  d.procedimento ? `${num}: ${d.procedimento}` : `Dente ${num}`;
     const upper = isUpperTooth(num);
     const gap = (i === mid) ? '<div class="odonto-quadrant-gap"></div>' : '';
+    const savedFaces = r ? (r.faceStatus || Object.fromEntries((r.faces||[]).map(f=>[f,'treated']))) : (d.face && d.face!=='–' ? Object.fromEntries(d.face.split(',').map(f=>f.trim()).filter(Boolean).map(f=>[f,'treated'])) : odontoExtractFaceStatusFromObs(d.obs));
+    const faceStatus = pacDenteSel===num ? pacFaceStatus : savedFaces;
     const pendingDot = hasPending ? '<div class="odonto-pending-dot"></div>' : '';
     const pendingStyle = hasPending ? 'filter:drop-shadow(0 0 4px rgba(245,158,11,.7));' : '';
     // Front SVG clickable (opens detail panel); face grid has its own click (cycles colors)
     const type  = getToothType(num);
     const cl    = TOOTH_COND_COLORS[cond] || TOOTH_COND_COLORS.higido;
-    const frontSVG = getFrontalSVG(type, upper, cl, cond === 'extraido');
-    const faceGrid = getFaceGridPacHTML(num);
+    const frontSVG = getFrontalSVG(type, upper, cl, cond === 'extraido', faceStatus, cond);
+    const faceGrid = getFaceGridPacHTML(num, faceStatus);
     const frontWrap = `<div onclick="pacClicarDente(${num});event.stopPropagation()" style="cursor:pointer;${pendingStyle}">${frontSVG}</div>`;
     const numDiv = `<div class="ot-num" onclick="pacClicarDente(${num});event.stopPropagation()" style="cursor:pointer;">${num}</div>`;
     const views = `<div class="ot-views">${frontWrap}${faceGrid}</div>`;
@@ -6585,9 +6654,8 @@ function pacRenderArcada(id, dentes){
 function pacRenderLegenda(){
   const c = document.getElementById('pac-odonto-legenda');
   if(!c) return;
-  const itens = [['#fff','var(--rose-light)','Hígido'],['#ffcdd2','#e57373','Cárie'],['#c8e6c9','#66bb6a','Restaurado'],['#eee','#bdbdbd','Extraído'],['#fff9c4','#fdd835','Canal'],['#bbdefb','#42a5f5','Coroa'],['#e1bee7','#ab47bc','Implante']];
   const itens2 = [
-    ['#fff','#b89b8a','Hígido'],['#ef5350','#b71c1c','Cárie'],['#43a047','#1b5e20','Restaurado'],
+    ['#fff','#b89b8a','Hígido'],['#ef5350','#b71c1c','Cárie'],['#2374c6','#14599c','Restaurado'],
     ['#9e9e9e','#424242','Extraído'],['#ffb300','#e65100','Canal'],['#1e88e5','#0d47a1','Coroa'],['#8e24aa','#4a148c','Implante']
   ];
   c.innerHTML = '<span class="odonto-face-status untreated">Não tratado</span><span class="odonto-face-status treated">Tratado</span>' + itens2.map(([bg,brd,lbl])=>
@@ -6595,21 +6663,57 @@ function pacRenderLegenda(){
   ).join('');
 }
 
-function pacClickFace(num, face, e) {
-  e.stopPropagation();
-  if (!pacFaceColors[num]) pacFaceColors[num] = {};
-  pacFaceColors[num][face] = ((pacFaceColors[num][face] || 0) + 1) % 3;
-  pacRenderArcadas();
+function pacToggleFaceStatusMap(status, face){
+  const next = {...(status || {})};
+  if(next[face] === 'treated') delete next[face];
+  else next[face] = 'treated';
+  return next;
 }
 
-function getFaceGridPacHTML(num) {
-  const fc = pacFaceColors[num] || {};
-  // 0=vazio(branco) 1=azul(restaurado) 2=vermelho(cárie)
-  const FILL   = ['#ffffff', '#1565c0', '#e53935'];
-  const STROKE = ['#b0a09a', '#0a3d8f', '#b71c1c'];
+async function pacClickFace(num, face, e) {
+  if(e) e.stopPropagation();
+  if(pacDenteSel === num){
+    pacFaceStatus = pacToggleFaceStatusMap(pacFaceStatus, face);
+    pacFacesSel = Object.keys(pacFaceStatus);
+    document.querySelectorAll('[data-face]').forEach(b=>pacPaintFaceButton(b, pacFaceStatus[b.dataset.face]));
+    const input = document.getElementById('pac-d-faces');
+    if(input) input.value = pacFacesSel.join(',');
+    pacRenderArcadas();
+    return;
+  }
+  if(pacDentesRascunho[num]){
+    pacDentesRascunho[num].faceStatus = pacToggleFaceStatusMap(pacDentesRascunho[num].faceStatus, face);
+    pacDentesRascunho[num].faces = Object.keys(pacDentesRascunho[num].faceStatus);
+    pacRenderArcadas();
+    return;
+  }
+  if(!selectedPatientId){ showToast('Selecione um paciente.','warn'); return; }
+  const existing = pacDentesMap[num];
+  const obs = odontoToggleFaceInObs(existing?.obs || '', face);
+  const condicao = existing?.condicao || 'higido';
+  showLoading(true);
+  let error = null;
+  if(existing?.id){
+    ({ error } = await _sb.from('procedimentos_dentes').update({obs, condicao, data:hoje()}).eq('id', existing.id));
+    if(!error) pacDentesMap[num] = {...existing, obs, condicao, data:hoje()};
+  } else {
+    const { data: novo, error: e } = await _sb.from('procedimentos_dentes').insert([{clinica_id:clinicaId,paciente_id:selectedPatientId,dente:num,condicao,procedimento:'',obs,data:hoje()}]).select().single();
+    error = e;
+    if(!error) pacDentesMap[num] = novo;
+  }
+  showLoading(false);
+  if(error){ showToast('Erro: '+error.message,'error'); return; }
+  pacRenderArcadas();
+  pacRenderDentesHistorico();
+}
+
+function getFaceGridPacHTML(num, faceStatus) {
+  const fc = faceStatus || {};
+  const FILL = {none:'#ffffff', treated:'#2374c6', untreated:'#d63d46'};
+  const STROKE = {none:'#b0a09a', treated:'#14599c', untreated:'#a91f2a'};
   function zone(face, pts, isRect) {
-    const st = fc[face] || 0;
-    const f = FILL[st], s = STROKE[st];
+    const st = fc[face] || 'none';
+    const f = FILL[st] || FILL.none, s = STROKE[st] || STROKE.none;
     const shape = isRect
       ? `<rect x="11" y="11" width="10" height="10" fill="${f}" stroke="${s}" stroke-width="1.1"/>`
       : `<polygon points="${pts}" fill="${f}" stroke="${s}" stroke-width="1.1"/>`;
@@ -6617,13 +6721,13 @@ function getFaceGridPacHTML(num) {
   }
   return `<svg class="ot-face-grid" width="36" height="36" viewBox="0 0 32 32"
     xmlns="http://www.w3.org/2000/svg" onclick="event.stopPropagation()"
-    title="1º clique=azul(restaurado) 2º=vermelho(cárie) 3º=limpar">
+    title="Clique para marcar tratado; clique novamente para limpar">
     <rect width="32" height="32" rx="3" fill="#f7f1ee" stroke="#c9b5ae" stroke-width="0.8"/>
-    ${zone('vestibular','1,1 31,1 21,11 11,11')}
-    ${zone('mesial','1,1 11,11 11,21 1,31')}
-    ${zone('oclusal','',true)}
-    ${zone('distal','31,1 21,11 21,21 31,31')}
-    ${zone('lingual','1,31 11,21 21,21 31,31')}
+    ${zone('Vestibular','1,1 31,1 21,11 11,11')}
+    ${zone('Mesial','1,1 11,11 11,21 1,31')}
+    ${zone('Oclusal','',true)}
+    ${zone('Distal','31,1 21,11 21,21 31,31')}
+    ${zone('Lingual','1,31 11,21 21,21 31,31')}
   </svg>`;
 }
 
@@ -6956,9 +7060,8 @@ function pacPaintFaceButton(btn, status){
 function pacToggleFace(face){
   const current = pacFaceStatus[face];
   const btn = document.querySelector('[data-face="'+face+'"]');
-  if(!current) pacFaceStatus[face] = 'untreated';
-  else if(current === 'untreated') pacFaceStatus[face] = 'treated';
-  else delete pacFaceStatus[face];
+  if(current === 'treated') delete pacFaceStatus[face];
+  else pacFaceStatus[face] = 'treated';
   pacFacesSel = Object.keys(pacFaceStatus);
   pacPaintFaceButton(btn, pacFaceStatus[face]);
   document.getElementById('pac-d-faces').value = pacFacesSel.join(',');
