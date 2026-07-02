@@ -139,11 +139,15 @@ async function runTool(name, args, sb, clinicId) {
 // CHAMADA GEMINI REST NATIVA
 // ══════════════════════════════════════════════
 async function callGemini(apiKey, payload) {
+  // Remove qualquer caractere fora do ASCII imprimível (ex: bullets copiados acidentalmente)
+  const safeKey = String(apiKey || '').replace(/[^\x20-\x7E]/g, '').trim();
+  if (!safeKey) throw new Error('GEMINI_KEY_INVALID');
+
   const resp = await fetch(GEMINI_URL, {
     method:  'POST',
     headers: {
       'Content-Type':   'application/json',
-      'x-goog-api-key': apiKey
+      'x-goog-api-key': safeKey
     },
     body: JSON.stringify(payload)
   });
