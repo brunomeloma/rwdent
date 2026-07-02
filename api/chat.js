@@ -100,9 +100,26 @@ async function runTool(name, args, sb, clinicId) {
         .order('nome')
         .limit(lim);
       if (error) throw new Error(error.message);
-      if (!data?.length) return 'Nenhum paciente cadastrado ainda.';
-      return `${data.length} paciente(s):\n` +
-        data.map(p => `• ${p.nome} | ${p.telefone || 'sem telefone'}`).join('\n');
+      if (!data?.length) return JSON.stringify({
+        tool: name,
+        ok: true,
+        kind: 'patient_list',
+        total: 0,
+        message: 'Nenhum paciente cadastrado ainda.',
+        patients: []
+      });
+      return JSON.stringify({
+        tool: name,
+        ok: true,
+        kind: 'patient_list',
+        total: data.length,
+        limit: lim,
+        patients: data.map(p => ({
+          id: p.id,
+          nome: p.nome,
+          telefone: p.telefone || null
+        }))
+      });
     }
 
     case 'buscar_paciente': {
@@ -116,9 +133,28 @@ async function runTool(name, args, sb, clinicId) {
         .order('nome')
         .limit(10);
       if (error) throw new Error(error.message);
-      if (!data?.length) return `Nenhum paciente encontrado para "${q}".`;
-      return `${data.length} resultado(s):\n` +
-        data.map(p => `• [ID:${p.id}] ${p.nome} | ${p.telefone || 'sem telefone'}`).join('\n');
+      if (!data?.length) return JSON.stringify({
+        tool: name,
+        ok: true,
+        kind: 'patient_search',
+        query: q,
+        total: 0,
+        message: `Nenhum paciente encontrado para "${q}".`,
+        patients: []
+      });
+      return JSON.stringify({
+        tool: name,
+        ok: true,
+        kind: 'patient_search',
+        query: q,
+        total: data.length,
+        patients: data.map(p => ({
+          id: p.id,
+          nome: p.nome,
+          telefone: p.telefone || null,
+          email: p.email || null
+        }))
+      });
     }
 
     case 'cadastrar_paciente': {
@@ -136,12 +172,69 @@ async function runTool(name, args, sb, clinicId) {
         .select('id, nome, telefone')
         .single();
       if (error) throw new Error(error.message);
-      return `✅ Paciente "${data.nome}" cadastrado com sucesso! (ID: ${data.id})`;
+      return JSON.stringify({
+        tool: name,
+        ok: true,
+        kind: 'patient_created',
+        patient: {
+          id: data.id,
+          nome: data.nome,
+          telefone: data.telefone || null
+        }
+      });
     }
 
     default:
       return `Ferramenta "${name}" não reconhecida.`;
   }
+}
+
+function parseToolResult(raw) {
+  try {
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === 'object' ? parsed : { ok: true, message: String(raw || '') };
+  } catch {
+    return { ok: true, message: String(raw || '') };
+  }
+}
+
+function formatPhone(phone) {
+  const digits = String(phone || '').replace(/\D/g, '');
+  if (!digits) return 'sem telefone';
+  if (digits.length === 11) return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
+  if (digits.length === 10) return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
+  return digits;
+}
+
+function formatToolReply(outputs) {
+  const last = outputs[outputs.length - 1];
+  if (!last) return null;
+
+  const data = last.data || {};
+  const patients = Array.isArray(data.patients) ? data.patients : [];
+
+  if (data.kind === 'patient_list') {
+    if (!patients.length) return data.message || 'Nenhum paciente cadastrado ainda.';
+    const lines = patients.map((p, idx) => `${idx + 1}. ${p.nome} - ${formatPhone(p.telefone)}`);
+    const suffix = data.total >= data.limit ? '\n\nMostrando os primeiros pacientes da lista.' : '';
+    return `Encontrei estes pacientes:\n\n${lines.join('\n')}${suffix}`;
+  }
+
+  if (data.kind === 'patient_search') {
+    if (!patients.length) return data.message || `Nenhum paciente encontrado para "${data.query || 'sua busca'}".`;
+    const lines = patients.map((p, idx) => {
+      const email = p.email ? ` - ${p.email}` : '';
+      return `${idx + 1}. ${p.nome} - ${formatPhone(p.telefone)}${email}`;
+    });
+    return `Resultado da busca por "${data.query || 'paciente'}":\n\n${lines.join('\n')}`;
+  }
+
+  if (data.kind === 'patient_created' && data.patient) {
+    return `Paciente cadastrado com sucesso:\n\n${data.patient.nome} - ${formatPhone(data.patient.telefone)}`;
+  }
+
+  if (data.message) return data.message;
+  return null;
 }
 
 // ══════════════════════════════════════════════
@@ -238,6 +331,7 @@ module.exports = async function handler(req, res) {
   try {
     let rounds = 0;
     let response;
+    const toolOutputs = [];
 
     while (rounds++ < MAX_TOOL_ROUNDS) {
       response = await groq.chat.completions.create({
@@ -264,12 +358,16 @@ module.exports = async function handler(req, res) {
             result = await runTool(tc.function.name, args, authedSb, clinicId);
           }
         } catch (e) {
-          result = `Erro: ${e.message}`;
+          result = JSON.stringify({ tool: tc.function.name, ok: false, message: `Erro: ${e.message}` });
         }
         console.log(`[AI] tool=${tc.function.name} ok`);
+        toolOutputs.push({ name: tc.function.name, data: parseToolResult(result) });
         oaiMessages.push({ role: 'tool', tool_call_id: tc.id, content: result });
       }
     }
+
+    const toolReply = formatToolReply(toolOutputs);
+    if (toolReply) return res.status(200).json({ reply: toolReply });
 
     const reply = response.choices[0].message.content?.trim() || 'Ação executada.';
     return res.status(200).json({ reply });
