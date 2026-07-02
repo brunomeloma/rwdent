@@ -404,6 +404,16 @@ button{font-family:inherit;}
 .oral-mouth::after{content:"";position:absolute;left:52px;right:52px;top:46px;bottom:46px;border-radius:50%;background:#e98b82;opacity:.35;}
 .perio-zone{transition:fill .15s;cursor:pointer;}
 .perio-zone:hover{filter:brightness(0.9);}
+.perio-mouth{width:min(360px,100%);height:auto;margin:auto;display:inline-block;}
+.perio-mouth .gum{fill:#f6aaa8;stroke:#d56b70;stroke-width:2;}
+.perio-mouth .gum-soft{fill:#fac4c1;opacity:.72;}
+.perio-mouth .perio-zone{fill:#f4b0ae;stroke:#c07070;stroke-width:1.4;opacity:.82;}
+.perio-mouth .perio-zone:hover{filter:brightness(.95) drop-shadow(0 2px 3px rgba(120,30,30,.2));}
+.perio-mouth .tooth{fill:#fffdf8;stroke:#d8c8bc;stroke-width:1.1;filter:drop-shadow(0 2px 2px rgba(80,30,30,.13));}
+.perio-mouth .groove{fill:none;stroke:#eadbd0;stroke-width:.8;opacity:.75;}
+.perio-mouth .line{stroke:#fff;stroke-width:3;stroke-linecap:round;fill:none;}
+.perio-mouth .label{font:800 13px Arial,sans-serif;fill:#7a1a1a;pointer-events:none;}
+.perio-mouth .num{font:700 8px Arial,sans-serif;fill:#3a2020;pointer-events:none;}
 .perio-chip{display:inline-flex;align-items:center;justify-content:center;padding:3px 11px;border-radius:20px;font-size:11px;font-weight:700;background:var(--rose-lighter);color:var(--rose-text);border:1.5px solid var(--rose-light);cursor:pointer;transition:all .15s;user-select:none;}
 .perio-chip.active{background:var(--rose);color:#fff;border-color:var(--rose);}
 .perio-proc-list-item{display:flex;align-items:center;padding:8px 10px;border-bottom:1px solid var(--rose-lighter);gap:8px;}
@@ -4235,17 +4245,27 @@ function pacPeriodontiaSvg(){
     [31,214,340,10,19],[32,240,336,10,18],[33,265,327,11,18],[34,290,316,12,15],
     [35,314,304,13,16],[36,337,286,15,18],[37,356,266,14,18],[38,372,242,14,18]
   ];
-  const tooth = ([n,x,y,rx,ry]) => `<g><ellipse class="tooth" cx="${x}" cy="${y}" rx="${rx}" ry="${ry}"/><text class="num" x="${x}" y="${y + (y < 180 ? -22 : 28)}" text-anchor="middle">${n}</text></g>`;
+  const tooth = ([n,x,y,rx,ry]) => `<g>
+    <ellipse class="tooth" cx="${x}" cy="${y}" rx="${rx}" ry="${ry}"/>
+    <path class="groove" d="M${x-rx*.55} ${y} C${x-rx*.2} ${y-ry*.2} ${x+rx*.2} ${y-ry*.2} ${x+rx*.55} ${y}"/>
+    <text class="num" x="${x}" y="${y + (y < 180 ? -22 : 28)}" text-anchor="middle">${n}</text>
+  </g>`;
   return `<svg class="perio-mouth" viewBox="0 0 400 380" role="img" aria-label="Registro periodontal por sextantes">
     <path class="gum" d="M35 138 C46 48 142 14 200 14 C258 14 354 48 365 138 C370 172 350 198 316 202 C260 198 232 180 200 180 C168 180 140 198 84 202 C50 198 30 172 35 138 Z"/>
-    <path class="gum-soft" d="M70 137 C82 70 150 42 200 42 C250 42 318 70 330 137 C302 128 258 120 200 120 C142 120 98 128 70 137 Z"/>
     <path class="gum" d="M35 238 C46 332 142 366 200 366 C258 366 354 332 365 238 C370 204 350 182 316 178 C260 182 232 200 200 200 C168 200 140 182 84 178 C50 182 30 204 35 238 Z"/>
-    <path class="gum-soft" d="M70 243 C82 310 150 338 200 338 C250 338 318 310 330 243 C302 252 258 260 200 260 C142 260 98 252 70 243 Z"/>
-    <path class="line" d="M200 180 L125 72 M200 180 L275 72 M200 200 L128 314 M200 200 L272 314"/>
+    <path class="gum-soft" d="M67 137 C83 65 150 39 200 39 C250 39 317 65 333 137 C302 128 258 120 200 120 C142 120 98 128 67 137 Z"/>
+    <path class="gum-soft" d="M67 243 C83 315 150 341 200 341 C250 341 317 315 333 243 C302 252 258 260 200 260 C142 260 98 252 67 243 Z"/>
+    <path id="pac-perio-z-S1" class="perio-zone" onclick="pacPerioToggleSextant('S1')" title="Sextante S1" d="M49 137 C56 82 92 48 125 33 L147 96 C123 102 101 116 84 144 Z"/>
+    <path id="pac-perio-z-S2" class="perio-zone" onclick="pacPerioToggleSextant('S2')" title="Sextante S2" d="M125 33 C169 14 231 14 275 33 L253 96 C221 86 179 86 147 96 Z"/>
+    <path id="pac-perio-z-S3" class="perio-zone" onclick="pacPerioToggleSextant('S3')" title="Sextante S3" d="M275 33 C308 48 344 82 351 137 L316 144 C299 116 277 102 253 96 Z"/>
+    <path id="pac-perio-z-S6" class="perio-zone" onclick="pacPerioToggleSextant('S6')" title="Sextante S6" d="M49 243 C56 298 92 332 125 347 L147 284 C123 278 101 264 84 236 Z"/>
+    <path id="pac-perio-z-S5" class="perio-zone" onclick="pacPerioToggleSextant('S5')" title="Sextante S5" d="M125 347 C169 366 231 366 275 347 L253 284 C221 294 179 294 147 284 Z"/>
+    <path id="pac-perio-z-S4" class="perio-zone" onclick="pacPerioToggleSextant('S4')" title="Sextante S4" d="M275 347 C308 332 344 298 351 243 L316 236 C299 264 277 278 253 284 Z"/>
+    <path class="line" d="M200 180 L125 33 M200 180 L275 33 M200 200 L125 347 M200 200 L275 347"/>
     ${sup.map(tooth).join('')}
     ${inf.map(tooth).join('')}
-    <text class="label" x="200" y="91" text-anchor="middle">S1</text>
-    <text class="label" x="105" y="144" text-anchor="middle">S2</text>
+    <text class="label" x="105" y="122" text-anchor="middle">S1</text>
+    <text class="label" x="200" y="82" text-anchor="middle">S2</text>
     <text class="label" x="295" y="144" text-anchor="middle">S3</text>
     <text class="label" x="295" y="244" text-anchor="middle">S4</text>
     <text class="label" x="200" y="292" text-anchor="middle">S5</text>
@@ -4773,50 +4793,7 @@ function renderPatientDetail(abaAtiva){
           <!-- DIAGRAMA DE SEXTANTES -->
           <div style="text-align:center;margin-bottom:16px;">
             <div style="font-size:11px;color:var(--rose-text);margin-bottom:6px;">Toque no sextante para marcar</div>
-            <svg viewBox="0 0 230 200" width="210" height="183" xmlns="http://www.w3.org/2000/svg" style="display:inline-block;" aria-label="Diagrama de sextantes periodontais">
-              <!-- Fundo oval — contorno dos lábios -->
-              <ellipse cx="115" cy="107" rx="110" ry="93" fill="#fff5f4" stroke="#c47878" stroke-width="1.5"/>
-              <!-- Cavidade oral interior -->
-              <ellipse cx="115" cy="109" rx="68" ry="60" fill="#ffe4e0"/>
-              <!-- ARCADA SUPERIOR — sextantes S1 S2 S3 (clicáveis) -->
-              <path id="pac-perio-z-S1" class="perio-zone" onclick="pacPerioToggleSextant('S1')" title="Sextante S1 (superior esquerdo)"
-                d="M 23,105 A 92,80 0 0,1 69,35.7 L 81,56.5 A 68,56 0 0,0 47,105 Z"
-                fill="#f4b0ae" stroke="#c07070" stroke-width="1"/>
-              <path id="pac-perio-z-S2" class="perio-zone" onclick="pacPerioToggleSextant('S2')" title="Sextante S2 (superior central)"
-                d="M 69,35.7 A 92,80 0 0,1 161,35.7 L 149,56.5 A 68,56 0 0,0 81,56.5 Z"
-                fill="#f4b0ae" stroke="#c07070" stroke-width="1"/>
-              <path id="pac-perio-z-S3" class="perio-zone" onclick="pacPerioToggleSextant('S3')" title="Sextante S3 (superior direito)"
-                d="M 161,35.7 A 92,80 0 0,1 207,105 L 183,105 A 68,56 0 0,0 149,56.5 Z"
-                fill="#f4b0ae" stroke="#c07070" stroke-width="1"/>
-              <!-- ARCADA INFERIOR — sextantes S6 S5 S4 (clicáveis) -->
-              <path id="pac-perio-z-S6" class="perio-zone" onclick="pacPerioToggleSextant('S6')" title="Sextante S6 (inferior esquerdo)"
-                d="M 23,113 A 92,80 0 0,0 69,182.3 L 81,161.5 A 68,56 0 0,1 47,113 Z"
-                fill="#f4b0ae" stroke="#c07070" stroke-width="1"/>
-              <path id="pac-perio-z-S5" class="perio-zone" onclick="pacPerioToggleSextant('S5')" title="Sextante S5 (inferior central)"
-                d="M 69,182.3 A 92,80 0 0,0 161,182.3 L 149,161.5 A 68,56 0 0,1 81,161.5 Z"
-                fill="#f4b0ae" stroke="#c07070" stroke-width="1"/>
-              <path id="pac-perio-z-S4" class="perio-zone" onclick="pacPerioToggleSextant('S4')" title="Sextante S4 (inferior direito)"
-                d="M 161,182.3 A 92,80 0 0,0 207,113 L 183,113 A 68,56 0 0,1 149,161.5 Z"
-                fill="#f4b0ae" stroke="#c07070" stroke-width="1"/>
-              <!-- Bumps (dentes) no bordo interno de cada arcada -->
-              <path d="M 47,105 A 68,56 0 0,1 115,49 A 68,56 0 0,1 183,105"
-                fill="none" stroke="#b06060" stroke-width="7" stroke-linecap="round" stroke-dasharray="8,3.5"/>
-              <path d="M 47,113 A 68,56 0 0,0 115,169 A 68,56 0 0,0 183,113"
-                fill="none" stroke="#b06060" stroke-width="7" stroke-linecap="round" stroke-dasharray="8,3.5"/>
-              <!-- Divisores de sextante — arcada superior -->
-              <line x1="69" y1="35.7" x2="81" y2="56.5" stroke="#c07070" stroke-width="1.4"/>
-              <line x1="161" y1="35.7" x2="149" y2="56.5" stroke="#c07070" stroke-width="1.4"/>
-              <!-- Divisores de sextante — arcada inferior -->
-              <line x1="69" y1="182.3" x2="81" y2="161.5" stroke="#c07070" stroke-width="1.4"/>
-              <line x1="161" y1="182.3" x2="149" y2="161.5" stroke="#c07070" stroke-width="1.4"/>
-              <!-- Rótulos S1–S6 -->
-              <text x="46"  y="70"  font-size="12" font-weight="800" text-anchor="middle" fill="#7a1a1a" style="pointer-events:none">S1</text>
-              <text x="115" y="38"  font-size="12" font-weight="800" text-anchor="middle" fill="#7a1a1a" style="pointer-events:none">S2</text>
-              <text x="184" y="70"  font-size="12" font-weight="800" text-anchor="middle" fill="#7a1a1a" style="pointer-events:none">S3</text>
-              <text x="46"  y="154" font-size="12" font-weight="800" text-anchor="middle" fill="#7a1a1a" style="pointer-events:none">S6</text>
-              <text x="115" y="183" font-size="12" font-weight="800" text-anchor="middle" fill="#7a1a1a" style="pointer-events:none">S5</text>
-              <text x="184" y="154" font-size="12" font-weight="800" text-anchor="middle" fill="#7a1a1a" style="pointer-events:none">S4</text>
-            </svg>
+            ${pacPeriodontiaSvg()}
             <div style="display:flex;gap:5px;margin-top:8px;justify-content:center;flex-wrap:wrap;">
               ${['S1','S2','S3','S4','S5','S6'].map(s=>`<span id="pac-perio-chip-${s}" class="perio-chip" onclick="pacPerioToggleSextant('${s}')">${s}</span>`).join('')}
             </div>
