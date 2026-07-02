@@ -13540,6 +13540,14 @@ document.addEventListener('keydown', e=>{
 #ai-send:hover{transform:scale(1.08);}
 #ai-send:disabled{opacity:.45;cursor:not-allowed;transform:none!important;}
 
+.ai-chips{display:flex;flex-wrap:wrap;gap:5px;padding:0 10px 8px;flex-shrink:0;}
+.ai-chip{
+  background:#fff;border:1.5px solid #f0cfc4;color:#a05040;
+  font-size:11px;font-weight:600;padding:4px 10px;border-radius:18px;
+  cursor:pointer;transition:all .16s;white-space:nowrap;font-family:inherit;
+}
+.ai-chip:hover{background:#fdf0eb;border-color:#d4735a;color:#7a3020;}
+
 @media(max-width:480px){
   #ai-box{right:10px;bottom:80px;width:calc(100vw - 20px);}
   #ai-btn{right:10px;bottom:14px;width:50px;height:50px;}
@@ -13563,9 +13571,15 @@ document.addEventListener('keydown', e=>{
     <button class="ai-head-close" onclick="aiToggle()" aria-label="Fechar"><i class="ti ti-x"></i></button>
   </div>
   <div class="ai-msgs" id="ai-msgs"></div>
-  <p class="ai-disclaimer">⚕️ Não substitui avaliação clínica presencial.</p>
+  <div class="ai-chips" id="ai-chips">
+    <button class="ai-chip" onclick="aiChip('Como cadastro um paciente?')">👥 Cadastrar paciente</button>
+    <button class="ai-chip" onclick="aiChip('Como faço um agendamento?')">📅 Agendar consulta</button>
+    <button class="ai-chip" onclick="aiChip('Onde fica o odontograma?')">🦷 Odontograma</button>
+    <button class="ai-chip" onclick="aiChip('Como adiciono um procedimento?')">➕ Procedimentos</button>
+    <button class="ai-chip" onclick="aiChip('Como vejo o financeiro?')">💰 Financeiro</button>
+  </div>
   <div class="ai-foot">
-    <input id="ai-input" type="text" placeholder="Pergunte algo..." maxlength="300"
+    <input id="ai-input" type="text" placeholder="Ex: como cadastro um paciente?" maxlength="300"
       onkeydown="if(event.key==='Enter')aiSend()"/>
     <button id="ai-send" onclick="aiSend()" aria-label="Enviar"><i class="ti ti-send"></i></button>
   </div>
@@ -13595,11 +13609,17 @@ document.addEventListener('keydown', e=>{
     if(aiOpened && aiFirstOpen){
       aiFirstOpen = false;
       const ctx = getCtx();
-      document.getElementById('ai-head-name').textContent = 'IA — ' + ctx.clinicName;
+      document.getElementById('ai-head-name').textContent = 'Ajuda — RWDent';
       setTimeout(()=>{
-        aiAddMsg('bot', `Olá! 😊 Sou o assistente IA da ${ctx.clinicName}.\n\nComo posso ajudar?`);
+        aiAddMsg('bot', `Olá, ${ctx.dentistName.split(' ')[0]}! 👋\n\nSou seu assistente do RWDent. Pode perguntar qualquer coisa sobre o sistema:\n\n• Como cadastrar pacientes\n• Como usar a agenda\n• Onde fica o odontograma\n• Como lançar procedimentos\n• E muito mais!`);
       }, 320);
     }
+  };
+
+  window.aiChip = function(text){
+    if(aiLoading) return;
+    document.getElementById('ai-input').value = text;
+    aiSend();
   };
 
   window.aiSend = function(){
@@ -13608,6 +13628,8 @@ document.addEventListener('keydown', e=>{
     const text = inp.value.trim();
     if(!text) return;
     inp.value = '';
+    const chips = document.getElementById('ai-chips');
+    if(chips) chips.style.display = 'none';
     aiAddMsg('usr', escHtml(text));
     aiHistory.push({ role:'user', content: text });
     aiCallApi();
