@@ -3668,7 +3668,7 @@ function renderHomeStats(){
   // Pagamentos pendentes
   const pagPendEl = document.getElementById('home-pag-pendentes');
   if(pagPendEl){
-    const _vendaPago = v => (v.pagamentos||[]).reduce((s,p)=>s+p.valor,0);
+    const _vendaPago = vendaValorPago;
     const pendentes = vendas.filter(v=>v.status==='finalizada'&&_vendaPago(v)<(v.total||0));
     if(!pendentes.length){
       pagPendEl.innerHTML='<div class="home-empty">Nenhum pagamento pendente.</div>';
@@ -6385,6 +6385,34 @@ async function pacAlterarStatusPlano(id, status){
   pacRenderPlanoLista();
 }
 
+// Desfazer "Realizado" — volta o item para Aprovado (ou Pendente, se nunca foi aprovado)
+async function pacDesfazerRealizadoPlano(id){
+  const item = pacPlanoList.find(i=>i.id===id);
+  if(!item || item.status!=='realizado') return;
+  const novo = item.data_aprovado ? 'aprovado' : 'pendente';
+  if(!confirm(`Desfazer "Realizado"? O item volta para ${novo==='aprovado'?'Aprovado':'Pendente'}. Se uma venda foi finalizada junto, ela volta para orçamento e o estoque é devolvido.`)) return;
+  showLoading(true);
+  let { error } = await _sb.from('plano_tratamento').update({status:novo, data_realizado:null}).eq('id',id);
+  if(error && error.message && error.message.includes('data_realizado')){
+    ({ error } = await _sb.from('plano_tratamento').update({status:novo}).eq('id',id));
+  }
+  if(error){ showLoading(false); showToast('Erro: '+error.message,'error'); return; }
+  item.status = novo; item.data_realizado = null;
+  // Reverte a venda auto-finalizada vinculada exclusivamente a este item
+  const v = vendas.find(x=>x.planoItemId===id && x.status==='finalizada');
+  if(v){
+    if(v.consumo && v.consumo.length) devolverEstoque(v.consumo);
+    v.status='orcamento'; v.consumo=null; v.dataFinal=null;
+    const _eDesf = await saveFinanceiro();
+    if(_eDesf) showToast('Erro ao reverter a venda: '+_eDesf.message,'error');
+    renderEstoque();
+  }
+  showLoading(false);
+  pacRenderPlanoResumo();
+  pacRenderPlanoLista();
+  showToast(`Item voltou para ${novo==='aprovado'?'Aprovado':'Pendente'}. Se um registro foi criado na aba Realizados, apague-o por lá se necessário.`,'warn');
+}
+
 // Devolver item do plano para Pendente
 async function pacDesaprovarPlano(id){
   if(!confirm('Devolver para Pendente? O orçamento gerado (se houver) não será removido automaticamente.')) return;
@@ -7724,7 +7752,7 @@ function renderRelatorio(){
       <div style="background:var(--rose-light);border-radius:8px;height:12px;margin-top:8px;"><div style="background:${corTaxa};border-radius:8px;height:12px;width:${taxaComp}%;"></div></div>
     </div>
     ${(()=>{
-      const _vendaPago = v => (v.pagamentos||[]).reduce((s,p)=>s+p.valor,0);
+      const _vendaPago = vendaValorPago;
       const inadPer = finPer.filter(v=>_vendaPago(v)<(v.total||0));
       const inadTotal = inadPer.reduce((a,v)=>a+((v.total||0)-_vendaPago(v)),0);
       const contMat={};
@@ -9219,11 +9247,27 @@ const STATUS_VENDA = {
 
 function computeConsumo(itens){
   const map={};
+  const addProc=(procId,qtd)=>{ (procInsumos[procId]||[]).forEach(ins=>{ map[ins.matId]=(map[ins.matId]||0)+ins.qtd*qtd; }); };
   (itens||[]).forEach(it=>{
     const qtd=Number(it.qtd)||1;
-    (procInsumos[it.procId]||[]).forEach(ins=>{ map[ins.matId]=(map[ins.matId]||0)+ins.qtd*qtd; });
+    if(it.comboId){
+      // Item de combo: consome os insumos dos procedimentos internos
+      const cb=combos.find(c=>c.id===it.comboId);
+      if(cb)(cb.itens||[]).forEach(ci=>addProc(ci.procId,(Number(ci.qtd)||1)*qtd));
+    } else if(it.procId){
+      addProc(it.procId,qtd);
+    }
   });
   return Object.keys(map).map(k=>({matId:Number(k),qtd:parseFloat(map[k].toFixed(4))}));
+}
+
+// Valor já pago de uma venda — critério único para todas as telas.
+// Vendas antigas finalizadas sem extrato de pagamentos contam como pagas no ato,
+// exceto venda rápida com entrada registrada (deve o restante).
+function vendaValorPago(v){
+  if(Array.isArray(v.pagamentos)) return v.pagamentos.reduce((s,p)=>s+(Number(p.valor)||0),0);
+  if(Number(v.restante)>0) return Math.max(0,(Number(v.total)||0)-Number(v.restante));
+  return Number(v.total)||0;
 }
 function aplicarBaixaEstoque(consumo){
   const aplicado=[];
@@ -9303,6 +9347,12 @@ async function finalizarVendaSalva(id){
   const consumo=computeConsumo(v.itens||[]);
   const aplicado=aplicarBaixaEstoque(consumo);
   v.status='finalizada'; v.consumo=aplicado; v.dataFinal=new Date().toISOString();
+  // Extrato: pagamento integral no ato (desconta o que já tiver sido pago antes)
+  const _jaPago=(v.pagamentos||[]).reduce((s,p)=>s+(Number(p.valor)||0),0);
+  const _falta=Math.max(0,(v.total||0)-_jaPago);
+  if(_falta>0){
+    v.pagamentos=(v.pagamentos||[]).concat([{id:Date.now(),valor:parseFloat(_falta.toFixed(2)),forma:v.formaPagamento==='debito'?'debito':(v.formaPagamento||'').startsWith('credito')?'credito':'dinheiro',parcelas_cartao:1,data:new Date().toISOString(),obs:''}]);
+  }
   showLoading(true); const _eVF=await saveFinanceiro(); showLoading(false);
   renderVendas(); renderEstoque();
   if(!_eVF){ logAtividade('Venda finalizada', `${v.pacienteNome||'—'} — ${fmtBRL(v.total)}`); showToast('Venda finalizada! Estoque atualizado.'); }
@@ -9536,14 +9586,25 @@ async function finalizarVendaPac(pacId){
   });
   const consumo = computeConsumo(itensProc);
   const aplicado = aplicarBaixaEstoque(consumo);
+  const _parCredito = forma.startsWith('credito') ? (parseInt(forma.replace('credito',''))||1) : 1;
   const venda = {
     id: nextVendaId++, status:'finalizada',
+    formaPagamento: forma,
     pacienteId: pacId, pacienteNome: pac?.nome||'',
     itens: orcamento.map(it=>({procId:it.procId||null,comboId:it.comboId||null,qtd:it.qtd,nome:it.nome,dente:it.dente||'',descDente:it.descDente||''})),
     subtotal: parseFloat(subtotal.toFixed(2)),
     desconto, total, consumo: aplicado,
     data: new Date().toISOString(),
-    dataFinal: new Date().toISOString()
+    dataFinal: new Date().toISOString(),
+    // Extrato: pagamento integral no ato da finalização
+    pagamentos: [{
+      id: Date.now(),
+      valor: parseFloat(total.toFixed(2)),
+      forma: forma==='debito'?'debito':forma.startsWith('credito')?'credito':'dinheiro',
+      parcelas_cartao: _parCredito,
+      data: new Date().toISOString(),
+      obs: ''
+    }]
   };
   vendas.push(venda);
   orcamento = [];
@@ -10070,6 +10131,15 @@ async function vrFinalizarMobile(){
     profissional_id:profId||null, profissional_nome:profNome,
     data:new Date().toISOString(), dataFinal:new Date().toISOString(),
     consumo:consumoAplicado,
+    // Extrato de pagamento: entrada parcial ou pagamento integral no ato
+    pagamentos:[{
+      id:Date.now(),
+      valor:parseFloat(((entrada>0&&restante>0)?entrada:total).toFixed(2)),
+      forma:vrPagamentoMobile,
+      parcelas_cartao:vrPagamentoMobile==='credito'?parcelas:1,
+      data:new Date().toISOString(),
+      obs:(entrada>0&&restante>0)?'Entrada':''
+    }],
   };
   vendas.push(venda);
 
@@ -10347,6 +10417,15 @@ async function vrFinalizar(){
     data: new Date().toISOString(),
     dataFinal: new Date().toISOString(),
     consumo: consumoAplicado,
+    // Extrato de pagamento: entrada parcial ou pagamento integral no ato
+    pagamentos: [{
+      id: Date.now(),
+      valor: parseFloat(((entrada>0&&restante>0)?entrada:total).toFixed(2)),
+      forma: vrPagamento,
+      parcelas_cartao: vrPagamento==='credito'?parcelas:1,
+      data: new Date().toISOString(),
+      obs: (entrada>0&&restante>0)?'Entrada':''
+    }],
   };
   vendas.push(venda);
 
@@ -10671,6 +10750,7 @@ function pacRenderPlanoLista(){
       ${profissionais.map(pr=>`<option value="${pr.id}">${escapeHtml(pr.nome)}</option>`).join('')}
     </select>` : '';
     const btnRealizar = (item.status==='aprovado'||item.status==='pendente') ? `<button class="btn-secondary" style="font-size:11px;padding:4px 10px;color:#2e7d32;border-color:#a5d6a7;" onclick="pacAlterarStatusPlano(${item.id},'realizado')">✅ Realizado</button>` : '';
+    const btnDesfazerReal = item.status==='realizado' ? `<button class="btn-secondary" style="font-size:11px;padding:4px 10px;color:#7a5c00;border-color:#ffe082;background:#fff8e1;" onclick="pacDesfazerRealizadoPlano(${item.id})">↩ Desfazer</button>` : '';
     return `<div style="border:1px solid var(--rose-light);border-radius:12px;padding:13px;margin-bottom:8px;background:#fff;">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;">
         <div>
@@ -10693,7 +10773,7 @@ function pacRenderPlanoLista(){
         </div>
         <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
           <select onchange="pacPlanoSetUrgencia(${item.id},this.value)" style="font-size:11px;padding:4px 6px;border:1px solid var(--rose-light);border-radius:8px;color:#3a2020;" title="Classificar urgência"><option value="" ${!pacPlanoGetUrgencia(item.id)?'selected':''}>— Urgência</option><option value="urgente" ${pacPlanoGetUrgencia(item.id)==='urgente'?'selected':''}>🔴 Urgente</option><option value="recomendado" ${pacPlanoGetUrgencia(item.id)==='recomendado'?'selected':''}>🟡 Recom.</option><option value="eletivo" ${pacPlanoGetUrgencia(item.id)==='eletivo'?'selected':''}>🟢 Eletivo</option></select>
-          ${btnDesaprovar}${btnAprovar}${profSelect}${btnRealizar}
+          ${btnDesaprovar}${btnAprovar}${profSelect}${btnRealizar}${btnDesfazerReal}
           <button class="btn-danger" style="font-size:11px;padding:4px 8px;" onclick="pacRemoverPlano(${item.id})"><i class="ti ti-trash"></i></button>
         </div>
       </div>
@@ -10741,7 +10821,8 @@ async function pacAprovarOrcamentoPlano(pacId){
       return {
         procId: procObj?.id||null, qtd:1, nome:item.procedimento,
         dente: dentesArr.join(','), descDente: item.descricao||'',
-        precoUnit: valorTotal
+        precoUnit: valorTotal,
+        planoId: item.id
       };
     });
     const subtotal = itensVenda.reduce((a,it)=>a+it.precoUnit*it.qtd,0);
@@ -11833,7 +11914,12 @@ async function pacFinalizarItensSelecionados(vendaId, pacId){
   const aplicado  = aplicarBaixaEstoque(consumo);
 
   // 2. Marca planoIds dos itens selecionados como 'realizado'
-  const planoIdsSel = (v.planoIds||[]).filter((_,i)=>sel.has(i));
+  // Preferência: planoId gravado no próprio item (à prova de remoção/consolidação);
+  // fallback por índice só para vendas antigas sem esse campo.
+  const _temPlanoIdNosItens = (v.itens||[]).some(i=>i.planoId);
+  const planoIdsSel = _temPlanoIdNosItens
+    ? itensSel.map(i=>i.planoId).filter(Boolean)
+    : (v.planoIds||[]).filter((_,i)=>sel.has(i));
   // Compatibilidade: vendas criadas pelo botão "✔ Aprovar" individual usam
   // planoItemId (singular) em vez de planoIds — sem isso o item ficava
   // "aprovado" pra sempre no Plano mesmo após a venda ser finalizada.
@@ -11887,7 +11973,9 @@ async function pacFinalizarItensSelecionados(vendaId, pacId){
     vendas.push(novaVenda);
 
     // Atualiza venda original: remove itens finalizados, recalcula totais
-    const planoIdsRest = (v.planoIds||[]).filter((_,i)=>!sel.has(i));
+    const planoIdsRest = _temPlanoIdNosItens
+      ? itensRest.map(i=>i.planoId).filter(Boolean)
+      : (v.planoIds||[]).filter((_,i)=>!sel.has(i));
     v.itens    = itensRest;
     v.planoIds = planoIdsRest;
     const novoSub = itensRest.reduce((a,it)=>(a+(it.precoUnit||0)*(it.qtd||1)),0);
@@ -12024,6 +12112,12 @@ async function pacOrcConfirmAddItem(vendaId, pacId){
 async function pacOrcRemoveItem(vendaId, idx, pacId){
   const v = vendas.find(x=>x.id===vendaId); if(!v) return;
   if(!confirm('Remover este item do orçamento?')) return;
+  // Mantém planoIds alinhado com itens ao remover
+  const _removido = (v.itens||[])[idx];
+  if(v.planoIds && v.planoIds.length){
+    if(_removido && _removido.planoId) v.planoIds = v.planoIds.filter(p=>p!==_removido.planoId);
+    else if(v.planoIds.length === (v.itens||[]).length) v.planoIds = v.planoIds.filter((_,i)=>i!==idx);
+  }
   v.itens = (v.itens||[]).filter((_,i)=>i!==idx);
   // Recalcular subtotal e total
   v.subtotal = v.itens.reduce((a,it)=>a+(it.precoUnit||0)*(it.qtd||1), 0);
@@ -13516,7 +13610,7 @@ function toggleContasReceber(){
   const panel = document.getElementById('contas-receber-panel');
   if(!panel) return;
   if(panel.style.display!=='none'){ panel.style.display='none'; return; }
-  const _vPago = v => (v.pagamentos||[]).reduce((s,p)=>s+p.valor,0);
+  const _vPago = vendaValorPago;
   const pendentes = vendas.filter(v=>v.status==='finalizada'&&_vPago(v)<(v.total||0));
   const totalDevedor = pendentes.reduce((a,v)=>a+((v.total||0)-_vPago(v)),0);
   const totalGeral = pendentes.reduce((a,v)=>a+(v.total||0),0);
@@ -13650,10 +13744,7 @@ function pagPacRender(pacId){
   const formaLabel = f => f==='pix'?'PIX':f==='credito'?'Cartão Crédito':f==='debito'?'Cartão Débito':'Dinheiro';
 
   const finVendas = vendas.filter(v=>v.pacienteId===pacId && v.status==='finalizada');
-  const _vendaPago = v => {
-    if(!v.pagamentos) return v.total||0;
-    return v.pagamentos.reduce((s,p)=>s+p.valor,0);
-  };
+  const _vendaPago = vendaValorPago;
   const pendentes = finVendas.filter(v=> _vendaPago(v) < (v.total||0));
   const quitadas = finVendas.filter(v=> _vendaPago(v) >= (v.total||0));
 

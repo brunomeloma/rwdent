@@ -196,7 +196,8 @@ async function runTool(name, args, sb, clinicId) {
     }
 
     case 'buscar_paciente': {
-      const q = String(args.query || '').trim().slice(0, 100);
+      // Remove caracteres que quebram a sintaxe de filtro do PostgREST
+      const q = String(args.query || '').replace(/[,()%]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 100);
       if (!q) return 'Informe um nome ou telefone para buscar.';
       const { data, error } = await sb
         .from('pacientes')
