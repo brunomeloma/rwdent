@@ -413,6 +413,11 @@ button{font-family:inherit;}
   width:min(680px,calc(100vw - 32px))!important;max-height:calc(100vh - 96px)!important;
   overflow:auto!important;background:#fff!important;z-index:1600!important;box-shadow:0 20px 60px rgba(0,0,0,.24)!important;
 }
+/* Face grid SVG — 5-zone clickable per tooth */
+.ot-face-grid{display:block;transition:opacity .15s;}
+.ot-face-grid polygon,.ot-face-grid rect{transition:opacity .12s;}
+.ot-face-grid polygon:hover,.ot-face-grid rect:hover{opacity:.72;}
+.odonto-dente-wrap.selected .ot-face-grid{filter:drop-shadow(0 0 3px rgba(29,78,216,.35));}
 /* Upper arcada aligns to bottom, lower to top */
 .odonto-arcada#arc-sup .odonto-dente-wrap,
 .odonto-arcada#pac-arc-sup .odonto-dente-wrap,
@@ -6313,6 +6318,7 @@ let pacDenteSel   = null;
 let pacProcsList  = [];
 let pacDentesRascunho = {};
 let pacFaceStatus = {};
+let pacFaceColors = {};  // { dentNum: { FaceName: ''|'treated'|'untreated' } } — cicla: azul→vermelho→limpar
 
 async function pacCarregarOdonto(pacId){
   const { data } = await _sb.from('procedimentos_dentes')
@@ -6324,6 +6330,7 @@ async function pacCarregarOdonto(pacId){
   pacFacesSel = [];
   pacFaceStatus = {};
   pacDentesRascunho = {};
+  pacFaceColors = {};
   pacOdontoOrcList = [];
   pacRenderArcadas();
   pacRenderLegenda();
@@ -6379,18 +6386,19 @@ function pacRenderArcada(id, dentes){
     const tip  = r ? `Dente ${num}: ${r.procs.map(p=>p.nome).join(', ')||'rascunho'} (não salvo)` :
                  d.procedimento ? `${num}: ${d.procedimento}` : `Dente ${num}`;
     const upper = isUpperTooth(num);
-    const pendingStyle = hasPending ? 'filter:drop-shadow(0 0 4px rgba(245,158,11,.7));' : '';
     const gap = (i === mid) ? '<div class="odonto-quadrant-gap"></div>' : '';
-    const numDiv = `<div class="ot-num">${num}</div>`;
-    const toothHTML = getToothSVG(num, cond, pendingStyle);
-    const savedFaces = r ? (r.faceStatus || Object.fromEntries((r.faces||[]).map(f=>[f,'treated']))) : (d.face && d.face!=='–' ? Object.fromEntries(d.face.split(',').map(f=>f.trim()).filter(Boolean).map(f=>[f,'treated'])) : odontoExtractFaceStatusFromObs(d.obs));
-    const faceStatus = pacDenteSel===num ? pacFaceStatus : savedFaces;
-    const faceHTML = odontoFaceGridHTML(num, faceStatus, 'pacFaceGridClick');
-    const inner = upper
-      ? `${toothHTML}${numDiv}${faceHTML}`
-      : `${faceHTML}${numDiv}${toothHTML}`;
     const pendingDot = hasPending ? '<div class="odonto-pending-dot"></div>' : '';
-    return `${gap}<div class="odonto-dente-wrap${sel}" onclick="pacClicarDente(${num})" title="${escapeHtml(tip)}">${pendingDot}${inner}</div>`;
+    const pendingStyle = hasPending ? 'filter:drop-shadow(0 0 4px rgba(245,158,11,.7));' : '';
+    // Front SVG clickable (opens detail panel); face grid has its own click (cycles colors)
+    const type  = getToothType(num);
+    const cl    = TOOTH_COND_COLORS[cond] || TOOTH_COND_COLORS.higido;
+    const frontSVG = getFrontalSVG(type, upper, cl, cond === 'extraido');
+    const faceGrid = getFaceGridPacHTML(num);
+    const frontWrap = `<div onclick="pacClicarDente(${num});event.stopPropagation()" style="cursor:pointer;${pendingStyle}">${frontSVG}</div>`;
+    const numDiv = `<div class="ot-num" onclick="pacClicarDente(${num});event.stopPropagation()" style="cursor:pointer;">${num}</div>`;
+    const views = `<div class="ot-views">${frontWrap}${faceGrid}</div>`;
+    const inner = upper ? `${numDiv}${views}` : `${views}${numDiv}`;
+    return `${gap}<div class="odonto-dente-wrap${sel}" title="${escapeHtml(tip)}">${pendingDot}${inner}</div>`;
   }).join('');
 }
 
@@ -6401,6 +6409,27 @@ function pacRenderLegenda(){
   c.innerHTML = '<span class="odonto-face-status untreated">Não tratado</span><span class="odonto-face-status treated">Tratado</span>' + itens.map(([bg,brd,lbl])=>
     `<div class="odonto-leg"><div class="odonto-leg-dot" style="background:${bg};border-color:${brd};"></div>${lbl}</div>`
   ).join('');
+}
+
+function pacClickFace(num, face, e) {
+  e.stopPropagation();
+  if (!pacFaceColors[num]) pacFaceColors[num] = {};
+  pacFaceColors[num][face] = ((pacFaceColors[num][face] || 0) + 1) % 3;
+  pacRenderArcadas();
+}
+
+function getFaceGridPacHTML(num) {
+  const fc = pacFaceColors[num] || {};
+  const CL = ['#f0e8e5', '#1565c0', '#c62828'];
+  const b  = '#b8998f';
+  const cv = f => CL[fc[f] || 0];
+  return `<svg class="ot-face-grid" width="32" height="32" viewBox="0 0 30 30" xmlns="http://www.w3.org/2000/svg" onclick="event.stopPropagation()" title="Clique para marcar faces: azul=restaurado, vermelho=cárie, 3º clique limpa">
+    <polygon points="0,0 30,0 20,10 10,10" fill="${cv('vestibular')}" stroke="${b}" stroke-width="0.7" onclick="pacClickFace(${num},'vestibular',event)" style="cursor:pointer"/>
+    <polygon points="0,0 10,10 10,20 0,30" fill="${cv('mesial')}" stroke="${b}" stroke-width="0.7" onclick="pacClickFace(${num},'mesial',event)" style="cursor:pointer"/>
+    <rect x="10" y="10" width="10" height="10" fill="${cv('oclusal')}" stroke="${b}" stroke-width="0.7" onclick="pacClickFace(${num},'oclusal',event)" style="cursor:pointer"/>
+    <polygon points="30,0 20,10 20,20 30,30" fill="${cv('distal')}" stroke="${b}" stroke-width="0.7" onclick="pacClickFace(${num},'distal',event)" style="cursor:pointer"/>
+    <polygon points="0,30 10,20 20,20 30,30" fill="${cv('lingual')}" stroke="${b}" stroke-width="0.7" onclick="pacClickFace(${num},'lingual',event)" style="cursor:pointer"/>
+  </svg>`;
 }
 
 function pacSalvarRascunhoDenteAtual(){
@@ -6743,10 +6772,10 @@ function pacToggleFace(face){
 
 function pacFaceGridClick(evt, num, face){
   if(evt) evt.stopPropagation();
-  if(pacDenteSel !== num) pacClicarDente(num);
-  setTimeout(()=>{
-    pacToggleFace(face);
-  },0);
+  if(!pacFaceColors[num]) pacFaceColors[num] = {};
+  const cur = pacFaceColors[num][face] || '';
+  pacFaceColors[num][face] = cur === '' ? 'treated' : cur === 'treated' ? 'untreated' : '';
+  pacRenderArcadas();
 }
 
 function pacDenteFiltrarProcs(){
