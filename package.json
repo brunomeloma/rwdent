@@ -7,6 +7,9 @@
     "format": "prettier --write \"**/*.{html,css,js,json,md,sql}\"",
     "format:check": "prettier --check \"**/*.{html,css,js,json,md,sql}\""
   },
+  "dependencies": {
+    "openai": "^4.104.0"
+  },
   "devDependencies": {
     "prettier": "^3.3.3"
   }
