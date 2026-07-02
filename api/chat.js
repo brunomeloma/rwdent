@@ -1,6 +1,6 @@
 const { createClient } = require('@supabase/supabase-js');
 
-const GEMINI_MODEL = 'gemini-1.5-flash';
+const GEMINI_MODEL = 'gemini-2.0-flash-lite';
 const GEMINI_URL   = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
 
 const MAX_HISTORY     = 10;
@@ -139,10 +139,13 @@ async function runTool(name, args, sb, clinicId) {
 // CHAMADA GEMINI REST NATIVA
 // ══════════════════════════════════════════════
 async function callGemini(apiKey, payload) {
-  const resp = await fetch(`${GEMINI_URL}?key=${apiKey}`, {
+  const resp = await fetch(GEMINI_URL, {
     method:  'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body:    JSON.stringify(payload)
+    headers: {
+      'Content-Type':   'application/json',
+      'x-goog-api-key': apiKey
+    },
+    body: JSON.stringify(payload)
   });
 
   if (!resp.ok) {
