@@ -7,7 +7,7 @@ const MAX_CONTENT_LEN = 600;
 const MAX_TOOL_ROUNDS = 4;
 
 // ══════════════════════════════════════════════
-// FERRAMENTAS (3 ativas: listar, buscar, cadastrar)
+// FERRAMENTAS (4 ativas: listar, buscar, cadastrar, agendar)
 // ══════════════════════════════════════════════
 const TOOLS = [
   {
@@ -53,6 +53,25 @@ const TOOLS = [
         required: ['nome']
       }
     }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'agendar_consulta',
+      description: 'Cria um agendamento na agenda da clínica. ESCRITA — só chame após o usuário confirmar com "sim", "pode" ou "confirmo".',
+      parameters: {
+        type: 'object',
+        properties: {
+          paciente_query: { type: 'string', description: 'Nome ou telefone do paciente a agendar' },
+          data:           { type: 'string', description: 'Data da consulta em YYYY-MM-DD' },
+          horario:        { type: 'string', description: 'Horário em HH:MM, 24 horas' },
+          procedimento:   { type: 'string', description: 'Procedimento ou motivo da consulta' },
+          profissional_id:{ type: 'integer', description: 'ID do profissional, se o usuário informar' },
+          observacoes:    { type: 'string', description: 'Observações opcionais' }
+        },
+        required: ['paciente_query', 'data', 'horario']
+      }
+    }
   }
 ];
 
@@ -63,7 +82,7 @@ function buildSystemPrompt(ctx) {
   const clinicName  = String(ctx?.clinicName  || 'Clínica').slice(0, 80);
   const dentistName = String(ctx?.dentistName || 'Profissional').slice(0, 60);
   const today = new Date().toLocaleDateString('pt-BR', {
-    weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
+    weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'America/Sao_Paulo'
   });
 
   return `Você é a assistente do RWDent para a clínica "${clinicName}" (${dentistName}).
@@ -73,17 +92,20 @@ FERRAMENTAS DISPONÍVEIS:
 • listar_pacientes   → lista pacientes (leitura, execute direto)
 • buscar_paciente    → busca por nome ou telefone (leitura, execute direto)
 • cadastrar_paciente → cadastra novo paciente (⚠️ ESCRITA — exige confirmação)
+• agendar_consulta   → cria consulta/agendamento (⚠️ ESCRITA — exige confirmação)
 
 REGRAS OBRIGATÓRIAS:
 1. NUNCA invente, suponha ou fabrique nomes de pacientes, telefones ou qualquer dado do banco. Se não tiver acesso às ferramentas, diga isso claramente.
 2. Só execute listar_pacientes quando o usuário pedir claramente para listar/ver/mostrar pacientes.
 3. Só execute buscar_paciente quando o usuário pedir claramente para procurar/buscar/encontrar um paciente específico.
-4. Perguntas de capacidade, como "você consegue agendar?", "dá para marcar consulta?" ou "você faz procedimento?", devem ser respondidas em texto, sem chamar ferramentas.
-5. Agendamento, Google Agenda, procedimentos, financeiro e estoque AINDA NÃO têm ferramenta ativa. Se perguntarem, explique que por enquanto você orienta como fazer no sistema e que a automação ainda será implementada.
-6. cadastrar: SEMPRE apresente os dados e aguarde "sim"/"pode"/"confirmo" ANTES de chamar a ferramenta.
-7. Se faltar o nome para cadastrar, pergunte antes.
-8. Se houver pacientes com nomes parecidos ao buscar, liste as opções reais retornadas pela ferramenta.
-9. Nunca apague dados. Nunca acesse dados de outras clínicas.
+4. Perguntas de capacidade, como "você consegue agendar?" ou "dá para marcar consulta?", devem ser respondidas dizendo que sim, você consegue agendar pacientes cadastrados depois de receber paciente, data, horário e confirmação.
+5. Agendar/cadastrar são ações de escrita: SEMPRE apresente os dados e aguarde "sim"/"pode"/"confirmo" ANTES de chamar a ferramenta.
+6. Para agendar, colete no mínimo paciente, data e horário. Se faltar algum, pergunte antes. Use procedimento "Consulta" se o usuário não informar.
+6.1. Ao chamar agendar_consulta, converta datas relativas ("hoje", "amanhã", "sexta") para YYYY-MM-DD usando a data de hoje acima e horário HH:MM.
+7. Se o paciente não for encontrado ou houver vários pacientes parecidos, use os dados reais retornados pela ferramenta e peça para o usuário escolher.
+8. Google Agenda direto AINDA NÃO tem OAuth conectado. Depois de agendar, forneça o link gerado para adicionar ao Google Agenda.
+9. Procedimentos, financeiro e estoque ainda não têm ferramenta ativa; apenas oriente.
+10. Nunca apague dados. Nunca acesse dados de outras clínicas.
 
 Responda sempre em português do Brasil. Seja breve e direto.`;
 }
@@ -187,9 +209,166 @@ async function runTool(name, args, sb, clinicId) {
       });
     }
 
+    case 'agendar_consulta': {
+      const pacienteQuery = String(args.paciente_query || '').trim().slice(0, 120);
+      const data = normalizeDate(args.data);
+      const horario = normalizeTime(args.horario);
+      const procedimento = String(args.procedimento || 'Consulta').trim().slice(0, 160) || 'Consulta';
+      const obs = String(args.observacoes || '').trim().slice(0, 500);
+
+      if (!pacienteQuery) throw new Error('Informe o paciente para agendar.');
+      if (!data) throw new Error('Informe a data no formato YYYY-MM-DD.');
+      if (!horario) throw new Error('Informe o horário no formato HH:MM.');
+
+      const patients = await findPatients(sb, clinicId, pacienteQuery);
+      if (!patients.length) return JSON.stringify({
+        tool: name,
+        ok: false,
+        kind: 'appointment_patient_not_found',
+        message: `Não encontrei paciente para "${pacienteQuery}". Cadastre o paciente primeiro ou informe outro nome/telefone.`
+      });
+      if (patients.length > 1) return JSON.stringify({
+        tool: name,
+        ok: false,
+        kind: 'appointment_patient_ambiguous',
+        query: pacienteQuery,
+        patients
+      });
+
+      const paciente = patients[0];
+      const prof = await findProfessional(sb, clinicId, args.profissional_id);
+      if (!prof) throw new Error('Nenhum profissional cadastrado para criar o agendamento.');
+
+      const { data: conflito, error: conflictError } = await sb
+        .from('agendamentos')
+        .select('id, nome, data, horario, prof_nome')
+        .eq('clinica_id', clinicId)
+        .eq('prof_id', prof.id)
+        .eq('data', data)
+        .eq('horario', horario)
+        .limit(1);
+      if (conflictError) throw new Error(conflictError.message);
+      if (conflito?.length) return JSON.stringify({
+        tool: name,
+        ok: false,
+        kind: 'appointment_conflict',
+        appointment: conflito[0],
+        message: `Já existe agendamento para ${prof.nome} em ${formatDateBR(data)} às ${horario}.`
+      });
+
+      const { data: novo, error } = await sb
+        .from('agendamentos')
+        .insert([{
+          paciente_id: paciente.id,
+          nome: paciente.nome,
+          telefone: paciente.telefone || '',
+          prof_id: prof.id,
+          prof_nome: prof.nome,
+          prof_cor: prof.cor || '#d4735a',
+          data,
+          horario,
+          procedimento,
+          obs,
+          clinica_id: clinicId
+        }])
+        .select('id, paciente_id, nome, telefone, prof_id, prof_nome, data, horario, procedimento, obs')
+        .single();
+      if (error) throw new Error(error.message);
+
+      return JSON.stringify({
+        tool: name,
+        ok: true,
+        kind: 'appointment_created',
+        appointment: {
+          id: novo.id,
+          nome: novo.nome,
+          telefone: novo.telefone || null,
+          prof_nome: novo.prof_nome,
+          data: novo.data,
+          horario: novo.horario,
+          procedimento: novo.procedimento || 'Consulta',
+          obs: novo.obs || '',
+          google_calendar_url: buildGoogleCalendarUrl(novo)
+        }
+      });
+    }
+
     default:
       return `Ferramenta "${name}" não reconhecida.`;
   }
+}
+
+async function findPatients(sb, clinicId, query) {
+  const q = String(query || '').trim();
+  const digits = q.replace(/\D/g, '');
+  const filters = [`nome.ilike.%${q.replace(/[,()%]/g, ' ')}%`];
+  if (digits) filters.push(`telefone.ilike.%${digits}%`);
+
+  const { data, error } = await sb
+    .from('pacientes')
+    .select('id, nome, telefone')
+    .eq('clinica_id', clinicId)
+    .or(filters.join(','))
+    .order('nome')
+    .limit(10);
+  if (error) throw new Error(error.message);
+
+  const rows = data || [];
+  const exact = rows.filter(p =>
+    String(p.nome || '').toLowerCase() === q.toLowerCase() ||
+    (digits && String(p.telefone || '').replace(/\D/g, '') === digits)
+  );
+  const chosen = exact.length === 1 ? exact : rows;
+  return chosen.map(p => ({ id: p.id, nome: p.nome, telefone: p.telefone || null }));
+}
+
+async function findProfessional(sb, clinicId, profissionalId) {
+  let query = sb
+    .from('profissionais')
+    .select('id, nome, cor, principal')
+    .eq('clinica_id', clinicId);
+
+  if (profissionalId) {
+    query = query.eq('id', Number(profissionalId));
+  } else {
+    query = query.order('principal', { ascending: false }).order('id');
+  }
+
+  const { data, error } = await query.limit(1);
+  if (error) throw new Error(error.message);
+  return data?.[0] || null;
+}
+
+function normalizeDate(value) {
+  const s = String(value || '').trim();
+  return /^\d{4}-\d{2}-\d{2}$/.test(s) ? s : '';
+}
+
+function normalizeTime(value) {
+  const m = String(value || '').trim().match(/^(\d{1,2}):(\d{2})/);
+  if (!m) return '';
+  const h = Number(m[1]);
+  const min = Number(m[2]);
+  if (h < 0 || h > 23 || min < 0 || min > 59) return '';
+  return `${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
+}
+
+function formatDateBR(isoDate) {
+  const [y, m, d] = String(isoDate || '').split('-');
+  return y && m && d ? `${d}/${m}/${y}` : String(isoDate || '');
+}
+
+function buildGoogleCalendarUrl(appointment) {
+  const data = String(appointment.data || '');
+  const horario = String(appointment.horario || '00:00');
+  const [ano, mes, dia] = data.split('-');
+  const [hh, mm] = horario.split(':');
+  const start = `${ano}${mes}${dia}T${String(hh).padStart(2, '0')}${String(mm).padStart(2, '0')}00`;
+  const endHour = Math.min((Number(hh) || 0) + 1, 23);
+  const end = `${ano}${mes}${dia}T${String(endHour).padStart(2, '0')}${String(mm).padStart(2, '0')}00`;
+  const title = encodeURIComponent(`${appointment.procedimento || 'Consulta'} - ${appointment.nome || 'Paciente'}`);
+  const details = encodeURIComponent(`Paciente: ${appointment.nome || ''}\nProfissional: ${appointment.prof_nome || ''}\n${appointment.obs ? 'Observações: ' + appointment.obs : ''}`);
+  return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${start}/${end}&details=${details}&ctz=America/Sao_Paulo`;
 }
 
 function parseToolResult(raw) {
@@ -236,8 +415,23 @@ function formatToolReply(outputs) {
     return `Paciente cadastrado com sucesso:\n\n${data.patient.nome} - ${formatPhone(data.patient.telefone)}`;
   }
 
+  if (data.kind === 'appointment_patient_ambiguous') {
+    const options = patients.map((p, idx) => `${idx + 1}. ${p.nome} - ${formatPhone(p.telefone)}`);
+    return `Encontrei mais de um paciente parecido. Qual deles você quer agendar?\n\n${options.join('\n')}`;
+  }
+
+  if (data.kind === 'appointment_created' && data.appointment) {
+    const a = data.appointment;
+    const link = a.google_calendar_url ? `\n\nAdicionar ao Google Agenda:\n${a.google_calendar_url}` : '';
+    return `Agendamento criado com sucesso:\n\n${a.nome}\n${formatDateBR(a.data)} às ${a.horario}\n${a.procedimento || 'Consulta'} com ${a.prof_nome || 'profissional'}${link}`;
+  }
+
   if (data.message) return data.message;
   return null;
+}
+
+function shouldRefreshApp(toolOutputs) {
+  return toolOutputs.some(o => ['patient_created', 'appointment_created'].includes(o?.data?.kind));
 }
 
 // ══════════════════════════════════════════════
@@ -370,7 +564,7 @@ module.exports = async function handler(req, res) {
     }
 
     const toolReply = formatToolReply(toolOutputs);
-    if (toolReply) return res.status(200).json({ reply: toolReply });
+    if (toolReply) return res.status(200).json({ reply: toolReply, refresh: shouldRefreshApp(toolOutputs) });
 
     const reply = response.choices[0].message.content?.trim() || 'Ação executada.';
     return res.status(200).json({ reply });

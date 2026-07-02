@@ -13587,7 +13587,7 @@ document.addEventListener('keydown', e=>{
   <div class="ai-msgs" id="ai-msgs"></div>
   <div class="ai-chips" id="ai-chips">
     <button class="ai-chip" onclick="aiChip('Liste meus pacientes')">👥 Pacientes</button>
-    <button class="ai-chip" onclick="aiChip('Como faço um agendamento?')">📅 Agenda</button>
+    <button class="ai-chip" onclick="aiChip('Agende uma consulta')">📅 Agendar</button>
     <button class="ai-chip" onclick="aiChip('Onde fica o odontograma?')">🦷 Odontograma</button>
     <button class="ai-chip" onclick="aiChip('Como vejo o financeiro?')">💰 Financeiro</button>
   </div>
@@ -13641,7 +13641,7 @@ document.addEventListener('keydown', e=>{
 
   function _sendWelcome(){
     const nome = (clinicaData?.nome_resp||'').split(' ')[0] || 'Doutor(a)';
-    _addMsg('bot', `Olá, ${_esc(nome)}! 👋 Sou sua assistente no RWDent.<br><br>Hoje eu posso <strong>listar pacientes</strong>, <strong>buscar um paciente</strong> e <strong>cadastrar</strong> novos pacientes com confirmação. Também posso orientar você sobre agenda, procedimentos e financeiro.`);
+    _addMsg('bot', `Olá, ${_esc(nome)}! 👋 Sou sua assistente no RWDent.<br><br>Hoje eu posso <strong>listar</strong>, <strong>buscar</strong> e <strong>cadastrar</strong> pacientes, além de <strong>criar agendamentos</strong> com confirmação.`);
   }
 
   /* ── Chips de sugestão ── */
@@ -13714,10 +13714,11 @@ document.addEventListener('keydown', e=>{
         const body = await res.json().catch(()=>({}));
         throw new Error(body.error || `Erro ${res.status}`);
       }
-      const { reply } = await res.json();
+      const { reply, refresh } = await res.json();
       const text = reply || 'Não consegui responder agora. Tente novamente.';
       _hist.push({ role:'assistant', content: text });
-      _addMsg('bot', _esc(text).replace(/\n/g,'<br>'));
+      _addMsg('bot', _formatBotText(text));
+      if(refresh) _refreshAppData();
     } catch(e){
       _hideTyping();
       const msg = _friendlyError(e?.message || '');
@@ -13742,6 +13743,24 @@ document.addEventListener('keydown', e=>{
     if(raw.length > 120 || raw.startsWith('{') || raw.startsWith('['))
       return 'Não consegui processar a resposta. Tente novamente.';
     return raw;
+  }
+
+  async function _refreshAppData(){
+    try {
+      if(typeof loadData === 'function') await loadData();
+      if(typeof renderLista === 'function') renderLista();
+      if(typeof renderHomeStats === 'function') renderHomeStats();
+      if(typeof renderCalendario === 'function') renderCalendario();
+    } catch(e){
+      console.warn('Falha ao atualizar dados após ação da IA:', e);
+    }
+  }
+
+  function _formatBotText(text){
+    const safe = _esc(text).replace(/\n/g,'<br>');
+    return safe.replace(/(https:\/\/calendar\.google\.com\/calendar\/render\?[^<\s]+)/g, url => {
+      return `<a href="${url}" target="_blank" rel="noopener" style="color:#a04030;font-weight:700;text-decoration:underline;">Abrir Google Agenda</a>`;
+    });
   }
 
   function _esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
