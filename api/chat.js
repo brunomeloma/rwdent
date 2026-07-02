@@ -74,12 +74,13 @@ FERRAMENTAS DISPONÍVEIS:
 • buscar_paciente    → busca por nome ou telefone (leitura, execute direto)
 • cadastrar_paciente → cadastra novo paciente (⚠️ ESCRITA — exige confirmação)
 
-REGRAS:
-1. listar e buscar: execute imediatamente, sem pedir confirmação.
-2. cadastrar: SEMPRE apresente os dados e aguarde "sim"/"pode"/"confirmo" ANTES de chamar a ferramenta.
-3. Se faltar o nome para cadastrar, pergunte antes.
-4. Se houver pacientes com nomes parecidos ao buscar, liste as opções.
-5. Nunca apague dados. Nunca acesse dados de outras clínicas.
+REGRAS OBRIGATÓRIAS:
+1. NUNCA invente, suponha ou fabrique nomes de pacientes, telefones ou qualquer dado do banco. Se não tiver acesso às ferramentas, diga isso claramente.
+2. listar e buscar: execute imediatamente com a ferramenta, sem pedir confirmação.
+3. cadastrar: SEMPRE apresente os dados e aguarde "sim"/"pode"/"confirmo" ANTES de chamar a ferramenta.
+4. Se faltar o nome para cadastrar, pergunte antes.
+5. Se houver pacientes com nomes parecidos ao buscar, liste as opções reais retornadas pela ferramenta.
+6. Nunca apague dados. Nunca acesse dados de outras clínicas.
 
 Responda sempre em português do Brasil. Seja breve e direto.`;
 }
@@ -164,7 +165,11 @@ module.exports = async function handler(req, res) {
   let clinicId = null;
   let authedSb = null;
 
-  if (accessToken && process.env.SUPABASE_URL && process.env.SUPABASE_ANON_KEY) {
+  if (!accessToken) {
+    console.log('[AI] auth: sem token no header Authorization');
+  } else if (!process.env.SUPABASE_URL || !process.env.SUPABASE_ANON_KEY) {
+    console.log('[AI] auth: SUPABASE_URL ou SUPABASE_ANON_KEY ausente');
+  } else {
     try {
       authedSb = createClient(
         process.env.SUPABASE_URL,
@@ -172,16 +177,30 @@ module.exports = async function handler(req, res) {
         { global: { headers: { Authorization: `Bearer ${accessToken}` } } }
       );
       const { data: { user }, error: authErr } = await authedSb.auth.getUser();
-      if (!authErr && user) {
-        const { data: cli } = await authedSb
+      if (authErr) {
+        console.log(`[AI] auth error: ${authErr.message}`);
+      } else if (!user) {
+        console.log('[AI] auth: usuário não encontrado para o token');
+      } else {
+        console.log(`[AI] auth: user=${user.id}`);
+        const { data: cli, error: cliErr } = await authedSb
           .from('clinicas')
           .select('id')
           .eq('user_id', user.id)
           .eq('status', 'aprovado')
           .single();
-        if (cli) clinicId = cli.id;
+        if (cliErr) {
+          console.log(`[AI] clinica error: ${cliErr.message}`);
+        } else if (cli) {
+          clinicId = cli.id;
+          console.log(`[AI] clinicId=${clinicId}`);
+        } else {
+          console.log('[AI] clinica: não encontrada para user');
+        }
       }
-    } catch (_) {}
+    } catch (e) {
+      console.log(`[AI] auth exception: ${e.message}`);
+    }
   }
 
   // ── Histórico ──
