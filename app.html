@@ -368,14 +368,14 @@ button{font-family:inherit;}
 .odonto-facecell.face-l{left:4px;bottom:0;width:24px;height:10px;clip-path:polygon(22% 0,78% 0,100% 100%,0 100%);}
 .odonto-facecell.face-m{left:0;top:4px;width:10px;height:24px;clip-path:polygon(0 0,100% 22%,100% 78%,0 100%);}
 .odonto-facecell.face-d{right:0;top:4px;width:10px;height:24px;clip-path:polygon(0 22%,100% 0,100% 100%,0 78%);}
-.odonto-facecell.untreated{background:#d63d46;border-color:#a91f2a;}
-.odonto-facecell.treated{background:#2374c6;border-color:#14599c;}
+.odonto-facecell.untreated{background:#e53935;border-color:#b71c1c;}
+.odonto-facecell.treated{background:#1565c0;border-color:#0a3d8f;}
 .odonto-face-status{
   display:inline-flex;align-items:center;gap:5px;font-size:10px;color:var(--rose-text);
 }
 .odonto-face-status::before{content:"";width:10px;height:10px;border-radius:2px;display:inline-block;}
-.odonto-face-status.untreated::before{background:#d63d46;}
-.odonto-face-status.treated::before{background:#2374c6;}
+.odonto-face-status.untreated::before{background:#e53935;}
+.odonto-face-status.treated::before{background:#1565c0;}
 .odonto-tooth-modal-overlay{
   position:fixed;inset:0;background:rgba(58,32,32,.38);z-index:1600;
   align-items:flex-start;justify-content:center;padding:72px 16px 24px;overflow:auto;
@@ -414,9 +414,9 @@ button{font-family:inherit;}
   overflow:auto!important;background:#fff!important;z-index:1600!important;box-shadow:0 20px 60px rgba(0,0,0,.24)!important;
 }
 /* Face grid SVG — 5-zone clickable per tooth */
-.ot-face-grid{display:block;transition:opacity .15s;}
-.ot-face-grid polygon,.ot-face-grid rect{transition:opacity .12s;}
-.ot-face-grid polygon:hover,.ot-face-grid rect:hover{opacity:.72;}
+.ot-face-grid{display:block;}
+.ot-face-grid .fg-zone{transition:filter .12s;cursor:pointer;}
+.ot-face-grid .fg-zone:hover{filter:brightness(1.18) drop-shadow(0 0 2px rgba(0,0,0,.35));}
 .odonto-dente-wrap.selected .ot-face-grid{filter:drop-shadow(0 0 3px rgba(29,78,216,.35));}
 /* Upper arcada aligns to bottom, lower to top */
 .odonto-arcada#arc-sup .odonto-dente-wrap,
@@ -6420,15 +6420,26 @@ function pacClickFace(num, face, e) {
 
 function getFaceGridPacHTML(num) {
   const fc = pacFaceColors[num] || {};
-  const CL = ['#f0e8e5', '#1565c0', '#c62828'];
-  const b  = '#b8998f';
-  const cv = f => CL[fc[f] || 0];
-  return `<svg class="ot-face-grid" width="32" height="32" viewBox="0 0 30 30" xmlns="http://www.w3.org/2000/svg" onclick="event.stopPropagation()" title="Clique para marcar faces: azul=restaurado, vermelho=cárie, 3º clique limpa">
-    <polygon points="0,0 30,0 20,10 10,10" fill="${cv('vestibular')}" stroke="${b}" stroke-width="0.7" onclick="pacClickFace(${num},'vestibular',event)" style="cursor:pointer"/>
-    <polygon points="0,0 10,10 10,20 0,30" fill="${cv('mesial')}" stroke="${b}" stroke-width="0.7" onclick="pacClickFace(${num},'mesial',event)" style="cursor:pointer"/>
-    <rect x="10" y="10" width="10" height="10" fill="${cv('oclusal')}" stroke="${b}" stroke-width="0.7" onclick="pacClickFace(${num},'oclusal',event)" style="cursor:pointer"/>
-    <polygon points="30,0 20,10 20,20 30,30" fill="${cv('distal')}" stroke="${b}" stroke-width="0.7" onclick="pacClickFace(${num},'distal',event)" style="cursor:pointer"/>
-    <polygon points="0,30 10,20 20,20 30,30" fill="${cv('lingual')}" stroke="${b}" stroke-width="0.7" onclick="pacClickFace(${num},'lingual',event)" style="cursor:pointer"/>
+  // 0=vazio(branco) 1=azul(restaurado) 2=vermelho(cárie)
+  const FILL   = ['#ffffff', '#1565c0', '#e53935'];
+  const STROKE = ['#b0a09a', '#0a3d8f', '#b71c1c'];
+  function zone(face, pts, isRect) {
+    const st = fc[face] || 0;
+    const f = FILL[st], s = STROKE[st];
+    const shape = isRect
+      ? `<rect x="11" y="11" width="10" height="10" fill="${f}" stroke="${s}" stroke-width="1.1"/>`
+      : `<polygon points="${pts}" fill="${f}" stroke="${s}" stroke-width="1.1"/>`;
+    return `<g class="fg-zone" onclick="pacClickFace(${num},'${face}',event)">${shape}</g>`;
+  }
+  return `<svg class="ot-face-grid" width="36" height="36" viewBox="0 0 32 32"
+    xmlns="http://www.w3.org/2000/svg" onclick="event.stopPropagation()"
+    title="1º clique=azul(restaurado) 2º=vermelho(cárie) 3º=limpar">
+    <rect width="32" height="32" rx="3" fill="#f7f1ee" stroke="#c9b5ae" stroke-width="0.8"/>
+    ${zone('vestibular','1,1 31,1 21,11 11,11')}
+    ${zone('mesial','1,1 11,11 11,21 1,31')}
+    ${zone('oclusal','',true)}
+    ${zone('distal','31,1 21,11 21,21 31,31')}
+    ${zone('lingual','1,31 11,21 21,21 31,31')}
   </svg>`;
 }
 
