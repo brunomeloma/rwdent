@@ -13668,10 +13668,14 @@ document.addEventListener('keydown', e=>{
     setEnabled(false);
     aiShowTyping();
     try {
+      // Pega token de sessão atual para autenticar ações no backend
+      const { data:{ session } } = await _sb.auth.getSession();
+      const accessToken = session?.access_token || '';
+
       const res = await fetch('/api/chat',{
         method:'POST',
         headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ messages: aiHistory, context: getCtx() })
+        body: JSON.stringify({ messages: aiHistory, context: getCtx(), accessToken })
       });
       aiHideTyping();
       if(!res.ok){ const e=await res.json().catch(()=>({})); throw new Error(e.error||'Erro '+res.status); }
