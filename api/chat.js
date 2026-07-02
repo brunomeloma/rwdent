@@ -1,7 +1,7 @@
 const { OpenAI }       = require('openai');
 const { createClient } = require('@supabase/supabase-js');
 
-const GROQ_MODEL      = 'llama-3.1-8b-instant';
+const GROQ_MODEL      = 'llama-3.3-70b-versatile';
 const MAX_HISTORY     = 10;
 const MAX_CONTENT_LEN = 600;
 const MAX_TOOL_ROUNDS = 4;
@@ -172,38 +172,38 @@ module.exports = async function handler(req, res) {
   const cleanToken   = cleanStr(accessToken);
 
   if (!cleanToken) {
-    console.log('[AI] auth: sem token no header Authorization');
+    console.log('[AI] auth: sem token');
   } else if (!supabaseUrl || !supabaseAnon) {
-    console.log('[AI] auth: SUPABASE_URL ou SUPABASE_ANON_KEY ausente');
+    console.log('[AI] auth: variáveis Supabase ausentes');
   } else {
     try {
-      // Valida o JWT passando o token explicitamente (correto para Supabase v2 no servidor)
-      const sb = createClient(supabaseUrl, supabaseAnon);
-      const { data: { user }, error: authErr } = await sb.auth.getUser(cleanToken);
-      if (authErr) {
-        console.log(`[AI] auth error: ${authErr.message}`);
-      } else if (!user) {
-        console.log('[AI] auth: usuário não encontrado para o token');
-      } else {
-        console.log(`[AI] auth: user=${user.id}`);
-        // Cria cliente autenticado para as queries do banco
-        authedSb = createClient(supabaseUrl, supabaseAnon, {
-          global: { headers: { Authorization: `Bearer ${cleanToken}` } }
-        });
-        const { data: cli, error: cliErr } = await authedSb
-          .from('clinicas')
-          .select('id')
-          .eq('user_id', user.id)
-          .eq('status', 'aprovado')
-          .single();
-        if (cliErr) {
-          console.log(`[AI] clinica error: ${cliErr.message}`);
-        } else if (cli) {
-          clinicId = cli.id;
-          console.log(`[AI] clinicId=${clinicId}`);
+      // Usa RLS do Supabase: o JWT filtra automaticamente os dados do usuário
+      authedSb = createClient(supabaseUrl, supabaseAnon, {
+        global: { headers: { Authorization: `Bearer ${cleanToken}` } }
+      });
+      // Busca a clínica aprovada do usuário logado (RLS garante isolamento)
+      const { data: cli, error: cliErr } = await authedSb
+        .from('clinicas')
+        .select('id, user_id')
+        .eq('status', 'aprovado')
+        .limit(1)
+        .single();
+      if (cliErr) {
+        console.log(`[AI] clinica error: ${cliErr.message}`);
+        // Tenta auth explícita como fallback
+        const sbPlain = createClient(supabaseUrl, supabaseAnon);
+        const { data: { user }, error: authErr } = await sbPlain.auth.getUser(cleanToken);
+        if (!authErr && user) {
+          console.log(`[AI] fallback auth: user=${user.id}`);
+          const { data: cli2 } = await authedSb
+            .from('clinicas').select('id').eq('user_id', user.id).eq('status', 'aprovado').single();
+          if (cli2) { clinicId = cli2.id; console.log(`[AI] clinicId=${clinicId}`); }
         } else {
-          console.log('[AI] clinica: não encontrada para user');
+          console.log(`[AI] fallback auth error: ${authErr?.message}`);
         }
+      } else if (cli) {
+        clinicId = cli.id;
+        console.log(`[AI] clinicId=${clinicId} user=${cli.user_id}`);
       }
     } catch (e) {
       console.log(`[AI] auth exception: ${e.message}`);
