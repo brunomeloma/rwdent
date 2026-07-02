@@ -402,12 +402,12 @@ button{font-family:inherit;}
 .oral-mouth{height:150px;border:2px solid var(--rose-light);border-radius:50% / 42%;position:relative;background:#fff7f5;}
 .oral-mouth::before{content:"";position:absolute;left:18px;right:18px;top:64px;height:18px;border-top:2px solid #d9aaa0;border-bottom:2px solid #d9aaa0;border-radius:50%;}
 .oral-mouth::after{content:"";position:absolute;left:52px;right:52px;top:46px;bottom:46px;border-radius:50%;background:#e98b82;opacity:.35;}
-.perio-mouth{width:210px;height:180px;margin:auto;border-radius:48%;background:#f8d6d0;position:relative;border:2px solid #d7aaa0;}
-.perio-mouth::before,.perio-mouth::after{content:"";position:absolute;left:26px;right:26px;height:46px;background:#fff;border:1.5px solid #bdb2ad;}
-.perio-mouth::before{top:25px;border-radius:48% 48% 18% 18%;}
-.perio-mouth::after{bottom:25px;border-radius:18% 18% 48% 48%;}
-.perio-sextants{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
-.perio-sextants input{width:100%;padding:8px;border:1.5px solid var(--rose-light);border-radius:8px;text-align:center;}
+.perio-zone{transition:fill .15s;cursor:pointer;}
+.perio-zone:hover{filter:brightness(0.9);}
+.perio-chip{display:inline-flex;align-items:center;justify-content:center;padding:3px 11px;border-radius:20px;font-size:11px;font-weight:700;background:var(--rose-lighter);color:var(--rose-text);border:1.5px solid var(--rose-light);cursor:pointer;transition:all .15s;user-select:none;}
+.perio-chip.active{background:var(--rose);color:#fff;border-color:var(--rose);}
+.perio-proc-list-item{display:flex;align-items:center;padding:8px 10px;border-bottom:1px solid var(--rose-lighter);gap:8px;}
+.perio-proc-list-item:last-child{border-bottom:none;}
 #pac-dente-panel{
   position:fixed!important;top:72px!important;left:50%!important;transform:translateX(-50%)!important;
   width:min(680px,calc(100vw - 32px))!important;max-height:calc(100vh - 96px)!important;
@@ -4736,51 +4736,78 @@ function renderPatientDetail(abaAtiva){
           </div>
         </div>
         <div id="pac-odonto-sub-periodontia" data-pac-odonto-sub style="display:none;margin-top:14px;">
-          <div class="oral-chart">
-            <div>
-              <svg viewBox="0 0 200 176" width="170" height="150" style="display:block;margin:0 auto 4px;" xmlns="http://www.w3.org/2000/svg" aria-label="Sextantes periodontais">
-                <defs><clipPath id="pc${p.id}"><ellipse cx="100" cy="88" rx="90" ry="78"/></clipPath></defs>
-                <!-- fundo oval -->
-                <ellipse cx="100" cy="88" rx="93" ry="81" fill="#fce8e6" stroke="#bf7970" stroke-width="2"/>
-                <!-- arcada superior -->
-                <path d="M10,88 C10,38 45,8 100,6 C155,8 190,38 190,88 Z" fill="#f0b4ae" clip-path="url(#pc${p.id})"/>
-                <!-- arcada inferior -->
-                <path d="M10,88 C10,138 45,168 100,170 C155,168 190,138 190,88 Z" fill="#f0b4ae" clip-path="url(#pc${p.id})"/>
-                <!-- bumps dentes superiores -->
-                <path d="M25,82 C27,70 31,66 36,70 C38,74 41,78 44,74 C47,68 51,64 56,68 C58,72 60,77 63,73 C66,67 72,63 79,67 C82,71 85,75 89,71 C93,65 97,61 100,60 C103,61 107,65 111,71 C115,75 118,71 121,67 C128,63 134,67 137,73 C140,77 142,72 144,68 C149,64 153,68 156,74 C159,78 162,74 164,70 C169,66 173,70 175,82" stroke="#bf7970" stroke-width="1.3" fill="none" clip-path="url(#pc${p.id})"/>
-                <!-- bumps dentes inferiores -->
-                <path d="M25,94 C27,106 31,110 36,106 C38,102 41,98 44,102 C47,108 51,112 56,108 C58,104 60,99 63,103 C66,109 72,113 79,109 C82,105 85,101 89,105 C93,111 97,115 100,116 C103,115 107,111 111,105 C115,101 118,105 121,109 C128,113 134,109 137,103 C140,99 142,104 144,108 C149,112 153,108 156,102 C159,98 162,102 164,106 C169,110 173,106 175,94" stroke="#bf7970" stroke-width="1.3" fill="none" clip-path="url(#pc${p.id})"/>
-                <!-- divisores horizontais e verticais -->
-                <line x1="12" y1="88" x2="188" y2="88" stroke="#bf7970" stroke-width="1.6"/>
-                <line x1="63" y1="88" x2="52" y2="10" stroke="#bf7970" stroke-width="1.5"/>
-                <line x1="137" y1="88" x2="148" y2="10" stroke="#bf7970" stroke-width="1.5"/>
-                <line x1="63" y1="88" x2="52" y2="166" stroke="#bf7970" stroke-width="1.5"/>
-                <line x1="137" y1="88" x2="148" y2="166" stroke="#bf7970" stroke-width="1.5"/>
-                <!-- zonas clicáveis transparentes -->
-                <path d="M63,88 L52,10 C30,12 10,44 10,88 Z" fill="transparent" style="cursor:pointer" onclick="document.getElementById('pac-perio-S1')?.focus()" title="Sextante S1"/>
-                <path d="M52,10 L148,10 L137,88 L63,88 Z" fill="transparent" style="cursor:pointer" onclick="document.getElementById('pac-perio-S2')?.focus()" title="Sextante S2"/>
-                <path d="M137,88 L148,10 C170,12 190,44 190,88 Z" fill="transparent" style="cursor:pointer" onclick="document.getElementById('pac-perio-S3')?.focus()" title="Sextante S3"/>
-                <path d="M63,88 L52,166 C30,164 10,132 10,88 Z" fill="transparent" style="cursor:pointer" onclick="document.getElementById('pac-perio-S6')?.focus()" title="Sextante S6"/>
-                <path d="M52,166 L148,166 L137,88 L63,88 Z" fill="transparent" style="cursor:pointer" onclick="document.getElementById('pac-perio-S5')?.focus()" title="Sextante S5"/>
-                <path d="M137,88 L148,166 C170,164 190,132 190,88 Z" fill="transparent" style="cursor:pointer" onclick="document.getElementById('pac-perio-S4')?.focus()" title="Sextante S4"/>
-                <!-- rótulos S1-S6 -->
-                <text x="34" y="56" font-size="13" font-weight="800" text-anchor="middle" fill="#7a1a1a" style="pointer-events:none">S1</text>
-                <text x="100" y="44" font-size="13" font-weight="800" text-anchor="middle" fill="#7a1a1a" style="pointer-events:none">S2</text>
-                <text x="166" y="56" font-size="13" font-weight="800" text-anchor="middle" fill="#7a1a1a" style="pointer-events:none">S3</text>
-                <text x="34" y="128" font-size="13" font-weight="800" text-anchor="middle" fill="#7a1a1a" style="pointer-events:none">S6</text>
-                <text x="100" y="140" font-size="13" font-weight="800" text-anchor="middle" fill="#7a1a1a" style="pointer-events:none">S5</text>
-                <text x="166" y="128" font-size="13" font-weight="800" text-anchor="middle" fill="#7a1a1a" style="pointer-events:none">S4</text>
-              </svg>
-              <div style="font-size:10px;color:var(--rose-text);text-align:center;">Clique no sextante para preencher</div>
+          <!-- DIAGRAMA DE SEXTANTES -->
+          <div style="text-align:center;margin-bottom:16px;">
+            <div style="font-size:11px;color:var(--rose-text);margin-bottom:6px;">Toque no sextante para marcar</div>
+            <svg viewBox="0 0 230 200" width="210" height="183" xmlns="http://www.w3.org/2000/svg" style="display:inline-block;" aria-label="Diagrama de sextantes periodontais">
+              <!-- Fundo oval — contorno dos lábios -->
+              <ellipse cx="115" cy="107" rx="110" ry="93" fill="#fff5f4" stroke="#c47878" stroke-width="1.5"/>
+              <!-- Cavidade oral interior -->
+              <ellipse cx="115" cy="109" rx="68" ry="60" fill="#ffe4e0"/>
+              <!-- ARCADA SUPERIOR — sextantes S1 S2 S3 (clicáveis) -->
+              <path id="pac-perio-z-S1" class="perio-zone" onclick="pacPerioToggleSextant('S1')" title="Sextante S1 (superior esquerdo)"
+                d="M 23,105 A 92,80 0 0,1 69,35.7 L 81,56.5 A 68,56 0 0,0 47,105 Z"
+                fill="#f4b0ae" stroke="#c07070" stroke-width="1"/>
+              <path id="pac-perio-z-S2" class="perio-zone" onclick="pacPerioToggleSextant('S2')" title="Sextante S2 (superior central)"
+                d="M 69,35.7 A 92,80 0 0,1 161,35.7 L 149,56.5 A 68,56 0 0,0 81,56.5 Z"
+                fill="#f4b0ae" stroke="#c07070" stroke-width="1"/>
+              <path id="pac-perio-z-S3" class="perio-zone" onclick="pacPerioToggleSextant('S3')" title="Sextante S3 (superior direito)"
+                d="M 161,35.7 A 92,80 0 0,1 207,105 L 183,105 A 68,56 0 0,0 149,56.5 Z"
+                fill="#f4b0ae" stroke="#c07070" stroke-width="1"/>
+              <!-- ARCADA INFERIOR — sextantes S6 S5 S4 (clicáveis) -->
+              <path id="pac-perio-z-S6" class="perio-zone" onclick="pacPerioToggleSextant('S6')" title="Sextante S6 (inferior esquerdo)"
+                d="M 23,113 A 92,80 0 0,0 69,182.3 L 81,161.5 A 68,56 0 0,1 47,113 Z"
+                fill="#f4b0ae" stroke="#c07070" stroke-width="1"/>
+              <path id="pac-perio-z-S5" class="perio-zone" onclick="pacPerioToggleSextant('S5')" title="Sextante S5 (inferior central)"
+                d="M 69,182.3 A 92,80 0 0,0 161,182.3 L 149,161.5 A 68,56 0 0,1 81,161.5 Z"
+                fill="#f4b0ae" stroke="#c07070" stroke-width="1"/>
+              <path id="pac-perio-z-S4" class="perio-zone" onclick="pacPerioToggleSextant('S4')" title="Sextante S4 (inferior direito)"
+                d="M 161,182.3 A 92,80 0 0,0 207,113 L 183,113 A 68,56 0 0,1 149,161.5 Z"
+                fill="#f4b0ae" stroke="#c07070" stroke-width="1"/>
+              <!-- Bumps (dentes) no bordo interno de cada arcada -->
+              <path d="M 47,105 A 68,56 0 0,1 115,49 A 68,56 0 0,1 183,105"
+                fill="none" stroke="#b06060" stroke-width="7" stroke-linecap="round" stroke-dasharray="8,3.5"/>
+              <path d="M 47,113 A 68,56 0 0,0 115,169 A 68,56 0 0,0 183,113"
+                fill="none" stroke="#b06060" stroke-width="7" stroke-linecap="round" stroke-dasharray="8,3.5"/>
+              <!-- Divisores de sextante — arcada superior -->
+              <line x1="69" y1="35.7" x2="81" y2="56.5" stroke="#c07070" stroke-width="1.4"/>
+              <line x1="161" y1="35.7" x2="149" y2="56.5" stroke="#c07070" stroke-width="1.4"/>
+              <!-- Divisores de sextante — arcada inferior -->
+              <line x1="69" y1="182.3" x2="81" y2="161.5" stroke="#c07070" stroke-width="1.4"/>
+              <line x1="161" y1="182.3" x2="149" y2="161.5" stroke="#c07070" stroke-width="1.4"/>
+              <!-- Rótulos S1–S6 -->
+              <text x="46"  y="70"  font-size="12" font-weight="800" text-anchor="middle" fill="#7a1a1a" style="pointer-events:none">S1</text>
+              <text x="115" y="38"  font-size="12" font-weight="800" text-anchor="middle" fill="#7a1a1a" style="pointer-events:none">S2</text>
+              <text x="184" y="70"  font-size="12" font-weight="800" text-anchor="middle" fill="#7a1a1a" style="pointer-events:none">S3</text>
+              <text x="46"  y="154" font-size="12" font-weight="800" text-anchor="middle" fill="#7a1a1a" style="pointer-events:none">S6</text>
+              <text x="115" y="183" font-size="12" font-weight="800" text-anchor="middle" fill="#7a1a1a" style="pointer-events:none">S5</text>
+              <text x="184" y="154" font-size="12" font-weight="800" text-anchor="middle" fill="#7a1a1a" style="pointer-events:none">S4</text>
+            </svg>
+            <div style="display:flex;gap:5px;margin-top:8px;justify-content:center;flex-wrap:wrap;">
+              ${['S1','S2','S3','S4','S5','S6'].map(s=>`<span id="pac-perio-chip-${s}" class="perio-chip" onclick="pacPerioToggleSextant('${s}')">${s}</span>`).join('')}
             </div>
-            <div>
-              <div style="font-size:13px;font-weight:800;color:var(--rose-dark);margin-bottom:10px;">Periodontia</div>
-              <div class="perio-sextants">
-                ${['S1','S2','S3','S6','S5','S4'].map(s=>`<div><label style="font-size:10px;color:var(--rose-text);font-weight:800;">${s}</label><input id="pac-perio-${s}" placeholder="0"/></div>`).join('')}
-              </div>
-              <div class="form-group full" style="margin-top:12px;"><label>Observações</label><textarea id="pac-perio-obs" rows="3" placeholder="Sangramento, mobilidade, cálculo, recessão, bolsa periodontal..."></textarea></div>
-              <div style="display:flex;justify-content:flex-end;margin-top:10px;"><button class="btn-primary" onclick="pacSalvarPeriodontia(${p.id})"><i class="ti ti-check"></i> Guardar anotação</button></div>
+          </div>
+          <!-- PROCEDIMENTOS REALIZADOS -->
+          <div style="margin-bottom:10px;">
+            <div style="font-size:12px;font-weight:700;color:var(--rose-dark);margin-bottom:8px;"><i class="ti ti-list-check"></i> Procedimentos realizados</div>
+            <div style="position:relative;margin-bottom:8px;">
+              <i class="ti ti-search" style="position:absolute;left:9px;top:50%;transform:translateY(-50%);color:var(--rose-text);font-size:13px;pointer-events:none;"></i>
+              <input type="text" id="pac-perio-search" placeholder="Buscar procedimento..." oninput="pacPerioRenderProcs()"
+                style="width:100%;padding:8px 10px 8px 30px;border:1.5px solid var(--rose-light);border-radius:8px;font-size:13px;box-sizing:border-box;"/>
             </div>
+            <div id="pac-perio-proc-list" style="max-height:220px;overflow-y:auto;border:1px solid var(--rose-light);border-radius:10px;background:#fff;"></div>
+          </div>
+          <!-- RESUMO DA SELEÇÃO -->
+          <div id="pac-perio-sel-resumo" style="display:none;background:var(--rose-lighter);border-radius:8px;padding:8px 10px;margin-bottom:10px;font-size:12px;color:var(--rose-dark);line-height:1.6;"></div>
+          <!-- OBSERVAÇÕES -->
+          <div class="form-group full" style="margin-bottom:10px;">
+            <label>Observações</label>
+            <textarea id="pac-perio-obs" rows="2" placeholder="Sangramento, mobilidade, bolsa periodontal, recessão, cálculo..."></textarea>
+          </div>
+          <!-- AÇÕES -->
+          <div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;">
+            <button class="btn-secondary" onclick="pacPerioAdicionarOrcamento(${p.id})"><i class="ti ti-receipt"></i> Adicionar ao orçamento</button>
+            <button class="btn-primary" onclick="pacSalvarPeriodontia(${p.id})"><i class="ti ti-check"></i> Registrar no histórico</button>
           </div>
         </div>
       </div>
@@ -6354,6 +6381,8 @@ let pacProcsList  = [];
 let pacDentesRascunho = {};
 let pacFaceStatus = {};
 let pacFaceColors = {};  // { dentNum: { FaceName: ''|'treated'|'untreated' } } — cicla: azul→vermelho→limpar
+let pacPerioSextants = {};  // { S1: bool, ... } — sextantes selecionados na periodontia
+let pacPerioProcSel  = {};  // { procId: qty } — procedimentos periodontal selecionados
 
 async function pacCarregarOdonto(pacId){
   const { data } = await _sb.from('procedimentos_dentes')
@@ -6366,6 +6395,8 @@ async function pacCarregarOdonto(pacId){
   pacFaceStatus = {};
   pacDentesRascunho = {};
   pacFaceColors = {};
+  pacPerioSextants = {};
+  pacPerioProcSel  = {};
   pacOdontoOrcList = [];
   pacRenderArcadas();
   pacRenderLegenda();
@@ -6375,6 +6406,7 @@ async function pacCarregarOdonto(pacId){
 function pacOdontoSubtab(tab){
   document.querySelectorAll('[data-pac-odonto-sub]').forEach(el=>{ el.style.display = el.id === 'pac-odonto-sub-'+tab ? '' : 'none'; });
   document.querySelectorAll('[data-pac-odonto-subtab]').forEach(btn=>btn.classList.toggle('active', btn.dataset.pacOdontoSubtab===tab));
+  if(tab === 'periodontia') pacPerioRenderProcs();
 }
 
 async function pacSalvarTecidos(pacId){
@@ -6394,13 +6426,102 @@ async function pacSalvarTecidos(pacId){
 }
 
 async function pacSalvarPeriodontia(pacId){
-  const sext = ['S1','S2','S3','S6','S5','S4'].map(s=>`${s}: ${document.getElementById('pac-perio-'+s)?.value.trim() || '0'}`).join('; ');
+  const sextStr = Object.keys(pacPerioSextants).filter(s=>pacPerioSextants[s]).join(', ') || 'sem sextante';
+  const procStr = Object.keys(pacPerioProcSel)
+    .filter(id=>(pacPerioProcSel[id]||0)>0)
+    .map(id=>{ const p=procs.find(x=>x.id===Number(id)); return p?`${p.nome} (${pacPerioProcSel[id]}×)`:null; })
+    .filter(Boolean).join(', ');
   const obs = document.getElementById('pac-perio-obs')?.value.trim() || '';
+  const desc = `Periodontia — Sextantes: ${sextStr}${procStr ? '. Procedimentos: '+procStr : ''}`;
   showLoading(true);
-  const { error } = await _sb.from('atendimentos_odonto').insert([{clinica_id:clinicaId,paciente_id:pacId,data:hoje(),procedimentos:'Periodontia - '+sext,obs,dentes_tratados:'[]'}]);
+  const { error } = await _sb.from('atendimentos_odonto').insert([{clinica_id:clinicaId,paciente_id:pacId,data:hoje(),procedimentos:desc,obs,dentes_tratados:'[]'}]);
   showLoading(false);
   if(error){ showToast('Erro: '+error.message,'error'); return; }
-  showToast('Periodontia salva no histórico.');
+  showToast('Periodontia registrada no histórico.');
+}
+
+function pacPerioToggleSextant(s){
+  pacPerioSextants[s] = !pacPerioSextants[s];
+  const el = document.getElementById('pac-perio-z-'+s);
+  if(el) el.setAttribute('fill', pacPerioSextants[s] ? '#e53935' : '#f4b0ae');
+  const chip = document.getElementById('pac-perio-chip-'+s);
+  if(chip) chip.classList.toggle('active', !!pacPerioSextants[s]);
+  pacPerioRenderResumo();
+}
+
+function pacPerioRenderResumo(){
+  const resumo = document.getElementById('pac-perio-sel-resumo');
+  if(!resumo) return;
+  const sel = Object.keys(pacPerioSextants).filter(s=>pacPerioSextants[s]);
+  const procSel = Object.keys(pacPerioProcSel).filter(id=>(pacPerioProcSel[id]||0)>0);
+  if(!sel.length && !procSel.length){ resumo.style.display='none'; return; }
+  resumo.style.display='';
+  let html = '';
+  if(sel.length) html += `<strong>Sextantes:</strong> ${sel.join(', ')}`;
+  if(procSel.length){
+    if(sel.length) html += '<br>';
+    html += '<strong>Procedimentos:</strong> ' + procSel.map(id=>{
+      const p = procs.find(x=>x.id===Number(id));
+      return p ? `${escapeHtml(p.nome)} × ${pacPerioProcSel[id]}` : '';
+    }).filter(Boolean).join(' · ');
+  }
+  resumo.innerHTML = html;
+}
+
+function pacPerioRenderProcs(){
+  const search = (document.getElementById('pac-perio-search')?.value||'').toLowerCase().trim();
+  const list = document.getElementById('pac-perio-proc-list');
+  if(!list) return;
+  const filtered = (procs||[]).filter(p => !p.inativo && (!search || p.nome.toLowerCase().includes(search)));
+  if(!filtered.length){
+    list.innerHTML = '<div style="padding:14px;text-align:center;color:var(--rose-text);font-size:12px;">Nenhum procedimento encontrado</div>';
+    return;
+  }
+  list.innerHTML = filtered.slice(0,60).map(p => {
+    const qty = pacPerioProcSel[p.id] || 0;
+    const sel = qty > 0;
+    return `<div class="perio-proc-list-item" style="background:${sel?'#fff9f9':'#fff'};">
+      <span style="flex:1;font-size:13px;${sel?'font-weight:700;color:var(--rose-dark);':''}">${escapeHtml(p.nome)}</span>
+      <span style="font-size:11px;color:var(--rose-text);min-width:52px;text-align:right;">${fmtBRL(p.precoFinal)}</span>
+      <div style="display:flex;align-items:center;gap:2px;">
+        <button onclick="pacPerioProcChange(${p.id},-1)" style="width:22px;height:22px;border:1px solid var(--rose-light);border-radius:4px;background:var(--rose-lighter);cursor:pointer;font-size:15px;line-height:1;color:var(--rose-dark);display:flex;align-items:center;justify-content:center;">−</button>
+        <span style="width:24px;text-align:center;font-size:12px;font-weight:700;color:var(--rose-dark);">${qty||'&nbsp;'}</span>
+        <button onclick="pacPerioProcChange(${p.id},1)" style="width:22px;height:22px;border:1.5px solid ${sel?'var(--rose)':'var(--rose-light)'};border-radius:4px;background:${sel?'var(--rose)':'var(--rose-lighter)'};cursor:pointer;font-size:15px;line-height:1;color:${sel?'#fff':'var(--rose-dark)'};display:flex;align-items:center;justify-content:center;">+</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function pacPerioProcChange(procId, delta){
+  const cur = pacPerioProcSel[procId] || 0;
+  const next = Math.max(0, cur + delta);
+  if(next === 0) delete pacPerioProcSel[procId];
+  else pacPerioProcSel[procId] = next;
+  pacPerioRenderProcs();
+  pacPerioRenderResumo();
+}
+
+function pacPerioAdicionarOrcamento(pacId){
+  const procIds = Object.keys(pacPerioProcSel).map(Number).filter(id=>(pacPerioProcSel[id]||0)>0);
+  if(!procIds.length){ showToast('Selecione ao menos um procedimento.','warn'); return; }
+  const sextStr = Object.keys(pacPerioSextants).filter(s=>pacPerioSextants[s]).join(', ') || 'Periodontia';
+  if(!pacOdontoOrcList) pacOdontoOrcList = [];
+  procIds.forEach(procId=>{
+    const proc = procs.find(p=>p.id===procId);
+    if(!proc) return;
+    const qty = pacPerioProcSel[procId];
+    pacOdontoOrcList.push({
+      procId: proc.id,
+      nome: `Periodontia (${sextStr}) — ${proc.nome}`,
+      precoUnit: proc.precoFinal,
+      qtd: qty,
+      total: proc.precoFinal * qty,
+      dentes: '',
+      tipo: 'global'
+    });
+  });
+  pacOdontoRenderOrcLista();
+  showToast('Adicionado ao orçamento!');
 }
 
 function pacRenderArcadas(){
