@@ -4655,6 +4655,11 @@ function renderPatientDetail(abaAtiva){
         </div>
         <div id="pac-odonto-sub-odontograma" data-pac-odonto-sub style="margin-top:14px;">
           <div style="overflow-x:auto;padding:8px 0;">
+            ${calcIdade(p.nascimento)!==null && calcIdade(p.nascimento)<13 ? `
+            <div style="text-align:center;font-size:11px;font-weight:700;color:var(--rose-text);text-transform:uppercase;margin-bottom:6px;">Superior — Decíduos</div>
+            <div class="odonto-arcada" id="pac-arc-dec-sup"></div>
+            <div style="height:8px;"></div>
+            ` : ''}
             <div style="text-align:center;font-size:11px;font-weight:700;color:var(--rose-text);text-transform:uppercase;margin-bottom:6px;">Superior — Permanentes</div>
             <div class="odonto-arcada" id="pac-arc-sup"></div>
             <div style="display:flex;align-items:center;gap:8px;margin:6px 0;">
@@ -4664,6 +4669,11 @@ function renderPatientDetail(abaAtiva){
             </div>
             <div class="odonto-arcada" id="pac-arc-inf"></div>
             <div style="text-align:center;font-size:11px;font-weight:700;color:var(--rose-text);text-transform:uppercase;margin-top:6px;">Inferior — Permanentes</div>
+            ${calcIdade(p.nascimento)!==null && calcIdade(p.nascimento)<13 ? `
+            <div style="height:8px;"></div>
+            <div class="odonto-arcada" id="pac-arc-dec-inf"></div>
+            <div style="text-align:center;font-size:11px;font-weight:700;color:var(--rose-text);text-transform:uppercase;margin-top:6px;">Inferior — Decíduos</div>
+            ` : ''}
           </div>
           <!-- legenda -->
           <div style="display:flex;flex-wrap:wrap;gap:12px;margin:10px 0;justify-content:center;align-items:center;" id="pac-odonto-legenda"></div>
@@ -6597,6 +6607,12 @@ function pacPerioAdicionarOrcamento(pacId){
 function pacRenderArcadas(){
   pacRenderArcada('pac-arc-sup',     PAC_FDI_SUP);
   pacRenderArcada('pac-arc-inf',     PAC_FDI_INF);
+  const pac = pacientes.find(p=>p.id===selectedPatientId);
+  const mostrarDeciduos = calcIdade(pac?.nascimento) !== null && calcIdade(pac?.nascimento) < 13;
+  if(mostrarDeciduos){
+    pacRenderArcada('pac-arc-dec-sup', PAC_FDI_DEC_SUP);
+    pacRenderArcada('pac-arc-dec-inf', PAC_FDI_DEC_INF);
+  }
 }
 
 function pacRenderArcada(id, dentes){
