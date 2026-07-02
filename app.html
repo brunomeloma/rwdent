@@ -5473,7 +5473,7 @@ const DENTE_NOME = {
   81:'Dec. Inc. Central',82:'Dec. Inc. Lateral',83:'Dec. Canino',84:'Dec. Molar 1',85:'Dec. Molar 2'
 };
 const COND_PT = {higido:'Hígido',carie:'Cárie',restaurado:'Restaurado',extraido:'Extraído',canal:'Canal',coroa:'Coroa',implante:'Implante',fratura:'Fratura',selante:'Selante',outro:'Outro'};
-const COND_COR = {higido:'#fff',carie:'#ffcdd2',restaurado:'#c8e6c9',extraido:'#eee',canal:'#fff9c4',coroa:'#bbdefb',implante:'#e1bee7',fratura:'#ffccbc',selante:'#b2ebf2',outro:'#f5f5f5'};
+const COND_COR = {higido:'#fff',carie:'#ef5350',restaurado:'#43a047',extraido:'#9e9e9e',canal:'#ffb300',coroa:'#1e88e5',implante:'#8e24aa',fratura:'#fb8c00',selante:'#00acc1',outro:'#757575'};
 const ODONTO_COND_OPTIONS = [
   {id:'ausente', label:'Ausente', code:'A', visual:'extraido'},
   {id:'higido_selado', label:'Hígido selado', code:'Hs', visual:'higido'},
@@ -5554,16 +5554,17 @@ function renderOdontogramaMain(){
 
 /* ── Modern SVG Tooth System — versão anatômica ── */
 const TOOTH_COND_COLORS = {
-  higido:     { fill:'#fffdf9', stroke:'#b89b8a', oclFill:'#fffaf4', root:'#d9b98f' },
-  carie:      { fill:'#ffd9dc', stroke:'#e57373', oclFill:'#ffd9dc', root:'#d9b98f' },
-  restaurado: { fill:'#d9f2dc', stroke:'#62b56a', oclFill:'#d9f2dc', root:'#d9b98f' },
-  extraido:   { fill:'#eeeeee', stroke:'#bdbdbd', oclFill:'#eeeeee', root:'#c9c9c9' },
-  canal:      { fill:'#fff4b8', stroke:'#e7b800', oclFill:'#fff4b8', root:'#d9b98f' },
-  coroa:      { fill:'#d8eaff', stroke:'#4d8edb', oclFill:'#d8eaff', root:'#d9b98f' },
-  implante:   { fill:'#ecd8ff', stroke:'#9b5ad6', oclFill:'#ecd8ff', root:'#d9b98f' },
-  fratura:    { fill:'#ffd8c8', stroke:'#ff7043', oclFill:'#ffd8c8', root:'#d9b98f' },
-  selante:    { fill:'#d3f7fb', stroke:'#26aebe', oclFill:'#d3f7fb', root:'#d9b98f' },
-  outro:      { fill:'#f6f1ed', stroke:'#9e9e9e', oclFill:'#f6f1ed', root:'#d9b98f' }
+  //                    fill vivo      light(gradiente) stroke escuro    oclFill        raiz
+  higido:     { fill:'#fffdf9', light:'#f5eee7', stroke:'#b89b8a', oclFill:'#fffaf4', root:'#d9b98f' },
+  carie:      { fill:'#ef5350', light:'#ffcdd2', stroke:'#b71c1c', oclFill:'#ef5350', root:'#c9a080' },
+  restaurado: { fill:'#43a047', light:'#c8e6c9', stroke:'#1b5e20', oclFill:'#43a047', root:'#d9b98f' },
+  extraido:   { fill:'#9e9e9e', light:'#eeeeee', stroke:'#424242', oclFill:'#9e9e9e', root:'#bdbdbd' },
+  canal:      { fill:'#ffb300', light:'#fff8e1', stroke:'#e65100', oclFill:'#ffb300', root:'#d9b98f' },
+  coroa:      { fill:'#1e88e5', light:'#bbdefb', stroke:'#0d47a1', oclFill:'#1e88e5', root:'#d9b98f' },
+  implante:   { fill:'#8e24aa', light:'#e1bee7', stroke:'#4a148c', oclFill:'#8e24aa', root:'#9e9e9e' },
+  fratura:    { fill:'#fb8c00', light:'#ffe0b2', stroke:'#bf360c', oclFill:'#fb8c00', root:'#d9b98f' },
+  selante:    { fill:'#00acc1', light:'#e0f7fa', stroke:'#006064', oclFill:'#00acc1', root:'#d9b98f' },
+  outro:      { fill:'#757575', light:'#eeeeee', stroke:'#212121', oclFill:'#757575', root:'#d9b98f' }
 };
 
 function getToothType(num) {
@@ -5585,12 +5586,13 @@ function isUpperTooth(num) {
 }
 
 function toothDefs(id, c){
+  const light = c.light || '#f5eee7';
   return `<defs>
     <linearGradient id="${id}c" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#f5eee7"/>
-      <stop offset="28%" stop-color="${c.fill}"/>
-      <stop offset="58%" stop-color="#ffffff"/>
-      <stop offset="100%" stop-color="#e2d6cb"/>
+      <stop offset="0%"   stop-color="${light}"/>
+      <stop offset="25%"  stop-color="${c.fill}"/>
+      <stop offset="65%"  stop-color="${c.fill}"/>
+      <stop offset="100%" stop-color="${light}"/>
     </linearGradient>
     <linearGradient id="${id}r" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0%" stop-color="#f0d8b4"/>
@@ -5757,13 +5759,13 @@ function renderLegenda(){
   const c = document.getElementById('odonto-legenda');
   if(!c) return;
   const itens = [
-    ['higido','#fff','var(--rose-light)','Hígido'],
-    ['carie','#ffcdd2','#e57373','Cárie'],
-    ['restaurado','#c8e6c9','#66bb6a','Restaurado'],
-    ['extraido','#eee','#bdbdbd','Extraído'],
-    ['canal','#fff9c4','#fdd835','Canal'],
-    ['coroa','#bbdefb','#42a5f5','Coroa'],
-    ['implante','#e1bee7','#ab47bc','Implante'],
+    ['higido','#fff','#b89b8a','Hígido'],
+    ['carie','#ef5350','#b71c1c','Cárie'],
+    ['restaurado','#43a047','#1b5e20','Restaurado'],
+    ['extraido','#9e9e9e','#424242','Extraído'],
+    ['canal','#ffb300','#e65100','Canal'],
+    ['coroa','#1e88e5','#0d47a1','Coroa'],
+    ['implante','#8e24aa','#4a148c','Implante'],
   ];
   c.innerHTML = itens.map(([,bg,brd,label])=>
     `<div class="odonto-leg"><div class="odonto-leg-dot" style="background:${bg};border-color:${brd};"></div>${label}</div>`
@@ -6407,7 +6409,11 @@ function pacRenderLegenda(){
   const c = document.getElementById('pac-odonto-legenda');
   if(!c) return;
   const itens = [['#fff','var(--rose-light)','Hígido'],['#ffcdd2','#e57373','Cárie'],['#c8e6c9','#66bb6a','Restaurado'],['#eee','#bdbdbd','Extraído'],['#fff9c4','#fdd835','Canal'],['#bbdefb','#42a5f5','Coroa'],['#e1bee7','#ab47bc','Implante']];
-  c.innerHTML = '<span class="odonto-face-status untreated">Não tratado</span><span class="odonto-face-status treated">Tratado</span>' + itens.map(([bg,brd,lbl])=>
+  const itens2 = [
+    ['#fff','#b89b8a','Hígido'],['#ef5350','#b71c1c','Cárie'],['#43a047','#1b5e20','Restaurado'],
+    ['#9e9e9e','#424242','Extraído'],['#ffb300','#e65100','Canal'],['#1e88e5','#0d47a1','Coroa'],['#8e24aa','#4a148c','Implante']
+  ];
+  c.innerHTML = '<span class="odonto-face-status untreated">Não tratado</span><span class="odonto-face-status treated">Tratado</span>' + itens2.map(([bg,brd,lbl])=>
     `<div class="odonto-leg"><div class="odonto-leg-dot" style="background:${bg};border-color:${brd};"></div>${lbl}</div>`
   ).join('');
 }
