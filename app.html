@@ -1524,6 +1524,21 @@ select, textarea {
         </div>
       </div>
 
+      <!-- ── RECALL + ANIVERSARIANTES ── -->
+      <div class="home-tables-row" style="margin-top:16px;">
+        <div class="card home-table-card">
+          <h3 class="home-table-title"><i class="ti ti-phone-outgoing" style="color:#1565c0;"></i> Retornos atrasados (6+ meses)</h3>
+          <div id="home-recall"><div class="home-empty">Nenhum retorno atrasado.</div></div>
+        </div>
+        <div class="card home-table-card">
+          <h3 class="home-table-title"><i class="ti ti-cake" style="color:#c2185b;"></i> Aniversariantes do mês</h3>
+          <div id="home-aniversariantes"><div class="home-empty">Nenhum aniversariante este mês.</div></div>
+        </div>
+      </div>
+
+      <!-- ── LEMBRETE DE BACKUP ── -->
+      <div id="home-backup-banner" style="display:none;margin-top:16px;"></div>
+
       <!-- ── ALERTAS DE ESTOQUE ── -->
       <div id="home-estoque-alertas" style="display:none;margin-top:16px;"></div>
 
@@ -2496,9 +2511,13 @@ select, textarea {
       <div class="card">
         <div class="section-header">
           <h2><i class="ti ti-receipt"></i> Vendas e Orçamentos</h2>
-          <button class="btn-secondary" onclick="toggleContasReceber()" style="font-size:12px;"><i class="ti ti-report-money"></i> Contas a receber</button>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <button class="btn-secondary" onclick="toggleComissoes()" style="font-size:12px;"><i class="ti ti-percentage"></i> Comissões</button>
+            <button class="btn-secondary" onclick="toggleContasReceber()" style="font-size:12px;"><i class="ti ti-report-money"></i> Contas a receber</button>
+          </div>
         </div>
         <div id="contas-receber-panel" style="display:none;margin-bottom:20px;"></div>
+        <div id="comissoes-panel" style="display:none;margin-bottom:20px;"></div>
         <div id="vendas-metrics" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:16px;"></div>
         <div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;align-items:center;">
           <input type="text" id="venda-search" placeholder="Buscar venda..." oninput="renderVendas()" style="flex:1;min-width:150px;"/>
@@ -2890,6 +2909,16 @@ select, textarea {
           <div id="ultimo-backup-info" style="font-size:12px;color:var(--rose-text);margin-bottom:10px;display:flex;align-items:center;gap:6px;"></div>
           <div style="display:flex;gap:10px;flex-wrap:wrap;">
             <button class="btn-secondary" onclick="exportarBackup()" style="padding:8px 16px;font-size:13px;"><i class="ti ti-download"></i> Exportar todos os dados (JSON)</button>
+          </div>
+
+          <hr style="border-color:var(--rose-light);margin:24px 0;"/>
+          <h2 style="font-size:13px;font-weight:700;color:var(--rose-dark);margin-bottom:14px;display:flex;align-items:center;gap:8px;text-transform:uppercase;letter-spacing:.5px;"><i class="ti ti-lock"></i> PIN do financeiro</h2>
+          <p style="font-size:12px;color:var(--rose-text);margin-bottom:10px;">Proteja as abas Financeiro, Vendas, Procedimentos, Materiais e Estoque com um PIN de 4 a 6 dígitos. Útil quando outra pessoa usa o sistema na recepção.</p>
+          <div id="fin-pin-status" style="font-size:12px;margin-bottom:10px;"></div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+            <input type="password" id="fin-pin-input" inputmode="numeric" maxlength="6" placeholder="PIN (4-6 dígitos)" style="width:150px;padding:8px 12px;border:1px solid var(--rose-light);border-radius:8px;font-size:13px;"/>
+            <button class="btn-secondary" onclick="definirFinPin()" style="padding:8px 16px;font-size:13px;"><i class="ti ti-lock"></i> Definir PIN</button>
+            <button class="btn-secondary" onclick="removerFinPin()" style="padding:8px 16px;font-size:13px;color:#b33;"><i class="ti ti-lock-open"></i> Remover PIN</button>
           </div>
 
           <hr style="border-color:var(--rose-light);margin:24px 0;"/>
@@ -3490,8 +3519,61 @@ function toggleMobileMore(){
   if(ov) ov.classList.toggle('show');
 }
 
+// ── PIN do financeiro ──
+const FIN_PIN_TABS = ['financeiro','vendas_fin','procedimentos_fin','materiais_fin','estoque_fin'];
+async function _hashPin(pin){
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('rwdent:'+pin));
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+function finPinBloqueado(tab){
+  return FIN_PIN_TABS.includes(tab) && cfg && cfg.finPinHash && sessionStorage.getItem('rw-fin-unlocked')!==cfg.finPinHash;
+}
+async function pedirFinPin(tab){
+  const pin = prompt('🔒 Área protegida. Digite o PIN do financeiro:');
+  if(pin===null) return;
+  const h = await _hashPin(String(pin).trim());
+  if(h === cfg.finPinHash){
+    sessionStorage.setItem('rw-fin-unlocked', cfg.finPinHash);
+    switchTab(tab);
+  } else {
+    showToast('PIN incorreto.','error');
+  }
+}
+async function definirFinPin(){
+  const val = (document.getElementById('fin-pin-input')?.value||'').trim();
+  if(!/^\d{4,6}$/.test(val)){ showToast('O PIN deve ter de 4 a 6 dígitos.','warn'); return; }
+  cfg.finPinHash = await _hashPin(val);
+  const _eP = await saveFinanceiro();
+  if(_eP){ showToast('Erro ao salvar PIN: '+_eP.message,'error'); return; }
+  sessionStorage.setItem('rw-fin-unlocked', cfg.finPinHash);
+  document.getElementById('fin-pin-input').value='';
+  atualizarFinPinStatus();
+  showToast('PIN definido! As abas financeiras agora pedem o PIN.');
+}
+async function removerFinPin(){
+  if(!cfg.finPinHash){ showToast('Nenhum PIN definido.','warn'); return; }
+  const pin = prompt('Digite o PIN atual para removê-lo:');
+  if(pin===null) return;
+  const h = await _hashPin(String(pin).trim());
+  if(h !== cfg.finPinHash){ showToast('PIN incorreto.','error'); return; }
+  delete cfg.finPinHash;
+  const _eP = await saveFinanceiro();
+  if(_eP){ showToast('Erro: '+_eP.message,'error'); return; }
+  sessionStorage.removeItem('rw-fin-unlocked');
+  atualizarFinPinStatus();
+  showToast('PIN removido.');
+}
+function atualizarFinPinStatus(){
+  const el = document.getElementById('fin-pin-status');
+  if(!el) return;
+  el.innerHTML = cfg && cfg.finPinHash
+    ? '<span style="color:#2e7d32;font-weight:700;"><i class="ti ti-lock"></i> PIN ativo — abas financeiras protegidas.</span>'
+    : '<span style="color:var(--rose-text);"><i class="ti ti-lock-open"></i> Nenhum PIN definido.</span>';
+}
+
 function switchTab(tab){
   if(tab==='invisalign_apresentacao' && !_isRhaizaClinic) tab='home';
+  if(finPinBloqueado(tab)){ pedirFinPin(tab); return; }
   ['home','agendar','lista','calendario','pacientes','profissionais','configuracoes','financeiro','procedimentos_fin','materiais_fin','estoque_fin','vendas_fin','venda_rapida','resgate','invisalign_apresentacao','admin'].forEach(t=>{
     const el=document.getElementById('tab-'+t);
     if(el) el.style.display = t===tab?'':'none';
@@ -3524,7 +3606,7 @@ function switchTab(tab){
   if(tab==='pacientes') renderPatients();
   if(tab==='profissionais') renderProfissionais();
   if(tab==='home') renderHomeStats();
-  if(tab==='configuracoes') renderConfiguracoes();
+  if(tab==='configuracoes'){ renderConfiguracoes(); atualizarFinPinStatus(); }
   if(tab==='resgate') renderResgate();
   if(tab==='admin') loadAdminPanel();
   if(tab==='invisalign_apresentacao'){
@@ -3633,6 +3715,8 @@ function renderHomeStats(){
         const st = (agGetStatus(a)||'pendente').toLowerCase();
         const badgeCls = st.includes('confirm') ? 'confirmada' : st.includes('complet') ? 'completada' : 'pendente';
         const badgeTxt = st.includes('confirm') ? 'Confirmada' : st.includes('complet') ? 'Completada' : 'Pendente';
+        const telAg = a.telefone || pac?.telefone || '';
+        const btnWpp = telAg ? `<button class="home-btn-ver" style="min-height:32px;padding:5px 9px;border-radius:8px;background:#25d366;color:#fff;border-color:#25d366;" title="Lembrar via WhatsApp" onclick="enviarConfirmacaoWpp('${escapeHtml(telAg).replace(/'/g,'&#39;')}','${escapeHtml(nome).replace(/'/g,'&#39;')}','${a.data}','${a.horario||''}','${escapeHtml(a.procedimento||'Consulta').replace(/'/g,'&#39;')}')"><i class="ti ti-brand-whatsapp"></i></button>` : '';
         return `<div class="home-table-row">
           <div>
             <div class="home-table-name">${escapeHtml(nome)}</div>
@@ -3640,6 +3724,7 @@ function renderHomeStats(){
           </div>
           <div style="font-weight:700;color:#3a2020;min-width:44px;text-align:center;">${(a.horario||'').slice(0,5)}</div>
           <span class="home-badge ${badgeCls}">${badgeTxt}</span>
+          ${btnWpp}
         </div>`;
       }).join('');
     }
@@ -3674,15 +3759,18 @@ function renderHomeStats(){
       pagPendEl.innerHTML='<div class="home-empty">Nenhum pagamento pendente.</div>';
     } else {
       const sorted = pendentes.sort((a,b)=>((a.dataFinal||a.data||'').localeCompare(b.dataFinal||b.data||'')));
+      const _hj = new Date().toISOString().slice(0,10);
       pagPendEl.innerHTML = sorted.slice(0,5).map(v=>{
         const saldo = (v.total||0)-_vendaPago(v);
         const pac = pacientes.find(p=>p.id===v.pacienteId);
         const dt = v.dataFinal||v.data||'';
+        const vencido = v.vencimento && v.vencimento < _hj;
         return `<div class="home-table-row">
           <div>
             <div class="home-table-name">${escapeHtml(pac?.nome||v.pacienteNome||'—')}</div>
-            <div class="home-table-sub">${dt?new Date(dt).toLocaleDateString('pt-BR'):'—'}</div>
+            <div class="home-table-sub">${dt?new Date(dt).toLocaleDateString('pt-BR'):'—'}${v.vencimento?' · vence '+new Date(v.vencimento+'T12:00:00').toLocaleDateString('pt-BR'):''}</div>
           </div>
+          ${vencido?'<span class="fin-badge danger" style="font-size:9px;">VENCIDO</span>':''}
           <span style="font-weight:700;color:#dc2626;font-size:13px;white-space:nowrap;">${fmtBRL(saldo)}</span>
         </div>`;
       }).join('')+(pendentes.length>5?`<div style="text-align:center;padding:6px;"><button class="btn-secondary" style="font-size:11px;" onclick="switchTab('vendas_fin')">Ver todos (${pendentes.length})</button></div>`:'');
@@ -3704,6 +3792,85 @@ function renderHomeStats(){
         <button class="home-btn-ver" onclick="verPacienteHome('${p.id}')" style="min-height:36px;padding:6px 14px;border-radius:8px;">Ver</button>
       </div>`).join('');
     }
+  }
+
+  // Retornos atrasados (recall 6+ meses)
+  const recallEl = document.getElementById('home-recall');
+  if(recallEl){
+    const hoje6m = new Date(); hoje6m.setMonth(hoje6m.getMonth()-6);
+    const hojeStr = new Date().toISOString().slice(0,10);
+    const recall = pacientes.map(p=>{
+      const agsPac = agendamentos.filter(a=>a.paciente_id===p.id);
+      if(!agsPac.length) return null;
+      const temFuturo = agsPac.some(a=>(a.data||'')>=hojeStr && (agGetStatus(a)||'').toLowerCase()!=='cancelado');
+      if(temFuturo) return null;
+      const ultima = agsPac.map(a=>a.data||'').sort().pop();
+      if(!ultima || new Date(ultima) > hoje6m) return null;
+      return { p, ultima };
+    }).filter(Boolean).sort((a,b)=>a.ultima.localeCompare(b.ultima)).slice(0,6);
+    if(!recall.length){
+      recallEl.innerHTML='<div class="home-empty">Nenhum retorno atrasado.</div>';
+    } else {
+      recallEl.innerHTML = recall.map(({p,ultima})=>{
+        const meses = Math.floor((Date.now()-new Date(ultima).getTime())/2629800000);
+        const tel = (p.telefone||'').replace(/\D/g,'');
+        const btnW = tel ? `<button class="home-btn-ver" style="min-height:32px;padding:5px 9px;border-radius:8px;background:#25d366;color:#fff;" title="Chamar para retorno" onclick="homeRecallWpp(${p.id})"><i class="ti ti-brand-whatsapp"></i></button>` : '';
+        return `<div class="home-table-row">
+          <div>
+            <div class="home-table-name">${escapeHtml(p.nome)}</div>
+            <div class="home-table-sub">Última visita: ${new Date(ultima+'T12:00:00').toLocaleDateString('pt-BR')} (${meses} meses)</div>
+          </div>
+          ${btnW}
+          <button class="home-btn-ver" onclick="verPacienteHome('${p.id}')" style="min-height:32px;padding:5px 12px;border-radius:8px;">Ver</button>
+        </div>`;
+      }).join('');
+    }
+  }
+
+  // Aniversariantes do mês
+  const aniverEl = document.getElementById('home-aniversariantes');
+  if(aniverEl){
+    const mesAtual = new Date().getMonth()+1;
+    const diaAtual = new Date().getDate();
+    const aniver = pacientes.filter(p=>{
+      const dn = (p.data_nascimento||'').slice(5,7);
+      return dn && parseInt(dn)===mesAtual;
+    }).map(p=>({p, dia: parseInt((p.data_nascimento||'').slice(8,10))||0}))
+      .sort((a,b)=>a.dia-b.dia);
+    if(!aniver.length){
+      aniverEl.innerHTML='<div class="home-empty">Nenhum aniversariante este mês.</div>';
+    } else {
+      aniverEl.innerHTML = aniver.slice(0,8).map(({p,dia})=>{
+        const hojeAniv = dia===diaAtual;
+        const tel = (p.telefone||'').replace(/\D/g,'');
+        const btnW = tel ? `<button class="home-btn-ver" style="min-height:32px;padding:5px 9px;border-radius:8px;background:#25d366;color:#fff;" title="Enviar parabéns" onclick="homeAniverWpp(${p.id})"><i class="ti ti-brand-whatsapp"></i></button>` : '';
+        return `<div class="home-table-row" ${hojeAniv?'style="background:#fff3f6;border-radius:8px;"':''}>
+          <div>
+            <div class="home-table-name">${hojeAniv?'🎂 ':''}${escapeHtml(p.nome)}</div>
+            <div class="home-table-sub">Dia ${dia}${hojeAniv?' — hoje!':''}</div>
+          </div>
+          ${btnW}
+        </div>`;
+      }).join('')+(aniver.length>8?`<div style="text-align:center;padding:6px;font-size:11px;color:var(--rose-text);">+${aniver.length-8} aniversariante(s)</div>`:'');
+    }
+  }
+
+  // Lembrete mensal de backup
+  const bkEl = document.getElementById('home-backup-banner');
+  if(bkEl){
+    const last = localStorage.getItem('rwdent-ultimo-backup');
+    const dias = last ? Math.floor((Date.now()-new Date(last).getTime())/86400000) : null;
+    if(dias===null || dias>30){
+      bkEl.innerHTML = `<div class="card" style="border:1.5px solid #90caf9;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+        <i class="ti ti-database-export" style="font-size:24px;color:#1565c0;"></i>
+        <div style="flex:1;min-width:200px;">
+          <div style="font-size:13px;font-weight:700;color:#0d47a1;">Hora de fazer backup</div>
+          <div style="font-size:12px;color:var(--rose-text);">${dias===null?'Nenhum backup registrado ainda.':'Seu último backup foi há '+dias+' dias.'} Exporte seus dados por segurança.</div>
+        </div>
+        <button class="btn-primary" style="font-size:12px;" onclick="switchTab('configuracoes')"><i class="ti ti-download"></i> Fazer backup</button>
+      </div>`;
+      bkEl.style.display='';
+    } else { bkEl.style.display='none'; bkEl.innerHTML=''; }
   }
 
   // Alertas de estoque baixo
@@ -6935,7 +7102,10 @@ function pacRenderDentesHistorico(){
     c.innerHTML = '<div style="text-align:center;color:var(--rose-text);font-size:13px;padding:16px;">Nenhum dente marcado ainda. Clique num dente acima para registrar.</div>';
     return;
   }
-  c.innerHTML = `<div style="font-size:12px;font-weight:700;color:var(--rose-text);text-transform:uppercase;margin-bottom:8px;">Dentes com registro</div>` +
+  c.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:6px;">
+      <span style="font-size:12px;font-weight:700;color:var(--rose-text);text-transform:uppercase;">Dentes com registro</span>
+      <button class="btn-secondary" style="font-size:11px;padding:4px 12px;" onclick="pacToggleEvolucao()"><i class="ti ti-timeline"></i> Evolução</button>
+    </div><div id="pac-evolucao-panel" style="display:none;margin-bottom:12px;"></div>` +
     dentes.sort((a,b)=>a.dente-b.dente).map(d=>`
       <div class="proc-item">
         <div class="proc-header">
@@ -6947,6 +7117,45 @@ function pacRenderDentesHistorico(){
         ${d.obs?`<div style="font-size:11px;color:var(--rose-text);margin-top:3px;">${escapeHtml(d.obs)}</div>`:''}
       </div>
     `).join('');
+}
+
+// ── Evolução do odontograma: linha do tempo dos atendimentos e dentes tratados ──
+async function pacToggleEvolucao(){
+  const panel = document.getElementById('pac-evolucao-panel');
+  if(!panel) return;
+  if(panel.style.display!=='none'){ panel.style.display='none'; return; }
+  panel.style.display='';
+  panel.innerHTML = '<div style="padding:14px;text-align:center;color:var(--rose-text);font-size:12px;">Carregando evolução...</div>';
+  const { data, error } = await _sb.from('atendimentos_odonto')
+    .select('*').eq('clinica_id',clinicaId).eq('paciente_id',selectedPatientId)
+    .order('data',{ascending:false}).limit(50);
+  if(error){ panel.innerHTML = '<div style="padding:12px;color:#b33;font-size:12px;">Erro: '+escapeHtml(error.message)+'</div>'; return; }
+  if(!data||!data.length){
+    panel.innerHTML = '<div style="padding:14px;text-align:center;color:var(--rose-text);font-size:12px;">Nenhum atendimento registrado ainda. A evolução aparece conforme os procedimentos são realizados.</div>';
+    return;
+  }
+  const itens = data.map(a=>{
+    let dentes = [];
+    try{ dentes = JSON.parse(a.dentes_tratados||'[]'); }catch(e){}
+    const badges = (dentes||[]).map(d=>`<span style="background:var(--rose-lighter);color:var(--rose-dark);border-radius:6px;padding:2px 7px;font-size:10px;font-weight:700;" title="${escapeHtml(d.procedimento||'')}">🦷${d.dente}</span>`).join(' ');
+    const [y,m,dd] = (a.data||'').split('-');
+    return `<div style="display:flex;gap:10px;padding:10px 0;border-bottom:1px solid var(--rose-lighter);">
+      <div style="min-width:64px;text-align:center;">
+        <div style="font-size:13px;font-weight:800;color:var(--rose-dark);">${dd||'--'}/${m||'--'}</div>
+        <div style="font-size:10px;color:var(--rose-text);">${y||''}</div>
+      </div>
+      <div style="flex:1;">
+        <div style="font-size:13px;font-weight:600;color:#3a2020;">${escapeHtml(a.procedimentos||'Atendimento')}</div>
+        ${badges?`<div style="display:flex;flex-wrap:wrap;gap:3px;margin-top:4px;">${badges}</div>`:''}
+        ${a.profissional_nome?`<div style="font-size:11px;color:var(--rose-text);margin-top:3px;"><i class="ti ti-user"></i> ${escapeHtml(a.profissional_nome)}</div>`:''}
+        ${a.obs?`<div style="font-size:11px;color:var(--rose-text);margin-top:2px;">${escapeHtml(a.obs)}</div>`:''}
+      </div>
+    </div>`;
+  }).join('');
+  panel.innerHTML = `<div style="border:1.5px solid var(--rose-light);border-radius:12px;padding:12px 16px;background:#fff;">
+    <div style="font-size:12px;font-weight:800;color:var(--rose-dark);margin-bottom:6px;"><i class="ti ti-timeline"></i> Evolução do paciente — ${data.length} atendimento(s)</div>
+    <div style="max-height:340px;overflow-y:auto;">${itens}</div>
+  </div>`;
 }
 
 async function pacRemoverDente(id){
@@ -11178,6 +11387,28 @@ function enviarConfirmacaoWpp(tel, nome, data, horario, procedimento){
   window.open(url, '_blank');
 }
 
+// ── WhatsApp Recall (retorno atrasado) ──
+function homeRecallWpp(pacId){
+  const p = pacientes.find(x=>x.id===pacId); if(!p) return;
+  const num = (p.telefone||'').replace(/\D/g,'');
+  if(!num){ showToast('Paciente sem telefone cadastrado.','warn'); return; }
+  const numBR = num.startsWith('55') ? num : '55' + num;
+  const clinica = clinicaData?.nome_cli || 'nossa clínica';
+  const msg = `Olá, ${_primeiroNome(p.nome)}! 😊\n\nAqui é ${_prepClinica(clinica)}. Sentimos sua falta por aqui! Já faz um tempinho desde a sua última visita, e a manutenção regular é essencial para a saúde do seu sorriso. 🦷✨\n\nQue tal agendarmos uma avaliação ou limpeza? Me diga qual o melhor dia e horário pra você que encontramos um encaixe! 🙏`;
+  window.open(`https://wa.me/${numBR}?text=${encodeURIComponent(msg)}`, '_blank');
+}
+
+// ── WhatsApp Aniversário ──
+function homeAniverWpp(pacId){
+  const p = pacientes.find(x=>x.id===pacId); if(!p) return;
+  const num = (p.telefone||'').replace(/\D/g,'');
+  if(!num){ showToast('Paciente sem telefone cadastrado.','warn'); return; }
+  const numBR = num.startsWith('55') ? num : '55' + num;
+  const clinica = clinicaData?.nome_cli || 'nossa clínica';
+  const msg = `🎉🎂 Parabéns, ${_primeiroNome(p.nome)}!\n\nToda a equipe ${_prepClinica(clinica)} deseja um feliz aniversário, com muita saúde, alegria e motivos de sobra para sorrir! 😁✨\n\nUm grande abraço! 🥳`;
+  window.open(`https://wa.me/${numBR}?text=${encodeURIComponent(msg)}`, '_blank');
+}
+
 // ══════════════════════════════════════════════════════
 // ASSINATURA DIGITAL
 // ══════════════════════════════════════════════════════
@@ -11951,6 +12182,8 @@ async function pacFinalizarItensSelecionados(vendaId, pacId){
     v.total=parseFloat(totalFinal.toFixed(2));
     v.consumo=aplicado;
     v.dataFinal=new Date().toISOString();
+    v.profissional_id=profId||null;
+    v.profissional_nome=profNome;
     v.pagamentos = (v.pagamentos||[]).concat(_pagamentos);
     delete _orcSel[vendaId];
     delete _orcDesc[vendaId];
@@ -11968,6 +12201,8 @@ async function pacFinalizarItensSelecionados(vendaId, pacId){
       consumo: aplicado,
       data: new Date().toISOString(),
       dataFinal: new Date().toISOString(),
+      profissional_id: profId||null,
+      profissional_nome: profNome,
       pagamentos: _pagamentos
     };
     vendas.push(novaVenda);
@@ -12330,6 +12565,72 @@ function pacPlanoRenderParcelamento(total){
     </div>`);
   }
   c.innerHTML = `<div style="font-size:11px;font-weight:700;color:var(--rose-text);text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px;"><i class="ti ti-calculator"></i> Simulação de parcelas</div>${rows.join('')}`;
+}
+
+// ── Recibo de pagamento em PDF (jsPDF) ──
+function gerarReciboPagamento(vendaId, pgId, pacId){
+  const v = vendas.find(x=>x.id===vendaId);
+  if(!v){ showToast('Venda não encontrada.','error'); return; }
+  const pg = (v.pagamentos||[]).find(p=>p.id===pgId);
+  if(!pg){ showToast('Pagamento não encontrado.','error'); return; }
+  if(!window.jspdf){ showToast('jsPDF não carregado.','error'); return; }
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  const pac = pacientes.find(p=>p.id===pacId);
+  const clinicaNome = clinicaData?.nome_cli || document.getElementById('header-clinica')?.textContent || 'Clínica';
+  const respNome = clinicaData?.nome_resp || '';
+  const endereco = clinicaData?.endereco || '';
+  const telefone = clinicaData?.telefone || '';
+  const rose = [212,115,90], dark = [122,48,32], text = [58,32,32];
+  const formaLbl = pg.forma==='pix'?'PIX':pg.forma==='credito'?('Cartão de Crédito'+(pg.parcelas_cartao>1?' em '+pg.parcelas_cartao+'x':'')):pg.forma==='debito'?'Cartão de Débito':'Dinheiro';
+  const valorExt = fmtBRL(pg.valor);
+  const dtPg = new Date(pg.data);
+
+  // Cabeçalho
+  doc.setFillColor(...rose); doc.rect(0,0,210,32,'F');
+  doc.setFontSize(18); doc.setTextColor(255,255,255); doc.setFont(undefined,'bold');
+  doc.text(clinicaNome,105,14,{align:'center'});
+  doc.setFontSize(10); doc.setFont(undefined,'normal');
+  doc.text('RECIBO DE PAGAMENTO',105,22,{align:'center'});
+
+  let y = 46;
+  doc.setTextColor(...text); doc.setFontSize(11);
+  // Nº do recibo e data
+  doc.setFont(undefined,'bold'); doc.text(`Recibo Nº ${vendaId}-${String(pgId).slice(-5)}`,14,y);
+  doc.setFont(undefined,'normal'); doc.text(dtPg.toLocaleDateString('pt-BR'),196,y,{align:'right'}); y+=12;
+
+  // Valor em destaque
+  doc.setFillColor(253,240,235); doc.roundedRect(14,y,182,20,3,3,'F');
+  doc.setFontSize(16); doc.setFont(undefined,'bold'); doc.setTextColor(...dark);
+  doc.text(valorExt,105,y+13,{align:'center'}); y+=30;
+
+  // Corpo
+  doc.setFontSize(11); doc.setTextColor(...text); doc.setFont(undefined,'normal');
+  const linhas = doc.splitTextToSize(
+    `Recebemos de ${pac?.nome||v.pacienteNome||'—'} a importância de ${valorExt}, `+
+    `na forma de pagamento ${formaLbl}, referente a: ${(v.itens||[]).map(i=>i.nome).join(', ')||'serviços odontológicos'}.`+
+    (pg.obs?` (${pg.obs})`:''), 182);
+  doc.text(linhas,14,y); y += linhas.length*6 + 6;
+
+  // Situação da venda
+  const pago = vendaValorPago(v);
+  const saldo = Math.max(0,(v.total||0)-pago);
+  doc.setFontSize(10);
+  doc.text(`Valor total do tratamento: ${fmtBRL(v.total||0)}`,14,y); y+=6;
+  doc.text(`Total pago até a data: ${fmtBRL(pago)}`,14,y); y+=6;
+  doc.setFont(undefined,'bold');
+  doc.text(saldo>0?`Saldo restante: ${fmtBRL(saldo)}`:'Situação: QUITADO',14,y); y+=16;
+
+  // Assinatura
+  doc.setFont(undefined,'normal'); doc.setDrawColor(...text);
+  doc.line(60,y+18,150,y+18);
+  doc.setFontSize(10);
+  doc.text(respNome||clinicaNome,105,y+24,{align:'center'});
+  const rodape = [endereco, telefone && 'Tel: '+telefone].filter(Boolean).join(' — ');
+  if(rodape){ doc.setFontSize(8); doc.setTextColor(120,120,120); doc.text(rodape,105,285,{align:'center'}); }
+
+  doc.save(`recibo-${(pac?.nome||'paciente').split(' ')[0].toLowerCase()}-${dtPg.toISOString().slice(0,10)}.pdf`);
+  showToast('Recibo gerado!');
 }
 
 // ── Geração de PDF do orçamento (jsPDF) ──
@@ -13606,6 +13907,73 @@ async function calSaveNewAppt(){
 // ══════════════════════════════════════════════════════
 // CONTAS A RECEBER (painel global)
 // ══════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════
+// COMISSÕES POR PROFISSIONAL
+// ══════════════════════════════════════════════════════
+function toggleComissoes(){
+  const panel = document.getElementById('comissoes-panel');
+  if(!panel) return;
+  if(panel.style.display!=='none'){ panel.style.display='none'; return; }
+  renderComissoes();
+  panel.style.display='';
+}
+
+function renderComissoes(){
+  const panel = document.getElementById('comissoes-panel');
+  if(!panel) return;
+  if(!cfg.comissoes) cfg.comissoes = {};
+  const fin = _filtrarVendasPorPeriodo(vendas.filter(v=>v.status==='finalizada'), 'venda-mes','venda-ano');
+  const _periodo = _labelPeriodo('venda-mes','venda-ano');
+  // Agrupa produção por profissional
+  const porProf = {};
+  let semProf = 0;
+  fin.forEach(v=>{
+    const pid = v.profissional_id;
+    if(!pid){ semProf += (v.total||0); return; }
+    if(!porProf[pid]) porProf[pid] = { nome: v.profissional_nome||profissionais.find(p=>p.id==pid)?.nome||'—', total:0, qtd:0 };
+    porProf[pid].total += (v.total||0);
+    porProf[pid].qtd++;
+  });
+  // Inclui profissionais cadastrados mesmo sem produção no período
+  profissionais.forEach(pr=>{ if(!porProf[pr.id]) porProf[pr.id]={nome:pr.nome,total:0,qtd:0}; });
+  const rows = Object.entries(porProf).sort((a,b)=>b[1].total-a[1].total);
+  let totalComissoes = 0;
+  const linhas = rows.map(([pid,d])=>{
+    const pct = Number(cfg.comissoes[pid])||0;
+    const val = d.total*pct/100;
+    totalComissoes += val;
+    return `<div style="display:grid;grid-template-columns:1fr 90px 110px 70px 110px;gap:8px;align-items:center;padding:10px 16px;border-bottom:1px solid var(--rose-light);font-size:13px;">
+      <span style="font-weight:600;">${escapeHtml(d.nome)}</span>
+      <span style="text-align:center;color:var(--rose-text);">${d.qtd} venda(s)</span>
+      <span style="text-align:right;font-weight:700;">${fmtBRL(d.total)}</span>
+      <input type="number" min="0" max="100" step="0.5" value="${pct}" onchange="setComissaoPct(${pid},this.value)" style="width:60px;padding:4px 6px;border:1px solid var(--rose-light);border-radius:8px;text-align:center;font-size:12px;" title="% de comissão"/>
+      <span style="text-align:right;font-weight:800;color:#2e7d32;">${fmtBRL(val)}</span>
+    </div>`;
+  }).join('');
+  panel.innerHTML = `
+    <div style="border:1.5px solid var(--rose-light);border-radius:14px;overflow:hidden;background:#fff;">
+      <div style="background:var(--rose-lighter);padding:16px;border-bottom:1px solid var(--rose-light);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+        <div style="font-size:14px;font-weight:800;color:var(--rose-dark);"><i class="ti ti-percentage"></i> Comissões — ${_periodo}</div>
+        <div style="font-size:13px;color:var(--rose-text);">Total em comissões: <strong style="color:#2e7d32;font-size:15px;">${fmtBRL(totalComissoes)}</strong></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 90px 110px 70px 110px;gap:8px;padding:8px 16px;background:var(--rose-lighter);font-size:10px;font-weight:700;color:var(--rose-text);text-transform:uppercase;">
+        <span>Profissional</span><span style="text-align:center;">Vendas</span><span style="text-align:right;">Produção</span><span style="text-align:center;">%</span><span style="text-align:right;">Comissão</span>
+      </div>
+      <div style="max-height:320px;overflow-y:auto;">${linhas||'<div style="padding:20px;text-align:center;color:var(--rose-text);font-size:13px;">Nenhum profissional cadastrado.</div>'}</div>
+      ${semProf>0?`<div style="padding:10px 16px;font-size:11px;color:var(--rose-text);background:#fffde7;border-top:1px solid #ffe082;"><i class="ti ti-info-circle"></i> ${fmtBRL(semProf)} em vendas do período sem profissional vinculado (não entram na comissão). Nas próximas finalizações, selecione quem atendeu.</div>`:''}
+      <div style="padding:8px 16px;font-size:11px;color:var(--rose-text);border-top:1px solid var(--rose-light);">O período segue os filtros de mês/ano da lista de vendas acima. A % fica salva por profissional.</div>
+    </div>`;
+}
+
+async function setComissaoPct(profId, val){
+  if(!cfg.comissoes) cfg.comissoes = {};
+  cfg.comissoes[profId] = Math.min(100, Math.max(0, parseFloat(val)||0));
+  const _eCom = await saveFinanceiro();
+  if(_eCom){ showToast('Erro ao salvar comissão: '+_eCom.message,'error'); return; }
+  renderComissoes();
+  showToast('Comissão salva.');
+}
+
 function toggleContasReceber(){
   const panel = document.getElementById('contas-receber-panel');
   if(!panel) return;
@@ -13636,18 +14004,22 @@ function toggleContasReceber(){
   if(!lista.length){
     html+='<div style="padding:24px;text-align:center;color:var(--rose-text);font-size:13px;"><i class="ti ti-circle-check" style="font-size:28px;display:block;margin-bottom:6px;color:#2e7d32;"></i>Sem contas pendentes.</div>';
   } else {
+    const _hjCR = new Date().toISOString().slice(0,10);
     lista.forEach(p=>{
       const saldo = p.total-p.pago;
       const pac = pacientes.find(x=>x.id===p.pacId);
-      html+=`<div style="padding:12px 16px;border-bottom:1px solid var(--rose-light);">
+      const vencidas = p.vendas.filter(v=>v.vencimento && v.vencimento < _hjCR);
+      const proxVenc = p.vendas.map(v=>v.vencimento).filter(Boolean).sort()[0];
+      html+=`<div style="padding:12px 16px;border-bottom:1px solid var(--rose-light);${vencidas.length?'background:#fff8f8;':''}">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-          <div style="font-weight:700;color:#3a2020;font-size:13px;cursor:pointer;" onclick="switchTab('pacientes');setTimeout(()=>selectPatient(${p.pacId}),200);setTimeout(()=>renderPatientDetail('financeiro'),400);">${escapeHtml(pac?.nome||p.nome)} <i class="ti ti-chevron-right" style="font-size:10px;opacity:.4;"></i></div>
+          <div style="font-weight:700;color:#3a2020;font-size:13px;cursor:pointer;" onclick="switchTab('pacientes');setTimeout(()=>selectPatient(${p.pacId}),200);setTimeout(()=>renderPatientDetail('financeiro'),400);">${escapeHtml(pac?.nome||p.nome)} ${vencidas.length?'<span class="fin-badge danger" style="font-size:9px;margin-left:4px;">VENCIDO</span>':''} <i class="ti ti-chevron-right" style="font-size:10px;opacity:.4;"></i></div>
           <span style="font-weight:800;color:#dc2626;font-size:14px;">${fmtBRL(saldo)}</span>
         </div>
-        <div style="display:flex;gap:16px;font-size:11px;color:var(--rose-text);">
+        <div style="display:flex;gap:16px;font-size:11px;color:var(--rose-text);flex-wrap:wrap;">
           <span>Total: ${fmtBRL(p.total)}</span>
           <span>Pago: ${fmtBRL(p.pago)}</span>
           <span>${p.vendas.length} venda(s)</span>
+          ${proxVenc?`<span style="${proxVenc<_hjCR?'color:#dc2626;font-weight:700;':''}">Vencimento: ${new Date(proxVenc+'T12:00:00').toLocaleDateString('pt-BR')}</span>`:''}
         </div>
       </div>`;
     });
@@ -13782,10 +14154,16 @@ function pagPacRender(pacId){
             <div style="font-weight:600;">${fmtBRL(pg.valor)} <span style="font-weight:400;color:var(--rose-text);">— ${formaLabel(pg.forma)}${pg.parcelas_cartao>1?' '+pg.parcelas_cartao+'x':''}</span></div>
             <div style="font-size:11px;color:var(--rose-text);">${new Date(pg.data).toLocaleDateString('pt-BR')}${pg.obs?' — '+escapeHtml(pg.obs):''}</div>
           </div>
+          <button class="pag-del" style="color:#1565c0;" onclick="gerarReciboPagamento(${v.id},${pg.id},${pacId})" title="Gerar recibo PDF"><i class="ti ti-file-download"></i></button>
           <button class="pag-del" onclick="pagPacDelPag(${v.id},${pg.id},${pacId})" title="Remover"><i class="ti ti-x"></i></button>
         </div>`).join('')}
       </div>`:''}
-      ${saldo>0?`<button class="btn-secondary" style="width:100%;justify-content:center;" onclick="pagPacFormPag(${v.id},${pacId},${saldo})"><i class="ti ti-plus"></i> Registrar pagamento</button>
+      ${saldo>0?`<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;font-size:12px;color:var(--rose-text);flex-wrap:wrap;">
+        <span style="font-weight:700;"><i class="ti ti-calendar-due"></i> Vencimento:</span>
+        <input type="date" value="${v.vencimento||''}" onchange="pagPacSetVenc(${v.id},this.value,${pacId})" style="padding:4px 8px;border:1px solid var(--rose-light);border-radius:8px;font-size:12px;"/>
+        ${v.vencimento && v.vencimento < new Date().toISOString().slice(0,10) ? '<span class="fin-badge danger" style="font-size:10px;">VENCIDO</span>' : ''}
+      </div>
+      <button class="btn-secondary" style="width:100%;justify-content:center;" onclick="pagPacFormPag(${v.id},${pacId},${saldo})"><i class="ti ti-plus"></i> Registrar pagamento</button>
       <div id="pac-fin-form-pag-${v.id}"></div>`:''}
     </div>`;
   };
@@ -13813,6 +14191,15 @@ function pagPacRender(pacId){
         ${quitadas.sort((a,b)=>(b.dataFinal||b.data||'').localeCompare(a.dataFinal||a.data||'')).map(renderVendaCard).join('')}
       </details>
     `:''}`;
+}
+
+async function pagPacSetVenc(vendaId, val, pacId){
+  const v = vendas.find(x=>x.id===vendaId); if(!v) return;
+  v.vencimento = val || null;
+  const _eVc = await saveFinanceiro();
+  if(_eVc){ showToast('Erro ao salvar vencimento: '+_eVc.message,'error'); return; }
+  pagPacRender(pacId);
+  showToast(val ? 'Vencimento salvo.' : 'Vencimento removido.');
 }
 
 function pagPacFormPag(vendaId, pacId, saldoRestante){
