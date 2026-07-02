@@ -1,8 +1,7 @@
+const { OpenAI }       = require('openai');
 const { createClient } = require('@supabase/supabase-js');
 
-const GEMINI_MODEL = 'gemini-1.5-flash';
-const GEMINI_URL   = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
-
+const GROQ_MODEL      = 'llama-3.1-8b-instant';
 const MAX_HISTORY     = 10;
 const MAX_CONTENT_LEN = 600;
 const MAX_TOOL_ROUNDS = 4;
@@ -10,40 +9,49 @@ const MAX_TOOL_ROUNDS = 4;
 // ══════════════════════════════════════════════
 // FERRAMENTAS (3 ativas: listar, buscar, cadastrar)
 // ══════════════════════════════════════════════
-const FUNCTION_DECLARATIONS = [
+const TOOLS = [
   {
-    name: 'listar_pacientes',
-    description: 'Lista os pacientes cadastrados na clínica. Leitura — não requer confirmação.',
-    parameters: {
-      type: 'object',
-      properties: {
-        limite: { type: 'integer', description: 'Quantidade (padrão: 10, máximo: 20)' }
+    type: 'function',
+    function: {
+      name: 'listar_pacientes',
+      description: 'Lista os pacientes cadastrados na clínica. Leitura — execute direto, sem confirmação.',
+      parameters: {
+        type: 'object',
+        properties: {
+          limite: { type: 'integer', description: 'Quantidade (padrão: 10, máximo: 20)' }
+        }
       }
     }
   },
   {
-    name: 'buscar_paciente',
-    description: 'Busca pacientes por nome ou telefone. Leitura — não requer confirmação.',
-    parameters: {
-      type: 'object',
-      properties: {
-        query: { type: 'string', description: 'Nome (parcial) ou telefone do paciente' }
-      },
-      required: ['query']
+    type: 'function',
+    function: {
+      name: 'buscar_paciente',
+      description: 'Busca pacientes por nome ou telefone. Leitura — execute direto, sem confirmação.',
+      parameters: {
+        type: 'object',
+        properties: {
+          query: { type: 'string', description: 'Nome (parcial) ou telefone do paciente' }
+        },
+        required: ['query']
+      }
     }
   },
   {
-    name: 'cadastrar_paciente',
-    description: 'Cadastra um novo paciente. ESCRITA — só chame após confirmação explícita do usuário (sim/pode/confirmo).',
-    parameters: {
-      type: 'object',
-      properties: {
-        nome:            { type: 'string', description: 'Nome completo' },
-        telefone:        { type: 'string', description: 'Telefone (somente números)' },
-        email:           { type: 'string', description: 'E-mail (opcional)' },
-        data_nascimento: { type: 'string', description: 'Data de nascimento YYYY-MM-DD (opcional)' }
-      },
-      required: ['nome']
+    type: 'function',
+    function: {
+      name: 'cadastrar_paciente',
+      description: 'Cadastra um novo paciente. ESCRITA — só chame após o usuário confirmar com "sim", "pode" ou "confirmo".',
+      parameters: {
+        type: 'object',
+        properties: {
+          nome:            { type: 'string', description: 'Nome completo' },
+          telefone:        { type: 'string', description: 'Telefone (somente números)' },
+          email:           { type: 'string', description: 'E-mail (opcional)' },
+          data_nascimento: { type: 'string', description: 'Data de nascimento YYYY-MM-DD (opcional)' }
+        },
+        required: ['nome']
+      }
     }
   }
 ];
@@ -62,18 +70,18 @@ function buildSystemPrompt(ctx) {
 Data de hoje: ${today}.
 
 FERRAMENTAS DISPONÍVEIS:
-• listar_pacientes  → lista pacientes da clínica (leitura, execute direto)
-• buscar_paciente   → busca por nome ou telefone (leitura, execute direto)
+• listar_pacientes   → lista pacientes (leitura, execute direto)
+• buscar_paciente    → busca por nome ou telefone (leitura, execute direto)
 • cadastrar_paciente → cadastra novo paciente (⚠️ ESCRITA — exige confirmação)
 
 REGRAS:
-1. listar e buscar: execute imediatamente sem pedir confirmação.
-2. cadastrar: SEMPRE apresente os dados ("Vou cadastrar:\n• Nome: X\n• Tel: Y\nConfirma?") e aguarde "sim"/"pode"/"confirmo" antes de chamar a ferramenta.
-3. Se faltar o nome do paciente, pergunte antes de cadastrar.
-4. Se encontrar pacientes com nomes parecidos ao buscar, liste as opções.
+1. listar e buscar: execute imediatamente, sem pedir confirmação.
+2. cadastrar: SEMPRE apresente os dados e aguarde "sim"/"pode"/"confirmo" ANTES de chamar a ferramenta.
+3. Se faltar o nome para cadastrar, pergunte antes.
+4. Se houver pacientes com nomes parecidos ao buscar, liste as opções.
 5. Nunca apague dados. Nunca acesse dados de outras clínicas.
 
-Responda em português do Brasil. Seja breve e direto.`;
+Responda sempre em português do Brasil. Seja breve e direto.`;
 }
 
 // ══════════════════════════════════════════════
@@ -136,44 +144,13 @@ async function runTool(name, args, sb, clinicId) {
 }
 
 // ══════════════════════════════════════════════
-// CHAMADA GEMINI REST NATIVA
-// ══════════════════════════════════════════════
-async function callGemini(apiKey, payload) {
-  // Remove qualquer caractere fora do ASCII imprimível (ex: bullets copiados acidentalmente)
-  const safeKey = String(apiKey || '').replace(/[^\x20-\x7E]/g, '').trim();
-  if (!safeKey) throw new Error('GEMINI_KEY_INVALID');
-
-  const resp = await fetch(GEMINI_URL, {
-    method:  'POST',
-    headers: {
-      'Content-Type':   'application/json',
-      'x-goog-api-key': safeKey
-    },
-    body: JSON.stringify(payload)
-  });
-
-  if (!resp.ok) {
-    let body = '';
-    try { body = await resp.text(); } catch (_) {}
-
-    // Detecta chave inválida explicitamente
-    if (resp.status === 400 && (body.includes('API_KEY_INVALID') || body.includes('API key not valid'))) {
-      throw new Error('GEMINI_KEY_INVALID');
-    }
-    throw new Error(`HTTP ${resp.status}${body ? ': ' + body.slice(0, 200) : ''}`);
-  }
-
-  return resp.json();
-}
-
-// ══════════════════════════════════════════════
 // HANDLER PRINCIPAL
 // ══════════════════════════════════════════════
 module.exports = async function handler(req, res) {
   res.setHeader('Content-Type', 'application/json');
 
   if (req.method !== 'POST') return res.status(405).json({ error: 'Método não permitido.' });
-  if (!process.env.GEMINI_API_KEY) return res.status(500).json({ error: 'Serviço de IA não configurado.' });
+  if (!process.env.GROQ_API_KEY)  return res.status(500).json({ error: 'Serviço de IA não configurado.' });
 
   const { messages, context } = req.body || {};
 
@@ -207,83 +184,71 @@ module.exports = async function handler(req, res) {
     } catch (_) {}
   }
 
-  // ── Histórico em formato Gemini (role: "user"/"model") ──
-  const contents = messages
+  // ── Histórico ──
+  const history = messages
     .slice(-MAX_HISTORY)
     .filter(m => m && ['user', 'assistant'].includes(m.role) && typeof m.content === 'string')
-    .map(m => ({
-      role:  m.role === 'assistant' ? 'model' : 'user',
-      parts: [{ text: m.content.slice(0, MAX_CONTENT_LEN) }]
-    }));
+    .map(m => ({ role: m.role, content: m.content.slice(0, MAX_CONTENT_LEN) }));
 
-  if (!contents.length || contents[contents.length - 1].role !== 'user')
+  if (!history.length || history[history.length - 1].role !== 'user')
     return res.status(400).json({ error: 'Requisição inválida.' });
 
   const withTools = !!(clinicId && authedSb);
 
-  const payload = {
-    system_instruction: { parts: [{ text: buildSystemPrompt(context) }] },
-    contents,
-    generationConfig: { maxOutputTokens: 400, temperature: 0.25 }
-  };
+  const groq = new OpenAI({
+    apiKey:  process.env.GROQ_API_KEY,
+    baseURL: 'https://api.groq.com/openai/v1'
+  });
 
-  if (withTools) {
-    payload.tools = [{ function_declarations: FUNCTION_DECLARATIONS }];
-  }
+  let oaiMessages = [
+    { role: 'system', content: buildSystemPrompt(context) },
+    ...history
+  ];
 
-  console.log(`[AI] provider=gemini model=${GEMINI_MODEL} tools=${withTools} clinic=${clinicId}`);
+  console.log(`[AI] provider=groq model=${GROQ_MODEL} tools=${withTools} clinic=${clinicId}`);
 
   try {
     let rounds = 0;
-    let geminiData;
+    let response;
 
     while (rounds++ < MAX_TOOL_ROUNDS) {
-      geminiData = await callGemini(process.env.GEMINI_API_KEY, payload);
+      response = await groq.chat.completions.create({
+        model:       GROQ_MODEL,
+        messages:    oaiMessages,
+        tools:       withTools ? TOOLS : undefined,
+        tool_choice: withTools ? 'auto' : undefined,
+        max_tokens:  400,
+        temperature: 0.3
+      });
 
-      const candidate = geminiData.candidates?.[0];
-      if (!candidate) throw new Error('Resposta vazia do modelo.');
+      const choice = response.choices[0];
+      if (choice.finish_reason !== 'tool_calls') break;
 
-      const parts    = candidate.content?.parts || [];
-      const fnCalls  = parts.filter(p => p.functionCall);
+      oaiMessages.push(choice.message);
 
-      if (!fnCalls.length) break;
-
-      // Acrescenta resposta do modelo (com functionCalls) ao histórico
-      payload.contents.push({ role: 'model', parts });
-
-      // Executa ferramentas e envia respostas
-      const responseParts = [];
-      for (const part of fnCalls) {
-        const { name, args } = part.functionCall;
+      for (const tc of (choice.message.tool_calls || [])) {
         let result;
         try {
           if (!clinicId || !authedSb) {
             result = 'Sessão expirada. Peça ao usuário para recarregar a página.';
           } else {
-            result = await runTool(name, args || {}, authedSb, clinicId);
+            const args = JSON.parse(tc.function.arguments || '{}');
+            result = await runTool(tc.function.name, args, authedSb, clinicId);
           }
         } catch (e) {
-          result = `Erro na ferramenta: ${e.message}`;
+          result = `Erro: ${e.message}`;
         }
-        console.log(`[AI] tool=${name} ok`);
-        responseParts.push({ functionResponse: { name, response: { content: result } } });
+        console.log(`[AI] tool=${tc.function.name} ok`);
+        oaiMessages.push({ role: 'tool', tool_call_id: tc.id, content: result });
       }
-
-      // Gemini espera role "user" para respostas de função
-      payload.contents.push({ role: 'user', parts: responseParts });
     }
 
-    const finalParts = geminiData.candidates?.[0]?.content?.parts || [];
-    const reply = finalParts.find(p => p.text)?.text?.trim() || 'Ação executada.';
+    const reply = response.choices[0].message.content?.trim() || 'Ação executada.';
     return res.status(200).json({ reply });
 
   } catch (err) {
     const detail = err?.message || String(err);
-    if (detail === 'GEMINI_KEY_INVALID') {
-      console.error('[AI] GEMINI_KEY_INVALID — verifique a variável GEMINI_API_KEY na Vercel');
-      return res.status(500).json({ error: 'Chave da IA inválida. Verifique a variável GEMINI_API_KEY na Vercel.' });
-    }
-    console.error(`[AI] provider=gemini model=${GEMINI_MODEL} erro: ${detail}`);
+    console.error(`[AI] provider=groq model=${GROQ_MODEL} erro: ${detail}`);
     return res.status(500).json({ error: 'Serviço de IA temporariamente indisponível. Tente novamente.' });
   }
 };
