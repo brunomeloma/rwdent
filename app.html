@@ -5822,8 +5822,9 @@ function odontoFaceGridHTML(num, selectedFaces, handlerName){
 
 function odontoToggleFaceInObs(obs, face){
   const status = odontoExtractFaceStatusFromObs(obs);
-  if(status[face] === 'treated') delete status[face];
-  else status[face] = 'treated';
+  if(!status[face]) status[face] = 'treated';
+  else if(status[face] === 'treated') status[face] = 'untreated';
+  else delete status[face];
   const clean = odontoCleanObsMeta(obs);
   const facesLine = Object.keys(status).length ? 'Faces: '+odontoFaceStatusText(status) : '';
   return [facesLine, clean].filter(Boolean).join('\n');
@@ -5946,8 +5947,9 @@ function odontoMainSetCond(cond){
 function odontoMainToggleFace(face){
   const current = odontoMainFaceStatus[face];
   const btn = document.querySelector('[data-odonto-face="'+face+'"]');
-  if(current === 'treated') delete odontoMainFaceStatus[face];
-  else odontoMainFaceStatus[face] = 'treated';
+  if(!current) odontoMainFaceStatus[face] = 'treated';
+  else if(current === 'treated') odontoMainFaceStatus[face] = 'untreated';
+  else delete odontoMainFaceStatus[face];
   odontoMainFacesSel = Object.keys(odontoMainFaceStatus);
   if(btn) odontoMainPaintFaceButton(btn, odontoMainFaceStatus[face]);
   if(odontoSelDente){
@@ -6665,8 +6667,9 @@ function pacRenderLegenda(){
 
 function pacToggleFaceStatusMap(status, face){
   const next = {...(status || {})};
-  if(next[face] === 'treated') delete next[face];
-  else next[face] = 'treated';
+  if(!next[face]) next[face] = 'treated';
+  else if(next[face] === 'treated') next[face] = 'untreated';
+  else delete next[face];
   return next;
 }
 
@@ -6721,7 +6724,7 @@ function getFaceGridPacHTML(num, faceStatus) {
   }
   return `<svg class="ot-face-grid" width="36" height="36" viewBox="0 0 32 32"
     xmlns="http://www.w3.org/2000/svg" onclick="event.stopPropagation()"
-    title="Clique para marcar tratado; clique novamente para limpar">
+    title="1º toque: tratado; 2º: não tratado; 3º: limpar">
     <rect width="32" height="32" rx="3" fill="#f7f1ee" stroke="#c9b5ae" stroke-width="0.8"/>
     ${zone('Vestibular','1,1 31,1 21,11 11,11')}
     ${zone('Mesial','1,1 11,11 11,21 1,31')}
@@ -7060,8 +7063,9 @@ function pacPaintFaceButton(btn, status){
 function pacToggleFace(face){
   const current = pacFaceStatus[face];
   const btn = document.querySelector('[data-face="'+face+'"]');
-  if(current === 'treated') delete pacFaceStatus[face];
-  else pacFaceStatus[face] = 'treated';
+  if(!current) pacFaceStatus[face] = 'treated';
+  else if(current === 'treated') pacFaceStatus[face] = 'untreated';
+  else delete pacFaceStatus[face];
   pacFacesSel = Object.keys(pacFaceStatus);
   pacPaintFaceButton(btn, pacFaceStatus[face]);
   document.getElementById('pac-d-faces').value = pacFacesSel.join(',');
