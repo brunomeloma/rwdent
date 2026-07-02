@@ -5752,6 +5752,15 @@ function odontoFaceGridHTML(num, selectedFaces, handlerName){
   }</div>`;
 }
 
+function odontoToggleFaceInObs(obs, face){
+  const status = odontoExtractFaceStatusFromObs(obs);
+  if(status[face] === 'treated') delete status[face];
+  else status[face] = 'treated';
+  const clean = odontoCleanObsMeta(obs);
+  const facesLine = Object.keys(status).length ? 'Faces: '+odontoFaceStatusText(status) : '';
+  return [facesLine, clean].filter(Boolean).join('\n');
+}
+
 function odontoExtractFacesFromObs(obs){
   return Object.keys(odontoExtractFaceStatusFromObs(obs));
 }
@@ -6001,12 +6010,27 @@ function odontoMainToggleReplicaDente(num){
   odontoMainRenderReplica();
 }
 
-function odontoFaceGridClick(evt, num, face){
+async function odontoFaceGridClick(evt, num, face){
   if(evt) evt.stopPropagation();
-  if(odontoSelDente !== num) odontoClicarDente(num);
-  setTimeout(()=>{
-    odontoMainToggleFace(face);
-  },0);
+  if(!odontoPatId){ showToast('Selecione um paciente.','warn'); return; }
+  const existing = odontoDentes[num];
+  const obs = odontoToggleFaceInObs(existing?.obs || '', face);
+  const condicao = existing?.condicao || 'higido';
+  const data = document.getElementById('odonto-atend-data')?.value || hoje();
+  showLoading(true);
+  let error = null;
+  if(existing?.id){
+    ({ error } = await _sb.from('procedimentos_dentes').update({obs, condicao, data}).eq('id', existing.id));
+    if(!error) odontoDentes[num] = {...existing, obs, condicao, data};
+  } else {
+    const { data: novo, error: e } = await _sb.from('procedimentos_dentes').insert([{clinica_id:clinicaId,paciente_id:odontoPatId,dente:num,condicao,procedimento:'',obs,data}]).select().single();
+    error = e;
+    if(!error) odontoDentes[num] = novo;
+  }
+  showLoading(false);
+  if(error){ showToast('Erro: '+error.message,'error'); return; }
+  renderArcada('arc-sup', FDI_SUP);
+  renderArcada('arc-inf', FDI_INF);
 }
 
 function odontoClicarDente(num){
@@ -6941,12 +6965,26 @@ function pacToggleFace(face){
   if(pacDenteSel) pacRenderArcadas();
 }
 
-function pacFaceGridClick(evt, num, face){
+async function pacFaceGridClick(evt, num, face){
   if(evt) evt.stopPropagation();
-  if(!pacFaceColors[num]) pacFaceColors[num] = {};
-  const cur = pacFaceColors[num][face] || '';
-  pacFaceColors[num][face] = cur === '' ? 'treated' : cur === 'treated' ? 'untreated' : '';
+  if(!selectedPatientId){ showToast('Selecione um paciente.','warn'); return; }
+  const existing = pacDentesMap[num];
+  const obs = odontoToggleFaceInObs(existing?.obs || '', face);
+  const condicao = existing?.condicao || 'higido';
+  showLoading(true);
+  let error = null;
+  if(existing?.id){
+    ({ error } = await _sb.from('procedimentos_dentes').update({obs, condicao, data:hoje()}).eq('id', existing.id));
+    if(!error) pacDentesMap[num] = {...existing, obs, condicao, data:hoje()};
+  } else {
+    const { data: novo, error: e } = await _sb.from('procedimentos_dentes').insert([{clinica_id:clinicaId,paciente_id:selectedPatientId,dente:num,condicao,procedimento:'',obs,data:hoje()}]).select().single();
+    error = e;
+    if(!error) pacDentesMap[num] = novo;
+  }
+  showLoading(false);
+  if(error){ showToast('Erro: '+error.message,'error'); return; }
   pacRenderArcadas();
+  pacRenderDentesHistorico();
 }
 
 function pacDenteFiltrarProcs(){
