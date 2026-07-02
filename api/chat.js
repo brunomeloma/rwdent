@@ -246,7 +246,7 @@ module.exports = async function handler(req, res) {
   res.setHeader('Content-Type', 'application/json');
 
   if (req.method !== 'POST') return res.status(405).json({ error: 'Método não permitido.' });
-  if (!process.env.OPENAI_API_KEY) return res.status(500).json({ error: 'Serviço indisponível.' });
+  if (!process.env.GEMINI_API_KEY) return res.status(500).json({ error: 'Serviço indisponível.' });
 
   const { messages, context, accessToken } = req.body || {};
 
@@ -286,7 +286,10 @@ module.exports = async function handler(req, res) {
   if (!history.length || history[history.length - 1].role !== 'user')
     return res.status(400).json({ error: 'Requisição inválida.' });
 
-  const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+  const openai = new OpenAI({
+    apiKey:  process.env.GEMINI_API_KEY,
+    baseURL: 'https://generativelanguage.googleapis.com/openai/'
+  });
 
   // Ferramentas só disponíveis se autenticado
   const tools = (clinicId && authedSb) ? TOOLS : undefined;
@@ -303,7 +306,7 @@ module.exports = async function handler(req, res) {
     // Loop de tool calling (OpenAI pode encadear múltiplas ferramentas)
     while (rounds++ < MAX_TOOL_ROUNDS) {
       response = await openai.chat.completions.create({
-        model:        'gpt-4o-mini',
+        model:        'gemini-2.0-flash',
         messages:     oaiMessages,
         tools,
         tool_choice:  tools ? 'auto' : undefined,
