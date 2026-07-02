@@ -165,16 +165,22 @@ module.exports = async function handler(req, res) {
   let clinicId = null;
   let authedSb = null;
 
-  if (!accessToken) {
+  // Remove caracteres fora do ASCII imprimível (bullets copiados acidentalmente de dashboards)
+  const cleanStr = s => String(s || '').replace(/[^\x20-\x7E]/g, '').trim();
+  const supabaseUrl  = cleanStr(process.env.SUPABASE_URL);
+  const supabaseAnon = cleanStr(process.env.SUPABASE_ANON_KEY);
+  const cleanToken   = cleanStr(accessToken);
+
+  if (!cleanToken) {
     console.log('[AI] auth: sem token no header Authorization');
-  } else if (!process.env.SUPABASE_URL || !process.env.SUPABASE_ANON_KEY) {
+  } else if (!supabaseUrl || !supabaseAnon) {
     console.log('[AI] auth: SUPABASE_URL ou SUPABASE_ANON_KEY ausente');
   } else {
     try {
       authedSb = createClient(
-        process.env.SUPABASE_URL,
-        process.env.SUPABASE_ANON_KEY,
-        { global: { headers: { Authorization: `Bearer ${accessToken}` } } }
+        supabaseUrl,
+        supabaseAnon,
+        { global: { headers: { Authorization: `Bearer ${cleanToken}` } } }
       );
       const { data: { user }, error: authErr } = await authedSb.auth.getUser();
       if (authErr) {
@@ -214,8 +220,9 @@ module.exports = async function handler(req, res) {
 
   const withTools = !!(clinicId && authedSb);
 
+  const groqKey = String(process.env.GROQ_API_KEY || '').replace(/[^\x20-\x7E]/g, '').trim();
   const groq = new OpenAI({
-    apiKey:  process.env.GROQ_API_KEY,
+    apiKey:  groqKey,
     baseURL: 'https://api.groq.com/openai/v1'
   });
 
