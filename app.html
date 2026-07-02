@@ -374,6 +374,17 @@ button{font-family:inherit;}
   background:#fff;border:2px solid var(--rose);border-radius:14px;padding:16px;
   width:min(680px,100%);box-shadow:0 20px 60px rgba(0,0,0,.24);
 }
+.odonto-condition-grid{
+  display:grid;grid-template-columns:repeat(3,minmax(150px,1fr));gap:6px 12px;
+}
+.odonto-condition-option{
+  display:flex;align-items:center;gap:6px;font-size:12px;color:#3a2020;
+  min-height:24px;cursor:pointer;user-select:none;
+}
+.odonto-condition-option input{
+  width:16px!important;height:16px!important;margin:0;accent-color:var(--rose);
+}
+.odonto-condition-option.active{font-weight:700;color:var(--rose-dark);}
 #pac-dente-panel{
   position:fixed!important;top:72px!important;left:50%!important;transform:translateX(-50%)!important;
   width:min(680px,calc(100vw - 32px))!important;max-height:calc(100vh - 96px)!important;
@@ -487,6 +498,7 @@ button{font-family:inherit;}
 .fin-pac-form label{font-size:10px;font-weight:700;color:var(--rose-text);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px;}
 .fin-pac-form input,.fin-pac-form select,.fin-pac-form textarea{width:100%;padding:8px 10px;border:1.5px solid var(--rose-light);border-radius:8px;font-size:13px;color:var(--rose-dark);box-sizing:border-box;}
 @media(max-width:600px){
+  .odonto-condition-grid{grid-template-columns:1fr;}
   .fin-pac-resumo{grid-template-columns:1fr;}
   .fin-pac-valores{grid-template-columns:1fr;}
   .fin-pac-form .form-grid{grid-template-columns:1fr;}
@@ -1686,18 +1698,7 @@ select, textarea {
 
           <div style="margin-top:12px;">
             <div style="font-size:11px;font-weight:700;color:var(--rose-text);text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px;">Problemas / condições</div>
-            <div style="display:flex;flex-wrap:wrap;gap:6px;" id="odonto-d-cond-btns">
-              <button type="button" data-od-main-cond-wrap="higido" onclick="odontoMainSetCond('higido')" style="padding:6px 10px;border:2px solid var(--rose-light);border-radius:9px;background:#fff;font-size:12px;font-weight:600;cursor:pointer;">Hígido</button>
-              <button type="button" data-od-main-cond-wrap="carie" onclick="odontoMainSetCond('carie')" style="padding:6px 10px;border:2px solid var(--rose-light);border-radius:9px;background:#fff;font-size:12px;font-weight:600;cursor:pointer;">Cárie</button>
-              <button type="button" data-od-main-cond-wrap="restaurado" onclick="odontoMainSetCond('restaurado')" style="padding:6px 10px;border:2px solid var(--rose-light);border-radius:9px;background:#fff;font-size:12px;font-weight:600;cursor:pointer;">Restaurado</button>
-              <button type="button" data-od-main-cond-wrap="extraido" onclick="odontoMainSetCond('extraido')" style="padding:6px 10px;border:2px solid var(--rose-light);border-radius:9px;background:#fff;font-size:12px;font-weight:600;cursor:pointer;">Extraído</button>
-              <button type="button" data-od-main-cond-wrap="canal" onclick="odontoMainSetCond('canal')" style="padding:6px 10px;border:2px solid var(--rose-light);border-radius:9px;background:#fff;font-size:12px;font-weight:600;cursor:pointer;">Canal</button>
-              <button type="button" data-od-main-cond-wrap="coroa" onclick="odontoMainSetCond('coroa')" style="padding:6px 10px;border:2px solid var(--rose-light);border-radius:9px;background:#fff;font-size:12px;font-weight:600;cursor:pointer;">Coroa</button>
-              <button type="button" data-od-main-cond-wrap="implante" onclick="odontoMainSetCond('implante')" style="padding:6px 10px;border:2px solid var(--rose-light);border-radius:9px;background:#fff;font-size:12px;font-weight:600;cursor:pointer;">Implante</button>
-              <button type="button" data-od-main-cond-wrap="fratura" onclick="odontoMainSetCond('fratura')" style="padding:6px 10px;border:2px solid var(--rose-light);border-radius:9px;background:#fff;font-size:12px;font-weight:600;cursor:pointer;">Fratura</button>
-              <button type="button" data-od-main-cond-wrap="selante" onclick="odontoMainSetCond('selante')" style="padding:6px 10px;border:2px solid var(--rose-light);border-radius:9px;background:#fff;font-size:12px;font-weight:600;cursor:pointer;">Selante</button>
-              <button type="button" data-od-main-cond-wrap="outro" onclick="odontoMainSetCond('outro')" style="padding:6px 10px;border:2px solid var(--rose-light);border-radius:9px;background:#fff;font-size:12px;font-weight:600;cursor:pointer;">Outro</button>
-            </div>
+            <div class="odonto-condition-grid" id="odonto-d-cond-btns"></div>
             <input type="hidden" id="odonto-d-cond" value="higido"/>
           </div>
 
@@ -5406,6 +5407,34 @@ const DENTE_NOME = {
 };
 const COND_PT = {higido:'Hígido',carie:'Cárie',restaurado:'Restaurado',extraido:'Extraído',canal:'Canal',coroa:'Coroa',implante:'Implante',fratura:'Fratura',selante:'Selante',outro:'Outro'};
 const COND_COR = {higido:'#fff',carie:'#ffcdd2',restaurado:'#c8e6c9',extraido:'#eee',canal:'#fff9c4',coroa:'#bbdefb',implante:'#e1bee7',fratura:'#ffccbc',selante:'#b2ebf2',outro:'#f5f5f5'};
+const ODONTO_COND_OPTIONS = [
+  {id:'ausente', label:'Ausente', code:'A', visual:'extraido'},
+  {id:'higido_selado', label:'Hígido selado', code:'Hs', visual:'higido'},
+  {id:'incluso', label:'Incluso', code:'I', visual:'outro'},
+  {id:'extraido', label:'Extraído', code:'E', visual:'extraido'},
+  {id:'protese_parcial_removivel', label:'Prótese parcial removível', code:'PPR', visual:'coroa'},
+  {id:'higido', label:'Hígido', code:'H', visual:'higido'},
+  {id:'protese_temporaria', label:'Prótese temporária', code:'PT', visual:'coroa'},
+  {id:'protese_coronaria', label:'Prótese coronária/unitária', code:'Pc', visual:'coroa'},
+  {id:'coroa', label:'Coroa', code:'Co', visual:'coroa'},
+  {id:'implante', label:'Implante', code:'Imp', visual:'implante'},
+  {id:'pilar', label:'Pilar', code:'P', visual:'coroa'},
+  {id:'nucleo', label:'Núcleo', code:'Pino', visual:'coroa'},
+  {id:'resto_radicular', label:'Resto radicular', code:'RR', visual:'extraido'},
+  {id:'retracao_gengival', label:'Retração gengival', code:'Rg', visual:'outro'},
+  {id:'calculo_dental', label:'Cálculo dental', code:'Cd', visual:'outro'},
+  {id:'extracao_indicada', label:'Extração indicada', code:'Ei', visual:'extraido'},
+  {id:'selante_indicado', label:'Selante indicado', code:'Si', visual:'selante'},
+  {id:'fratura', label:'Fratura', code:'Fr', visual:'fratura'},
+  {id:'mancha_branca_ativa', label:'Mancha branca ativa', code:'MB', visual:'carie'},
+  {id:'cariado', label:'Cariado', code:'C', visual:'carie'},
+  {id:'restaurado', label:'Restaurado', code:'R', visual:'restaurado'},
+  {id:'carie_raiz', label:'Cárie de raiz', code:'Cr', visual:'carie'},
+  {id:'restaurado_com_carie', label:'Restaurado com cárie', code:'Rc', visual:'carie'},
+  {id:'raiz_restaurada', label:'Raiz restaurada', code:'Rr', visual:'restaurado'},
+  {id:'trat_endodontico', label:'Tratamento endodôntico realizado', code:'Te', visual:'canal'},
+  {id:'necessita_endodontico', label:'Necessita de tratamento endodôntico', code:'Ne', visual:'canal'}
+];
 
 let odontoPatId = null;
 let odontoSelDente = null;
@@ -5414,6 +5443,7 @@ let odontoAtends = [];    // atendimentos salvos
 let odontoMainFacesSel = [];
 let odontoMainProcs = [];
 let odontoMainReplica = [];
+let odontoMainCondsSel = [];
 
 function renderOdontogramaTab(){
   const sel = document.getElementById('odonto-pac-sel');
@@ -5593,13 +5623,32 @@ function odontoExtractFacesFromObs(obs){
   return match ? match[1].split(',').map(f=>f.trim()).filter(Boolean) : [];
 }
 
+function odontoExtractCondsFromObs(obs){
+  const match = String(obs||'').match(/^Condições:\s*([^\n]+)\n?/mi);
+  if(!match) return [];
+  const labels = match[1].split(',').map(s=>s.trim()).filter(Boolean);
+  return labels.map(txt=>{
+    const code = (txt.match(/\(([^)]+)\)$/)||[])[1];
+    const plain = txt.replace(/\s*\([^)]+\)$/,'');
+    const found = ODONTO_COND_OPTIONS.find(o=>o.code===code || o.label===plain);
+    return found?.id;
+  }).filter(Boolean);
+}
+
+function odontoCleanObsMeta(obs){
+  return String(obs||'')
+    .replace(/^Faces:\s*[^\n]+\n?/gmi,'')
+    .replace(/^Condições:\s*[^\n]+\n?/gmi,'')
+    .trim();
+}
+
 function renderArcada(containerId, dentes){
   const c = document.getElementById(containerId);
   if(!c) return;
   const mid = Math.floor(dentes.length / 2);
   c.innerHTML = dentes.map((num, i) => {
     const d = odontoDentes[num] || {};
-    const cond = d.condicao || 'higido';
+    const cond = odontoSelDente===num ? odontoCondVisualFromSelected() : (d.condicao || 'higido');
     const sel = odontoSelDente===num ? ' selected' : '';
     const title = d.procedimento ? `${num}: ${d.procedimento}` : `Dente ${num}`;
     const upper = isUpperTooth(num);
@@ -5633,14 +5682,39 @@ function renderLegenda(){
   ).join('');
 }
 
+function odontoCondVisualFromSelected(){
+  const opt = ODONTO_COND_OPTIONS.find(o=>odontoMainCondsSel.includes(o.id));
+  return opt?.visual || 'higido';
+}
+
+function odontoMainRenderCondOptions(selectedIds){
+  const c = document.getElementById('odonto-d-cond-btns');
+  if(!c) return;
+  if(selectedIds) odontoMainCondsSel = selectedIds.filter(Boolean);
+  document.getElementById('odonto-d-cond').value = odontoCondVisualFromSelected();
+  c.innerHTML = ODONTO_COND_OPTIONS.map(o=>{
+    const checked = odontoMainCondsSel.includes(o.id);
+    return `<label class="odonto-condition-option${checked?' active':''}">
+      <input type="checkbox" data-od-main-cond="${o.id}" ${checked?'checked':''} onchange="odontoMainToggleCond('${o.id}')">
+      ${escapeHtml(o.label)} (${escapeHtml(o.code)})
+    </label>`;
+  }).join('');
+}
+
+function odontoMainToggleCond(id){
+  const idx = odontoMainCondsSel.indexOf(id);
+  if(idx>=0) odontoMainCondsSel.splice(idx,1);
+  else odontoMainCondsSel.push(id);
+  odontoMainRenderCondOptions();
+  if(odontoSelDente){
+    renderArcada('arc-sup', FDI_SUP);
+    renderArcada('arc-inf', FDI_INF);
+  }
+}
+
 function odontoMainSetCond(cond){
-  document.getElementById('odonto-d-cond').value = cond || 'higido';
-  document.querySelectorAll('[data-od-main-cond-wrap]').forEach(btn=>{
-    const active = btn.dataset.odMainCondWrap === cond;
-    btn.style.borderColor = active ? 'var(--rose)' : 'var(--rose-light)';
-    btn.style.background = active ? 'var(--rose)' : '#fff';
-    btn.style.color = active ? '#fff' : '#3a2020';
-  });
+  const match = ODONTO_COND_OPTIONS.find(o=>o.id===cond || o.visual===cond);
+  odontoMainRenderCondOptions(match ? [match.id] : []);
 }
 
 function odontoMainToggleFace(face){
@@ -5794,13 +5868,11 @@ function odontoClicarDente(num){
   // Preenche com dados existentes
   const d = odontoDentes[num] || {};
   const obsRaw = d.obs || '';
-  let obsClean = obsRaw;
-  const faceMatch = obsRaw.match(/^Faces:\s*([^\n]+)\n?/i);
+  const obsClean = odontoCleanObsMeta(obsRaw);
   const facesExistentes = odontoExtractFacesFromObs(obsRaw);
-  if(faceMatch){
-    obsClean = obsRaw.replace(/^Faces:\s*[^\n]+\n?/i,'').trim();
-  }
-  odontoMainSetCond(d.condicao || 'higido');
+  const condsExistentes = odontoExtractCondsFromObs(obsRaw);
+  if(condsExistentes.length) odontoMainRenderCondOptions(condsExistentes);
+  else odontoMainSetCond(d.condicao || 'higido');
   odontoMainResetFaces(facesExistentes);
   odontoMainProcs = (d.procedimento || '')
     .split(',')
@@ -5827,20 +5899,27 @@ function odontoCancelarDente(){
   odontoMainFacesSel = [];
   odontoMainProcs = [];
   odontoMainReplica = [];
+  odontoMainCondsSel = [];
   renderArcada('arc-sup', FDI_SUP);
   renderArcada('arc-inf', FDI_INF);
 }
 
 async function odontoSalvarDente(){
   if(!odontoSelDente || !odontoPatId){ showToast('Selecione um dente.','warn'); return; }
-  const condicao     = document.getElementById('odonto-d-cond').value;
+  const condicao     = odontoCondVisualFromSelected();
   const facesTxt     = odontoMainFacesSel.length ? 'Faces: '+odontoMainFacesSel.join(', ') : '';
+  const condsTxt     = odontoMainCondsSel.length
+    ? 'Condições: '+odontoMainCondsSel.map(id=>{
+        const o = ODONTO_COND_OPTIONS.find(x=>x.id===id);
+        return o ? `${o.label} (${o.code})` : id;
+      }).join(', ')
+    : '';
   const procedimento = odontoMainProcs.map(p=>p.nome).join(', ');
   const obs          = document.getElementById('odonto-d-obs').value.trim();
   const profId       = document.getElementById('odonto-d-prof').value || null;
   const prof         = profissionais.find(p=>p.id==profId);
   const data         = document.getElementById('odonto-atend-data').value || hoje();
-  const obsFinal     = [facesTxt, obs].filter(Boolean).join('\n');
+  const obsFinal     = [facesTxt, condsTxt, obs].filter(Boolean).join('\n');
   const dentesSalvar = [odontoSelDente, ...odontoMainReplica].filter((v,i,a)=>v && a.indexOf(v)===i);
   showLoading(true);
   let error = null;
