@@ -13685,7 +13685,7 @@ document.addEventListener('keydown', e=>{
       aiAddMsg('bot', escHtml(reply).replace(/\n/g,'<br>'));
     } catch(e){
       aiHideTyping();
-      const msg = e?.message && !e.message.startsWith('Erro ') ? e.message : 'Não consegui conectar ao servidor.';
+      const msg = e?.message || 'Não consegui conectar ao servidor.';
       aiAddMsg('bot', `⚠️ ${msg}`);
     } finally {
       aiLoading = false;

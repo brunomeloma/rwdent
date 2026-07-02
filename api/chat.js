@@ -286,9 +286,10 @@ module.exports = async function handler(req, res) {
   if (!history.length || history[history.length - 1].role !== 'user')
     return res.status(400).json({ error: 'Requisição inválida.' });
 
+  const GEMINI_MODEL = 'gemini-1.5-flash';
   const openai = new OpenAI({
     apiKey:  process.env.GEMINI_API_KEY,
-    baseURL: 'https://generativelanguage.googleapis.com/openai/'
+    baseURL: 'https://generativelanguage.googleapis.com/v1beta/openai/'
   });
 
   // Ferramentas só disponíveis se autenticado
@@ -299,16 +300,17 @@ module.exports = async function handler(req, res) {
     ...history
   ];
 
+  console.log(`[AI] provider=gemini model=${GEMINI_MODEL} tools=${tools ? TOOLS.length : 0} clinicId=${clinicId}`);
+
   try {
     let rounds = 0;
     let response;
 
-    // Loop de tool calling (OpenAI pode encadear múltiplas ferramentas)
     while (rounds++ < MAX_TOOL_ROUNDS) {
       response = await openai.chat.completions.create({
-        model:        'gemini-2.0-flash',
+        model:        GEMINI_MODEL,
         messages:     oaiMessages,
-        tools,
+        tools:        tools || undefined,
         tool_choice:  tools ? 'auto' : undefined,
         max_tokens:   500,
         temperature:  0.3
@@ -317,10 +319,8 @@ module.exports = async function handler(req, res) {
       const choice = response.choices[0];
       if (choice.finish_reason !== 'tool_calls') break;
 
-      // Adiciona resposta do assistente (com tool_calls)
       oaiMessages.push(choice.message);
 
-      // Executa cada ferramenta e adiciona resultado
       for (const tc of (choice.message.tool_calls || [])) {
         let result;
         try {
@@ -341,7 +341,8 @@ module.exports = async function handler(req, res) {
     return res.status(200).json({ reply });
 
   } catch (err) {
-    console.error('AI error:', err?.message || err);
-    return res.status(500).json({ error: 'Erro ao processar. Tente novamente.' });
+    const detail = err?.status ? `HTTP ${err.status}: ${err?.message || ''}` : (err?.message || String(err));
+    console.error(`[AI] provider=gemini model=${GEMINI_MODEL} error: ${detail}`);
+    return res.status(500).json({ error: `Erro ao processar (${detail}). Tente novamente.` });
   }
 };
