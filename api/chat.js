@@ -1,10 +1,42 @@
 const { OpenAI }       = require('openai');
 const { createClient } = require('@supabase/supabase-js');
 
-const GROQ_MODEL      = (process.env.GROQ_MODEL || 'llama-3.3-70b-versatile').trim();
+// Corrente de modelos: tenta o primeiro; se não existir/for descontinuado na
+// Groq, cai automaticamente para o próximo. GROQ_MODEL (env) tem prioridade.
+const GROQ_MODELS = [
+  ...(process.env.GROQ_MODEL ? [process.env.GROQ_MODEL.trim()] : []),
+  'moonshotai/kimi-k2-instruct-0905', // Kimi K2 — forte em tool calling e PT-BR
+  'moonshotai/kimi-k2-instruct',
+  'llama-3.3-70b-versatile'           // reserva estável
+];
+let _modeloIdx = 0; // cache por instância: pula modelos que já falharam
 const MAX_HISTORY     = 14;
 const MAX_CONTENT_LEN = 900;
 const MAX_TOOL_ROUNDS = 4;
+
+function _erroDeModelo(err){
+  const m = String(err?.message || '').toLowerCase();
+  return err?.status === 404 || /model|decommission|does not exist|not found|invalid.*model/i.test(m);
+}
+
+// chat.completions.create com fallback de modelo
+async function groqCreate(groq, params){
+  while (_modeloIdx < GROQ_MODELS.length) {
+    const model = GROQ_MODELS[_modeloIdx];
+    try {
+      const resp = await groq.chat.completions.create({ ...params, model });
+      return { resp, model };
+    } catch (err) {
+      if (_erroDeModelo(err) && _modeloIdx < GROQ_MODELS.length - 1) {
+        console.log(`[AI] modelo ${model} indisponível (${err?.status||''} ${String(err?.message||'').slice(0,80)}) — caindo para ${GROQ_MODELS[_modeloIdx+1]}`);
+        _modeloIdx++;
+        continue;
+      }
+      throw err;
+    }
+  }
+  throw new Error('Nenhum modelo disponível.');
+}
 
 // ══════════════════════════════════════════════
 // FERRAMENTAS (4 ativas: listar, buscar, cadastrar, agendar)
@@ -948,22 +980,24 @@ module.exports = async function handler(req, res) {
     ...history
   ];
 
-  console.log(`[AI] provider=groq model=${GROQ_MODEL} tools=${withTools} clinic=${clinicId}`);
+  console.log(`[AI] provider=groq modelos=${GROQ_MODELS.join('>')} tools=${withTools} clinic=${clinicId}`);
 
+  let modeloUsado = GROQ_MODELS[_modeloIdx];
   try {
     let rounds = 0;
     let response;
     const toolOutputs = [];
 
     while (rounds++ < MAX_TOOL_ROUNDS) {
-      response = await groq.chat.completions.create({
-        model:       GROQ_MODEL,
+      const r = await groqCreate(groq, {
         messages:    oaiMessages,
         tools:       withTools ? TOOLS : undefined,
         tool_choice: withTools ? 'auto' : undefined,
-        max_tokens:  400,
+        max_tokens:  800,
         temperature: 0.3
       });
+      response = r.resp;
+      modeloUsado = r.model;
 
       const choice = response.choices[0];
       if (choice.finish_reason !== 'tool_calls') break;
@@ -996,7 +1030,7 @@ module.exports = async function handler(req, res) {
 
   } catch (err) {
     const detail = err?.message || String(err);
-    console.error(`[AI] provider=groq model=${GROQ_MODEL} erro: ${detail}`);
+    console.error(`[AI] provider=groq model=${modeloUsado} erro: ${detail}`);
     return res.status(500).json({ error: 'Serviço de IA temporariamente indisponível. Tente novamente.' });
   }
 };
