@@ -1,7 +1,7 @@
 const { OpenAI }       = require('openai');
 const { createClient } = require('@supabase/supabase-js');
 
-const GROQ_MODEL      = 'llama-3.3-70b-versatile';
+const GROQ_MODEL      = (process.env.GROQ_MODEL || 'llama-3.3-70b-versatile').trim();
 const MAX_HISTORY     = 14;
 const MAX_CONTENT_LEN = 900;
 const MAX_TOOL_ROUNDS = 4;
@@ -112,6 +112,52 @@ const TOOLS = [
   {
     type: 'function',
     function: {
+      name: 'ficha_paciente',
+      description: 'Resumo do paciente: contato, próxima consulta, última visita e últimos atendimentos. Leitura — execute direto.',
+      parameters: {
+        type: 'object',
+        properties: {
+          paciente_query: { type: 'string', description: 'Nome ou telefone do paciente' }
+        },
+        required: ['paciente_query']
+      }
+    }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'remarcar_consulta',
+      description: 'Muda a data/horário de uma consulta existente. ESCRITA — só chame após o usuário confirmar com "sim", "pode" ou "confirmo".',
+      parameters: {
+        type: 'object',
+        properties: {
+          paciente_query: { type: 'string', description: 'Nome ou telefone do paciente' },
+          data_atual:     { type: 'string', description: 'Data atual da consulta YYYY-MM-DD (se o paciente tiver mais de uma)' },
+          nova_data:      { type: 'string', description: 'Nova data YYYY-MM-DD' },
+          novo_horario:   { type: 'string', description: 'Novo horário HH:MM' }
+        },
+        required: ['paciente_query', 'nova_data', 'novo_horario']
+      }
+    }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'cancelar_consulta',
+      description: 'Marca uma consulta como cancelada (não apaga o registro). ESCRITA — só chame após o usuário confirmar com "sim", "pode" ou "confirmo".',
+      parameters: {
+        type: 'object',
+        properties: {
+          paciente_query: { type: 'string', description: 'Nome ou telefone do paciente' },
+          data:           { type: 'string', description: 'Data da consulta YYYY-MM-DD (se o paciente tiver mais de uma)' }
+        },
+        required: ['paciente_query']
+      }
+    }
+  },
+  {
+    type: 'function',
+    function: {
       name: 'agendar_consulta',
       description: 'Cria um agendamento na agenda da clínica. ESCRITA — só chame após o usuário confirmar com "sim", "pode" ou "confirmo".',
       parameters: {
@@ -177,10 +223,16 @@ FERRAMENTAS DISPONÍVEIS:
 • horarios_livres     → horários vagos de um dia para agendar (leitura, execute direto)
 • aniversariantes_mes → aniversariantes do mês (leitura, execute direto)
 • retornos_atrasados  → pacientes sem retorno há X meses, recall (leitura, execute direto)
+• ficha_paciente      → resumo do paciente: contato, próxima consulta, última visita, atendimentos (leitura, execute direto)
 • cadastrar_paciente  → cadastra novo paciente (⚠️ ESCRITA — exige confirmação)
 • agendar_consulta    → cria consulta/agendamento (⚠️ ESCRITA — exige confirmação)
+• remarcar_consulta   → muda data/horário de consulta existente (⚠️ ESCRITA — exige confirmação)
+• cancelar_consulta   → marca consulta como cancelada, sem apagar (⚠️ ESCRITA — exige confirmação)
 
-Converta SEMPRE datas relativas ("hoje", "amanhã", "sexta", "semana que vem") para YYYY-MM-DD usando a data de hoje acima antes de chamar ver_agenda/horarios_livres. Para "esta semana", use data + data_fim.
+Converta SEMPRE datas relativas ("hoje", "amanhã", "sexta", "semana que vem") para YYYY-MM-DD usando a data de hoje acima antes de chamar as ferramentas de agenda. Para "esta semana", use data + data_fim.${ctx?.currentPatient ? `
+
+PACIENTE ABERTO NA TELA AGORA: ${String(ctx.currentPatient).slice(0,120)}
+Se o usuário disser "ele", "ela", "esse paciente" ou pedir algo sem citar nome, assuma que é este paciente.` : ''}
 
 REGRAS OBRIGATÓRIAS:
 1. NUNCA invente, suponha ou fabrique nomes de pacientes, telefones ou qualquer dado do banco. Se não tiver acesso às ferramentas, diga isso claramente.
@@ -411,6 +463,74 @@ async function runTool(name, args, sb, clinicId) {
       return JSON.stringify({ tool: name, ok: true, kind: 'recall_list', meses, total: lista.length, pacientes: lista });
     }
 
+    case 'ficha_paciente': {
+      const q = String(args.paciente_query || '').trim();
+      if (!q) throw new Error('Informe o paciente.');
+      const patients = await findPatients(sb, clinicId, q);
+      if (!patients.length) return JSON.stringify({ tool: name, ok: false, message: `Nenhum paciente encontrado para "${q}".` });
+      if (patients.length > 1) return JSON.stringify({ tool: name, ok: false, kind: 'appointment_patient_ambiguous', query: q, patients });
+      const pac = patients[0];
+      const hoje = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' });
+      const [{ data: dados }, { data: futuras }, { data: passadas }, { data: atends }] = await Promise.all([
+        sb.from('pacientes').select('nome, telefone, email, data_nascimento').eq('clinica_id', clinicId).eq('id', pac.id).single(),
+        sb.from('agendamentos').select('data, horario, procedimento, prof_nome').eq('clinica_id', clinicId).eq('paciente_id', pac.id).gte('data', hoje).order('data').order('horario').limit(2),
+        sb.from('agendamentos').select('data, horario, procedimento').eq('clinica_id', clinicId).eq('paciente_id', pac.id).lt('data', hoje).order('data', { ascending: false }).limit(1),
+        sb.from('atendimentos_odonto').select('data, procedimentos').eq('clinica_id', clinicId).eq('paciente_id', pac.id).order('data', { ascending: false }).limit(3)
+      ]);
+      return JSON.stringify({
+        tool: name, ok: true, kind: 'patient_profile',
+        paciente: {
+          nome: dados?.nome || pac.nome, telefone: dados?.telefone || pac.telefone || null,
+          email: dados?.email || null, data_nascimento: dados?.data_nascimento || null
+        },
+        proximas: (futuras||[]).map(a => ({ data: a.data, horario: (a.horario||'').slice(0,5), procedimento: a.procedimento || 'Consulta', prof: a.prof_nome || '' })),
+        ultima_visita: passadas?.[0] ? { data: passadas[0].data, procedimento: passadas[0].procedimento || 'Consulta' } : null,
+        atendimentos: (atends||[]).map(a => ({ data: a.data, procedimentos: String(a.procedimentos||'').slice(0,120) }))
+      });
+    }
+
+    case 'remarcar_consulta': {
+      const q = String(args.paciente_query || '').trim();
+      const novaData = normalizeDate(args.nova_data);
+      const novoHorario = normalizeTime(args.novo_horario);
+      if (!q) throw new Error('Informe o paciente.');
+      if (!novaData || !novoHorario) throw new Error('Informe a nova data (YYYY-MM-DD) e o novo horário (HH:MM).');
+      const alvo = await findAppointment(sb, clinicId, q, normalizeDate(args.data_atual));
+      if (alvo.erro) return alvo.erro;
+      const ag = alvo.ag;
+      // Conflito no novo horário (mesmo profissional)
+      const { data: conflito } = await sb.from('agendamentos').select('id, nome')
+        .eq('clinica_id', clinicId).eq('prof_id', ag.prof_id).eq('data', novaData).eq('horario', novoHorario).neq('id', ag.id).limit(1);
+      if (conflito?.length) return JSON.stringify({
+        tool: name, ok: false,
+        message: `${formatDateBR(novaData)} às ${novoHorario} já está ocupado (${conflito[0].nome}). Escolha outro horário — posso listar os livres.`
+      });
+      const deAntes = { data: ag.data, horario: (ag.horario||'').slice(0,5) };
+      const { error } = await sb.from('agendamentos').update({ data: novaData, horario: novoHorario }).eq('id', ag.id).eq('clinica_id', clinicId);
+      if (error) throw new Error(error.message);
+      return JSON.stringify({
+        tool: name, ok: true, kind: 'appointment_rescheduled',
+        appointment: { nome: ag.nome, de: deAntes, para: { data: novaData, horario: novoHorario }, procedimento: ag.procedimento || 'Consulta', prof_nome: ag.prof_nome || '',
+          google_calendar_url: buildGoogleCalendarUrl({ nome: ag.nome, data: novaData, horario: novoHorario, procedimento: ag.procedimento, prof_nome: ag.prof_nome, obs: '' }) }
+      });
+    }
+
+    case 'cancelar_consulta': {
+      const q = String(args.paciente_query || '').trim();
+      if (!q) throw new Error('Informe o paciente.');
+      const alvo = await findAppointment(sb, clinicId, q, normalizeDate(args.data));
+      if (alvo.erro) return alvo.erro;
+      const ag = alvo.ag;
+      // Status vive dentro de obs, no mesmo marcador que o app usa — sem apagar nada
+      const novoObs = buildObsComStatus(ag.obs, 'cancelado');
+      const { error } = await sb.from('agendamentos').update({ obs: novoObs }).eq('id', ag.id).eq('clinica_id', clinicId);
+      if (error) throw new Error(error.message);
+      return JSON.stringify({
+        tool: name, ok: true, kind: 'appointment_cancelled',
+        appointment: { nome: ag.nome, data: ag.data, horario: (ag.horario||'').slice(0,5), procedimento: ag.procedimento || 'Consulta' }
+      });
+    }
+
     case 'agendar_consulta': {
       const pacienteQuery = String(args.paciente_query || '').trim().slice(0, 120);
       const data = normalizeDate(args.data);
@@ -498,6 +618,45 @@ async function runTool(name, args, sb, clinicId) {
     default:
       return `Ferramenta "${name}" não reconhecida.`;
   }
+}
+
+// Status do agendamento vive na coluna obs entre marcadores (mesma convenção do app)
+const AG_ST_INI = '<!--AGSTATUS:';
+const AG_ST_FIM = ':AGSTATUS-->';
+function buildObsComStatus(obsRaw, status) {
+  const raw = String(obsRaw || '');
+  const i = raw.indexOf(AG_ST_INI), j = raw.indexOf(AG_ST_FIM);
+  const texto = (i !== -1 && j > i) ? (raw.slice(0, i) + raw.slice(j + AG_ST_FIM.length)).trim() : raw.trim();
+  return texto + (texto ? '\n' : '') + AG_ST_INI + status + AG_ST_FIM;
+}
+function agStatusDe(obsRaw) {
+  const raw = String(obsRaw || '');
+  const i = raw.indexOf(AG_ST_INI), j = raw.indexOf(AG_ST_FIM);
+  return (i !== -1 && j > i) ? raw.slice(i + AG_ST_INI.length, j) : '';
+}
+
+// Localiza UMA consulta futura do paciente (para remarcar/cancelar).
+// Retorna {ag} ou {erro: JSON-string com lista para o usuário escolher}.
+async function findAppointment(sb, clinicId, pacienteQuery, dataFiltro) {
+  const patients = await findPatients(sb, clinicId, pacienteQuery);
+  if (!patients.length) return { erro: JSON.stringify({ ok: false, message: `Nenhum paciente encontrado para "${pacienteQuery}".` }) };
+  if (patients.length > 1) return { erro: JSON.stringify({ ok: false, kind: 'appointment_patient_ambiguous', query: pacienteQuery, patients }) };
+  const pac = patients[0];
+  const hoje = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' });
+  let query = sb.from('agendamentos')
+    .select('id, nome, telefone, prof_id, prof_nome, data, horario, procedimento, obs')
+    .eq('clinica_id', clinicId).eq('paciente_id', pac.id)
+    .order('data').order('horario').limit(10);
+  query = dataFiltro ? query.eq('data', dataFiltro) : query.gte('data', hoje);
+  const { data: ags, error } = await query;
+  if (error) throw new Error(error.message);
+  const ativos = (ags || []).filter(a => agStatusDe(a.obs).toLowerCase() !== 'cancelado');
+  if (!ativos.length) return { erro: JSON.stringify({ ok: false, message: `${pac.nome} não tem consulta ${dataFiltro ? 'em ' + formatDateBR(dataFiltro) : 'futura'} para alterar.` }) };
+  if (ativos.length > 1) return { erro: JSON.stringify({
+    ok: false, kind: 'appointment_choose', paciente: pac.nome,
+    consultas: ativos.map(a => ({ data: a.data, horario: (a.horario||'').slice(0,5), procedimento: a.procedimento || 'Consulta' }))
+  }) };
+  return { ag: ativos[0] };
 }
 
 async function findPatients(sb, clinicId, query) {
@@ -656,6 +815,36 @@ function formatToolReply(outputs) {
     return `Encontrei mais de um paciente parecido. Qual deles você quer agendar?\n\n${options.join('\n')}`;
   }
 
+  if (data.kind === 'patient_profile' && data.paciente) {
+    const p = data.paciente;
+    const linhas = [`*${p.nome}*`, `📱 ${formatPhone(p.telefone)}${p.email ? ' · ' + p.email : ''}`];
+    if (p.data_nascimento) linhas.push(`🎂 Nascimento: ${formatDateBR(p.data_nascimento)}`);
+    if (data.proximas?.length) linhas.push(`\n📅 Próxima consulta: ${formatDateBR(data.proximas[0].data)} às ${data.proximas[0].horario} — ${data.proximas[0].procedimento}`);
+    else linhas.push('\n📅 Sem consulta futura marcada.');
+    if (data.ultima_visita) linhas.push(`🕐 Última visita: ${formatDateBR(data.ultima_visita.data)} (${data.ultima_visita.procedimento})`);
+    if (data.atendimentos?.length) {
+      linhas.push('\nÚltimos atendimentos:');
+      data.atendimentos.forEach(a => linhas.push(`• ${formatDateBR(a.data)} — ${a.procedimentos}`));
+    }
+    return linhas.join('\n');
+  }
+
+  if (data.kind === 'appointment_choose') {
+    const cs = (data.consultas||[]).map((c,i)=>`${i+1}. ${formatDateBR(c.data)} às ${c.horario} — ${c.procedimento}`);
+    return `${data.paciente} tem mais de uma consulta marcada. Qual delas?\n\n${cs.join('\n')}\n\nMe diga a data da que você quer alterar.`;
+  }
+
+  if (data.kind === 'appointment_rescheduled' && data.appointment) {
+    const a = data.appointment;
+    const link = a.google_calendar_url ? `\n\nAdicionar ao Google Agenda:\n${a.google_calendar_url}` : '';
+    return `Consulta remarcada! ✅\n\n${a.nome}\nDe: ${formatDateBR(a.de.data)} às ${a.de.horario}\nPara: *${formatDateBR(a.para.data)} às ${a.para.horario}*\n${a.procedimento} com ${a.prof_nome || 'profissional'}${link}`;
+  }
+
+  if (data.kind === 'appointment_cancelled' && data.appointment) {
+    const a = data.appointment;
+    return `Consulta cancelada. ❌\n\n${a.nome} — ${formatDateBR(a.data)} às ${a.horario} (${a.procedimento})\n\nO registro fica na agenda com status "cancelado" (nada é apagado). Quer remarcar para outra data?`;
+  }
+
   if (data.kind === 'appointment_created' && data.appointment) {
     const a = data.appointment;
     const link = a.google_calendar_url ? `\n\nAdicionar ao Google Agenda:\n${a.google_calendar_url}` : '';
@@ -667,7 +856,7 @@ function formatToolReply(outputs) {
 }
 
 function shouldRefreshApp(toolOutputs) {
-  return toolOutputs.some(o => ['patient_created', 'appointment_created'].includes(o?.data?.kind));
+  return toolOutputs.some(o => ['patient_created', 'appointment_created', 'appointment_rescheduled', 'appointment_cancelled'].includes(o?.data?.kind));
 }
 
 // ══════════════════════════════════════════════

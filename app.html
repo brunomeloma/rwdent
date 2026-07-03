@@ -2352,9 +2352,16 @@
     try {
       const { data:{ session } } = await _sb.auth.getSession();
       if(!session){ throw new Error('LOGIN_EXPIRED'); }
+      let _pacAberto = '';
+      try {
+        if (typeof selectedPatientId !== 'undefined' && selectedPatientId && typeof pacientes !== 'undefined') {
+          _pacAberto = (pacientes.find(p=>p.id===selectedPatientId)?.nome || '');
+        }
+      } catch(e){}
       const ctx = {
         clinicName:  (clinicaData?.nome_cli  || '').trim() || 'Clínica',
         dentistName: (clinicaData?.nome_resp || '').trim() || 'Profissional',
+        currentPatient: _pacAberto,
         procedures:  _safeProceduresContext()
       };
       const res = await fetch('/api/chat', {
