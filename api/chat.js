@@ -440,11 +440,35 @@ async function runTool(name, args, sb, clinicId) {
     case 'cadastrar_paciente': {
       const nome = String(args.nome || '').trim().slice(0, 200);
       if (!nome) throw new Error('Nome do paciente é obrigatório.');
+      const telefoneDigits = args.telefone ? String(args.telefone).replace(/\D/g, '').slice(0, 20) : '';
+
+      // Idempotência: se o mesmo telefone já foi cadastrado (ex.: a resposta
+      // do cadastro anterior se perdeu por timeout e o cliente reenviou a
+      // mesma confirmação), devolve o paciente existente em vez de criar
+      // um registro duplicado.
+      if (telefoneDigits) {
+        const { data: existente } = await sb
+          .from('pacientes')
+          .select('id, nome, telefone')
+          .eq('clinica_id', clinicId)
+          .eq('telefone', telefoneDigits)
+          .limit(1);
+        if (existente?.length) {
+          return JSON.stringify({
+            tool: name,
+            ok: true,
+            kind: 'patient_created',
+            jaExistia: true,
+            patient: { id: existente[0].id, nome: existente[0].nome, telefone: existente[0].telefone || null }
+          });
+        }
+      }
+
       const { data, error } = await sb
         .from('pacientes')
         .insert([{
           nome,
-          telefone:        args.telefone        ? String(args.telefone).replace(/\D/g, '').slice(0, 20) : null,
+          telefone:        telefoneDigits || null,
           email:           args.email           ? String(args.email).slice(0, 200) : null,
           data_nascimento: args.data_nascimento || null,
           clinica_id:      clinicId
@@ -866,6 +890,7 @@ function formatToolReply(outputs) {
   }
 
   if (data.kind === 'patient_created' && data.patient) {
+    if (data.jaExistia) return `Esse paciente já estava cadastrado:\n\n${data.patient.nome} - ${formatPhone(data.patient.telefone)}`;
     return `Paciente cadastrado com sucesso:\n\n${data.patient.nome} - ${formatPhone(data.patient.telefone)}`;
   }
 
@@ -944,6 +969,10 @@ function formatToolReply(outputs) {
     return `Agendamento criado com sucesso:\n\n${a.nome}\n${formatDateBR(a.data)} às ${a.horario}\n${a.procedimento || 'Consulta'} com ${a.prof_nome || 'profissional'}${link}`;
   }
 
+  // Mensagens que começam com "Erro:" vêm do catch técnico (ex.: exceção do
+  // banco) — não mostra o texto cru para o usuário, troca por algo seguro.
+  if (typeof data.message === 'string' && data.message.startsWith('Erro:'))
+    return 'Não consegui concluir essa ação agora. Tente novamente em instantes ou confira manualmente na tela.';
   if (data.message) return data.message;
   return null;
 }
@@ -1056,10 +1085,14 @@ module.exports = async function handler(req, res) {
   const orKey   = _limpa(process.env.OPENROUTER_API_KEY);
   const gemKey  = _limpa(process.env.GEMINI_API_KEY);
   const clients = {};
-  if (groqKey) clients.groq       = new OpenAI({ apiKey: groqKey, baseURL: 'https://api.groq.com/openai/v1' });
-  if (cerKey)  clients.cerebras   = new OpenAI({ apiKey: cerKey,  baseURL: 'https://api.cerebras.ai/v1' });
-  if (orKey)   clients.openrouter = new OpenAI({ apiKey: orKey,   baseURL: 'https://openrouter.ai/api/v1' });
-  if (gemKey)  clients.gemini     = new OpenAI({ apiKey: gemKey,  baseURL: 'https://generativelanguage.googleapis.com/v1beta/openai/' });
+  // Timeout curto por chamada: o SDK da OpenAI usa 10 minutos por padrão, o
+  // que deixaria um provedor lento consumir sozinho todo o tempo da function
+  // (60s no Vercel) sem nunca acionar o fallback para o próximo candidato.
+  const PROVIDER_TIMEOUT_MS = 15000;
+  if (groqKey) clients.groq       = new OpenAI({ apiKey: groqKey, baseURL: 'https://api.groq.com/openai/v1', timeout: PROVIDER_TIMEOUT_MS, maxRetries: 0 });
+  if (cerKey)  clients.cerebras   = new OpenAI({ apiKey: cerKey,  baseURL: 'https://api.cerebras.ai/v1', timeout: PROVIDER_TIMEOUT_MS, maxRetries: 0 });
+  if (orKey)   clients.openrouter = new OpenAI({ apiKey: orKey,   baseURL: 'https://openrouter.ai/api/v1', timeout: PROVIDER_TIMEOUT_MS, maxRetries: 0 });
+  if (gemKey)  clients.gemini     = new OpenAI({ apiKey: gemKey,  baseURL: 'https://generativelanguage.googleapis.com/v1beta/openai/', timeout: PROVIDER_TIMEOUT_MS, maxRetries: 0 });
 
   let oaiMessages = [
     { role: 'system', content: buildSystemPrompt(context) },
@@ -1092,6 +1125,7 @@ module.exports = async function handler(req, res) {
 
       for (const tc of (choice.message.tool_calls || [])) {
         let result;
+        let falhouExecucao = false;
         try {
           if (!clinicId || !authedSb) {
             result = 'Sessão expirada. Peça ao usuário para recarregar a página.';
@@ -1100,9 +1134,14 @@ module.exports = async function handler(req, res) {
             result = await runTool(tc.function.name, args, authedSb, clinicId);
           }
         } catch (e) {
+          falhouExecucao = true;
           result = JSON.stringify({ tool: tc.function.name, ok: false, message: `Erro: ${e.message}` });
         }
-        console.log(`[AI] tool=${tc.function.name} ok`);
+        // Log real: só marca "ok" quando a execução realmente não lançou
+        // exceção. Resultado negativo esperado (paciente não encontrado,
+        // horário em conflito) não é falha de execução — continua "ok".
+        if (falhouExecucao) console.error(`[AI] tool=${tc.function.name} FALHOU: ${result}`);
+        else console.log(`[AI] tool=${tc.function.name} ok`);
         toolOutputs.push({ name: tc.function.name, data: parseToolResult(result) });
         oaiMessages.push({ role: 'tool', tool_call_id: tc.id, content: result });
       }
