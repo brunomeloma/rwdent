@@ -660,7 +660,7 @@ function renderHomeStats(){
     </div>
     <div class="home-stat-card">
       <div class="home-stat-icon" style="background:#e8f5e9;color:#2e7d32;"><i class="ti ti-currency-dollar"></i></div>
-      <div><div class="home-stat-num" style="font-size:16px;">${fmtBRL(_fatMes)}</div><div class="home-stat-label">Faturamento ${_mesLabel}</div></div>
+      <div><div class="home-stat-num money">${fmtBRL(_fatMes)}</div><div class="home-stat-label">Faturamento ${_mesLabel}</div></div>
     </div>
     <div class="home-stat-card">
       <div class="home-stat-icon" style="background:#fff4e5;color:#e08a20;"><i class="ti ti-calendar"></i></div>
@@ -10933,10 +10933,12 @@ function renderComissoes(){
         <div style="font-size:14px;font-weight:800;color:var(--rose-dark);"><i class="ti ti-percentage"></i> Comissões — ${_periodo}</div>
         <div style="font-size:13px;color:var(--rose-text);">Total em comissões: <strong style="color:#2e7d32;font-size:15px;">${fmtBRL(totalComissoes)}</strong></div>
       </div>
+      <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;"><div style="min-width:520px;">
       <div style="display:grid;grid-template-columns:1fr 90px 110px 70px 110px;gap:8px;padding:8px 16px;background:var(--rose-lighter);font-size:10px;font-weight:700;color:var(--rose-text);text-transform:uppercase;">
         <span>Profissional</span><span style="text-align:center;">Vendas</span><span style="text-align:right;">Produção</span><span style="text-align:center;">%</span><span style="text-align:right;">Comissão</span>
       </div>
       <div style="max-height:320px;overflow-y:auto;">${linhas||'<div style="padding:20px;text-align:center;color:var(--rose-text);font-size:13px;">Nenhum profissional cadastrado.</div>'}</div>
+      </div></div>
       ${semProf>0?`<div style="padding:10px 16px;font-size:11px;color:var(--rose-text);background:#fffde7;border-top:1px solid #ffe082;"><i class="ti ti-info-circle"></i> ${fmtBRL(semProf)} em vendas do período sem profissional vinculado (não entram na comissão). Nas próximas finalizações, selecione quem atendeu.</div>`:''}
       <div style="padding:8px 16px;font-size:11px;color:var(--rose-text);border-top:1px solid var(--rose-light);">O período segue os filtros de mês/ano da lista de vendas acima. A % fica salva por profissional.</div>
     </div>`;

@@ -17,8 +17,10 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#fdf6f3;color:#3a2020;mi
   width:46px;height:46px;border-radius:13px;display:flex;align-items:center;justify-content:center;
   font-size:22px;flex-shrink:0;
 }
-.home-stat-num{font-size:26px;font-weight:800;color:#3a2020;line-height:1;}
-.home-stat-label{font-size:11px;color:var(--rose-text);margin-top:3px;font-weight:500;}
+.home-stat-num{font-size:26px;font-weight:800;color:#3a2020;line-height:1;min-width:0;overflow-wrap:anywhere;}
+.home-stat-num.money{font-size:17px;line-height:1.2;}
+.home-stat-label{font-size:11px;color:var(--rose-text);margin-top:3px;font-weight:500;overflow-wrap:anywhere;}
+.home-stat-card>div{min-width:0;}
 
 /* ── HOME TABLES ── */
 .home-tables-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
@@ -31,8 +33,10 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#fdf6f3;color:#3a2020;mi
   padding:9px 0;border-bottom:1px solid var(--rose-lighter);font-size:13px;gap:8px;
 }
 .home-table-row:last-child{border-bottom:none;}
-.home-table-name{font-weight:600;color:#3a2020;flex:1;}
-.home-table-sub{font-size:11px;color:var(--rose-text);}
+.home-table-row>div:first-child{min-width:0;}
+.home-table-name{font-weight:600;color:#3a2020;flex:1;min-width:0;overflow-wrap:anywhere;}
+.home-table-sub{font-size:11px;color:var(--rose-text);overflow-wrap:anywhere;}
+.home-table-row .home-btn-ver,.home-table-row .home-badge{flex-shrink:0;}
 .home-badge{
   font-size:10px;font-weight:700;padding:3px 9px;border-radius:20px;text-transform:uppercase;letter-spacing:.4px;
 }
@@ -648,9 +652,10 @@ button{font-family:inherit;}
   .home-hero-banner{padding:18px 16px!important;border-radius:16px!important;margin-bottom:14px!important;}
   .home-hero-greeting{font-size:18px!important;margin-bottom:14px!important;}
   .home-hero-stats{gap:8px!important;}
-  .home-hero-stat{padding:10px 14px!important;min-width:0!important;flex:1!important;border-radius:12px!important;}
-  .home-hero-stat-val{font-size:18px!important;}
-  .home-hero-stat-lbl{font-size:9px!important;}
+  /* 2 chips por linha — 4 na mesma linha espremia os valores */
+  .home-hero-stat{padding:10px 12px!important;min-width:0!important;flex:1 1 calc(50% - 8px)!important;border-radius:12px!important;}
+  .home-hero-stat-val{font-size:16px!important;overflow-wrap:anywhere;}
+  .home-hero-stat-lbl{font-size:9px!important;overflow-wrap:anywhere;}
 
   /* Appointment items */
   .appt-item{flex-wrap:wrap;gap:8px;padding:10px 12px;}
@@ -1128,7 +1133,8 @@ select, textarea {
   .appt-item button { min-width: 44px !important; min-height: 44px !important; padding: 10px !important; border-radius: 10px !important; }
   /* Cards da home maiores */
   .home-stat-card { padding: 16px !important; }
-  .home-stat-num { font-size: 26px !important; }
+  .home-stat-num { font-size: 24px !important; }
+  .home-stat-num.money { font-size: 15px !important; } /* valores em R$ não podem estourar o card */
   .home-table-row { padding: 12px 0 !important; }
   /* Formulários - inputs maiores */
   input[type=text], input[type=email], input[type=tel], input[type=date], input[type=number], select, textarea {
@@ -1302,3 +1308,18 @@ select, textarea {
 .dark-mode .admin-table tr:hover td{background:#2a1e1a!important;}
 .dark-mode .admin-filter-btn{background:#1e1612!important;border-color:#3a2a24!important;color:#e0c8c0!important;}
 .dark-mode .admin-filter-btn.active{background:var(--rose)!important;color:#fff!important;}
+
+/* ══ REDE DE SEGURANÇA MOBILE — evita texto estourando ou grudando ══ */
+@media(max-width:768px){
+  /* nenhum card empurra a página para o lado */
+  .card,.home-table-card,.prof-card,.patient-card,.fin-pac-cob{min-width:0;max-width:100%;}
+  /* textos longos quebram em vez de vazar */
+  .card h2,.card h3,.section-header h2,.patient-info .name,.patient-info .meta,
+  .prof-card .name,.prof-card .meta,.fin-pac-cob-titulo,.atend-card-body,
+  .proc-item,.home-empty{overflow-wrap:anywhere;min-width:0;}
+  /* linhas flexíveis podem quebrar em telas estreitas */
+  .section-header{flex-wrap:wrap;gap:8px;}
+  /* métricas financeiras respiram */
+  #fin-metrics>div,#vendas-metrics>div{min-width:0;}
+  #fin-metrics>div>div:last-child,#vendas-metrics>div>div:last-child{font-size:17px!important;overflow-wrap:anywhere;}
+}
