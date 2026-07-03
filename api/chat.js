@@ -12,6 +12,15 @@ function montarCandidatos(clients){
     c.push({ prov:'groq', model:'moonshotai/kimi-k2-instruct-0905' });
     c.push({ prov:'groq', model:'llama-3.3-70b-versatile' });
   }
+  // Cerebras: gratuito com limites folgados, mesma API e mesmo Llama 3.3
+  if (clients.cerebras) {
+    c.push({ prov:'cerebras', model:'llama-3.3-70b' });
+    c.push({ prov:'cerebras', model:'llama3.1-8b' });
+  }
+  // OpenRouter: agregador com variantes gratuitas
+  if (clients.openrouter) {
+    c.push({ prov:'openrouter', model:'meta-llama/llama-3.3-70b-instruct:free' });
+  }
   if (clients.gemini) {
     c.push({ prov:'gemini', model:'gemini-2.0-flash' });
     c.push({ prov:'gemini', model:'gemini-1.5-flash' });
@@ -922,7 +931,7 @@ module.exports = async function handler(req, res) {
   res.setHeader('Content-Type', 'application/json');
 
   if (req.method !== 'POST') return res.status(405).json({ error: 'Método não permitido.' });
-  if (!process.env.GROQ_API_KEY && !process.env.GEMINI_API_KEY)
+  if (!process.env.GROQ_API_KEY && !process.env.CEREBRAS_API_KEY && !process.env.OPENROUTER_API_KEY && !process.env.GEMINI_API_KEY)
     return res.status(500).json({ error: 'Serviço de IA não configurado.' });
 
   const { messages, context } = req.body || {};
@@ -996,10 +1005,14 @@ module.exports = async function handler(req, res) {
 
   const _limpa = s => String(s || '').replace(/[^\x20-\x7E]/g, '').trim();
   const groqKey = _limpa(process.env.GROQ_API_KEY);
+  const cerKey  = _limpa(process.env.CEREBRAS_API_KEY);
+  const orKey   = _limpa(process.env.OPENROUTER_API_KEY);
   const gemKey  = _limpa(process.env.GEMINI_API_KEY);
   const clients = {};
-  if (groqKey) clients.groq   = new OpenAI({ apiKey: groqKey, baseURL: 'https://api.groq.com/openai/v1' });
-  if (gemKey)  clients.gemini = new OpenAI({ apiKey: gemKey,  baseURL: 'https://generativelanguage.googleapis.com/v1beta/openai/' });
+  if (groqKey) clients.groq       = new OpenAI({ apiKey: groqKey, baseURL: 'https://api.groq.com/openai/v1' });
+  if (cerKey)  clients.cerebras   = new OpenAI({ apiKey: cerKey,  baseURL: 'https://api.cerebras.ai/v1' });
+  if (orKey)   clients.openrouter = new OpenAI({ apiKey: orKey,   baseURL: 'https://openrouter.ai/api/v1' });
+  if (gemKey)  clients.gemini     = new OpenAI({ apiKey: gemKey,  baseURL: 'https://generativelanguage.googleapis.com/v1beta/openai/' });
 
   let oaiMessages = [
     { role: 'system', content: buildSystemPrompt(context) },
