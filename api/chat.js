@@ -1,60 +1,65 @@
 const { OpenAI }       = require('openai');
 const { createClient } = require('@supabase/supabase-js');
 
-// Corrente de modelos: tenta o primeiro; se não existir/for descontinuado na
-// Groq, cai automaticamente para o próximo. GROQ_MODEL (env) tem prioridade.
-const GROQ_MODELS = [
-  ...(process.env.GROQ_MODEL ? [process.env.GROQ_MODEL.trim()] : []),
-  'moonshotai/kimi-k2-instruct-0905', // Kimi K2 — forte em tool calling e PT-BR
-  'llama-3.3-70b-versatile'           // reserva estável
-];
-let _modeloIdx = 0; // cache por instância: pula modelos que já falharam
+// Corrente de provedores/modelos: tenta na ordem; qualquer falha (cota,
+// capacidade, modelo inexistente, chave inválida daquele provedor) cai para
+// o próximo. GROQ_MODEL (env) tem prioridade. GEMINI_API_KEY (opcional)
+// adiciona o Gemini gratuito no fim — cobre quando a cota da Groq esgota.
+function montarCandidatos(clients){
+  const c = [];
+  if (clients.groq) {
+    if (process.env.GROQ_MODEL) c.push({ prov:'groq', model: process.env.GROQ_MODEL.trim() });
+    c.push({ prov:'groq', model:'moonshotai/kimi-k2-instruct-0905' });
+    c.push({ prov:'groq', model:'llama-3.3-70b-versatile' });
+  }
+  if (clients.gemini) {
+    c.push({ prov:'gemini', model:'gemini-2.0-flash' });
+    c.push({ prov:'gemini', model:'gemini-1.5-flash' });
+  }
+  return c;
+}
+let _candIdx = 0; // cache por instância: pula candidatos que já falharam
 const MAX_HISTORY     = 14;
 const MAX_CONTENT_LEN = 900;
 const MAX_TOOL_ROUNDS = 4;
 
-// Erros de chave/autenticação não adiantam trocar de modelo — propagam.
-// Todo o resto (404 modelo, 429 rate limit, 503 over capacity, 400 de
-// parâmetro específico do modelo) cai para o próximo da corrente.
-function _erroDeChave(err){
-  const m = String(err?.message || '').toLowerCase();
-  return err?.status === 401 || /api.?key|unauthorized|invalid.*key/i.test(m);
-}
-
-// chat.completions.create com fallback de modelo
-async function groqCreate(groq, params){
+// chat.completions.create com fallback de provedor/modelo
+async function aiCreate(clients, params){
+  const candidatos = montarCandidatos(clients);
+  if (!candidatos.length) throw new Error('Nenhum provedor de IA configurado.');
+  if (_candIdx >= candidatos.length) _candIdx = candidatos.length - 1;
   const falhas = [];
-  while (_modeloIdx < GROQ_MODELS.length) {
-    const model = GROQ_MODELS[_modeloIdx];
+  let ultimoErr = null;
+  for (let i = _candIdx; i < candidatos.length; i++) {
+    const { prov, model } = candidatos[i];
     try {
-      const resp = await groq.chat.completions.create({ ...params, model });
-      return { resp, model };
+      const resp = await clients[prov].chat.completions.create({ ...params, model });
+      _candIdx = i;
+      return { resp, model: `${prov}/${model}` };
     } catch (err) {
-      falhas.push(`${model}:${err?.status||'?'}`);
-      console.log(`[AI] modelo ${model} falhou (${err?.status||''} ${String(err?.message||'').slice(0,140)})`);
-      if (!_erroDeChave(err) && _modeloIdx < GROQ_MODELS.length - 1) {
-        _modeloIdx++;
-        continue;
-      }
-      // Último recurso: se as ferramentas podem ser o problema (400/503),
-      // tenta o modelo estável UMA vez sem tools. Em 429 não tenta: é cota
-      // esgotada — outra chamada só queima mais limite.
-      if (!_erroDeChave(err) && err?.status !== 429 && params.tools) {
-        try {
-          const semTools = { ...params };
-          delete semTools.tools; delete semTools.tool_choice;
-          const resp = await groq.chat.completions.create({ ...semTools, model: GROQ_MODELS[GROQ_MODELS.length - 1] });
-          console.log(`[AI] respondeu SEM ferramentas após falhas: ${falhas.join(' ')}`);
-          return { resp, model: GROQ_MODELS[GROQ_MODELS.length - 1] + ' (sem tools)' };
-        } catch (err2) {
-          falhas.push(`sem-tools:${err2?.status||'?'}`);
-        }
-      }
-      err.falhas = falhas.join(' ');
-      throw err;
+      ultimoErr = err;
+      falhas.push(`${prov}/${model}:${err?.status||'?'}`);
+      console.log(`[AI] ${prov}/${model} falhou (${err?.status||''} ${String(err?.message||'').slice(0,140)})`);
+      // 429 não avança o cache permanente (cota renova); os demais avançam
+      if (err?.status !== 429) _candIdx = Math.min(i + 1, candidatos.length - 1);
     }
   }
-  throw new Error('Nenhum modelo disponível.');
+  // Último recurso (exceto cota esgotada em tudo): último candidato sem tools
+  if (params.tools && ultimoErr?.status !== 429) {
+    try {
+      const semTools = { ...params };
+      delete semTools.tools; delete semTools.tool_choice;
+      const { prov, model } = candidatos[candidatos.length - 1];
+      const resp = await clients[prov].chat.completions.create({ ...semTools, model });
+      console.log(`[AI] respondeu SEM ferramentas após falhas: ${falhas.join(' ')}`);
+      return { resp, model: `${prov}/${model} (sem tools)` };
+    } catch (err2) {
+      falhas.push(`sem-tools:${err2?.status||'?'}`);
+    }
+  }
+  ultimoErr = ultimoErr || new Error('Nenhum modelo disponível.');
+  ultimoErr.falhas = falhas.join(' ');
+  throw ultimoErr;
 }
 
 // ══════════════════════════════════════════════
@@ -917,7 +922,8 @@ module.exports = async function handler(req, res) {
   res.setHeader('Content-Type', 'application/json');
 
   if (req.method !== 'POST') return res.status(405).json({ error: 'Método não permitido.' });
-  if (!process.env.GROQ_API_KEY)  return res.status(500).json({ error: 'Serviço de IA não configurado.' });
+  if (!process.env.GROQ_API_KEY && !process.env.GEMINI_API_KEY)
+    return res.status(500).json({ error: 'Serviço de IA não configurado.' });
 
   const { messages, context } = req.body || {};
 
@@ -988,27 +994,28 @@ module.exports = async function handler(req, res) {
 
   const withTools = !!(clinicId && authedSb);
 
-  const groqKey = String(process.env.GROQ_API_KEY || '').replace(/[^\x20-\x7E]/g, '').trim();
-  const groq = new OpenAI({
-    apiKey:  groqKey,
-    baseURL: 'https://api.groq.com/openai/v1'
-  });
+  const _limpa = s => String(s || '').replace(/[^\x20-\x7E]/g, '').trim();
+  const groqKey = _limpa(process.env.GROQ_API_KEY);
+  const gemKey  = _limpa(process.env.GEMINI_API_KEY);
+  const clients = {};
+  if (groqKey) clients.groq   = new OpenAI({ apiKey: groqKey, baseURL: 'https://api.groq.com/openai/v1' });
+  if (gemKey)  clients.gemini = new OpenAI({ apiKey: gemKey,  baseURL: 'https://generativelanguage.googleapis.com/v1beta/openai/' });
 
   let oaiMessages = [
     { role: 'system', content: buildSystemPrompt(context) },
     ...history
   ];
 
-  console.log(`[AI] provider=groq modelos=${GROQ_MODELS.join('>')} tools=${withTools} clinic=${clinicId}`);
+  console.log(`[AI] provedores=${Object.keys(clients).join('+')} tools=${withTools} clinic=${clinicId}`);
 
-  let modeloUsado = GROQ_MODELS[_modeloIdx];
+  let modeloUsado = '?';
   try {
     let rounds = 0;
     let response;
     const toolOutputs = [];
 
     while (rounds++ < MAX_TOOL_ROUNDS) {
-      const r = await groqCreate(groq, {
+      const r = await aiCreate(clients, {
         messages:    oaiMessages,
         tools:       withTools ? TOOLS : undefined,
         tool_choice: withTools ? 'auto' : undefined,
@@ -1052,7 +1059,7 @@ module.exports = async function handler(req, res) {
     console.error(`[AI] provider=groq model=${modeloUsado} status=${err?.status||'?'} falhas=${err?.falhas||'-'} erro: ${detail}`);
     if (err?.status === 429) {
       // 429 vai como 429 mesmo: o app NÃO retenta (retentar só queima mais cota)
-      return res.status(429).json({ error: 'Limite de uso da IA atingido no provedor (plano gratuito da Groq). Aguarde 1 minuto e tente de novo. Se persistir o dia todo, o limite diário foi atingido.' });
+      return res.status(429).json({ error: 'Limite de uso da IA atingido. Aguarde 1 minuto e tente de novo.' });
     }
     let msg = 'Serviço de IA temporariamente indisponível. Tente novamente.';
     if (err?.status === 401) msg = 'Chave da IA inválida no servidor. Avise o administrador.';

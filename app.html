@@ -2438,9 +2438,11 @@
       return 'Falha de conexão. Tentei de novo e não consegui — verifique sua internet e envie novamente.';
     if(/Erro 5[0-9]{2}|HTTP 5[0-9]{2}/i.test(raw))
       return 'O servidor encontrou um problema. Tente novamente em instantes.';
-    if(raw.length > 120 || raw.startsWith('{') || raw.startsWith('['))
+    // Só troca por mensagem genérica se parecer erro técnico (JSON/stack),
+    // não quando for uma frase legível vinda do servidor
+    if(raw.startsWith('{') || raw.startsWith('[') || /error|exception|stack|undefined/i.test(raw) && raw.length > 200)
       return 'Não consegui processar a resposta. Tente novamente.';
-    return raw;
+    return raw.slice(0, 300);
   }
 
   async function _refreshAppData(){
