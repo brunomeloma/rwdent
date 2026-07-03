@@ -810,9 +810,9 @@ function renderHomeStats(){
     const mesAtual = new Date().getMonth()+1;
     const diaAtual = new Date().getDate();
     const aniver = pacientes.filter(p=>{
-      const dn = (p.data_nascimento||'').slice(5,7);
+      const dn = (p.nascimento||'').slice(5,7);
       return dn && parseInt(dn)===mesAtual;
-    }).map(p=>({p, dia: parseInt((p.data_nascimento||'').slice(8,10))||0}))
+    }).map(p=>({p, dia: parseInt((p.nascimento||'').slice(8,10))||0}))
       .sort((a,b)=>a.dia-b.dia);
     if(!aniver.length){
       aniverEl.innerHTML='<div class="home-empty">Nenhum aniversariante este mês.</div>';
