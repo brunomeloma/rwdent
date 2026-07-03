@@ -14,21 +14,27 @@ const MAX_HISTORY     = 14;
 const MAX_CONTENT_LEN = 900;
 const MAX_TOOL_ROUNDS = 4;
 
-function _erroDeModelo(err){
+// Erros de chave/autenticação não adiantam trocar de modelo — propagam.
+// Todo o resto (404 modelo, 429 rate limit, 503 over capacity, 400 de
+// parâmetro específico do modelo) cai para o próximo da corrente.
+function _erroDeChave(err){
   const m = String(err?.message || '').toLowerCase();
-  return err?.status === 404 || /model|decommission|does not exist|not found|invalid.*model/i.test(m);
+  return err?.status === 401 || /api.?key|unauthorized|invalid.*key/i.test(m);
 }
 
 // chat.completions.create com fallback de modelo
 async function groqCreate(groq, params){
+  // Erro transitório no modelo em cache não deve fixá-lo para sempre:
+  // tenta a partir do cache, mas sem gravar avanço por erro transitório? Não —
+  // simples e robusto: avança o cache; a corrente termina no modelo estável.
   while (_modeloIdx < GROQ_MODELS.length) {
     const model = GROQ_MODELS[_modeloIdx];
     try {
       const resp = await groq.chat.completions.create({ ...params, model });
       return { resp, model };
     } catch (err) {
-      if (_erroDeModelo(err) && _modeloIdx < GROQ_MODELS.length - 1) {
-        console.log(`[AI] modelo ${model} indisponível (${err?.status||''} ${String(err?.message||'').slice(0,80)}) — caindo para ${GROQ_MODELS[_modeloIdx+1]}`);
+      if (!_erroDeChave(err) && _modeloIdx < GROQ_MODELS.length - 1) {
+        console.log(`[AI] modelo ${model} falhou (${err?.status||''} ${String(err?.message||'').slice(0,100)}) — caindo para ${GROQ_MODELS[_modeloIdx+1]}`);
         _modeloIdx++;
         continue;
       }
