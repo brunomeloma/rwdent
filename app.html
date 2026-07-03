@@ -2405,7 +2405,8 @@
     let ultimoErro;
     for(let i = 1; i <= max; i++){
       const ctl = new AbortController();
-      const timer = setTimeout(()=>ctl.abort(), 30000);
+      // Um pouco acima do limite do servidor (60s) para não abortar antes dele
+      const timer = setTimeout(()=>ctl.abort(), 65000);
       try {
         const res = await fetch(url, { ...opts, signal: ctl.signal });
         clearTimeout(timer);

@@ -40,6 +40,14 @@ const MAX_HISTORY     = 14;
 const MAX_CONTENT_LEN = 900;
 const MAX_TOOL_ROUNDS = 4;
 
+// gpt-oss é modelo de raciocínio (pensa antes de responder). Para um
+// assistente de tarefas simples (agenda/paciente/preço), esforço "low" já
+// basta e corta bastante a latência — evita estourar o tempo da function
+// (FUNCTION_INVOCATION_TIMEOUT visto em produção com o esforço padrão).
+function _paramsExtra(model){
+  return model.includes('gpt-oss') ? { reasoning_effort: 'low' } : {};
+}
+
 // chat.completions.create com fallback de provedor/modelo
 async function aiCreate(clients, params){
   const candidatos = montarCandidatos(clients);
@@ -50,7 +58,7 @@ async function aiCreate(clients, params){
   for (let i = _candIdx; i < candidatos.length; i++) {
     const { prov, model } = candidatos[i];
     try {
-      const resp = await clients[prov].chat.completions.create({ ...params, model });
+      const resp = await clients[prov].chat.completions.create({ ...params, ..._paramsExtra(model), model });
       _candIdx = i;
       return { resp, model: `${prov}/${model}` };
     } catch (err) {
@@ -67,7 +75,7 @@ async function aiCreate(clients, params){
       const semTools = { ...params };
       delete semTools.tools; delete semTools.tool_choice;
       const { prov, model } = candidatos[candidatos.length - 1];
-      const resp = await clients[prov].chat.completions.create({ ...semTools, model });
+      const resp = await clients[prov].chat.completions.create({ ...semTools, ..._paramsExtra(model), model });
       console.log(`[AI] respondeu SEM ferramentas após falhas: ${falhas.join(' ')}`);
       return { resp, model: `${prov}/${model} (sem tools)` };
     } catch (err2) {
