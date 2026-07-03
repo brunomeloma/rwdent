@@ -12,10 +12,11 @@ function montarCandidatos(clients){
     c.push({ prov:'groq', model:'moonshotai/kimi-k2-instruct-0905' });
     c.push({ prov:'groq', model:'llama-3.3-70b-versatile' });
   }
-  // Cerebras: gratuito com limites folgados, mesma API e mesmo Llama 3.3
+  // Cerebras: gratuito com limites folgados, mesma API e mesmo Llama 3.3.
+  // Não usar llama3.1-8b aqui: modelo pequeno demais, erra a escolha de
+  // ferramenta com frequência (ex.: chama buscar_paciente para pergunta de preço).
   if (clients.cerebras) {
     c.push({ prov:'cerebras', model:'llama-3.3-70b' });
-    c.push({ prov:'cerebras', model:'llama3.1-8b' });
   }
   // OpenRouter: agregador com variantes gratuitas
   if (clients.openrouter) {
@@ -302,7 +303,8 @@ Se o usuário disser "ele", "ela", "esse paciente" ou pedir algo sem citar nome,
 REGRAS OBRIGATÓRIAS:
 1. NUNCA invente, suponha ou fabrique nomes de pacientes, telefones ou qualquer dado do banco. Se não tiver acesso às ferramentas, diga isso claramente.
 2. Só execute listar_pacientes quando o usuário pedir claramente para listar/ver/mostrar pacientes.
-3. Só execute buscar_paciente quando o usuário pedir claramente para procurar/buscar/encontrar um paciente específico.
+3. Só execute buscar_paciente quando o usuário pedir claramente para procurar/buscar/encontrar um paciente específico PELO NOME OU TELEFONE dele. NUNCA use buscar_paciente nem listar_pacientes para perguntas sobre procedimento, tratamento ou preço — nomes de procedimento (ex: "profilaxia", "canal", "clareamento") NÃO são nomes de paciente.
+3.1. Exemplo errado: usuário pergunta "qual o preço da profilaxia?" → NÃO chame buscar_paciente(query="profilaxia"). Certo: responda direto com o valor da lista de PROCEDIMENTOS/PREÇOS abaixo, sem chamar nenhuma ferramenta.
 4. Perguntas de capacidade, como "você consegue agendar?" ou "dá para marcar consulta?", devem ser respondidas dizendo que sim, você consegue agendar pacientes cadastrados depois de receber paciente, data, horário e confirmação.
 5. Agendar/cadastrar são ações de escrita: SEMPRE apresente os dados e aguarde "sim"/"pode"/"confirmo" ANTES de chamar a ferramenta.
 6. Para agendar, colete no mínimo paciente, data e horário. Se faltar algum, pergunte antes. Use procedimento "Consulta" se o usuário não informar.
@@ -920,6 +922,25 @@ function formatToolReply(outputs) {
   return null;
 }
 
+// Resultado "vazio/negativo" (nada encontrado, ok:false) não carrega dado
+// real para alucinar — nesses casos é seguro deixar o texto final do próprio
+// modelo prevalecer (ele pode ter percebido que chamou a ferramenta errada,
+// como buscar_paciente para uma pergunta de preço, e se corrigido na resposta).
+// Resultado com dados reais (pacientes, agenda, criação/edição) SEMPRE usa a
+// formatação determinística abaixo, para não arriscar o modelo inventar nomes,
+// telefones, horários ou preços.
+function _resultadoTemDadosReais(data) {
+  if (!data) return false;
+  if (data.ok === false) return false;
+  if (typeof data.total === 'number') return data.total > 0;
+  if (Array.isArray(data.livres)) return data.livres.length > 0;
+  if (data.kind === 'patient_created' || data.kind === 'appointment_created' ||
+      data.kind === 'appointment_rescheduled' || data.kind === 'appointment_cancelled' ||
+      data.kind === 'patient_profile' || data.kind === 'appointment_choose' ||
+      data.kind === 'appointment_patient_ambiguous') return true;
+  return false;
+}
+
 function shouldRefreshApp(toolOutputs) {
   return toolOutputs.some(o => ['patient_created', 'appointment_created', 'appointment_rescheduled', 'appointment_cancelled'].includes(o?.data?.kind));
 }
@@ -1061,10 +1082,16 @@ module.exports = async function handler(req, res) {
       }
     }
 
-    const toolReply = formatToolReply(toolOutputs);
-    if (toolReply) return res.status(200).json({ reply: toolReply, refresh: shouldRefreshApp(toolOutputs) });
+    const ultimaSaida = toolOutputs[toolOutputs.length - 1];
+    const modeloRespondeu = response.choices[0].message.content?.trim();
+    const usarFormatoFixo = ultimaSaida && (_resultadoTemDadosReais(ultimaSaida.data) || !modeloRespondeu);
 
-    const reply = response.choices[0].message.content?.trim() || 'Ação executada.';
+    if (usarFormatoFixo) {
+      const toolReply = formatToolReply(toolOutputs);
+      if (toolReply) return res.status(200).json({ reply: toolReply, refresh: shouldRefreshApp(toolOutputs) });
+    }
+
+    const reply = modeloRespondeu || 'Ação executada.';
     return res.status(200).json({ reply });
 
   } catch (err) {
