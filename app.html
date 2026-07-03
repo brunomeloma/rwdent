@@ -2447,11 +2447,28 @@
   }
 
   async function _refreshAppData(){
+    // Recarrega só o que as ferramentas de escrita da IA tocam (pacientes e
+    // agendamentos) — sem chamar loadAll(), que reinicia a visão do
+    // calendário, o campo de data e mostra o spinner global de carregamento.
     try {
-      if(typeof loadData === 'function') await loadData();
+      if(typeof _sb !== 'undefined' && typeof clinicaId !== 'undefined'){
+        const [{ data: ag }, { data: pa }] = await Promise.all([
+          _sb.from('agendamentos').select('*').eq('clinica_id', clinicaId).order('data').order('horario'),
+          _sb.from('pacientes').select('*, prontuarios(*)').eq('clinica_id', clinicaId)
+        ]);
+        // "agendamentos"/"pacientes" são `let` no topo de app.js — atribuir
+        // via window.agendamentos=... criaria uma propriedade solta em vez
+        // de atualizar essa variável. Precisa ser atribuição direta ao
+        // identificador para o resto do app (renderLista, renderPatients
+        // etc.) enxergar os dados novos.
+        if(ag) agendamentos = ag;
+        if(pa) pacientes = pa.map(p=>({ ...p, prontuarios: p.prontuarios||[] }));
+      }
       if(typeof renderLista === 'function') renderLista();
       if(typeof renderHomeStats === 'function') renderHomeStats();
       if(typeof renderCalendario === 'function') renderCalendario();
+      if(typeof renderPatients === 'function') renderPatients();
+      if(typeof renderScheduleOptions === 'function') renderScheduleOptions();
     } catch(e){
       console.warn('Falha ao atualizar dados após ação da IA:', e);
     }
