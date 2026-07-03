@@ -470,7 +470,7 @@ async function runTool(name, args, sb, clinicId) {
           nome,
           telefone:        telefoneDigits || null,
           email:           args.email           ? String(args.email).slice(0, 200) : null,
-          data_nascimento: args.data_nascimento || null,
+          nascimento:      args.data_nascimento || null,
           clinica_id:      clinicId
         }])
         .select('id, nome, telefone')
@@ -539,14 +539,14 @@ async function runTool(name, args, sb, clinicId) {
       const mes = Math.min(12, Math.max(1, Number(args.mes) || mesAtual));
       const { data, error } = await sb
         .from('pacientes')
-        .select('nome, telefone, data_nascimento')
+        .select('nome, telefone, nascimento')
         .eq('clinica_id', clinicId)
-        .not('data_nascimento', 'is', null)
+        .not('nascimento', 'is', null)
         .limit(500);
       if (error) throw new Error(error.message);
       const lista = (data||[])
-        .filter(p => Number(String(p.data_nascimento).slice(5,7)) === mes)
-        .map(p => ({ nome: p.nome, telefone: p.telefone || null, dia: Number(String(p.data_nascimento).slice(8,10)) }))
+        .filter(p => Number(String(p.nascimento).slice(5,7)) === mes)
+        .map(p => ({ nome: p.nome, telefone: p.telefone || null, dia: Number(String(p.nascimento).slice(8,10)) }))
         .sort((a,b) => a.dia - b.dia)
         .slice(0, 30);
       return JSON.stringify({ tool: name, ok: true, kind: 'birthday_list', mes, total: lista.length, aniversariantes: lista });
@@ -589,7 +589,7 @@ async function runTool(name, args, sb, clinicId) {
       const pac = patients[0];
       const hoje = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' });
       const [{ data: dados }, { data: futuras }, { data: passadas }, { data: atends }] = await Promise.all([
-        sb.from('pacientes').select('nome, telefone, email, data_nascimento').eq('clinica_id', clinicId).eq('id', pac.id).single(),
+        sb.from('pacientes').select('nome, telefone, email, nascimento').eq('clinica_id', clinicId).eq('id', pac.id).single(),
         sb.from('agendamentos').select('data, horario, procedimento, prof_nome').eq('clinica_id', clinicId).eq('paciente_id', pac.id).gte('data', hoje).order('data').order('horario').limit(2),
         sb.from('agendamentos').select('data, horario, procedimento').eq('clinica_id', clinicId).eq('paciente_id', pac.id).lt('data', hoje).order('data', { ascending: false }).limit(1),
         sb.from('atendimentos_odonto').select('data, procedimentos').eq('clinica_id', clinicId).eq('paciente_id', pac.id).order('data', { ascending: false }).limit(3)
@@ -598,7 +598,7 @@ async function runTool(name, args, sb, clinicId) {
         tool: name, ok: true, kind: 'patient_profile',
         paciente: {
           nome: dados?.nome || pac.nome, telefone: dados?.telefone || pac.telefone || null,
-          email: dados?.email || null, data_nascimento: dados?.data_nascimento || null
+          email: dados?.email || null, data_nascimento: dados?.nascimento || null
         },
         proximas: (futuras||[]).map(a => ({ data: a.data, horario: (a.horario||'').slice(0,5), procedimento: a.procedimento || 'Consulta', prof: a.prof_nome || '' })),
         ultima_visita: passadas?.[0] ? { data: passadas[0].data, procedimento: passadas[0].procedimento || 'Consulta' } : null,
@@ -986,13 +986,17 @@ function formatToolReply(outputs) {
 // telefones, horários ou preços.
 function _resultadoTemDadosReais(data) {
   if (!data) return false;
-  if (data.ok === false) return false;
-  if (typeof data.total === 'number') return data.total > 0;
-  if (Array.isArray(data.livres)) return data.livres.length > 0;
+  // Estes "kind" carregam dados reais de paciente/consulta mesmo quando
+  // ok:false (ex.: múltiplos pacientes encontrados, precisa escolher) — a
+  // checagem tem que vir ANTES do "ok===false" abaixo, senão nunca dispara
+  // e o modelo poderia parafrasear/inventar em cima de nomes reais.
   if (data.kind === 'patient_created' || data.kind === 'appointment_created' ||
       data.kind === 'appointment_rescheduled' || data.kind === 'appointment_cancelled' ||
       data.kind === 'patient_profile' || data.kind === 'appointment_choose' ||
       data.kind === 'appointment_patient_ambiguous') return true;
+  if (data.ok === false) return false;
+  if (typeof data.total === 'number') return data.total > 0;
+  if (Array.isArray(data.livres)) return data.livres.length > 0;
   return false;
 }
 
