@@ -2167,9 +2167,10 @@
   </div>
   <div class="ai-msgs" id="ai-msgs"></div>
   <div class="ai-chips" id="ai-chips">
-    <button class="ai-chip" onclick="aiChip('Como faço um orçamento?')">🧾 Orçamento</button>
-    <button class="ai-chip" onclick="aiChip('Onde eu agendo uma consulta?')">📅 Agendar</button>
-    <button class="ai-chip" onclick="aiChip('Onde fica o odontograma?')">🦷 Odontograma</button>
+    <button class="ai-chip" onclick="aiChip('O que tenho na agenda hoje?')">📋 Agenda hoje</button>
+    <button class="ai-chip" onclick="aiChip('Quais horários estão livres amanhã?')">🕐 Horários livres</button>
+    <button class="ai-chip" onclick="aiChip('Quem são os aniversariantes do mês?')">🎂 Aniversários</button>
+    <button class="ai-chip" onclick="aiChip('Quais pacientes estão sem retorno há 6 meses?')">📞 Retornos</button>
     <button class="ai-chip" onclick="aiChip('Qual o preço da profilaxia?')">💵 Preços</button>
   </div>
   <div class="ai-foot">
@@ -2295,7 +2296,7 @@
 
   function _sendWelcome(){
     const nome = (clinicaData?.nome_resp||'').split(' ')[0] || 'Doutor(a)';
-    _addMsg('bot', `Olá, ${_esc(nome)}! 👋 Sou sua assistente no RWDent.<br><br>Posso tirar dúvidas de uso do sistema, mostrar onde ficam as telas, explicar orçamento/odontograma/agendamento e consultar preços de procedimentos. Também consigo buscar pacientes e criar agendamentos com sua confirmação.`);
+    _addMsg('bot', `Olá, ${_esc(nome)}! 👋 Sou sua assistente no RWDent.<br><br>Posso ver sua <b>agenda</b> ("o que tenho hoje?"), achar <b>horários livres</b>, listar <b>aniversariantes</b> e <b>retornos atrasados</b>, buscar pacientes, consultar preços e <b>agendar consultas</b> com sua confirmação. Também tiro dúvidas de uso do sistema.`);
   }
 
   /* ── Chips de sugestão ── */
@@ -2412,7 +2413,9 @@
   }
 
   function _formatBotText(text){
-    const safe = _esc(text).replace(/\n/g,'<br>');
+    let safe = _esc(text).replace(/\n/g,'<br>');
+    // *negrito* e **negrito**
+    safe = safe.replace(/\*\*([^*<]+)\*\*/g,'<b>$1</b>').replace(/\*([^*<]+)\*/g,'<b>$1</b>');
     return safe.replace(/(https:\/\/calendar\.google\.com\/calendar\/render\?[^<\s]+)/g, url => {
       return `<a href="${url}" target="_blank" rel="noopener" style="color:#a04030;font-weight:700;text-decoration:underline;">Abrir Google Agenda</a>`;
     });

@@ -2,8 +2,8 @@ const { OpenAI }       = require('openai');
 const { createClient } = require('@supabase/supabase-js');
 
 const GROQ_MODEL      = 'llama-3.3-70b-versatile';
-const MAX_HISTORY     = 10;
-const MAX_CONTENT_LEN = 600;
+const MAX_HISTORY     = 14;
+const MAX_CONTENT_LEN = 900;
 const MAX_TOOL_ROUNDS = 4;
 
 // ══════════════════════════════════════════════
@@ -51,6 +51,61 @@ const TOOLS = [
           data_nascimento: { type: 'string', description: 'Data de nascimento YYYY-MM-DD (opcional)' }
         },
         required: ['nome']
+      }
+    }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'ver_agenda',
+      description: 'Mostra os agendamentos da clínica em uma data ou período. Leitura — execute direto, sem confirmação.',
+      parameters: {
+        type: 'object',
+        properties: {
+          data:     { type: 'string', description: 'Data inicial YYYY-MM-DD (padrão: hoje)' },
+          data_fim: { type: 'string', description: 'Data final YYYY-MM-DD para período (opcional)' }
+        }
+      }
+    }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'horarios_livres',
+      description: 'Lista horários livres para agendar em uma data (08:00-18:00, blocos de 30min). Leitura — execute direto.',
+      parameters: {
+        type: 'object',
+        properties: {
+          data: { type: 'string', description: 'Data YYYY-MM-DD' },
+          profissional_id: { type: 'integer', description: 'ID do profissional (opcional; usa o principal)' }
+        },
+        required: ['data']
+      }
+    }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'aniversariantes_mes',
+      description: 'Lista pacientes que fazem aniversário no mês. Leitura — execute direto.',
+      parameters: {
+        type: 'object',
+        properties: {
+          mes: { type: 'integer', description: 'Mês 1-12 (padrão: mês atual)' }
+        }
+      }
+    }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'retornos_atrasados',
+      description: 'Lista pacientes sem consulta há X meses e sem agendamento futuro (recall). Leitura — execute direto.',
+      parameters: {
+        type: 'object',
+        properties: {
+          meses: { type: 'integer', description: 'Meses sem visita (padrão: 6)' }
+        }
       }
     }
   },
@@ -116,10 +171,16 @@ PROCEDIMENTOS/PREÇOS DISPONÍVEIS PARA CONSULTA:
 ${procedures || 'Nenhuma lista de procedimentos foi enviada nesta conversa. Se perguntarem preço, oriente a abrir Financeiro > Procedimentos.'}
 
 FERRAMENTAS DISPONÍVEIS:
-• listar_pacientes   → lista pacientes (leitura, execute direto)
-• buscar_paciente    → busca por nome ou telefone (leitura, execute direto)
-• cadastrar_paciente → cadastra novo paciente (⚠️ ESCRITA — exige confirmação)
-• agendar_consulta   → cria consulta/agendamento (⚠️ ESCRITA — exige confirmação)
+• listar_pacientes    → lista pacientes (leitura, execute direto)
+• buscar_paciente     → busca por nome ou telefone (leitura, execute direto)
+• ver_agenda          → agendamentos de uma data ou período (leitura, execute direto). "O que tenho hoje/amanhã/semana?"
+• horarios_livres     → horários vagos de um dia para agendar (leitura, execute direto)
+• aniversariantes_mes → aniversariantes do mês (leitura, execute direto)
+• retornos_atrasados  → pacientes sem retorno há X meses, recall (leitura, execute direto)
+• cadastrar_paciente  → cadastra novo paciente (⚠️ ESCRITA — exige confirmação)
+• agendar_consulta    → cria consulta/agendamento (⚠️ ESCRITA — exige confirmação)
+
+Converta SEMPRE datas relativas ("hoje", "amanhã", "sexta", "semana que vem") para YYYY-MM-DD usando a data de hoje acima antes de chamar ver_agenda/horarios_livres. Para "esta semana", use data + data_fim.
 
 REGRAS OBRIGATÓRIAS:
 1. NUNCA invente, suponha ou fabrique nomes de pacientes, telefones ou qualquer dado do banco. Se não tiver acesso às ferramentas, diga isso claramente.
@@ -256,6 +317,98 @@ async function runTool(name, args, sb, clinicId) {
           telefone: data.telefone || null
         }
       });
+    }
+
+    case 'ver_agenda': {
+      const hoje = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' });
+      const ini = normalizeDate(args.data) || hoje;
+      const fim = normalizeDate(args.data_fim) || ini;
+      const { data, error } = await sb
+        .from('agendamentos')
+        .select('nome, data, horario, procedimento, prof_nome')
+        .eq('clinica_id', clinicId)
+        .gte('data', ini).lte('data', fim)
+        .order('data').order('horario')
+        .limit(30);
+      if (error) throw new Error(error.message);
+      return JSON.stringify({
+        tool: name, ok: true, kind: 'agenda_list',
+        inicio: ini, fim, total: (data||[]).length,
+        agendamentos: (data||[]).map(a => ({
+          nome: a.nome, data: a.data, horario: (a.horario||'').slice(0,5),
+          procedimento: a.procedimento || 'Consulta', prof: a.prof_nome || ''
+        }))
+      });
+    }
+
+    case 'horarios_livres': {
+      const data = normalizeDate(args.data);
+      if (!data) throw new Error('Informe a data no formato YYYY-MM-DD.');
+      const prof = await findProfessional(sb, clinicId, args.profissional_id);
+      if (!prof) throw new Error('Nenhum profissional cadastrado.');
+      const { data: ags, error } = await sb
+        .from('agendamentos')
+        .select('horario')
+        .eq('clinica_id', clinicId).eq('prof_id', prof.id).eq('data', data);
+      if (error) throw new Error(error.message);
+      const ocupados = new Set((ags||[]).map(a => (a.horario||'').slice(0,5)));
+      const livres = [];
+      for (let h = 8; h < 18; h++) {
+        for (const m of ['00','30']) {
+          const slot = `${String(h).padStart(2,'0')}:${m}`;
+          if (!ocupados.has(slot)) livres.push(slot);
+        }
+      }
+      return JSON.stringify({
+        tool: name, ok: true, kind: 'free_slots',
+        data, profissional: prof.nome, ocupados: ocupados.size, livres
+      });
+    }
+
+    case 'aniversariantes_mes': {
+      const mesAtual = Number(new Date().toLocaleDateString('en-CA',{timeZone:'America/Sao_Paulo'}).slice(5,7));
+      const mes = Math.min(12, Math.max(1, Number(args.mes) || mesAtual));
+      const { data, error } = await sb
+        .from('pacientes')
+        .select('nome, telefone, data_nascimento')
+        .eq('clinica_id', clinicId)
+        .not('data_nascimento', 'is', null)
+        .limit(500);
+      if (error) throw new Error(error.message);
+      const lista = (data||[])
+        .filter(p => Number(String(p.data_nascimento).slice(5,7)) === mes)
+        .map(p => ({ nome: p.nome, telefone: p.telefone || null, dia: Number(String(p.data_nascimento).slice(8,10)) }))
+        .sort((a,b) => a.dia - b.dia)
+        .slice(0, 30);
+      return JSON.stringify({ tool: name, ok: true, kind: 'birthday_list', mes, total: lista.length, aniversariantes: lista });
+    }
+
+    case 'retornos_atrasados': {
+      const meses = Math.min(24, Math.max(1, Number(args.meses) || 6));
+      const hoje = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' });
+      const corte = new Date(Date.now() - meses * 2629800000).toISOString().slice(0,10);
+      const { data: ags, error } = await sb
+        .from('agendamentos')
+        .select('paciente_id, nome, telefone, data')
+        .eq('clinica_id', clinicId)
+        .order('data', { ascending: false })
+        .limit(1500);
+      if (error) throw new Error(error.message);
+      const porPac = new Map();
+      (ags||[]).forEach(a => {
+        if (!a.paciente_id) return;
+        const cur = porPac.get(a.paciente_id);
+        if (!cur) porPac.set(a.paciente_id, { nome: a.nome, telefone: a.telefone || null, ultima: a.data, temFuturo: a.data >= hoje });
+        else {
+          if (a.data > cur.ultima) cur.ultima = a.data;
+          if (a.data >= hoje) cur.temFuturo = true;
+        }
+      });
+      const lista = [...porPac.values()]
+        .filter(p => !p.temFuturo && p.ultima && p.ultima < corte)
+        .sort((a,b) => a.ultima.localeCompare(b.ultima))
+        .slice(0, 20);
+      return JSON.stringify({ tool: name, ok: true, kind: 'recall_list', meses, total: lista.length, pacientes: lista });
     }
 
     case 'agendar_consulta': {
@@ -462,6 +615,40 @@ function formatToolReply(outputs) {
 
   if (data.kind === 'patient_created' && data.patient) {
     return `Paciente cadastrado com sucesso:\n\n${data.patient.nome} - ${formatPhone(data.patient.telefone)}`;
+  }
+
+  if (data.kind === 'agenda_list') {
+    const ags = Array.isArray(data.agendamentos) ? data.agendamentos : [];
+    const periodo = data.inicio === data.fim ? formatDateBR(data.inicio) : `${formatDateBR(data.inicio)} a ${formatDateBR(data.fim)}`;
+    if (!ags.length) return `Nenhum agendamento em ${periodo}. Agenda livre! 🎉`;
+    const porData = {};
+    ags.forEach(a => { (porData[a.data] = porData[a.data] || []).push(a); });
+    const blocos = Object.keys(porData).sort().map(d => {
+      const linhas = porData[d].map(a => `${a.horario} — ${a.nome} (${a.procedimento}${a.prof ? ', ' + a.prof.split(' ')[0] + ' ' + (a.prof.split(' ')[1]||'') : ''})`);
+      return (data.inicio === data.fim ? '' : `*${formatDateBR(d)}*\n`) + linhas.join('\n');
+    });
+    return `Agenda de ${periodo} — ${ags.length} consulta(s):\n\n${blocos.join('\n\n')}`;
+  }
+
+  if (data.kind === 'free_slots') {
+    const livres = Array.isArray(data.livres) ? data.livres : [];
+    if (!livres.length) return `Nenhum horário livre em ${formatDateBR(data.data)} para ${data.profissional}. Dia lotado!`;
+    return `Horários livres em ${formatDateBR(data.data)} (${data.profissional}):\n\n${livres.join('  ·  ')}\n\nQuer que eu agende algum? Me diga o paciente e o horário.`;
+  }
+
+  if (data.kind === 'birthday_list') {
+    const lst = Array.isArray(data.aniversariantes) ? data.aniversariantes : [];
+    const nomesMes = ['','janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+    if (!lst.length) return `Nenhum aniversariante em ${nomesMes[data.mes]||'este mês'}.`;
+    const linhas = lst.map(p => `Dia ${String(p.dia).padStart(2,'0')} — ${p.nome} · ${formatPhone(p.telefone)}`);
+    return `🎂 Aniversariantes de ${nomesMes[data.mes]||'este mês'}:\n\n${linhas.join('\n')}\n\nNa tela Início tem o botão de WhatsApp para enviar os parabéns.`;
+  }
+
+  if (data.kind === 'recall_list') {
+    const lst = Array.isArray(data.pacientes) ? data.pacientes : [];
+    if (!lst.length) return `Nenhum paciente sem retorno há mais de ${data.meses} meses. Tudo em dia! ✅`;
+    const linhas = lst.map(p => `${p.nome} — última visita ${formatDateBR(p.ultima)} · ${formatPhone(p.telefone)}`);
+    return `📞 Pacientes sem retorno há ${data.meses}+ meses:\n\n${linhas.join('\n')}\n\nNa tela Início, o card "Retornos atrasados" tem o WhatsApp pronto para chamá-los.`;
   }
 
   if (data.kind === 'appointment_patient_ambiguous') {
