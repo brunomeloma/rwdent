@@ -6,7 +6,6 @@ const { createClient } = require('@supabase/supabase-js');
 const GROQ_MODELS = [
   ...(process.env.GROQ_MODEL ? [process.env.GROQ_MODEL.trim()] : []),
   'moonshotai/kimi-k2-instruct-0905', // Kimi K2 — forte em tool calling e PT-BR
-  'moonshotai/kimi-k2-instruct',
   'llama-3.3-70b-versatile'           // reserva estável
 ];
 let _modeloIdx = 0; // cache por instância: pula modelos que já falharam
@@ -37,10 +36,10 @@ async function groqCreate(groq, params){
         _modeloIdx++;
         continue;
       }
-      // Último recurso: se as ferramentas podem ser o problema (400) ou o
-      // modelo está saturado, tenta o modelo estável UMA vez sem tools —
-      // melhor responder sem ações do que não responder.
-      if (!_erroDeChave(err) && params.tools) {
+      // Último recurso: se as ferramentas podem ser o problema (400/503),
+      // tenta o modelo estável UMA vez sem tools. Em 429 não tenta: é cota
+      // esgotada — outra chamada só queima mais limite.
+      if (!_erroDeChave(err) && err?.status !== 429 && params.tools) {
         try {
           const semTools = { ...params };
           delete semTools.tools; delete semTools.tool_choice;
@@ -320,7 +319,7 @@ function normalizeProcedureContext(value) {
       return `• ${nome} — ${precoTxt} (${grupo}${tipo ? ', ' + tipo : ''})`;
     })
     .filter(Boolean);
-  return rows.join('\n').slice(0, 6000);
+  return rows.join('\n').slice(0, 4000);
 }
 
 // ══════════════════════════════════════════════
@@ -1051,9 +1050,12 @@ module.exports = async function handler(req, res) {
   } catch (err) {
     const detail = err?.message || String(err);
     console.error(`[AI] provider=groq model=${modeloUsado} status=${err?.status||'?'} falhas=${err?.falhas||'-'} erro: ${detail}`);
+    if (err?.status === 429) {
+      // 429 vai como 429 mesmo: o app NÃO retenta (retentar só queima mais cota)
+      return res.status(429).json({ error: 'Limite de uso da IA atingido no provedor (plano gratuito da Groq). Aguarde 1 minuto e tente de novo. Se persistir o dia todo, o limite diário foi atingido.' });
+    }
     let msg = 'Serviço de IA temporariamente indisponível. Tente novamente.';
-    if (err?.status === 429) msg = 'A IA recebeu muitas mensagens seguidas (limite do provedor). Aguarde ~30 segundos e tente de novo.';
-    else if (err?.status === 401) msg = 'Chave da IA inválida no servidor. Avise o administrador.';
+    if (err?.status === 401) msg = 'Chave da IA inválida no servidor. Avise o administrador.';
     else if (err?.status === 413 || /too large|maximum context|token/i.test(detail)) msg = 'A conversa ficou longa demais. Feche e abra o chat para começar de novo.';
     return res.status(500).json({ error: msg });
   }

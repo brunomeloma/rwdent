@@ -2409,10 +2409,11 @@
       try {
         const res = await fetch(url, { ...opts, signal: ctl.signal });
         clearTimeout(timer);
-        // 5xx transitório (cold start / gateway): tenta de novo
-        if(res.status >= 500 && i < max){
+        // 5xx transitório (cold start/gateway): UMA nova tentativa apenas —
+        // mais que isso multiplica chamadas e queima a cota do provedor de IA
+        if(res.status >= 500 && i < 2){
           ultimoErro = new Error('Erro '+res.status);
-          await new Promise(r=>setTimeout(r, 900*i));
+          await new Promise(r=>setTimeout(r, 1200));
           continue;
         }
         return res;
