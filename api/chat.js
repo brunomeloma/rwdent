@@ -83,6 +83,7 @@ const TOOLS = [
       description: 'Lista os pacientes cadastrados na clínica. Leitura — execute direto, sem confirmação.',
       parameters: {
         type: 'object',
+        additionalProperties: false,
         properties: {
           limite: { type: 'integer', description: 'Quantidade (padrão: 10, máximo: 20)' }
         }
@@ -96,6 +97,7 @@ const TOOLS = [
       description: 'Busca pacientes por nome ou telefone. Leitura — execute direto, sem confirmação.',
       parameters: {
         type: 'object',
+        additionalProperties: false,
         properties: {
           query: { type: 'string', description: 'Nome (parcial) ou telefone do paciente' }
         },
@@ -110,6 +112,7 @@ const TOOLS = [
       description: 'Cadastra um novo paciente. ESCRITA — só chame após o usuário confirmar com "sim", "pode" ou "confirmo".',
       parameters: {
         type: 'object',
+        additionalProperties: false,
         properties: {
           nome:            { type: 'string', description: 'Nome completo' },
           telefone:        { type: 'string', description: 'Telefone (somente números)' },
@@ -127,6 +130,7 @@ const TOOLS = [
       description: 'Mostra os agendamentos da clínica em uma data ou período. Leitura — execute direto, sem confirmação.',
       parameters: {
         type: 'object',
+        additionalProperties: false,
         properties: {
           data:     { type: 'string', description: 'Data inicial YYYY-MM-DD (padrão: hoje)' },
           data_fim: { type: 'string', description: 'Data final YYYY-MM-DD para período (opcional)' }
@@ -141,6 +145,7 @@ const TOOLS = [
       description: 'Lista horários livres para agendar em uma data (08:00-18:00, blocos de 30min). Leitura — execute direto.',
       parameters: {
         type: 'object',
+        additionalProperties: false,
         properties: {
           data: { type: 'string', description: 'Data YYYY-MM-DD' },
           profissional_id: { type: 'integer', description: 'ID do profissional (opcional; usa o principal)' }
@@ -156,6 +161,7 @@ const TOOLS = [
       description: 'Lista pacientes que fazem aniversário no mês. Leitura — execute direto.',
       parameters: {
         type: 'object',
+        additionalProperties: false,
         properties: {
           mes: { type: 'integer', description: 'Mês 1-12 (padrão: mês atual)' }
         }
@@ -169,6 +175,7 @@ const TOOLS = [
       description: 'Lista pacientes sem consulta há X meses e sem agendamento futuro (recall). Leitura — execute direto.',
       parameters: {
         type: 'object',
+        additionalProperties: false,
         properties: {
           meses: { type: 'integer', description: 'Meses sem visita (padrão: 6)' }
         }
@@ -182,6 +189,7 @@ const TOOLS = [
       description: 'Resumo do paciente: contato, próxima consulta, última visita e últimos atendimentos. Leitura — execute direto.',
       parameters: {
         type: 'object',
+        additionalProperties: false,
         properties: {
           paciente_query: { type: 'string', description: 'Nome ou telefone do paciente' }
         },
@@ -196,6 +204,7 @@ const TOOLS = [
       description: 'Muda a data/horário de uma consulta existente. ESCRITA — só chame após o usuário confirmar com "sim", "pode" ou "confirmo".',
       parameters: {
         type: 'object',
+        additionalProperties: false,
         properties: {
           paciente_query: { type: 'string', description: 'Nome ou telefone do paciente' },
           data_atual:     { type: 'string', description: 'Data atual da consulta YYYY-MM-DD (se o paciente tiver mais de uma)' },
@@ -213,6 +222,7 @@ const TOOLS = [
       description: 'Marca uma consulta como cancelada (não apaga o registro). ESCRITA — só chame após o usuário confirmar com "sim", "pode" ou "confirmo".',
       parameters: {
         type: 'object',
+        additionalProperties: false,
         properties: {
           paciente_query: { type: 'string', description: 'Nome ou telefone do paciente' },
           data:           { type: 'string', description: 'Data da consulta YYYY-MM-DD (se o paciente tiver mais de uma)' }
@@ -228,6 +238,7 @@ const TOOLS = [
       description: 'Cria um agendamento na agenda da clínica. ESCRITA — só chame após o usuário confirmar com "sim", "pode" ou "confirmo".',
       parameters: {
         type: 'object',
+        additionalProperties: false,
         properties: {
           paciente_query: { type: 'string', description: 'Nome ou telefone do paciente a agendar' },
           data:           { type: 'string', description: 'Data da consulta em YYYY-MM-DD' },
