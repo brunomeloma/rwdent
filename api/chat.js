@@ -24,20 +24,34 @@ function _erroDeChave(err){
 
 // chat.completions.create com fallback de modelo
 async function groqCreate(groq, params){
-  // Erro transitório no modelo em cache não deve fixá-lo para sempre:
-  // tenta a partir do cache, mas sem gravar avanço por erro transitório? Não —
-  // simples e robusto: avança o cache; a corrente termina no modelo estável.
+  const falhas = [];
   while (_modeloIdx < GROQ_MODELS.length) {
     const model = GROQ_MODELS[_modeloIdx];
     try {
       const resp = await groq.chat.completions.create({ ...params, model });
       return { resp, model };
     } catch (err) {
+      falhas.push(`${model}:${err?.status||'?'}`);
+      console.log(`[AI] modelo ${model} falhou (${err?.status||''} ${String(err?.message||'').slice(0,140)})`);
       if (!_erroDeChave(err) && _modeloIdx < GROQ_MODELS.length - 1) {
-        console.log(`[AI] modelo ${model} falhou (${err?.status||''} ${String(err?.message||'').slice(0,100)}) — caindo para ${GROQ_MODELS[_modeloIdx+1]}`);
         _modeloIdx++;
         continue;
       }
+      // Último recurso: se as ferramentas podem ser o problema (400) ou o
+      // modelo está saturado, tenta o modelo estável UMA vez sem tools —
+      // melhor responder sem ações do que não responder.
+      if (!_erroDeChave(err) && params.tools) {
+        try {
+          const semTools = { ...params };
+          delete semTools.tools; delete semTools.tool_choice;
+          const resp = await groq.chat.completions.create({ ...semTools, model: GROQ_MODELS[GROQ_MODELS.length - 1] });
+          console.log(`[AI] respondeu SEM ferramentas após falhas: ${falhas.join(' ')}`);
+          return { resp, model: GROQ_MODELS[GROQ_MODELS.length - 1] + ' (sem tools)' };
+        } catch (err2) {
+          falhas.push(`sem-tools:${err2?.status||'?'}`);
+        }
+      }
+      err.falhas = falhas.join(' ');
       throw err;
     }
   }
@@ -293,7 +307,7 @@ function normalizeProcedureContext(value) {
   if (!Array.isArray(value)) return '';
   const rows = value
     .filter(p => p && typeof p.nome === 'string')
-    .slice(0, 180)
+    .slice(0, 120)
     .map(p => {
       const nome = String(p.nome || '').replace(/\s+/g, ' ').trim().slice(0, 120);
       const grupo = String(p.grupo || 'Procedimentos').replace(/\s+/g, ' ').trim().slice(0, 80);
@@ -306,7 +320,7 @@ function normalizeProcedureContext(value) {
       return `• ${nome} — ${precoTxt} (${grupo}${tipo ? ', ' + tipo : ''})`;
     })
     .filter(Boolean);
-  return rows.join('\n').slice(0, 14000);
+  return rows.join('\n').slice(0, 6000);
 }
 
 // ══════════════════════════════════════════════
@@ -1036,7 +1050,11 @@ module.exports = async function handler(req, res) {
 
   } catch (err) {
     const detail = err?.message || String(err);
-    console.error(`[AI] provider=groq model=${modeloUsado} erro: ${detail}`);
-    return res.status(500).json({ error: 'Serviço de IA temporariamente indisponível. Tente novamente.' });
+    console.error(`[AI] provider=groq model=${modeloUsado} status=${err?.status||'?'} falhas=${err?.falhas||'-'} erro: ${detail}`);
+    let msg = 'Serviço de IA temporariamente indisponível. Tente novamente.';
+    if (err?.status === 429) msg = 'A IA recebeu muitas mensagens seguidas (limite do provedor). Aguarde ~30 segundos e tente de novo.';
+    else if (err?.status === 401) msg = 'Chave da IA inválida no servidor. Avise o administrador.';
+    else if (err?.status === 413 || /too large|maximum context|token/i.test(detail)) msg = 'A conversa ficou longa demais. Feche e abra o chat para começar de novo.';
+    return res.status(500).json({ error: msg });
   }
 };
