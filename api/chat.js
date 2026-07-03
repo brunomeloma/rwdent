@@ -7,10 +7,15 @@ const { createClient } = require('@supabase/supabase-js');
 // adiciona o Gemini gratuito no fim — cobre quando a cota da Groq esgota.
 function montarCandidatos(clients){
   const c = [];
+  // Groq descontinua modelos com frequência (kimi-k2-instruct-0905 caiu em
+  // 23/03/2026, llama-3.3-70b-versatile e qwen/qwen3-32b caíram em
+  // 17/06/2026 — todos com o mesmo substituto recomendado pela própria Groq:
+  // openai/gpt-oss-120b, hoje o modelo "produção" estável deles). Confirmado
+  // em console.groq.com/docs/deprecations em jul/2026.
   if (clients.groq) {
     if (process.env.GROQ_MODEL) c.push({ prov:'groq', model: process.env.GROQ_MODEL.trim() });
-    c.push({ prov:'groq', model:'moonshotai/kimi-k2-instruct-0905' });
-    c.push({ prov:'groq', model:'llama-3.3-70b-versatile' });
+    c.push({ prov:'groq', model:'openai/gpt-oss-120b' });
+    c.push({ prov:'groq', model:'openai/gpt-oss-20b' });
   }
   // Cerebras: gratuito com limites folgados. O catálogo de modelos da
   // Cerebras muda com o tempo — confirmado ao vivo em jul/2026 via
