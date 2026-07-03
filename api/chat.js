@@ -12,11 +12,13 @@ function montarCandidatos(clients){
     c.push({ prov:'groq', model:'moonshotai/kimi-k2-instruct-0905' });
     c.push({ prov:'groq', model:'llama-3.3-70b-versatile' });
   }
-  // Cerebras: gratuito com limites folgados, mesma API e mesmo Llama 3.3.
-  // Não usar llama3.1-8b aqui: modelo pequeno demais, erra a escolha de
-  // ferramenta com frequência (ex.: chama buscar_paciente para pergunta de preço).
+  // Cerebras: gratuito com limites folgados. O catálogo de modelos da
+  // Cerebras muda com o tempo — confirmado ao vivo em jul/2026 via
+  // cloud.cerebras.ai/.../playground (botão "View Code") que o modelo
+  // disponível na conta é gpt-oss-120b (não mais llama-3.3-70b, que
+  // passou a dar 404). gpt-oss-120b tem suporte nativo forte a tool calling.
   if (clients.cerebras) {
-    c.push({ prov:'cerebras', model:'llama-3.3-70b' });
+    c.push({ prov:'cerebras', model:'gpt-oss-120b' });
   }
   // OpenRouter: agregador com variantes gratuitas
   if (clients.openrouter) {
