@@ -1055,12 +1055,14 @@ select, textarea {
     margin-bottom:14px;
   }
 
-  /* Inputs e selects: altura confortável para toque */
+  /* Inputs e selects: altura confortável para toque.
+     Sem !important no padding: campos com ícone dentro (lupa de busca)
+     usam padding-left inline maior e ele precisa vencer. */
   input:not([type=checkbox]):not([type=radio]),
   select,
   textarea{
     min-height:44px;
-    padding:10px 12px !important;
+    padding:10px 12px;
   }
   textarea{min-height:80px;}
 

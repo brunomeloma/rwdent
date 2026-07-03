@@ -2143,9 +2143,10 @@
 #ai-send:hover{transform:scale(1.08);}
 #ai-send:disabled{opacity:.4;cursor:not-allowed;transform:none!important;}
 
-@media(max-width:480px){
-  #ai-box{right:8px;bottom:76px;width:calc(100vw - 16px);}
-  #ai-btn{right:10px;bottom:18px;}
+@media(max-width:768px){
+  /* Acima da barra de navegação inferior para não cobrir o botão "Mais" */
+  #ai-btn{right:12px;bottom:96px;}
+  #ai-box{right:8px;bottom:158px;width:calc(100vw - 16px);max-height:min(420px,calc(100vh - 180px));}
 }
 </style>
 
