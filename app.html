@@ -2364,7 +2364,7 @@
         currentPatient: _pacAberto,
         procedures:  _safeProceduresContext()
       };
-      const res = await fetch('/api/chat', {
+      const res = await _fetchComRetry('/api/chat', {
         method: 'POST',
         headers: {
           'Content-Type':  'application/json',
@@ -2386,10 +2386,44 @@
       _hideTyping();
       const msg = _friendlyError(e?.message || '');
       _addMsg('bot', `⚠️ ${msg}`);
+      // Devolve a pergunta ao campo para reenviar com um toque
+      const last = _hist[_hist.length - 1];
+      if(last && last.role === 'user'){
+        _hist.pop();
+        const inp = document.getElementById('ai-input');
+        if(inp && !inp.value) inp.value = last.content;
+      }
     } finally {
       _busy = false; _setEnabled(true);
       document.getElementById('ai-input').focus();
     }
+  }
+
+  /* ── Fetch com timeout e retry para rede móvel instável ── */
+  async function _fetchComRetry(url, opts, tentativas){
+    const max = tentativas || 3;
+    let ultimoErro;
+    for(let i = 1; i <= max; i++){
+      const ctl = new AbortController();
+      const timer = setTimeout(()=>ctl.abort(), 30000);
+      try {
+        const res = await fetch(url, { ...opts, signal: ctl.signal });
+        clearTimeout(timer);
+        // 5xx transitório (cold start / gateway): tenta de novo
+        if(res.status >= 500 && i < max){
+          ultimoErro = new Error('Erro '+res.status);
+          await new Promise(r=>setTimeout(r, 900*i));
+          continue;
+        }
+        return res;
+      } catch(e){
+        clearTimeout(timer);
+        ultimoErro = e;
+        // Erro de rede (Load failed / Failed to fetch / abort) → retry com backoff
+        if(i < max){ await new Promise(r=>setTimeout(r, 900*i)); continue; }
+      }
+    }
+    throw ultimoErro || new Error('Falha de conexão');
   }
 
   /* ── Mensagens amigáveis (sem JSON técnico) ── */
@@ -2399,8 +2433,8 @@
       return 'Sua sessão expirou. Por favor, faça login novamente.';
     if(/chave.*inválida|api_key|key.*invalid|gemini.*inválid/i.test(raw))
       return 'A IA está temporariamente indisponível. Tente novamente mais tarde.';
-    if(/Failed to fetch|NetworkError|network/i.test(raw))
-      return 'Sem conexão com o servidor. Verifique sua internet.';
+    if(/Failed to fetch|NetworkError|network|Load failed|aborted|timeout/i.test(raw))
+      return 'Falha de conexão. Tentei de novo e não consegui — verifique sua internet e envie novamente.';
     if(/Erro 5[0-9]{2}|HTTP 5[0-9]{2}/i.test(raw))
       return 'O servidor encontrou um problema. Tente novamente em instantes.';
     if(raw.length > 120 || raw.startsWith('{') || raw.startsWith('['))
