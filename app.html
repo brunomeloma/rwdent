@@ -158,6 +158,7 @@
         <div class="tn-dropdown">
           <button class="tn-dropdown-item" data-tab="profissionais" onclick="switchTab('profissionais');tnClose()"><i class="ti ti-briefcase"></i> Profissionais</button>
           <button class="tn-dropdown-item" data-tab="resgate" onclick="switchTab('resgate');tnClose()"><i class="ti ti-heart-handshake"></i> Resgate de Pacientes</button>
+          <button class="tn-dropdown-item" data-tab="captacao" onclick="switchTab('captacao');tnClose()"><i class="ti ti-address-book"></i> Captação</button>
           <button class="tn-dropdown-item" data-tab="invisalign_apresentacao" onclick="switchTab('invisalign_apresentacao');tnClose()"><i class="ti ti-align-box-left-stretch"></i> Alinhador Transparente</button>
           <button class="tn-dropdown-item admin-only" data-tab="admin" onclick="switchTab('admin');tnClose()" style="display:none;"><i class="ti ti-shield-check"></i> Painel Admin</button>
         </div>
@@ -1300,6 +1301,84 @@
     </div>
 
     <!-- ══════════════════════════════════════════════════
+         CAPTAÇÃO DE NOVOS CONTATOS
+    ══════════════════════════════════════════════════ -->
+    <div id="tab-captacao" class="content" style="display:none;">
+      <div class="card">
+        <div class="section-header">
+          <h2><i class="ti ti-address-book"></i> Captação</h2>
+        </div>
+        <p style="font-size:13px;color:var(--rose-text);margin-bottom:16px;">Cadastre contatos de possíveis pacientes (nome e telefone) e envie mensagem de WhatsApp para cada um. Ideal para listas de indicações ou contatos avulsos.</p>
+
+        <!-- Adicionar contato individual -->
+        <div style="background:var(--rose-lighter);border:1px solid var(--rose-light);border-radius:14px;padding:14px 16px;margin-bottom:14px;">
+          <h3 style="font-size:13px;font-weight:700;color:var(--rose-dark);margin-bottom:10px;">Adicionar contato</h3>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <input id="cap-novo-nome" type="text" placeholder="Nome do contato" style="flex:2;min-width:160px;padding:9px 12px;border:1.5px solid var(--rose-light);border-radius:9px;font-size:13px;font-family:inherit;">
+            <input id="cap-novo-tel" type="text" placeholder="Telefone (com DDD)" style="flex:1;min-width:140px;padding:9px 12px;border:1.5px solid var(--rose-light);border-radius:9px;font-size:13px;font-family:inherit;">
+            <button class="btn-primary" onclick="capAdicionarContato()" style="white-space:nowrap;"><i class="ti ti-plus"></i> Adicionar</button>
+          </div>
+        </div>
+
+        <!-- Adicionar em massa -->
+        <div style="background:var(--rose-lighter);border:1px solid var(--rose-light);border-radius:14px;padding:14px 16px;margin-bottom:20px;">
+          <h3 style="font-size:13px;font-weight:700;color:var(--rose-dark);margin-bottom:6px;">Adicionar vários de uma vez</h3>
+          <p style="font-size:12px;color:var(--rose-text);margin-bottom:8px;">Cole uma lista, um contato por linha. Formato: <code style="background:#fff;padding:1px 5px;border-radius:5px;">Nome, Telefone</code> (também aceita espaço ou tab entre nome e telefone).</p>
+          <textarea id="cap-lote-texto" placeholder="Maria Silva, (99) 98888-7777&#10;João Souza, (99) 99999-1111" style="width:100%;height:100px;border:1.5px solid var(--rose-light);border-radius:9px;padding:10px 12px;font-size:13px;font-family:inherit;resize:vertical;background:#fff;"></textarea>
+          <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px;">
+            <button class="btn-secondary" onclick="document.getElementById('cap-lote-texto').value=''">Limpar</button>
+            <button class="btn-primary" onclick="capAdicionarLote()"><i class="ti ti-upload"></i> Importar lista</button>
+          </div>
+        </div>
+
+        <!-- Métricas -->
+        <div id="cap-metrics" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:16px;"></div>
+
+        <!-- Busca e filtros -->
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;align-items:center;">
+          <input id="cap-busca" type="text" placeholder="Buscar por nome ou telefone..." oninput="capRenderTabela()" style="flex:1;min-width:180px;padding:8px 12px;border:1.5px solid var(--rose-light);border-radius:9px;font-size:13px;font-family:inherit;">
+          <select id="cap-filtro-status" onchange="capRenderTabela()" style="padding:8px 10px;border:1.5px solid var(--rose-light);border-radius:9px;font-size:13px;font-family:inherit;background:#fff;">
+            <option value="">Todos os status</option>
+            <option value="novo">Novo</option>
+            <option value="contatado">Contatado</option>
+            <option value="respondeu">Respondeu</option>
+            <option value="agendou">Agendou</option>
+            <option value="sem_interesse">Sem interesse</option>
+          </select>
+        </div>
+
+        <!-- Tabela -->
+        <div style="overflow-x:auto;">
+          <table style="width:100%;border-collapse:collapse;font-size:13px;">
+            <thead>
+              <tr style="background:var(--rose-lighter);">
+                <th style="padding:10px;text-align:left;">Nome</th>
+                <th style="padding:10px;text-align:left;">Telefone</th>
+                <th style="padding:10px;text-align:center;">Status</th>
+                <th style="padding:10px;text-align:center;">WhatsApp</th>
+                <th style="padding:10px;text-align:center;"></th>
+              </tr>
+            </thead>
+            <tbody id="cap-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Modal preview mensagem -->
+      <div id="cap-modal-bg" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;align-items:center;justify-content:center;padding:16px;" onclick="if(event.target===this)capFecharModal()">
+        <div style="background:#fff;border-radius:18px;padding:24px;max-width:480px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.3);">
+          <h2 style="font-size:15px;font-weight:700;color:var(--rose-dark);margin-bottom:4px;"><i class="ti ti-brand-whatsapp" style="color:#25d366;"></i> Mensagem para <span id="cap-modal-nome"></span></h2>
+          <p style="font-size:12px;color:var(--rose-text);margin-bottom:12px;">Revise e edite o texto antes de enviar:</p>
+          <textarea id="cap-modal-msg" style="width:100%;height:160px;border:1.5px solid var(--rose-light);border-radius:10px;padding:12px;font-size:13px;font-family:inherit;resize:vertical;background:var(--rose-lighter);"></textarea>
+          <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px;">
+            <button class="btn-secondary" onclick="capFecharModal()">Cancelar</button>
+            <button class="btn-primary" style="background:#25d366;border-color:#25d366;" onclick="capEnviarWpp()"><i class="ti ti-brand-whatsapp"></i> Enviar via WhatsApp</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════
          ALINHADOR TRANSPARENTE — APRESENTAÇÃO PARA O PACIENTE
     ══════════════════════════════════════════════════ -->
     <div id="tab-invisalign_apresentacao" class="content" style="display:none;">
@@ -1690,6 +1769,7 @@
         <button onclick="switchTab('financeiro');toggleMobileMore()"><i class="ti ti-chart-bar"></i>Financeiro</button>
         <button onclick="switchTab('profissionais');toggleMobileMore()"><i class="ti ti-stethoscope"></i>Equipe</button>
         <button onclick="switchTab('resgate');toggleMobileMore()"><i class="ti ti-heart-handshake"></i>Resgate</button>
+        <button onclick="switchTab('captacao');toggleMobileMore()"><i class="ti ti-address-book"></i>Captação</button>
         <button onclick="switchTab('invisalign_apresentacao');toggleMobileMore()"><i class="ti ti-align-box-left-stretch"></i>Alinhador</button>
         <button onclick="switchTab('configuracoes');toggleMobileMore()"><i class="ti ti-settings"></i>Config.</button>
         <button class="admin-only" onclick="switchTab('admin');toggleMobileMore()" style="display:none;"><i class="ti ti-shield-check"></i>Admin</button>

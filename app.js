@@ -551,7 +551,7 @@ function atualizarFinPinStatus(){
 function switchTab(tab){
   if(tab==='invisalign_apresentacao' && !_isRhaizaClinic) tab='home';
   if(finPinBloqueado(tab)){ pedirFinPin(tab); return; }
-  ['home','agendar','lista','calendario','pacientes','profissionais','configuracoes','financeiro','procedimentos_fin','materiais_fin','estoque_fin','vendas_fin','venda_rapida','resgate','invisalign_apresentacao','admin'].forEach(t=>{
+  ['home','agendar','lista','calendario','pacientes','profissionais','configuracoes','financeiro','procedimentos_fin','materiais_fin','estoque_fin','vendas_fin','venda_rapida','resgate','captacao','invisalign_apresentacao','admin'].forEach(t=>{
     const el=document.getElementById('tab-'+t);
     if(el) el.style.display = t===tab?'':'none';
   });
@@ -569,7 +569,7 @@ function switchTab(tab){
     calendario:'Calendário de atendimentos', pacientes:'Cadastro de pacientes',
     profissionais:'Equipe e profissionais', financeiro:'Painel financeiro', procedimentos_fin:'Procedimentos e precificação',
     materiais_fin:'Materiais e insumos', estoque_fin:'Controle de estoque', vendas_fin:'Vendas e orçamentos',
-    venda_rapida:'Vendas', resgate:'Resgate de pacientes', invisalign_apresentacao:'Alinhador Transparente', configuracoes:'Configurações da clínica', admin:'Painel Administrativo'
+    venda_rapida:'Vendas', resgate:'Resgate de pacientes', captacao:'Captação de contatos', invisalign_apresentacao:'Alinhador Transparente', configuracoes:'Configurações da clínica', admin:'Painel Administrativo'
   };
   const _subEl = document.getElementById('header-subtitulo');
   if(_subEl) _subEl.textContent = _tituloAba[tab] || 'Agendamentos e Prontuários Odontológicos';
@@ -595,6 +595,10 @@ function switchTab(tab){
     if(!_isRhaizaClinic) vendasSubTab('vr');
     // No mobile, foca busca automaticamente
     setTimeout(()=>{ const _s=document.getElementById('vr-search-m'); if(_s&&window.innerWidth<=768) _s.focus(); },200);
+  }
+  if(tab==='captacao'){
+    if(!_financeiroCarregado){ loadFinanceiro().then(()=>capRender()); }
+    else capRender();
   }
   if(tab==='venda_rapida'||tab==='financeiro'||tab==='procedimentos_fin'||tab==='materiais_fin'||tab==='estoque_fin'||tab==='vendas_fin'){
     if(!_financeiroCarregado){
@@ -10332,6 +10336,219 @@ function enviarResgateWpp(){
   window.open(`https://wa.me/${num}?text=${encodeURIComponent(msg)}`, '_blank');
   // NÃO fecha o modal — só mostra confirmação
   showToast('WhatsApp aberto! Mensagem '+(getResgateContador(nome))+' enviada para '+nome);
+}
+
+// ══════════════════════════════════════════════════════
+// CAPTAÇÃO DE NOVOS CONTATOS
+// ══════════════════════════════════════════════════════
+let capModalId = null;
+
+const CAP_STATUS_LABEL = {
+  novo:'Novo', contatado:'Contatado', respondeu:'Respondeu', agendou:'Agendou', sem_interesse:'Sem interesse'
+};
+const CAP_STATUS_COR = {
+  novo:'#6b21a8', contatado:'#856404', respondeu:'#1d4ed8', agendou:'#2e7d32', sem_interesse:'#dc2626'
+};
+
+function capContatos(){
+  if(!Array.isArray(cfg.captacao)) cfg.captacao = [];
+  return cfg.captacao;
+}
+
+function capProximoId(){
+  const lista = capContatos();
+  return lista.length ? Math.max(...lista.map(c=>c.id||0)) + 1 : 1;
+}
+
+function capNormalizarTel(tel){
+  return String(tel||'').replace(/\D/g,'');
+}
+
+async function capSalvar(){
+  const err = await saveFinanceiro();
+  if(err){ showToast('Erro ao salvar: '+(err.message||err),'error'); return false; }
+  return true;
+}
+
+function capRender(){
+  capRenderTabela();
+}
+
+function capAdicionarContato(){
+  const nomeEl = document.getElementById('cap-novo-nome');
+  const telEl  = document.getElementById('cap-novo-tel');
+  const nome = (nomeEl?.value||'').trim();
+  const tel  = capNormalizarTel(telEl?.value);
+  if(!nome){ showToast('Informe o nome do contato','error'); return; }
+  if(!tel){ showToast('Informe o telefone do contato','error'); return; }
+  const lista = capContatos();
+  if(lista.some(c=>capNormalizarTel(c.telefone)===tel)){
+    showToast('Já existe um contato com esse telefone','error');
+    return;
+  }
+  lista.push({ id:capProximoId(), nome, telefone: telEl.value.trim(), status:'novo', enviados:0, criado_em:new Date().toISOString() });
+  nomeEl.value=''; telEl.value='';
+  capSalvar().then(()=>{ showToast('Contato adicionado!'); capRenderTabela(); });
+}
+
+function capAdicionarLote(){
+  const txt = document.getElementById('cap-lote-texto');
+  const linhas = (txt?.value||'').split('\n').map(l=>l.trim()).filter(Boolean);
+  if(!linhas.length){ showToast('Cole ao menos um contato','error'); return; }
+
+  const lista = capContatos();
+  const telsExistentes = new Set(lista.map(c=>capNormalizarTel(c.telefone)));
+  let proximoId = capProximoId();
+  let adicionados = 0, duplicados = 0, invalidos = 0;
+
+  linhas.forEach(linha=>{
+    const partes = linha.split(/[,;\t]|(?<=\D)\s{2,}(?=\d)/).map(p=>p.trim()).filter(Boolean);
+    let nome, telRaw;
+    if(partes.length >= 2){
+      nome = partes[0];
+      telRaw = partes[partes.length-1];
+    } else {
+      // Sem separador claro: assume telefone no final da linha (últimos dígitos/símbolos)
+      const m = linha.match(/^(.*?)\s+([\d()+\-\s]{8,})$/);
+      if(m){ nome = m[1].trim(); telRaw = m[2].trim(); }
+    }
+    const tel = capNormalizarTel(telRaw);
+    if(!nome || !tel){ invalidos++; return; }
+    if(telsExistentes.has(tel)){ duplicados++; return; }
+    telsExistentes.add(tel);
+    lista.push({ id:proximoId++, nome, telefone:telRaw, status:'novo', enviados:0, criado_em:new Date().toISOString() });
+    adicionados++;
+  });
+
+  if(!adicionados){
+    showToast(invalidos ? 'Nenhum contato válido encontrado no texto colado' : 'Todos os contatos já existiam', 'error');
+    return;
+  }
+
+  txt.value = '';
+  capSalvar().then(()=>{
+    let msg = `${adicionados} contato(s) importado(s)!`;
+    if(duplicados) msg += ` ${duplicados} já existiam.`;
+    if(invalidos) msg += ` ${invalidos} linha(s) ignorada(s) (sem nome ou telefone).`;
+    showToast(msg);
+    capRenderTabela();
+  });
+}
+
+function capMudarStatus(id, status){
+  const c = capContatos().find(c=>c.id===id);
+  if(!c) return;
+  c.status = status;
+  capSalvar().then(()=>capRenderTabela());
+}
+
+function capExcluirContato(id){
+  const c = capContatos().find(c=>c.id===id);
+  if(!c) return;
+  if(!confirm(`Excluir o contato "${c.nome}"?`)) return;
+  cfg.captacao = capContatos().filter(x=>x.id!==id);
+  capSalvar().then(()=>{ showToast('Contato removido'); capRenderTabela(); });
+}
+
+function capGerarMensagem(nome){
+  const pn = _primeiroNome(nome);
+  const clinica = clinicaData?.nome_cli || 'nossa clínica';
+  return `Olá, ${pn}! Tudo bem? Aqui é da ${clinica}. Gostaria de agendar uma avaliação odontológica gratuita? Temos horários disponíveis essa semana. 🦷📅`;
+}
+
+function capAbrirModal(id){
+  const c = capContatos().find(c=>c.id===id);
+  if(!c) return;
+  capModalId = id;
+  document.getElementById('cap-modal-nome').textContent = c.nome;
+  document.getElementById('cap-modal-msg').value = capGerarMensagem(c.nome);
+  const bg = document.getElementById('cap-modal-bg');
+  if(bg) bg.style.display = 'flex';
+}
+
+function capFecharModal(){
+  const bg = document.getElementById('cap-modal-bg');
+  if(bg) bg.style.display = 'none';
+  capModalId = null;
+}
+
+function capEnviarWpp(){
+  const c = capContatos().find(c=>c.id===capModalId);
+  if(!c) return;
+  const tel = capNormalizarTel(c.telefone);
+  const num = tel.startsWith('55') ? tel : '55'+tel;
+  const msg = document.getElementById('cap-modal-msg')?.value || '';
+  c.enviados = (c.enviados||0) + 1;
+  if(c.status==='novo') c.status = 'contatado';
+  window.open(`https://wa.me/${num}?text=${encodeURIComponent(msg)}`, '_blank');
+  capSalvar().then(()=>{
+    showToast('WhatsApp aberto! Mensagem enviada para '+c.nome);
+    capRenderTabela();
+  });
+  // NÃO fecha o modal — permite conferir/reenviar
+}
+
+function capRenderTabela(){
+  const lista = capContatos();
+
+  const metrEl = document.getElementById('cap-metrics');
+  if(metrEl){
+    metrEl.innerHTML = [
+      {lbl:'Total', val:lista.length, cor:'var(--rose-dark)'},
+      {lbl:'Novos', val:lista.filter(c=>c.status==='novo').length, cor:CAP_STATUS_COR.novo},
+      {lbl:'Contatados', val:lista.filter(c=>c.status==='contatado').length, cor:CAP_STATUS_COR.contatado},
+      {lbl:'Responderam', val:lista.filter(c=>c.status==='respondeu').length, cor:CAP_STATUS_COR.respondeu},
+      {lbl:'Agendaram', val:lista.filter(c=>c.status==='agendou').length, cor:CAP_STATUS_COR.agendou},
+    ].map(s=>`<div style="background:var(--rose-lighter);border:1px solid var(--rose-light);border-radius:12px;padding:12px 16px;">
+      <div style="font-size:11px;color:var(--rose-text);">${s.lbl}</div>
+      <div style="font-size:22px;font-weight:800;color:${s.cor};">${s.val}</div>
+    </div>`).join('');
+  }
+
+  const busca = (document.getElementById('cap-busca')?.value||'').toLowerCase().trim();
+  const filtroStatus = document.getElementById('cap-filtro-status')?.value||'';
+
+  let filtrados = lista.slice().sort((a,b)=>(b.criado_em||'').localeCompare(a.criado_em||''));
+  if(busca){
+    filtrados = filtrados.filter(c=>
+      c.nome.toLowerCase().includes(busca) || capNormalizarTel(c.telefone).includes(busca.replace(/\D/g,''))
+    );
+  }
+  if(filtroStatus) filtrados = filtrados.filter(c=>c.status===filtroStatus);
+
+  const tb = document.getElementById('cap-tbody');
+  if(!tb) return;
+
+  if(!filtrados.length){
+    tb.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--rose-text);padding:24px;">
+      ${lista.length ? 'Nenhum contato encontrado com esse filtro.' : 'Nenhum contato cadastrado ainda. Adicione acima ou importe uma lista.'}
+    </td></tr>`;
+    return;
+  }
+
+  tb.innerHTML = filtrados.map(c=>{
+    const cor = CAP_STATUS_COR[c.status] || CAP_STATUS_COR.novo;
+    return `<tr style="border-bottom:1px solid var(--rose-light);">
+      <td style="padding:10px;font-weight:600;">${escapeHtml(c.nome)}</td>
+      <td style="padding:10px;color:var(--rose-text);font-size:12px;">${escapeHtml(c.telefone||'')}</td>
+      <td style="padding:10px;text-align:center;">
+        <select onchange="capMudarStatus(${c.id}, this.value)" style="border:1px solid var(--rose-light);border-radius:20px;padding:3px 8px;font-size:12px;font-weight:700;color:${cor};background:${cor}15;">
+          ${Object.entries(CAP_STATUS_LABEL).map(([k,l])=>`<option value="${k}" ${c.status===k?'selected':''}>${l}</option>`).join('')}
+        </select>
+      </td>
+      <td style="padding:10px;text-align:center;">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:3px;">
+          <button onclick="capAbrirModal(${c.id})" style="background:#25d366;border:none;border-radius:50%;width:38px;height:38px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(37,211,102,.4);" title="Enviar WhatsApp">
+            <i class="ti ti-brand-whatsapp" style="color:#fff;font-size:18px;"></i>
+          </button>
+          ${c.enviados ? `<span style="font-size:10px;color:#856404;font-weight:700;">${c.enviados}x enviado(s)</span>` : ''}
+        </div>
+      </td>
+      <td style="padding:10px;text-align:center;">
+        <button onclick="capExcluirContato(${c.id})" style="background:none;border:none;cursor:pointer;color:#dc2626;font-size:16px;" title="Excluir"><i class="ti ti-trash"></i></button>
+      </td>
+    </tr>`;
+  }).join('');
 }
 
 
