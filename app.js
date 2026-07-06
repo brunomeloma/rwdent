@@ -7393,11 +7393,8 @@ function atualizarPrecosClareamento(){
   if(nomeEl) nomeEl.textContent = clinicaData?.nome_cli || 'Consultório';
   const lista = typeof procs!=='undefined' && Array.isArray(procs) ? procs : [];
   const consultorio = lista.find(p=>p.nome==='Clareamento de Consultório');
-  const caseiro = lista.find(p=>p.nome==='Clareamento Caseiro');
   const elConsultorio = document.getElementById('clar-preco-consultorio');
   if(elConsultorio) elConsultorio.textContent = consultorio ? fmtBRL(consultorio.precoFinal||0) : 'Consulte a equipe';
-  const elCaseiro = document.getElementById('clar-preco-caseiro');
-  if(elCaseiro) elCaseiro.textContent = caseiro ? fmtBRL(caseiro.precoFinal||0) : 'Consulte a equipe';
 }
 
 function clareamentoAdicionarCarrinho(nomeProc){
