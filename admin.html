@@ -195,6 +195,17 @@ async function adminLogout(){
 }
 
 async function showApp(){
+  // Checagem real fica no banco, não só na lista ADMIN_EMAILS do front-end
+  // (mesma proteção que o painel admin dentro do app.html já usa).
+  const { data: isDbAdmin } = await _sb.rpc('rwdent_is_admin');
+  if(!isDbAdmin){
+    await _sb.auth.signOut();
+    const errEl = document.getElementById('a-err');
+    if(errEl){ errEl.textContent='Acesso admin negado pelo servidor.'; errEl.className='err-msg show'; }
+    document.getElementById('login-screen').style.display='flex';
+    document.getElementById('app').style.display='none';
+    return;
+  }
   document.getElementById('login-screen').style.display='none';
   document.getElementById('app').style.display='';
   await loadClinicas();
@@ -275,7 +286,13 @@ async function rejeitar(id){
 }
 
 async function excluir(id){
-  if(!confirm('Excluir permanentemente este cadastro?')) return;
+  const c = clinicas.find(x=>x.id===id);
+  const nome = c?.nome_cli || 'esta clínica';
+  // Excluir aqui apaga a linha de verdade (não é arquivar) — exige digitar o nome
+  // exato pra reduzir clique acidental, já que a ação não tem como ser desfeita.
+  const digitado = prompt(`Isso EXCLUI PERMANENTEMENTE o cadastro de "${nome}" e não pode ser desfeito.\n\nPara confirmar, digite o nome exato da clínica:`);
+  if(digitado === null) return;
+  if(digitado.trim() !== nome){ showToast('Nome não confere. Nada foi excluído.','error'); return; }
   const { error } = await _sb.from('clinicas').delete().eq('id',id);
   if(error){ showToast('Erro: '+error.message,'error'); return; }
   clinicas = clinicas.filter(x=>x.id!==id);

@@ -1043,6 +1043,16 @@ async function agendarConsulta(){
   const prof = profissionais.find(p=>p.id===profId);
   if(!prof){ showToast('Profissional inválido.','warn'); return; }
   showLoading(true);
+  // Confere de novo direto no banco (não só na lista em memória) bem antes de salvar,
+  // para reduzir a chance de duas pessoas agendarem o mesmo horário ao mesmo tempo
+  // em sessões diferentes (a checagem acima só vê o que já estava carregado nesta aba).
+  const { data: conflitoBanco } = await _sb.from('agendamentos')
+    .select('id').eq('clinica_id', clinicaId).eq('prof_id', profId).eq('data', data).eq('horario', horario).limit(1);
+  if(conflitoBanco && conflitoBanco.length){
+    showLoading(false);
+    showToast('Esse horário acabou de ser ocupado por outro agendamento. Escolha outro horário.','error');
+    return;
+  }
   const { data: novo, error } = await _sb.from('agendamentos').insert([{
     paciente_id: paciente.id, nome: paciente.nome,
     telefone: telefone||paciente.telefone||'',
@@ -1648,7 +1658,7 @@ function renderPatientDetail(abaAtiva){
 
               <div class="form-group">
                 <label>Sangramento gengival — quando?</label>
-                <input type="text" id="an-sangGeng-quando" placeholder="Ex: ao escovar, espontâneo..." value="${escapeHtml(p.anamnese?.sangGengQuando||'')}"/>
+                <input type="text" id="an-sangGeng-quando" placeholder="Ex: ao escovar" value="${escapeHtml(p.anamnese?.sangGengQuando||'')}"/>
               </div>
 
               ${[
@@ -1667,10 +1677,10 @@ function renderPatientDetail(abaAtiva){
 
               <div class="form-group">
                 <label>Usa fio dental?</label>
-                <div style="display:flex;gap:8px;margin-top:4px;">
-                  <label style="display:flex;align-items:center;gap:5px;font-size:13px;font-weight:400;text-transform:none;letter-spacing:0;cursor:pointer;"><input type="radio" name="an-fio" value="sim" ${p.anamnese?.fio==='sim'?'checked':''}> Sim</label>
-                  <label style="display:flex;align-items:center;gap:5px;font-size:13px;font-weight:400;text-transform:none;letter-spacing:0;cursor:pointer;"><input type="radio" name="an-fio" value="nao" ${p.anamnese?.fio==='nao'||!p.anamnese?.fio?'checked':''}> Não</label>
-                  <label style="display:flex;align-items:center;gap:5px;font-size:13px;font-weight:400;text-transform:none;letter-spacing:0;cursor:pointer;"><input type="radio" name="an-fio" value="asvezes" ${p.anamnese?.fio==='asvezes'?'checked':''}> Às vezes</label>
+                <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px;">
+                  <label style="display:flex;align-items:center;gap:5px;font-size:13px;font-weight:400;text-transform:none;letter-spacing:0;cursor:pointer;white-space:nowrap;"><input type="radio" name="an-fio" value="sim" ${p.anamnese?.fio==='sim'?'checked':''}> Sim</label>
+                  <label style="display:flex;align-items:center;gap:5px;font-size:13px;font-weight:400;text-transform:none;letter-spacing:0;cursor:pointer;white-space:nowrap;"><input type="radio" name="an-fio" value="nao" ${p.anamnese?.fio==='nao'||!p.anamnese?.fio?'checked':''}> Não</label>
+                  <label style="display:flex;align-items:center;gap:5px;font-size:13px;font-weight:400;text-transform:none;letter-spacing:0;cursor:pointer;white-space:nowrap;"><input type="radio" name="an-fio" value="asvezes" ${p.anamnese?.fio==='asvezes'?'checked':''}> Às vezes</label>
                 </div>
               </div>
 
@@ -2296,6 +2306,7 @@ function editPatient(id){
 async function savePatientEdit(id){
   const dados=readPatientForm();
   if(!dados.nome){ showToast('Preencha o nome.','warn'); return; }
+  if(dados.cpf && !validarCPF(dados.cpf)){ showToast('CPF inválido. Verifique os números.','warn'); document.getElementById('pt-cpf').focus(); return; }
   delete dados._responsavel;
   showLoading(true);
   const { error } = await _sb.from('pacientes').update(dados).eq('id',id);
@@ -5897,7 +5908,7 @@ function exportarTabelaPrecos(){
       rows += `<tr><td style="padding:7px 12px;border-bottom:1px solid #eee;font-size:13px;">${escapeHtml(p.nome)}</td><td style="padding:7px 12px;border-bottom:1px solid #eee;font-size:12px;color:#888;text-align:center;">${p.tempo||0} min</td><td style="padding:7px 12px;border-bottom:1px solid #eee;text-align:right;font-weight:700;font-size:13px;color:#7a3020;">R$ ${(p.precoFinal||0).toFixed(2).replace('.',',')}</td></tr>`;
     });
   });
-  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Tabela de Preços - ${clinica}</title>
+  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Tabela de Preços - ${escapeHtml(clinica)}</title>
 <style>*{margin:0;padding:0;box-sizing:border-box;}body{font-family:'Segoe UI',Arial,sans-serif;padding:30px;color:#3a2020;}
 .header{text-align:center;margin-bottom:24px;padding-bottom:16px;border-bottom:2px solid #d4735a;}
 .header h1{font-size:20px;color:#7a3020;}.header p{font-size:12px;color:#a05040;margin-top:4px;}
@@ -7333,6 +7344,7 @@ async function vrFinalizarMobile(){
   };
   vendas.push(venda);
 
+  let avisoAtendimentoMobile = '';
   if(pacId){
     const descProcs = vrCarrinho.map(i=>`${i.nome}${i.qtd>1?' (×'+i.qtd+')':''}`).join(', ');
     const { error: errAt } = await _sb.from('atendimentos_odonto').insert([{
@@ -7340,7 +7352,10 @@ async function vrFinalizarMobile(){
       procedimentos:descProcs, obs:obs||'Venda rápida',
       profissional_id:profId||null, profissional_nome:profNome, dentes_tratados:'[]'
     }]);
-    if(errAt) console.warn('Aviso atendimento:', errAt.message);
+    if(errAt){
+      console.warn('Aviso atendimento:', errAt.message);
+      avisoAtendimentoMobile = ' (mas o histórico do paciente não foi atualizado — registre manualmente)';
+    }
   }
 
   const { data: existing } = await _sb.from('financeiro_config').select('id').eq('clinica_id',clinicaId).single();
@@ -7372,7 +7387,8 @@ async function vrFinalizarMobile(){
   if(document.getElementById('vr-entrada-m')) document.getElementById('vr-entrada-m').value=0;
   if(document.getElementById('vr-obs-m')) document.getElementById('vr-obs-m').value='';
   vrCalcTotalMobile();
-  showToast('✅ Venda finalizada e salva!');
+  if(avisoAtendimentoMobile) showToast('✅ Venda finalizada e salva'+avisoAtendimentoMobile+'.', 'warn');
+  else showToast('✅ Venda finalizada e salva!');
 }
 
 function vendasSubTab(tab){
@@ -7640,6 +7656,7 @@ async function vrFinalizar(){
   vendas.push(venda);
 
   // Registra atendimento no histórico do paciente (se vinculado)
+  let avisoAtendimento = '';
   if(pacId){
     const descProcs = vrCarrinho.map(i=>`${i.nome}${i.qtd>1?' (×'+i.qtd+')':''}`).join(', ');
     const { error: errAt } = await _sb.from('atendimentos_odonto').insert([{
@@ -7648,7 +7665,10 @@ async function vrFinalizar(){
       profissional_id:profId||null, profissional_nome:profNome,
       dentes_tratados:'[]'
     }]);
-    if(errAt) console.warn('Aviso: não foi possível registrar atendimento:', errAt.message);
+    if(errAt){
+      console.warn('Aviso: não foi possível registrar atendimento:', errAt.message);
+      avisoAtendimento = ' (mas o histórico do paciente não foi atualizado — registre manualmente)';
+    }
   }
 
   // Salva tudo (estoque + venda) atomicamente
@@ -7692,7 +7712,8 @@ async function vrFinalizar(){
   vrCalcTotal();
   vrFiltrar();
 
-  showToast('✅ Venda finalizada e salva com sucesso!');
+  if(avisoAtendimento) showToast('✅ Venda finalizada e salva com sucesso'+avisoAtendimento+'.', 'warn');
+  else showToast('✅ Venda finalizada e salva com sucesso!');
 }
 
 
@@ -11463,6 +11484,14 @@ async function calSaveNewAppt(){
   const prof=profissionais.find(p=>p.id===profId);
   if(!prof){ showToast('Profissional inválido.','warn'); return; }
   showLoading(true);
+  // Confere de novo direto no banco antes de salvar (mesma proteção do agendamento pela tela normal).
+  const { data: conflitoBanco } = await _sb.from('agendamentos')
+    .select('id').eq('clinica_id', clinicaId).eq('prof_id', profId).eq('data', data).eq('horario', horario).limit(1);
+  if(conflitoBanco && conflitoBanco.length){
+    showLoading(false);
+    showToast('Esse horário acabou de ser ocupado por outro agendamento. Escolha outro horário.','error');
+    return;
+  }
   const { data:novo, error } = await _sb.from('agendamentos').insert([{
     paciente_id: paciente.id, nome: paciente.nome,
     telefone: telefone||paciente.telefone||'',
