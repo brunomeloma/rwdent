@@ -7376,13 +7376,36 @@ async function vrFinalizarMobile(){
 }
 
 function vendasSubTab(tab){
-  if(!_isRhaizaClinic && (tab==='aparelhos'||tab==='alinhador')) tab='vr';
+  if(!_isRhaizaClinic && (tab==='aparelhos'||tab==='alinhador'||tab==='clareamento')) tab='vr';
   document.querySelectorAll('.vendas-subtab').forEach(b=>b.classList.remove('active'));
   document.querySelector(`.vendas-subtab[onclick*="'${tab}'"]`)?.classList.add('active');
   document.getElementById('vendas-sub-aparelhos').style.display = tab==='aparelhos'?'':'none';
   document.getElementById('vendas-sub-alinhador').style.display = tab==='alinhador'?'':'none';
+  document.getElementById('vendas-sub-clareamento').style.display = tab==='clareamento'?'':'none';
   document.getElementById('vendas-sub-vr').style.display = tab==='vr'?'':'none';
   if(tab==='vr'){ vrInit(); vrInitMobile(); }
+  if(tab==='clareamento') atualizarPrecosClareamento();
+}
+
+function atualizarPrecosClareamento(){
+  const fmtBRL = v => 'R$ '+Number(v).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+  const nomeEl = document.getElementById('clar-nome-clinica');
+  if(nomeEl) nomeEl.textContent = clinicaData?.nome_cli || 'Consultório';
+  const lista = typeof procs!=='undefined' && Array.isArray(procs) ? procs : [];
+  const consultorio = lista.find(p=>p.nome==='Clareamento de Consultório');
+  const caseiro = lista.find(p=>p.nome==='Clareamento Caseiro');
+  const elConsultorio = document.getElementById('clar-preco-consultorio');
+  if(elConsultorio) elConsultorio.textContent = consultorio ? fmtBRL(consultorio.precoFinal||0) : 'Consulte a equipe';
+  const elCaseiro = document.getElementById('clar-preco-caseiro');
+  if(elCaseiro) elCaseiro.textContent = caseiro ? fmtBRL(caseiro.precoFinal||0) : 'Consulte a equipe';
+}
+
+function clareamentoAdicionarCarrinho(nomeProc){
+  const proc = (typeof procs!=='undefined' && Array.isArray(procs) ? procs : []).find(p=>p.nome===nomeProc);
+  if(!proc){ showToast('Procedimento não encontrado na tabela de preços','error'); return; }
+  vendasSubTab('vr');
+  vrAddItem(proc.id);
+  showToast(proc.nome+' adicionado à Venda Rápida!');
 }
 
 function vrInitMobile(){
