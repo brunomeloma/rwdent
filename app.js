@@ -7443,7 +7443,7 @@ function vrFiltrar(){
           <span style="font-size:16px;font-weight:800;color:var(--rose-dark);min-width:22px;text-align:center;">${noCarrinho.qtd}</span>
           <button onclick="vrAddItem(${p.id})" style="width:30px;height:30px;border:1.5px solid var(--rose-light);border-radius:8px;background:var(--rose-dark);color:#fff;font-size:18px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;">+</button>
         </div>`
-      : `<button onclick="vrAddItem(${p.id})" style="width:32px;height:32px;border:1.5px solid var(--rose-light);border-radius:8px;background:var(--rose-lighter);color:var(--rose-dark);font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-weight:700;">+</button>`;
+      : `<button onclick="event.stopPropagation();vrAddItem(${p.id})" style="width:32px;height:32px;border:1.5px solid var(--rose-light);border-radius:8px;background:var(--rose-lighter);color:var(--rose-dark);font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-weight:700;">+</button>`;
     return `<div class="vr-proc-item" style="${noCarrinho?'border-color:var(--rose);background:var(--rose-lighter);':''}" onclick="${noCarrinho?'':'vrAddItem('+p.id+')'}">
       <div style="flex:1;min-width:0;">
         <div style="font-size:15px;font-weight:700;color:var(--rose-dark);line-height:1.25;">${escapeHtml(p.nome)}</div>
