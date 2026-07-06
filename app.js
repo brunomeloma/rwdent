@@ -10727,24 +10727,40 @@ function capFecharModal(){
   capAtualizarProgressoBulk();
 }
 
-function capEnviarWpp(){
+async function capEnviarWpp(){
   const c = capBuscarContatoPorId(capModalId);
   if(!c) return;
   const tel = capNormalizarTel(c.telefone);
   const num = tel.startsWith('55') ? tel : '55'+tel;
   const msg = document.getElementById('cap-modal-msg')?.value || '';
-  window.open(`https://wa.me/${num}?text=${encodeURIComponent(msg)}`, '_blank');
 
-  const finalizar = () => {
+  const abrirWppEFinalizar = () => {
+    window.open(`https://wa.me/${num}?text=${encodeURIComponent(msg)}`, '_blank');
     if(capBulkAtivo) capBulkAvancar();
     else { showToast('WhatsApp aberto! Mensagem enviada para '+c.nome); capRenderTabela(); }
   };
 
-  if(c._isPaciente){ finalizar(); return; }
+  if(c._isPaciente){ abrirWppEFinalizar(); return; }
 
+  // IMPORTANTE: salva ANTES de abrir o WhatsApp. No celular, o link wa.me costuma trocar
+  // para o app do WhatsApp e suspender a aba do navegador — se o salvamento rodasse depois
+  // de abrir o link (como era antes), a gravação podia nunca terminar e o envio ficava sem
+  // registro. Salvando primeiro, o "enviado"/status já está garantido no banco antes do troca de app.
+  const btn = document.querySelector('#cap-modal-bg button[onclick="capEnviarWpp()"]');
+  if(btn){ btn.disabled = true; }
+  const statusAnterior = c.status;
   c.enviados = (c.enviados||0) + 1;
   if(c.status==='novo') c.status = 'contatado';
-  capSalvar().then(finalizar);
+  const ok = await capSalvar();
+  if(btn){ btn.disabled = false; }
+  if(!ok){
+    // Reverte a mudança local já que não foi possível confirmar a gravação
+    c.enviados -= 1;
+    c.status = statusAnterior;
+    showToast('Não foi possível salvar antes de abrir o WhatsApp. Tente novamente.','error');
+    return;
+  }
+  abrirWppEFinalizar();
   // NÃO fecha o modal fora do modo em massa — permite conferir/reenviar
 }
 
