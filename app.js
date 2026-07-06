@@ -10342,6 +10342,12 @@ function enviarResgateWpp(){
 // CAPTAÇÃO DE NOVOS CONTATOS
 // ══════════════════════════════════════════════════════
 let capModalId = null;
+let capModalModo = 'manual'; // 'manual' | 'campanha'
+let capFiltroCategoriaAtual = '';
+let capBulkAtivo = false;
+let capBulkFila = [];
+let capBulkPos = 0;
+let capBulkEnviados = 0;
 
 const CAP_STATUS_LABEL = {
   novo:'Novo', contatado:'Contatado', respondeu:'Respondeu', agendou:'Agendou', sem_interesse:'Sem interesse'
@@ -10349,6 +10355,27 @@ const CAP_STATUS_LABEL = {
 const CAP_STATUS_COR = {
   novo:'#6b21a8', contatado:'#856404', respondeu:'#1d4ed8', agendou:'#2e7d32', sem_interesse:'#dc2626'
 };
+const CAP_CATEGORIA_LABEL = { lead_st:'Lead ST', connect_vip:'Connect VIP', paciente:'Paciente' };
+const CAP_CATEGORIA_COR   = { lead_st:'#7a3020', connect_vip:'#1d4ed8', paciente:'#2e7d32' };
+
+// Mensagens padrão por categoria — nome oficial: "Consultório Odontológico Rhaiza Barroso"
+const CAP_MSG_PADRAO_LEAD_ST = `Olá! 😊 Tudo bem?
+
+Aqui é da Consultório Odontológico Rhaiza Barroso. Estamos com vagas para novos pacientes e gostaríamos de convidar você para conhecer nosso atendimento.
+
+Realizamos limpeza, clareamento, restaurações, tratamento de canal, implantes, próteses, ortodontia e diversos outros procedimentos, sempre com atendimento humanizado e tecnologia para oferecer mais conforto aos nossos pacientes.
+
+Neste período, quem agenda a primeira avaliação poderá conhecer as condições disponíveis para iniciar o tratamento de acordo com sua necessidade.
+
+Se desejar mais informações ou agendar uma avaliação, basta responder esta mensagem. Será um prazer atender você! 🦷✨`;
+
+const CAP_MSG_PADRAO_CONNECT_VIP = `Olá! 😊 Tudo bem?
+
+A Consultório Odontológico Rhaiza Barroso agora é parceira da Connect Inglês VIP.
+
+Alunos e familiares conveniados possuem condições especiais e benefícios exclusivos em diversos procedimentos odontológicos.
+
+Caso queira saber mais ou agendar uma avaliação, basta responder esta mensagem. Será um prazer atender você! 🦷✨`;
 
 function capContatos(){
   if(!Array.isArray(cfg.captacao)) cfg.captacao = [];
@@ -10362,6 +10389,26 @@ function capProximoId(){
 
 function capNormalizarTel(tel){
   return String(tel||'').replace(/\D/g,'');
+}
+
+// Chave de identidade do telefone p/ dedupe: remove o DDI 55 quando presente,
+// já que pacientes cadastrados são salvos só com DDD+número (sem 55) e o CSV
+// sempre traz o telefone com 55 na frente — sem isso os dois nunca combinam.
+function capChaveTelefone(tel){
+  let d = capNormalizarTel(tel);
+  if((d.length===12 || d.length===13) && d.startsWith('55')) d = d.slice(2);
+  return d;
+}
+
+function capFormatarTelefoneExibicao(tel){
+  let d = capNormalizarTel(tel);
+  if(!d) return '';
+  if(d.startsWith('55') && d.length > 11) d = d.slice(2);
+  const ddd = d.slice(0,2), num = d.slice(2);
+  let numFmt = num;
+  if(num.length===9) numFmt = num.slice(0,5)+'-'+num.slice(5);
+  else if(num.length===8) numFmt = num.slice(0,4)+'-'+num.slice(4);
+  return ddd ? `+55 ${ddd} ${numFmt}` : `+55 ${d}`;
 }
 
 async function capSalvar(){
@@ -10378,15 +10425,15 @@ function capAdicionarContato(){
   const nomeEl = document.getElementById('cap-novo-nome');
   const telEl  = document.getElementById('cap-novo-tel');
   const nome = (nomeEl?.value||'').trim();
-  const tel  = capNormalizarTel(telEl?.value);
+  const tel  = capChaveTelefone(telEl?.value);
   if(!nome){ showToast('Informe o nome do contato','error'); return; }
   if(!tel){ showToast('Informe o telefone do contato','error'); return; }
   const lista = capContatos();
-  if(lista.some(c=>capNormalizarTel(c.telefone)===tel)){
+  if(lista.some(c=>capChaveTelefone(c.telefone)===tel)){
     showToast('Já existe um contato com esse telefone','error');
     return;
   }
-  lista.push({ id:capProximoId(), nome, telefone: telEl.value.trim(), status:'novo', enviados:0, criado_em:new Date().toISOString() });
+  lista.push({ id:capProximoId(), nome, telefone: telEl.value.trim(), categoria:null, status:'novo', origem:'Manual', paciente_novo:'Sim', mensagem_campanha:null, enviados:0, criado_em:new Date().toISOString() });
   nomeEl.value=''; telEl.value='';
   capSalvar().then(()=>{ showToast('Contato adicionado!'); capRenderTabela(); });
 }
@@ -10397,7 +10444,7 @@ function capAdicionarLote(){
   if(!linhas.length){ showToast('Cole ao menos um contato','error'); return; }
 
   const lista = capContatos();
-  const telsExistentes = new Set(lista.map(c=>capNormalizarTel(c.telefone)));
+  const telsExistentes = new Set(lista.map(c=>capChaveTelefone(c.telefone)));
   let proximoId = capProximoId();
   let adicionados = 0, duplicados = 0, invalidos = 0;
 
@@ -10412,11 +10459,11 @@ function capAdicionarLote(){
       const m = linha.match(/^(.*?)\s+([\d()+\-\s]{8,})$/);
       if(m){ nome = m[1].trim(); telRaw = m[2].trim(); }
     }
-    const tel = capNormalizarTel(telRaw);
+    const tel = capChaveTelefone(telRaw);
     if(!nome || !tel){ invalidos++; return; }
     if(telsExistentes.has(tel)){ duplicados++; return; }
     telsExistentes.add(tel);
-    lista.push({ id:proximoId++, nome, telefone:telRaw, status:'novo', enviados:0, criado_em:new Date().toISOString() });
+    lista.push({ id:proximoId++, nome, telefone:telRaw, categoria:null, status:'novo', origem:'Manual', paciente_novo:'Sim', mensagem_campanha:null, enviados:0, criado_em:new Date().toISOString() });
     adicionados++;
   });
 
@@ -10433,6 +10480,141 @@ function capAdicionarLote(){
     showToast(msg);
     capRenderTabela();
   });
+}
+
+// ── Importação de arquivo CSV (Lead ST / Connect VIP) ──────────────────
+function capParseCsvGenerico(text, delimiter){
+  delimiter = delimiter || ';';
+  const rows = [];
+  let row = [], field = '', inQuotes = false;
+  for(let i=0;i<text.length;i++){
+    const c = text[i];
+    if(inQuotes){
+      if(c === '"'){
+        if(text[i+1] === '"'){ field += '"'; i++; }
+        else inQuotes = false;
+      } else field += c;
+    } else {
+      if(c === '"') inQuotes = true;
+      else if(c === delimiter){ row.push(field); field=''; }
+      else if(c === '\r'){ /* ignora, tratado no \n */ }
+      else if(c === '\n'){ row.push(field); rows.push(row); row=[]; field=''; }
+      else field += c;
+    }
+  }
+  if(field.length || row.length){ row.push(field); rows.push(row); }
+  return rows;
+}
+
+function capParseCsvContatos(text){
+  if(text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
+  const rows = capParseCsvGenerico(text, ';');
+  if(!rows.length) return [];
+  const header = rows[0].map(h=>h.trim().toLowerCase());
+  const out = [];
+  for(let i=1;i<rows.length;i++){
+    const r = rows[i];
+    if(r.length===1 && !r[0].trim()) continue;
+    const obj = {};
+    header.forEach((h,idx)=>{ obj[h] = (r[idx]!==undefined ? r[idx] : '').trim(); });
+    out.push(obj);
+  }
+  return out;
+}
+
+function capSlugCategoria(cat){
+  const c = (cat||'').trim().toLowerCase();
+  if(c==='lead st') return 'lead_st';
+  if(c==='connect vip') return 'connect_vip';
+  if(!c) return null;
+  return c.replace(/\s+/g,'_');
+}
+
+function capProcessarImportacao(linhas){
+  const lista = capContatos();
+  let proximoId = capProximoId();
+  const porTelefone = new Map(lista.map(c=>[capChaveTelefone(c.telefone), c]));
+  const pacientesArr = (typeof pacientes!=='undefined' && Array.isArray(pacientes)) ? pacientes : [];
+  const telefonesPacientes = new Set(pacientesArr.map(p=>capChaveTelefone(p.telefone)).filter(Boolean));
+
+  let importados=0, atualizados=0, duplicadosIgnorados=0, jaPacientes=0, invalidos=0;
+
+  linhas.forEach(row=>{
+    const nome = (row.nome||'').trim();
+    const telRaw = row.telefone||'';
+    const tel = capChaveTelefone(telRaw);
+    if(!nome || !tel){ invalidos++; return; }
+
+    if(telefonesPacientes.has(tel)){ jaPacientes++; return; }
+
+    const categoria = capSlugCategoria(row.categoria);
+    const origem = row.origem || '';
+    const pacienteNovo = row.paciente_novo || '';
+    const mensagemCampanha = row.mensagem_campanha || '';
+
+    const existente = porTelefone.get(tel);
+    if(existente){
+      let mudou = false;
+      if(categoria && existente.categoria !== categoria){ existente.categoria = categoria; mudou = true; }
+      if(origem && existente.origem !== origem){ existente.origem = origem; mudou = true; }
+      if(pacienteNovo && existente.paciente_novo !== pacienteNovo){ existente.paciente_novo = pacienteNovo; mudou = true; }
+      if(mensagemCampanha && existente.mensagem_campanha !== mensagemCampanha){ existente.mensagem_campanha = mensagemCampanha; mudou = true; }
+      if(mudou) atualizados++; else duplicadosIgnorados++;
+      return;
+    }
+
+    const novoContato = {
+      id: proximoId++,
+      nome, telefone: (telRaw.trim() || tel),
+      categoria, status:'novo', origem, paciente_novo: pacienteNovo,
+      mensagem_campanha: mensagemCampanha || null,
+      enviados:0, criado_em:new Date().toISOString()
+    };
+    lista.push(novoContato);
+    porTelefone.set(tel, novoContato);
+    importados++;
+  });
+
+  return { importados, atualizados, duplicadosIgnorados, jaPacientes, invalidos, total: linhas.length };
+}
+
+function capExibirResultadoImportacao(r){
+  const el = document.getElementById('cap-import-resultado');
+  if(!el) return;
+  el.style.display = 'block';
+  el.innerHTML = `
+    <div style="font-weight:700;color:var(--rose-dark);margin-bottom:4px;">Importação concluída (${r.total} linha(s) no arquivo)</div>
+    <div>✅ <strong>${r.importados}</strong> contato(s) importado(s)</div>
+    <div>🔄 <strong>${r.atualizados}</strong> contato(s) atualizado(s) (categoria/mensagem)</div>
+    <div>⏭️ <strong>${r.duplicadosIgnorados}</strong> duplicado(s) ignorado(s) (já cadastrados, sem mudança)</div>
+    ${r.jaPacientes ? `<div>🧑‍⚕️ <strong>${r.jaPacientes}</strong> já são pacientes da clínica (não duplicados na captação)</div>` : ''}
+    ${r.invalidos ? `<div>⚠️ <strong>${r.invalidos}</strong> linha(s) inválida(s) (sem nome ou telefone)</div>` : ''}
+    <div style="margin-top:6px;color:var(--rose-text);">Nenhuma funcionalidade existente foi alterada — apenas contatos de captação foram adicionados/atualizados.</div>
+  `;
+  showToast(`Importação concluída: ${r.importados} novos, ${r.atualizados} atualizados, ${r.duplicadosIgnorados} duplicados ignorados.`);
+}
+
+function capImportarCsv(){
+  const fileInput = document.getElementById('cap-import-csv');
+  const file = fileInput?.files?.[0];
+  if(!file){ showToast('Selecione um arquivo CSV primeiro','error'); return; }
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try{
+      const linhas = capParseCsvContatos(String(e.target.result||''));
+      if(!linhas.length){ showToast('Arquivo CSV vazio ou em formato inválido','error'); return; }
+      const resultado = capProcessarImportacao(linhas);
+      capSalvar().then(()=>{
+        capExibirResultadoImportacao(resultado);
+        capRenderTabela();
+        fileInput.value = '';
+      });
+    }catch(err){
+      showToast('Erro ao importar arquivo: '+err.message,'error');
+    }
+  };
+  reader.onerror = () => showToast('Não foi possível ler o arquivo','error');
+  reader.readAsText(file, 'UTF-8');
 }
 
 function capMudarStatus(id, status){
@@ -10456,48 +10638,149 @@ function capGerarMensagem(nome){
   return `Olá, ${pn}! Tudo bem? Aqui é da ${clinica}. Gostaria de agendar uma avaliação odontológica gratuita? Temos horários disponíveis essa semana. 🦷📅`;
 }
 
-function capAbrirModal(id){
-  const c = capContatos().find(c=>c.id===id);
+function capMensagemCampanhaPara(c){
+  if(c.mensagem_campanha) return c.mensagem_campanha;
+  if(c.categoria === 'lead_st') return CAP_MSG_PADRAO_LEAD_ST;
+  if(c.categoria === 'connect_vip') return CAP_MSG_PADRAO_CONNECT_VIP;
+  return capGerarMensagem(c.nome);
+}
+
+function capNomeAcaoCampanha(categoria){
+  if(categoria === 'lead_st') return 'Enviar mensagem de captação';
+  if(categoria === 'connect_vip') return 'Enviar mensagem Connect';
+  return 'Enviar campanha';
+}
+
+function capBuscarContatoPorId(id){
+  if(typeof id === 'string' && id.startsWith('p_')){
+    const pacId = id.slice(2);
+    const pacientesArr = (typeof pacientes!=='undefined' && Array.isArray(pacientes)) ? pacientes : [];
+    const pac = pacientesArr.find(p=>String(p.id)===pacId);
+    if(!pac) return null;
+    return { id, nome:pac.nome, telefone:pac.telefone, categoria:'paciente', status:null, enviados:0, _isPaciente:true };
+  }
+  const numId = typeof id === 'string' ? Number(id) : id;
+  return capContatos().find(c=>c.id===numId) || null;
+}
+
+function capAbrirModal(id, modo){
+  const c = capBuscarContatoPorId(id);
   if(!c) return;
   capModalId = id;
+  capModalModo = modo || 'manual';
   document.getElementById('cap-modal-nome').textContent = c.nome;
-  document.getElementById('cap-modal-msg').value = capGerarMensagem(c.nome);
+  document.getElementById('cap-modal-msg').value = capModalModo==='campanha' ? capMensagemCampanhaPara(c) : capGerarMensagem(c.nome);
   const bg = document.getElementById('cap-modal-bg');
   if(bg) bg.style.display = 'flex';
+  capAtualizarProgressoBulk();
+}
+
+function capAtualizarProgressoBulk(){
+  const prog = document.getElementById('cap-modal-progresso');
+  const btnTxt = document.getElementById('cap-modal-btn-txt');
+  if(!capBulkAtivo){
+    if(prog) prog.style.display = 'none';
+    if(btnTxt) btnTxt.textContent = 'Enviar via WhatsApp';
+    return;
+  }
+  if(prog){ prog.style.display = 'inline-block'; prog.textContent = `Campanha em massa: ${capBulkPos+1} de ${capBulkFila.length}`; }
+  if(btnTxt) btnTxt.textContent = (capBulkPos < capBulkFila.length-1) ? 'Enviar e ir para o próximo' : 'Enviar (último contato)';
 }
 
 function capFecharModal(){
   const bg = document.getElementById('cap-modal-bg');
   if(bg) bg.style.display = 'none';
   capModalId = null;
+  if(capBulkAtivo){
+    capBulkAtivo = false;
+    showToast(`Campanha em massa cancelada. ${capBulkEnviados} mensagem(ns) enviada(s) antes de cancelar.`);
+    capRenderTabela();
+  }
+  capAtualizarProgressoBulk();
 }
 
 function capEnviarWpp(){
-  const c = capContatos().find(c=>c.id===capModalId);
+  const c = capBuscarContatoPorId(capModalId);
   if(!c) return;
   const tel = capNormalizarTel(c.telefone);
   const num = tel.startsWith('55') ? tel : '55'+tel;
   const msg = document.getElementById('cap-modal-msg')?.value || '';
+  window.open(`https://wa.me/${num}?text=${encodeURIComponent(msg)}`, '_blank');
+
+  const finalizar = () => {
+    if(capBulkAtivo) capBulkAvancar();
+    else { showToast('WhatsApp aberto! Mensagem enviada para '+c.nome); capRenderTabela(); }
+  };
+
+  if(c._isPaciente){ finalizar(); return; }
+
   c.enviados = (c.enviados||0) + 1;
   if(c.status==='novo') c.status = 'contatado';
-  window.open(`https://wa.me/${num}?text=${encodeURIComponent(msg)}`, '_blank');
-  capSalvar().then(()=>{
-    showToast('WhatsApp aberto! Mensagem enviada para '+c.nome);
+  capSalvar().then(finalizar);
+  // NÃO fecha o modal fora do modo em massa — permite conferir/reenviar
+}
+
+function capSelecionarTodos(checked){
+  document.querySelectorAll('#cap-tbody input.cap-check').forEach(chk=>{ chk.checked = checked; });
+}
+
+function capContatosSelecionadosIds(){
+  return Array.from(document.querySelectorAll('#cap-tbody input.cap-check:checked')).map(el=>el.dataset.id);
+}
+
+function capIniciarCampanhaEmMassa(){
+  const ids = capContatosSelecionadosIds().filter(Boolean);
+  if(!ids.length){ showToast('Selecione ao menos um contato para a campanha em massa','error'); return; }
+  capBulkFila = ids;
+  capBulkPos = 0;
+  capBulkEnviados = 0;
+  capBulkAtivo = true;
+  capAbrirModal(capBulkFila[0], 'campanha');
+}
+
+function capBulkAvancar(){
+  capBulkEnviados++;
+  capBulkPos++;
+  if(capBulkPos < capBulkFila.length){
+    capAbrirModal(capBulkFila[capBulkPos], 'campanha');
     capRenderTabela();
+  } else {
+    capBulkAtivo = false;
+    capFecharModal();
+    showToast(`Campanha em massa concluída! ${capBulkEnviados} mensagem(ns) enviada(s).`);
+    capRenderTabela();
+  }
+}
+
+function capFiltrarCategoria(cat){
+  capFiltroCategoriaAtual = cat;
+  document.querySelectorAll('#cap-filtros-categoria button').forEach(b=>{
+    b.className = (b.dataset.cat === cat) ? 'btn-primary' : 'btn-secondary';
   });
-  // NÃO fecha o modal — permite conferir/reenviar
+  capRenderTabela();
+}
+
+function capListaExibicao(){
+  const lista = capContatos().slice();
+  const pacientesArr = (typeof pacientes!=='undefined' && Array.isArray(pacientes)) ? pacientes : [];
+  const pacientesComoContatos = pacientesArr.filter(p=>p.telefone).map(p=>({
+    id:'p_'+p.id, nome:p.nome, telefone:p.telefone, categoria:'paciente', status:null,
+    origem:'Paciente cadastrado', enviados:0, criado_em:p.criado_em||'', _isPaciente:true
+  }));
+  return { lista, pacientesComoContatos };
 }
 
 function capRenderTabela(){
-  const lista = capContatos();
+  const { lista, pacientesComoContatos } = capListaExibicao();
 
   const metrEl = document.getElementById('cap-metrics');
   if(metrEl){
     metrEl.innerHTML = [
-      {lbl:'Total', val:lista.length, cor:'var(--rose-dark)'},
-      {lbl:'Novos', val:lista.filter(c=>c.status==='novo').length, cor:CAP_STATUS_COR.novo},
+      {lbl:'Total captação', val:lista.length, cor:'var(--rose-dark)'},
+      {lbl:'Lead ST', val:lista.filter(c=>c.categoria==='lead_st').length, cor:CAP_CATEGORIA_COR.lead_st},
+      {lbl:'Connect VIP', val:lista.filter(c=>c.categoria==='connect_vip').length, cor:CAP_CATEGORIA_COR.connect_vip},
+      {lbl:'Pacientes', val:pacientesComoContatos.length, cor:CAP_CATEGORIA_COR.paciente},
       {lbl:'Contatados', val:lista.filter(c=>c.status==='contatado').length, cor:CAP_STATUS_COR.contatado},
-      {lbl:'Responderam', val:lista.filter(c=>c.status==='respondeu').length, cor:CAP_STATUS_COR.respondeu},
       {lbl:'Agendaram', val:lista.filter(c=>c.status==='agendou').length, cor:CAP_STATUS_COR.agendou},
     ].map(s=>`<div style="background:var(--rose-lighter);border:1px solid var(--rose-light);border-radius:12px;padding:12px 16px;">
       <div style="font-size:11px;color:var(--rose-text);">${s.lbl}</div>
@@ -10507,45 +10790,69 @@ function capRenderTabela(){
 
   const busca = (document.getElementById('cap-busca')?.value||'').toLowerCase().trim();
   const filtroStatus = document.getElementById('cap-filtro-status')?.value||'';
+  const filtroCat = capFiltroCategoriaAtual;
 
-  let filtrados = lista.slice().sort((a,b)=>(b.criado_em||'').localeCompare(a.criado_em||''));
+  let base;
+  if(filtroCat === 'paciente') base = pacientesComoContatos.slice();
+  else if(filtroCat === 'lead_st' || filtroCat === 'connect_vip') base = lista.filter(c=>c.categoria===filtroCat);
+  else base = lista.concat(pacientesComoContatos);
+
+  let filtrados = base.slice().sort((a,b)=>(b.criado_em||'').localeCompare(a.criado_em||''));
   if(busca){
     filtrados = filtrados.filter(c=>
-      c.nome.toLowerCase().includes(busca) || capNormalizarTel(c.telefone).includes(busca.replace(/\D/g,''))
+      (c.nome||'').toLowerCase().includes(busca) || capNormalizarTel(c.telefone).includes(busca.replace(/\D/g,''))
     );
   }
-  if(filtroStatus) filtrados = filtrados.filter(c=>c.status===filtroStatus);
+  if(filtroStatus) filtrados = filtrados.filter(c=>!c._isPaciente && c.status===filtroStatus);
 
   const tb = document.getElementById('cap-tbody');
   if(!tb) return;
 
   if(!filtrados.length){
-    tb.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--rose-text);padding:24px;">
-      ${lista.length ? 'Nenhum contato encontrado com esse filtro.' : 'Nenhum contato cadastrado ainda. Adicione acima ou importe uma lista.'}
+    tb.innerHTML = `<tr><td colspan="8" style="text-align:center;color:var(--rose-text);padding:24px;">
+      ${(lista.length||pacientesComoContatos.length) ? 'Nenhum contato encontrado com esse filtro.' : 'Nenhum contato cadastrado ainda. Adicione acima, importe uma lista ou o arquivo CSV.'}
     </td></tr>`;
     return;
   }
 
   tb.innerHTML = filtrados.map(c=>{
-    const cor = CAP_STATUS_COR[c.status] || CAP_STATUS_COR.novo;
+    const corStatus = CAP_STATUS_COR[c.status] || CAP_STATUS_COR.novo;
+    const corCat = CAP_CATEGORIA_COR[c.categoria] || '#888';
+    const labelCat = CAP_CATEGORIA_LABEL[c.categoria] || (c.categoria ? c.categoria : '—');
+    const nomeAcaoCampanha = capNomeAcaoCampanha(c.categoria);
     return `<tr style="border-bottom:1px solid var(--rose-light);">
-      <td style="padding:10px;font-weight:600;">${escapeHtml(c.nome)}</td>
-      <td style="padding:10px;color:var(--rose-text);font-size:12px;">${escapeHtml(c.telefone||'')}</td>
       <td style="padding:10px;text-align:center;">
-        <select onchange="capMudarStatus(${c.id}, this.value)" style="border:1px solid var(--rose-light);border-radius:20px;padding:3px 8px;font-size:12px;font-weight:700;color:${cor};background:${cor}15;">
-          ${Object.entries(CAP_STATUS_LABEL).map(([k,l])=>`<option value="${k}" ${c.status===k?'selected':''}>${l}</option>`).join('')}
-        </select>
+        ${c._isPaciente ? '' : `<input type="checkbox" class="cap-check" data-id="${c.id}">`}
+      </td>
+      <td style="padding:10px;font-weight:600;">${escapeHtml(c.nome)}</td>
+      <td style="padding:10px;color:var(--rose-text);font-size:12px;">${escapeHtml(capFormatarTelefoneExibicao(c.telefone))}</td>
+      <td style="padding:10px;text-align:center;">
+        <span style="background:${corCat}20;color:${corCat};border-radius:20px;padding:3px 10px;font-size:11.5px;font-weight:700;">${escapeHtml(labelCat)}</span>
+      </td>
+      <td style="padding:10px;text-align:center;">
+        ${c._isPaciente
+          ? '<span style="font-size:11px;color:var(--rose-text);">—</span>'
+          : `<select onchange="capMudarStatus(${c.id}, this.value)" style="border:1px solid var(--rose-light);border-radius:20px;padding:3px 8px;font-size:12px;font-weight:700;color:${corStatus};background:${corStatus}15;">
+              ${Object.entries(CAP_STATUS_LABEL).map(([k,l])=>`<option value="${k}" ${c.status===k?'selected':''}>${l}</option>`).join('')}
+            </select>`
+        }
       </td>
       <td style="padding:10px;text-align:center;">
         <div style="display:flex;flex-direction:column;align-items:center;gap:3px;">
-          <button onclick="capAbrirModal(${c.id})" style="background:#25d366;border:none;border-radius:50%;width:38px;height:38px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(37,211,102,.4);" title="Enviar WhatsApp">
-            <i class="ti ti-brand-whatsapp" style="color:#fff;font-size:18px;"></i>
+          <button onclick="capAbrirModal('${c.id}','manual')" style="background:#25d366;border:none;border-radius:50%;width:36px;height:36px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(37,211,102,.4);" title="Enviar WhatsApp">
+            <i class="ti ti-brand-whatsapp" style="color:#fff;font-size:17px;"></i>
           </button>
-          ${c.enviados ? `<span style="font-size:10px;color:#856404;font-weight:700;">${c.enviados}x enviado(s)</span>` : ''}
+          ${c.enviados ? `<span style="font-size:10px;color:#856404;font-weight:700;">${c.enviados}x</span>` : ''}
         </div>
       </td>
       <td style="padding:10px;text-align:center;">
-        <button onclick="capExcluirContato(${c.id})" style="background:none;border:none;cursor:pointer;color:#dc2626;font-size:16px;" title="Excluir"><i class="ti ti-trash"></i></button>
+        ${c._isPaciente
+          ? `<span style="font-size:10.5px;color:var(--rose-text);" title="Use a aba Resgate de Pacientes para mensagens a pacientes">Use Resgate</span>`
+          : `<button onclick="capAbrirModal('${c.id}','campanha')" style="background:var(--rose-dark);border:none;border-radius:8px;padding:6px 10px;cursor:pointer;color:#fff;font-size:11px;font-weight:700;white-space:nowrap;" title="${escapeHtml(nomeAcaoCampanha)}">${escapeHtml(nomeAcaoCampanha)}</button>`
+        }
+      </td>
+      <td style="padding:10px;text-align:center;">
+        ${c._isPaciente ? '' : `<button onclick="capExcluirContato(${c.id})" style="background:none;border:none;cursor:pointer;color:#dc2626;font-size:16px;" title="Excluir"><i class="ti ti-trash"></i></button>`}
       </td>
     </tr>`;
   }).join('');

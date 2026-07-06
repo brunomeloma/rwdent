@@ -1310,6 +1310,17 @@
         </div>
         <p style="font-size:13px;color:var(--rose-text);margin-bottom:16px;">Cadastre contatos de possíveis pacientes (nome e telefone) e envie mensagem de WhatsApp para cada um. Ideal para listas de indicações ou contatos avulsos.</p>
 
+        <!-- Importar arquivo CSV oficial -->
+        <div style="background:var(--rose-lighter);border:1px solid var(--rose-light);border-radius:14px;padding:14px 16px;margin-bottom:14px;">
+          <h3 style="font-size:13px;font-weight:700;color:var(--rose-dark);margin-bottom:6px;"><i class="ti ti-file-upload"></i> Importar arquivo CSV (Lead ST / Connect VIP)</h3>
+          <p style="font-size:12px;color:var(--rose-text);margin-bottom:8px;">Selecione o arquivo <code style="background:#fff;padding:1px 5px;border-radius:5px;">contatos_..._CORRIGIDO.csv</code>. Nomes e telefones não são alterados; duplicados são identificados pelo telefone.</p>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+            <input id="cap-import-csv" type="file" accept=".csv" style="flex:1;min-width:200px;font-size:12.5px;">
+            <button class="btn-primary" onclick="capImportarCsv()"><i class="ti ti-upload"></i> Importar arquivo</button>
+          </div>
+          <div id="cap-import-resultado" style="display:none;margin-top:10px;font-size:12.5px;background:#fff;border:1px solid var(--rose-light);border-radius:10px;padding:10px 12px;"></div>
+        </div>
+
         <!-- Adicionar contato individual -->
         <div style="background:var(--rose-lighter);border:1px solid var(--rose-light);border-radius:14px;padding:14px 16px;margin-bottom:14px;">
           <h3 style="font-size:13px;font-weight:700;color:var(--rose-dark);margin-bottom:10px;">Adicionar contato</h3>
@@ -1334,8 +1345,16 @@
         <!-- Métricas -->
         <div id="cap-metrics" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:16px;"></div>
 
-        <!-- Busca e filtros -->
-        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;align-items:center;">
+        <!-- Filtro por categoria -->
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;" id="cap-filtros-categoria">
+          <button class="btn-primary" data-cat="" onclick="capFiltrarCategoria('')">Todos</button>
+          <button class="btn-secondary" data-cat="paciente" onclick="capFiltrarCategoria('paciente')">Pacientes</button>
+          <button class="btn-secondary" data-cat="lead_st" onclick="capFiltrarCategoria('lead_st')">Lead ST</button>
+          <button class="btn-secondary" data-cat="connect_vip" onclick="capFiltrarCategoria('connect_vip')">Connect VIP</button>
+        </div>
+
+        <!-- Busca, filtro de status e ações em massa -->
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;align-items:center;">
           <input id="cap-busca" type="text" placeholder="Buscar por nome ou telefone..." oninput="capRenderTabela()" style="flex:1;min-width:180px;padding:8px 12px;border:1.5px solid var(--rose-light);border-radius:9px;font-size:13px;font-family:inherit;">
           <select id="cap-filtro-status" onchange="capRenderTabela()" style="padding:8px 10px;border:1.5px solid var(--rose-light);border-radius:9px;font-size:13px;font-family:inherit;background:#fff;">
             <option value="">Todos os status</option>
@@ -1346,16 +1365,25 @@
             <option value="sem_interesse">Sem interesse</option>
           </select>
         </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;align-items:center;">
+          <label style="display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--rose-text);cursor:pointer;">
+            <input type="checkbox" id="cap-selecionar-todos" onchange="capSelecionarTodos(this.checked)"> Selecionar todos (visíveis)
+          </label>
+          <button class="btn-primary" style="background:#25d366;border-color:#25d366;" onclick="capIniciarCampanhaEmMassa()"><i class="ti ti-brand-whatsapp"></i> Enviar campanha em massa</button>
+        </div>
 
         <!-- Tabela -->
         <div style="overflow-x:auto;">
           <table style="width:100%;border-collapse:collapse;font-size:13px;">
             <thead>
               <tr style="background:var(--rose-lighter);">
+                <th style="padding:10px;text-align:center;"></th>
                 <th style="padding:10px;text-align:left;">Nome</th>
                 <th style="padding:10px;text-align:left;">Telefone</th>
+                <th style="padding:10px;text-align:center;">Categoria</th>
                 <th style="padding:10px;text-align:center;">Status</th>
                 <th style="padding:10px;text-align:center;">WhatsApp</th>
+                <th style="padding:10px;text-align:center;">Campanha</th>
                 <th style="padding:10px;text-align:center;"></th>
               </tr>
             </thead>
@@ -1368,11 +1396,12 @@
       <div id="cap-modal-bg" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;align-items:center;justify-content:center;padding:16px;" onclick="if(event.target===this)capFecharModal()">
         <div style="background:#fff;border-radius:18px;padding:24px;max-width:480px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.3);">
           <h2 style="font-size:15px;font-weight:700;color:var(--rose-dark);margin-bottom:4px;"><i class="ti ti-brand-whatsapp" style="color:#25d366;"></i> Mensagem para <span id="cap-modal-nome"></span></h2>
+          <p id="cap-modal-progresso" style="display:none;font-size:11.5px;font-weight:700;color:var(--rose-dark);background:var(--rose-lighter);border-radius:7px;padding:3px 8px;display:inline-block;margin-bottom:8px;"></p>
           <p style="font-size:12px;color:var(--rose-text);margin-bottom:12px;">Revise e edite o texto antes de enviar:</p>
           <textarea id="cap-modal-msg" style="width:100%;height:160px;border:1.5px solid var(--rose-light);border-radius:10px;padding:12px;font-size:13px;font-family:inherit;resize:vertical;background:var(--rose-lighter);"></textarea>
           <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px;">
             <button class="btn-secondary" onclick="capFecharModal()">Cancelar</button>
-            <button class="btn-primary" style="background:#25d366;border-color:#25d366;" onclick="capEnviarWpp()"><i class="ti ti-brand-whatsapp"></i> Enviar via WhatsApp</button>
+            <button class="btn-primary" style="background:#25d366;border-color:#25d366;" onclick="capEnviarWpp()"><i class="ti ti-brand-whatsapp"></i> <span id="cap-modal-btn-txt">Enviar via WhatsApp</span></button>
           </div>
         </div>
       </div>
