@@ -1353,6 +1353,11 @@
           <button class="btn-secondary" data-cat="connect_vip" onclick="capFiltrarCategoria('connect_vip')">Connect VIP</button>
         </div>
 
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
+          <button class="btn-secondary" style="font-size:11.5px;" onclick="capRedefinirMensagemPadrao('lead_st')"><i class="ti ti-refresh"></i> Usar mensagem padrão atual em todos os Lead ST</button>
+          <button class="btn-secondary" style="font-size:11.5px;" onclick="capRedefinirMensagemPadrao('connect_vip')"><i class="ti ti-refresh"></i> Usar mensagem padrão atual em todos os Connect VIP</button>
+        </div>
+
         <!-- Busca, filtro de status e ações em massa -->
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;align-items:center;">
           <input id="cap-busca" type="text" placeholder="Buscar por nome ou telefone..." oninput="capRenderTabela()" style="flex:1;min-width:180px;padding:8px 12px;border:1.5px solid var(--rose-light);border-radius:9px;font-size:13px;font-family:inherit;">

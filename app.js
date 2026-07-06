@@ -10361,21 +10361,29 @@ const CAP_CATEGORIA_COR   = { lead_st:'#7a3020', connect_vip:'#1d4ed8', paciente
 // Mensagens padrão por categoria — nome oficial: "Consultório Odontológico Rhaiza Barroso"
 const CAP_MSG_PADRAO_LEAD_ST = `Olá! 😊 Tudo bem?
 
-Aqui é da Consultório Odontológico Rhaiza Barroso. Estamos com vagas para novos pacientes e gostaríamos de convidar você para conhecer nosso atendimento.
+Aqui é do Consultório Odontológico Rhaiza Barroso.
 
-Realizamos limpeza, clareamento, restaurações, tratamento de canal, implantes, próteses, ortodontia e diversos outros procedimentos, sempre com atendimento humanizado e tecnologia para oferecer mais conforto aos nossos pacientes.
+Estamos entrando em contato porque abrimos algumas vagas para novos pacientes e preparamos uma condição especial de boas-vindas para quem realizar o primeiro atendimento conosco.
 
-Neste período, quem agenda a primeira avaliação poderá conhecer as condições disponíveis para iniciar o tratamento de acordo com sua necessidade.
+É uma excelente oportunidade para conhecer nossa equipe, fazer uma avaliação completa da sua saúde bucal e aproveitar um benefício exclusivo no primeiro atendimento.
 
-Se desejar mais informações ou agendar uma avaliação, basta responder esta mensagem. Será um prazer atender você! 🦷✨`;
+Caso tenha interesse, responda esta mensagem com "QUERO" que enviaremos todas as informações e os horários disponíveis.
+
+Será um prazer receber você! 🦷✨`;
 
 const CAP_MSG_PADRAO_CONNECT_VIP = `Olá! 😊 Tudo bem?
 
-A Consultório Odontológico Rhaiza Barroso agora é parceira da Connect Inglês VIP.
+Aqui é do Consultório Odontológico Rhaiza Barroso.
 
-Alunos e familiares conveniados possuem condições especiais e benefícios exclusivos em diversos procedimentos odontológicos.
+Entramos em contato porque, por meio do Clube de Vantagens da Connect Inglês VIP, você tem um benefício exclusivo disponível.
 
-Caso queira saber mais ou agendar uma avaliação, basta responder esta mensagem. Será um prazer atender você! 🦷✨`;
+Você pode agendar uma consulta odontológica e receber também um benefício especial em um procedimento da clínica (informaremos todos os detalhes no momento do agendamento).
+
+É uma ótima oportunidade para fazer uma avaliação da sua saúde bucal com uma equipe especializada e conhecer nosso consultório.
+
+As vagas são limitadas para os participantes do Clube de Vantagens.
+
+Se tiver interesse, é só responder esta mensagem com "QUERO" que enviaremos os horários disponíveis. 🦷✨`;
 
 function capContatos(){
   if(!Array.isArray(cfg.captacao)) cfg.captacao = [];
@@ -10758,6 +10766,20 @@ function capFiltrarCategoria(cat){
     b.className = (b.dataset.cat === cat) ? 'btn-primary' : 'btn-secondary';
   });
   capRenderTabela();
+}
+
+// Contatos importados do CSV trazem sua própria mensagem_campanha salva.
+// Quando o texto padrão da categoria muda, isso limpa a mensagem individual
+// de cada contato da categoria para que volte a usar o padrão atual.
+function capRedefinirMensagemPadrao(categoria){
+  const lista = capContatos().filter(c=>c.categoria===categoria);
+  if(!lista.length){ showToast('Nenhum contato dessa categoria encontrado','error'); return; }
+  if(!confirm(`Redefinir a mensagem de campanha de ${lista.length} contato(s) de "${CAP_CATEGORIA_LABEL[categoria]}" para o texto padrão atual? Isso substitui qualquer mensagem já salva para esses contatos.`)) return;
+  lista.forEach(c=>{ c.mensagem_campanha = null; });
+  capSalvar().then(()=>{
+    showToast(`${lista.length} contato(s) de ${CAP_CATEGORIA_LABEL[categoria]} atualizado(s) para a mensagem padrão atual.`);
+    capRenderTabela();
+  });
 }
 
 function capListaExibicao(){
