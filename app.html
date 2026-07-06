@@ -1482,6 +1482,14 @@
             <input type="checkbox" id="cap-selecionar-todos" onchange="capSelecionarTodos(this.checked)"> Selecionar todos (visíveis)
           </label>
           <button class="btn-primary" style="background:#25d366;border-color:#25d366;" onclick="capIniciarCampanhaEmMassa()"><i class="ti ti-brand-whatsapp"></i> Enviar campanha em massa</button>
+          <select id="cap-status-em-massa" style="padding:8px 10px;border:1.5px solid var(--rose-light);border-radius:9px;font-size:12.5px;font-family:inherit;background:#fff;">
+            <option value="novo">Novo</option>
+            <option value="contatado" selected>Contatado</option>
+            <option value="respondeu">Respondeu</option>
+            <option value="agendou">Agendou</option>
+            <option value="sem_interesse">Sem interesse</option>
+          </select>
+          <button class="btn-secondary" onclick="capAplicarStatusEmMassa()"><i class="ti ti-checks"></i> Marcar selecionados</button>
         </div>
 
         <!-- Tabela -->

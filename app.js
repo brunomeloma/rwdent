@@ -10782,6 +10782,25 @@ function capIniciarCampanhaEmMassa(){
   capAbrirModal(capBulkFila[0], 'campanha');
 }
 
+// Corrige/atualiza o status de vários contatos de uma vez, sem enviar mensagem —
+// útil para marcar retroativamente quem já foi contatado por fora do sistema.
+function capAplicarStatusEmMassa(){
+  const ids = capContatosSelecionadosIds().filter(Boolean);
+  if(!ids.length){ showToast('Selecione ao menos um contato','error'); return; }
+  const novoStatus = document.getElementById('cap-status-em-massa')?.value || 'contatado';
+  const label = CAP_STATUS_LABEL[novoStatus] || novoStatus;
+  if(!confirm(`Marcar ${ids.length} contato(s) selecionado(s) como "${label}"? Isso NÃO envia nenhuma mensagem, só atualiza o status.`)) return;
+  let alterados = 0;
+  ids.forEach(id=>{
+    const c = capBuscarContatoPorId(id);
+    if(c && !c._isPaciente){ c.status = novoStatus; alterados++; }
+  });
+  capSalvar().then(()=>{
+    showToast(`${alterados} contato(s) marcado(s) como "${label}"`);
+    capRenderTabela();
+  });
+}
+
 function capBulkAvancar(){
   capBulkEnviados++;
   capBulkPos++;
