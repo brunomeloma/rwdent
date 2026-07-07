@@ -1470,9 +1470,12 @@ function renderPatientDetail(abaAtiva){
     <div class="card">
       <!-- HEADER -->
       <div class="section-header">
-        <div>
-          <h2><i class="ti ti-user"></i> ${escapeHtml(p.nome)} ${calcIdade(p.nascimento)!==null && calcIdade(p.nascimento)<18 ? '<span class="fin-badge danger" style="font-size:10px;">MENOR DE IDADE</span>' : ''}</h2>
-          <p style="color:var(--rose-text);margin-top:4px;font-size:13px;">${escapeHtml(p.plano||'Sem plano')} · ${p.nascimento?'Nasc. '+formatDate(p.nascimento)+(calcIdade(p.nascimento)!==null?' ('+calcIdade(p.nascimento)+' anos)':''):''}</p>
+        <div style="display:flex;align-items:center;gap:14px;">
+          <div class="home-row-avatar" style="width:52px;height:52px;font-size:18px;border-radius:14px;background:#${hashColor(p.nome||'?')};flex-shrink:0;">${initials(p.nome)}</div>
+          <div>
+            <h2>${escapeHtml(p.nome)} ${calcIdade(p.nascimento)!==null && calcIdade(p.nascimento)<18 ? '<span class="fin-badge danger" style="font-size:10px;">MENOR DE IDADE</span>' : ''}</h2>
+            <p style="color:var(--rose-text);margin-top:4px;font-size:13px;">${escapeHtml(p.plano||'Sem plano')} · ${p.nascimento?'Nasc. '+formatDate(p.nascimento)+(calcIdade(p.nascimento)!==null?' ('+calcIdade(p.nascimento)+' anos)':''):''}</p>
+          </div>
         </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
           <button class="btn-secondary" style="background:#e8f5e9;border-color:#a5d6a7;color:#2e7d32;" onclick="agendarDoProntuario(${p.id})"><i class="ti ti-calendar-plus"></i> Agendar</button>
