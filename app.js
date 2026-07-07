@@ -82,6 +82,9 @@ function hashColor(text){
   const c=(h&0x00FFFFFF).toString(16).toUpperCase();
   return'00000'.substring(0,6-c.length)+c;
 }
+function homeAvatar(nome){
+  return `<div class="home-row-avatar" style="background:#${hashColor(nome||'?')}">${initials(nome)}</div>`;
+}
 
 // ══════════════════════════════════════════════════════
 // AUTH
@@ -699,9 +702,12 @@ function renderHomeStats(){
         const telAg = a.telefone || pac?.telefone || '';
         const btnWpp = telAg ? `<button class="home-btn-ver" style="min-height:32px;padding:5px 9px;border-radius:8px;background:#25d366;color:#fff;border-color:#25d366;" title="Lembrar via WhatsApp" onclick="enviarConfirmacaoWpp('${escapeHtml(telAg).replace(/'/g,'&#39;')}','${escapeHtml(nome).replace(/'/g,'&#39;')}','${a.data}','${a.horario||''}','${escapeHtml(a.procedimento||'Consulta').replace(/'/g,'&#39;')}')"><i class="ti ti-brand-whatsapp"></i></button>` : '';
         return `<div class="home-table-row">
-          <div>
-            <div class="home-table-name">${escapeHtml(nome)}</div>
-            <div class="home-table-sub">${escapeHtml(a.procedimento||'')}</div>
+          <div class="home-row-main">
+            ${homeAvatar(nome)}
+            <div>
+              <div class="home-table-name">${escapeHtml(nome)}</div>
+              <div class="home-table-sub">${escapeHtml(a.procedimento||'')}</div>
+            </div>
           </div>
           <div style="font-weight:700;color:#3a2020;min-width:44px;text-align:center;">${(a.horario||'').slice(0,5)}</div>
           <span class="home-badge ${badgeCls}">${badgeTxt}</span>
@@ -723,8 +729,13 @@ function renderHomeStats(){
       recEl.innerHTML = recentPacs.map(p=>{
         const dt = p.created_at ? new Date(p.created_at).toLocaleDateString('pt-BR',{day:'2-digit',month:'short',year:'numeric'}) : '—';
         return `<div class="home-table-row">
-          <div class="home-table-name">${escapeHtml(p.nome)}</div>
-          <div class="home-table-sub">${dt}</div>
+          <div class="home-row-main">
+            ${homeAvatar(p.nome)}
+            <div>
+              <div class="home-table-name">${escapeHtml(p.nome)}</div>
+              <div class="home-table-sub">${dt}</div>
+            </div>
+          </div>
           <button class="home-btn-ver" onclick="verPacienteHome('${p.id}')" style="min-height:36px;padding:6px 14px;border-radius:8px;">Ver</button>
         </div>`;
       }).join('');
@@ -747,9 +758,12 @@ function renderHomeStats(){
         const dt = v.dataFinal||v.data||'';
         const vencido = v.vencimento && v.vencimento < _hj;
         return `<div class="home-table-row">
-          <div>
-            <div class="home-table-name">${escapeHtml(pac?.nome||v.pacienteNome||'—')}</div>
-            <div class="home-table-sub">${dt?new Date(dt).toLocaleDateString('pt-BR'):'—'}${v.vencimento?' · vence '+new Date(v.vencimento+'T12:00:00').toLocaleDateString('pt-BR'):''}</div>
+          <div class="home-row-main">
+            ${homeAvatar(pac?.nome||v.pacienteNome||'?')}
+            <div>
+              <div class="home-table-name">${escapeHtml(pac?.nome||v.pacienteNome||'—')}</div>
+              <div class="home-table-sub">${dt?new Date(dt).toLocaleDateString('pt-BR'):'—'}${v.vencimento?' · vence '+new Date(v.vencimento+'T12:00:00').toLocaleDateString('pt-BR'):''}</div>
+            </div>
           </div>
           ${vencido?'<span class="fin-badge danger" style="font-size:9px;">VENCIDO</span>':''}
           <span style="font-weight:700;color:#dc2626;font-size:13px;white-space:nowrap;">${fmtBRL(saldo)}</span>
@@ -768,7 +782,10 @@ function renderHomeStats(){
       anamEl.innerHTML='<div class="home-empty">Nenhuma anamnese recente.</div>';
     } else {
       anamEl.innerHTML = comAnam.map(p=>`<div class="home-table-row">
-        <div class="home-table-name">${escapeHtml(p.nome)}</div>
+        <div class="home-row-main">
+          ${homeAvatar(p.nome)}
+          <div class="home-table-name">${escapeHtml(p.nome)}</div>
+        </div>
         <span class="home-badge confirmada" style="font-size:10px;">Recebida</span>
         <button class="home-btn-ver" onclick="verPacienteHome('${p.id}')" style="min-height:36px;padding:6px 14px;border-radius:8px;">Ver</button>
       </div>`).join('');
@@ -797,9 +814,12 @@ function renderHomeStats(){
         const tel = (p.telefone||'').replace(/\D/g,'');
         const btnW = tel ? `<button class="home-btn-ver" style="min-height:32px;padding:5px 9px;border-radius:8px;background:#25d366;color:#fff;" title="Chamar para retorno" onclick="homeRecallWpp(${p.id})"><i class="ti ti-brand-whatsapp"></i></button>` : '';
         return `<div class="home-table-row">
-          <div>
-            <div class="home-table-name">${escapeHtml(p.nome)}</div>
-            <div class="home-table-sub">Última visita: ${new Date(ultima+'T12:00:00').toLocaleDateString('pt-BR')} (${meses} meses)</div>
+          <div class="home-row-main">
+            ${homeAvatar(p.nome)}
+            <div>
+              <div class="home-table-name">${escapeHtml(p.nome)}</div>
+              <div class="home-table-sub">Última visita: ${new Date(ultima+'T12:00:00').toLocaleDateString('pt-BR')} (${meses} meses)</div>
+            </div>
           </div>
           ${btnW}
           <button class="home-btn-ver" onclick="verPacienteHome('${p.id}')" style="min-height:32px;padding:5px 12px;border-radius:8px;">Ver</button>
@@ -826,9 +846,12 @@ function renderHomeStats(){
         const tel = (p.telefone||'').replace(/\D/g,'');
         const btnW = tel ? `<button class="home-btn-ver" style="min-height:32px;padding:5px 9px;border-radius:8px;background:#25d366;color:#fff;" title="Enviar parabéns" onclick="homeAniverWpp(${p.id})"><i class="ti ti-brand-whatsapp"></i></button>` : '';
         return `<div class="home-table-row" ${hojeAniv?'style="background:#fff3f6;border-radius:8px;"':''}>
-          <div>
-            <div class="home-table-name">${hojeAniv?'🎂 ':''}${escapeHtml(p.nome)}</div>
-            <div class="home-table-sub">Dia ${dia}${hojeAniv?' — hoje!':''}</div>
+          <div class="home-row-main">
+            ${homeAvatar(p.nome)}
+            <div>
+              <div class="home-table-name">${hojeAniv?'🎂 ':''}${escapeHtml(p.nome)}</div>
+              <div class="home-table-sub">Dia ${dia}${hojeAniv?' — hoje!':''}</div>
+            </div>
           </div>
           ${btnW}
         </div>`;

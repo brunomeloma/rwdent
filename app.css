@@ -1325,3 +1325,140 @@ select, textarea {
   #fin-metrics>div,#vendas-metrics>div{min-width:0;}
   #fin-metrics>div>div:last-child,#vendas-metrics>div>div:last-child{font-size:17px!important;overflow-wrap:anywhere;}
 }
+
+/* ═══════════════════════════════════════════════════════════
+   MODELO 3 — REDESIGN PREMIUM
+   Mesma paleta (--rose/--rose-dark/etc.), só eleva sombra,
+   espaçamento, raio de borda, tipografia e profundidade.
+   Nenhum seletor de layout/posicionamento (odontograma, calendário,
+   periodontia) foi tocado — só cor/sombra/raio onde é seguro.
+═══════════════════════════════════════════════════════════ */
+
+body{-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;}
+
+/* ── Cards: mais profundidade, cantos mais suaves ── */
+.card{
+  border-radius:18px!important;
+  border:1px solid rgba(122,48,32,.09)!important;
+  box-shadow:0 1px 2px rgba(122,48,32,.04),0 8px 28px rgba(122,48,32,.08)!important;
+}
+.card h2{font-size:12.5px!important;letter-spacing:.6px!important;font-weight:800!important;}
+
+/* ── Botões: gradiente sutil + elevação no hover ── */
+.btn-primary{
+  background:linear-gradient(160deg,var(--rose) 0%,var(--rose-dark) 130%)!important;
+  border-radius:12px!important;
+  padding:11px 20px!important;
+  box-shadow:0 4px 14px rgba(122,48,32,.22)!important;
+  transition:transform .18s cubic-bezier(.4,0,.2,1),box-shadow .18s!important;
+  letter-spacing:.1px;
+}
+.btn-primary:hover{transform:translateY(-1.5px)!important;box-shadow:0 8px 22px rgba(122,48,32,.3)!important;}
+.btn-primary:active{transform:translateY(0) scale(.98)!important;}
+.btn-secondary{
+  border-radius:12px!important;
+  border:1.5px solid var(--rose-light)!important;
+  transition:all .18s!important;
+}
+.btn-secondary:hover{border-color:var(--rose)!important;transform:translateY(-1px);}
+.btn-danger{border-radius:12px!important;transition:all .18s;}
+
+/* ── Nav superior: mais profundidade e refinamento ── */
+.header{
+  box-shadow:0 1px 0 rgba(255,255,255,.08) inset,0 4px 24px rgba(80,25,15,.28)!important;
+}
+.topnav-brand-icon{box-shadow:0 2px 8px rgba(0,0,0,.12);}
+.topnav-item{border-radius:10px!important;}
+.topnav-item:hover{background:rgba(255,255,255,.14)!important;}
+.tn-group-btn{border-radius:10px!important;}
+.tn-dropdown{border-radius:16px!important;box-shadow:0 16px 44px rgba(80,25,15,.22),0 2px 10px rgba(0,0,0,.08)!important;}
+
+/* ── Home hero banner: gradiente mais rico, mais profundidade ── */
+.home-hero-banner{
+  background:linear-gradient(150deg,#d4735a 0%,#a05040 60%,#8a3a2a 120%)!important;
+  border-radius:20px!important;
+  box-shadow:0 10px 32px rgba(122,48,32,.22)!important;
+  padding:24px 26px 26px!important;
+}
+.home-hero-greeting{font-weight:800!important;letter-spacing:-.2px;}
+.home-hero-stat{border-radius:12px!important;transition:transform .18s;}
+.home-hero-stat:hover{transform:translateY(-2px);}
+
+/* ── Home: linhas de lista com avatar colorido (iniciais) ── */
+.home-row-main{display:flex;align-items:center;gap:10px;min-width:0;flex:1;}
+.home-row-main .home-table-name,.home-row-main .home-table-sub{overflow-wrap:anywhere;}
+.home-row-avatar{
+  width:34px;height:34px;border-radius:10px;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+  color:#fff;font-weight:800;font-size:12px;letter-spacing:.2px;
+  box-shadow:0 2px 6px rgba(0,0,0,.14);
+}
+.home-table-row{
+  padding:9px 8px!important;margin:0 -8px;border-radius:10px;
+  transition:background .15s!important;
+}
+.home-table-row:hover{background:rgba(212,115,90,.06);}
+
+/* ── Home stat cards: sombra mais suave, leve elevação ── */
+.home-stat-card{
+  border-radius:16px!important;
+  box-shadow:0 1px 3px rgba(122,48,32,.05),0 6px 18px rgba(122,48,32,.07)!important;
+  transition:transform .18s,box-shadow .18s!important;
+}
+.home-stat-card:hover{transform:translateY(-2px);box-shadow:0 10px 26px rgba(122,48,32,.12)!important;}
+.home-stat-icon{box-shadow:0 2px 8px rgba(0,0,0,.06);}
+
+/* ── Inputs: bordas e foco mais refinados ── */
+input,select,textarea{
+  border-radius:12px!important;
+  border-color:rgba(122,48,32,.16)!important;
+  transition:border .2s,box-shadow .2s,background .2s!important;
+}
+input:focus,select:focus,textarea:focus{
+  box-shadow:0 0 0 4px rgba(212,115,90,.14)!important;
+}
+label{letter-spacing:.5px!important;}
+
+/* ── Listas / cards de item: leve elevação no hover ── */
+.appt-item,.patient-card,.prof-card{
+  border-radius:14px!important;
+  transition:box-shadow .2s,transform .18s!important;
+}
+.appt-item:hover,.patient-card:hover,.prof-card:hover{
+  transform:translateY(-1px);
+  box-shadow:0 8px 22px rgba(122,48,32,.1)!important;
+}
+.appt-time{border-radius:10px!important;}
+
+/* ── Badges: um pouco mais refinados ── */
+.home-badge,.fin-badge,.admin-badge,.status-badge,.badge,.urg-badge,.fin-pac-badge{
+  letter-spacing:.4px!important;
+}
+
+/* ── Modais: mais profundidade ── */
+.modal-box{
+  border-radius:22px!important;
+  box-shadow:0 24px 70px rgba(0,0,0,.22)!important;
+}
+.modal-title{font-weight:800!important;letter-spacing:-.1px;}
+
+/* ── Toast: mais refinado ── */
+.toast{border-radius:14px!important;box-shadow:0 10px 30px rgba(0,0,0,.14)!important;}
+
+/* ── Tabelas: cabeçalho mais elegante ── */
+table thead tr th,.admin-table th,.ap-table th{letter-spacing:.5px!important;}
+.admin-table,.ap-card{border-radius:18px!important;}
+
+/* ── Abas do paciente / vendas: pill mais suave ── */
+.pac-tab.active{box-shadow:0 3px 10px rgba(212,115,90,.2)!important;}
+.vendas-subtab.active{font-weight:800!important;}
+
+/* ── Mobile bottom nav: mais elegante ── */
+.mobile-bottom-nav{box-shadow:0 -4px 24px rgba(122,48,32,.1)!important;}
+.mobile-nav-item.active i{box-shadow:0 2px 8px rgba(212,115,90,.25);}
+.mobile-more-sheet{border-radius:26px 26px 0 0!important;}
+.mobile-more-grid button{border-radius:18px!important;transition:all .2s!important;}
+.mobile-more-grid button:hover{border-color:var(--rose)!important;}
+
+/* ── Cards de Aparelhos / Clareamento: mais premium ── */
+.ap-card:hover{box-shadow:0 14px 34px rgba(122,48,32,.14)!important;}
