@@ -12020,7 +12020,8 @@ async function galeriaUpload(fileList, pacId){
     try {
       const compressed = await _galeriaCompress(file, 1600);
       const ts = Date.now();
-      const ext = file.name.split('.').pop().toLowerCase() || 'jpg';
+      const extRaw = file.name.split('.').pop().toLowerCase().replace(/[^a-z0-9]/g,'');
+      const ext = extRaw || 'jpg';
       const fname = `${cat}__${ts}_${Math.random().toString(36).slice(2,6)}.${ext}`;
       const path = _galeriaPath(pacId, fname);
 

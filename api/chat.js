@@ -40,6 +40,26 @@ const MAX_HISTORY     = 14;
 const MAX_CONTENT_LEN = 900;
 const MAX_TOOL_ROUNDS = 4;
 
+// Rate limit em memória, por instância da function (best-effort — reseta a
+// cada cold start e não é compartilhado entre instâncias). Serve como
+// segunda camada de defesa contra abuso vindo de um único usuário
+// autenticado; a cota dos provedores de IA continua sendo o limite real.
+const RATE_LIMIT_WINDOW_MS = 60000;
+const RATE_LIMIT_MAX_REQ   = 12;
+const _rateBuckets = new Map();
+function isRateLimited(userId) {
+  const now = Date.now();
+  const hits = (_rateBuckets.get(userId) || []).filter(t => now - t < RATE_LIMIT_WINDOW_MS);
+  hits.push(now);
+  _rateBuckets.set(userId, hits);
+  // Evita crescimento ilimitado do Map em instâncias de longa duração
+  if (_rateBuckets.size > 500) {
+    const oldest = _rateBuckets.keys().next().value;
+    _rateBuckets.delete(oldest);
+  }
+  return hits.length > RATE_LIMIT_MAX_REQ;
+}
+
 // gpt-oss é modelo de raciocínio (pensa antes de responder). Para um
 // assistente de tarefas simples (agenda/paciente/preço), esforço "low" já
 // basta e corta bastante a latência — evita estourar o tempo da function
@@ -1025,6 +1045,7 @@ module.exports = async function handler(req, res) {
 
   let clinicId = null;
   let authedSb = null;
+  let userId = null;
 
   // Remove caracteres fora do ASCII imprimível (bullets copiados acidentalmente de dashboards)
   const cleanStr = s => String(s || '').replace(/[^\x20-\x7E]/g, '').trim();
@@ -1047,6 +1068,7 @@ module.exports = async function handler(req, res) {
         console.log('[AI] auth: nenhum usuário para o token');
       } else {
         console.log(`[AI] auth ok: user=${user.id}`);
+        userId = user.id;
         // Cria cliente com o token do usuário para respeitar RLS
         authedSb = createClient(supabaseUrl, supabaseAnon, {
           global: { headers: { Authorization: `Bearer ${cleanToken}` } }
@@ -1070,6 +1092,20 @@ module.exports = async function handler(req, res) {
     } catch (e) {
       console.log(`[AI] auth exception: ${e.message}`);
     }
+  }
+
+  // Endpoint exige login: sem isso, qualquer script externo poderia bater
+  // aqui direto (sem passar pela UI) e consumir a cota gratuita da IA que é
+  // compartilhada por todas as clínicas.
+  if (!userId) {
+    return res.status(401).json({ error: 'Faça login para usar o assistente.' });
+  }
+
+  // Rate limit best-effort por usuário (janela deslizante em memória do
+  // processo). Não é distribuído entre instâncias serverless — é uma camada
+  // extra além dos limites de cota dos provedores, não a defesa principal.
+  if (isRateLimited(userId)) {
+    return res.status(429).json({ error: 'Muitas mensagens em pouco tempo. Aguarde um instante.' });
   }
 
   // ── Histórico ──
