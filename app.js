@@ -11945,14 +11945,23 @@ async function galeriaCarregar(pacId){
 
   if(err2){ grid.innerHTML=`<div class="galeria-vazia"><i class="ti ti-alert-triangle"></i>${escapeHtml(err2.message)}</div>`; return; }
 
-  _galeriaFotos = (files||[]).filter(f=>f.name && !f.name.endsWith('/')).map(f=>{
+  const validFiles = (files||[]).filter(f=>f.name && !f.name.endsWith('/'));
+  const paths = validFiles.map(f=>`${clinicaId}/${pacId}/${f.name}`);
+  // Bucket é privado (fotos/radiografias são dado sensível de saúde) — URL
+  // assinada com expiração de 1h em vez de getPublicUrl(), que exigiria o
+  // bucket público e deixaria qualquer arquivo acessível por quem tivesse o link.
+  const { data: signedUrls, error: errSigned } = paths.length
+    ? await _sb.storage.from(GALERIA_BUCKET).createSignedUrls(paths, 3600)
+    : { data: [], error: null };
+  if(errSigned){ grid.innerHTML=`<div class="galeria-vazia"><i class="ti ti-alert-triangle"></i>${escapeHtml(errSigned.message)}</div>`; return; }
+
+  _galeriaFotos = validFiles.map((f,i)=>{
     const parts = f.name.split('__');
     const cat = parts.length>=2 ? parts[0] : 'foto';
-    const { data: urlData } = _sb.storage.from(GALERIA_BUCKET).getPublicUrl(`${clinicaId}/${pacId}/${f.name}`);
     return {
       name: f.name,
       categoria: cat,
-      url: urlData.publicUrl,
+      url: signedUrls[i]?.signedUrl || '',
       created: f.created_at || f.updated_at || '',
       size: f.metadata?.size || 0
     };
