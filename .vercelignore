@@ -1,0 +1,13 @@
+# Arquivos de operação/desenvolvimento — nunca devem ser publicados no site.
+# Sem isso, o Vercel serve QUALQUER arquivo do repositório como estático,
+# inclusive os que revelam credenciais de demo, e-mails/UUIDs de admin e a
+# arquitetura de segurança interna (achado em pentest — ver auditoria).
+*.sql
+supabase/
+docs/
+SECURITY_SETUP.md
+DEMO_SETUP.md
+.editorconfig
+.prettierrc.json
+.prettierignore
+.env.example
