@@ -437,7 +437,15 @@ async function doCadastro() {
   document.getElementById('btn-cad-text').textContent = 'Enviando...';
 
   try {
-    const { data: signUpData, error: signUpError } = await _sb.auth.signUp({ email, password: pass });
+    const { error: signUpError } = await _sb.auth.signUp({
+      email,
+      password: pass,
+      options: {
+        // Guardado em user_metadata — o trigger handle_new_user lê daqui
+        // para criar a clínica automaticamente (ver supabase-seguranca.sql).
+        data: { nome_resp: nome, nome_cli: clinica, telefone }
+      }
+    });
 
     if(signUpError) {
       show(signUpError.message === 'User already registered'
@@ -446,32 +454,9 @@ async function doCadastro() {
       return;
     }
 
-    const { data: loginData, error: loginError } = await _sb.auth.signInWithPassword({ email, password: pass });
-
-    if(loginError || !loginData.user) {
-      show('Conta criada! Mas não conseguimos fazer login automático. Tente entrar manualmente.');
-      showPanel('login');
-      return;
-    }
-
-    const { error: err2 } = await _sb.from('clinicas').insert([{
-      user_id  : loginData.user.id,
-      nome_resp: nome,
-      nome_cli : clinica,
-      email,
-      telefone,
-      status   : 'pendente'
-    }]);
-
-    if(err2) {
-      if(err2.message.includes('relation') || err2.message.includes('does not exist')) {
-        show('Tabela "clinicas" não encontrada. Execute o SQL do SETUP_SUPABASE.md no Supabase primeiro.');
-      } else {
-        show('Erro ao salvar perfil: ' + err2.message);
-      }
-      return;
-    }
-
+    // A clínica é criada no banco pelo trigger, com status 'pendente'.
+    // Sem insert manual nem login automático: funciona inclusive com
+    // confirmação de e-mail ligada.
     showPanel('pending');
 
   } catch(e) {
