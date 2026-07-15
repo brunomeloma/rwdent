@@ -1,0 +1,100 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# 🔒 RWDent - ARQUIVO .env.local SEGURO
+# 
+# INSTRUÇÕES:
+# 1. Renomeie este arquivo para .env.local (adicione .local no final)
+# 2. NUNCA commite este arquivo no Git
+# 3. Preencha COM AS NOVAS CHAVES do Supabase (que você vai regenerar)
+# 4. Use este arquivo localmente para desenvolvimento
+# 5. Para produção, configure as variáveis no Vercel Dashboard
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# ───────────────────────────────────────────────────────────────────────────────
+# SUPABASE - REGENERE ESTAS CHAVES NO DASHBOARD
+# ───────────────────────────────────────────────────────────────────────────────
+# 
+# Passo a passo para regenerar:
+# 1. Acesse https://supabase.com/dashboard
+# 2. Selecione seu projeto RWDent
+# 3. Vá para Settings → API
+# 4. Clique "Regenerate" ao lado de "anon public"
+# 5. Copie a URL e a NOVA chave abaixo
+#
+
+SUPABASE_URL=https://xdncwmxjdqiwykbcaddd.supabase.co
+SUPABASE_ANON_KEY=SUBSTITUA_COM_A_NOVA_CHAVE_GERADA_NO_SUPABASE
+
+# ───────────────────────────────────────────────────────────────────────────────
+# LLM PROVIDERS - Escolha pelo menos um
+# ───────────────────────────────────────────────────────────────────────────────
+
+# OpenRouter (recomendado - acesso a vários modelos)
+OPENROUTER_API_KEY=
+
+# OU Google Gemini
+GOOGLE_API_KEY=
+
+# OU Groq (ótimo para performance)
+GROQ_API_KEY=
+
+# ───────────────────────────────────────────────────────────────────────────────
+# INTEGRAÇÕES OPCIONAIS
+# ───────────────────────────────────────────────────────────────────────────────
+
+BROWSERBASE_API_KEY=
+BROWSERBASE_PROJECT_ID=
+VOICE_TOOLS_OPENAI_KEY=
+
+# ───────────────────────────────────────────────────────────────────────────────
+# CONFIGURAÇÕES DE APLICAÇÃO
+# ───────────────────────────────────────────────────────────────────────────────
+
+TERMINAL_TIMEOUT=60
+TERMINAL_LIFETIME_SECONDS=300
+BROWSER_SESSION_TIMEOUT=300
+BROWSER_INACTIVITY_TIMEOUT=120
+
+# ───────────────────────────────────────────────────────────────────────────────
+# CONFIGURAÇÕES DE SEGURANÇA
+# ───────────────────────────────────────────────────────────────────────────────
+
+# Requisito de senha - mínimo 12 caracteres
+MIN_PASSWORD_LENGTH=12
+
+# Permitir URLs privadas (localhost, 192.168.x.x, etc.)
+ALLOW_PRIVATE_URLS=false
+
+# Permitir todos os usuários sem allowlist
+GATEWAY_ALLOW_ALL_USERS=false
+
+# Timeout de sessão por inatividade
+SESSION_TIMEOUT_MINUTES=15
+
+# Máximo de tentativas de login
+MAX_LOGIN_ATTEMPTS=5
+
+# Tempo de bloqueio após múltiplas tentativas
+LOGIN_LOCKOUT_MINUTES=15
+
+# ───────────────────────────────────────────────────────────────────────────────
+# LOGGING E DEBUG
+# ───────────────────────────────────────────────────────────────────────────────
+
+# Debug de ferramentas web (false em produção)
+WEB_TOOLS_DEBUG=false
+
+# Debug de visão/IA (false em produção)
+VISION_TOOLS_DEBUG=false
+
+# Debug de MOA tools (false em produção)
+MOA_TOOLS_DEBUG=false
+
+# Debug de ferramentas de imagem (false em produção)
+IMAGE_TOOLS_DEBUG=false
+
+# ───────────────────────────────────────────────────────────────────────────────
+# AUTOMÁTICO - NÃO EDITE
+# ───────────────────────────────────────────────────────────────────────────────
+
+PYTHONUNBUFFERED=1
+PYTHONDONTWRITEBYTECODE=1
