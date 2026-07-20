@@ -5764,9 +5764,9 @@ function renderChartMensal(){
   el.innerHTML = `<div style="display:flex;align-items:flex-end;gap:6px;height:120px;">
     ${meses.map(m=>{
       const h = Math.max(m.total/max*100, 4);
-      return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;">
+      return `<div style="flex:1;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:4px;">
         <span style="font-size:10px;color:var(--rose-dark);font-weight:700;">${m.total>0?fmtBRL(m.total):''}</span>
-        <div style="width:100%;max-width:40px;height:${h}%;background:linear-gradient(180deg,var(--rose),var(--rose-dark));border-radius:6px 6px 2px 2px;transition:height .3s;"></div>
+        <div style="width:100%;max-width:40px;flex-shrink:0;height:${h}%;background:linear-gradient(180deg,var(--rose),var(--rose-dark));border-radius:6px 6px 2px 2px;transition:height .3s;"></div>
         <span style="font-size:10px;color:var(--rose-text);text-transform:capitalize;">${m.label}</span>
       </div>`;
     }).join('')}

@@ -733,6 +733,13 @@ const observer=new IntersectionObserver((entries)=>{
   entries.forEach(e=>{if(e.isIntersecting){e.target.classList.add('show');observer.unobserve(e.target);}});
 },{threshold:0.1,rootMargin:'0px 0px -40px 0px'});
 document.querySelectorAll('.animate').forEach(el=>observer.observe(el));
+// Rede de segurança: se o IntersectionObserver nunca disparar pra algum
+// elemento (scroll muito rápido, aba em segundo plano, navegador antigo),
+// o conteúdo não pode ficar invisível pra sempre — isso é uma landing de
+// vendas, preço e depoimentos precisam aparecer sempre.
+setTimeout(()=>{
+  document.querySelectorAll('.animate:not(.show)').forEach(el=>el.classList.add('show'));
+},2500);
 
 // WhatsApp & Pagamento
 const WPP_NUM = '5599988492438';
