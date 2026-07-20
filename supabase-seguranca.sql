@@ -120,12 +120,18 @@ DECLARE
   tabelas text[] := ARRAY[
     'pacientes','agendamentos','profissionais','anamneses','anamnese_links',
     'procedimentos_dentes','atendimentos_odonto','plano_tratamento',
-    'financeiro_config','log_atividades'
+    'financeiro_config','log_atividades','audit_logs'
   ];
 BEGIN
   FOREACH t IN ARRAY tabelas LOOP
     IF to_regclass('public.'||t) IS NULL THEN
       RAISE NOTICE 'pulando % (nao existe)', t; CONTINUE;
+    END IF;
+    IF NOT EXISTS (
+      SELECT 1 FROM information_schema.columns
+      WHERE table_schema = 'public' AND table_name = t AND column_name = 'clinica_id'
+    ) THEN
+      RAISE NOTICE 'pulando % (sem coluna clinica_id)', t; CONTINUE;
     END IF;
     EXECUTE format('ALTER TABLE public.%I ENABLE ROW LEVEL SECURITY', t);
     -- limpa policies antigas conhecidas + a nova
@@ -146,6 +152,40 @@ DROP POLICY IF EXISTS atendimentos_own ON public.atendimentos_odonto;
 DROP POLICY IF EXISTS plano_own        ON public.plano_tratamento;
 DROP POLICY IF EXISTS anamneses_own    ON public.anamneses;
 DROP POLICY IF EXISTS procdentes_own   ON public.procedimentos_dentes;
+
+-- ============================================================
+-- 4b. CRITICO — remove policies legadas que comparavam clinica_id
+-- contra auth.jwt()->>'user_metadata' (achado pelo Supabase Advisor,
+-- 18 issues "RLS references user metadata"). user_metadata e editavel
+-- pelo proprio usuario via supabase.auth.updateUser(), entao essas
+-- policies permitiam qualquer clinica acessar dado de outra (o Postgres
+-- combina policies permissivas com OR, entao mesmo com a policy segura
+-- '{tabela}_rls' acima ja aplicada, essas antigas ainda bypassavam tudo).
+-- Seguro remover: a policy '{tabela}_rls' criada no loop 4 acima ja
+-- cobre 100% do que essas cobriam, só que com auth.uid() (nao forjavel).
+-- ============================================================
+DROP POLICY IF EXISTS pacientes_select_own_clinic ON public.pacientes;
+DROP POLICY IF EXISTS pacientes_insert_own_clinic ON public.pacientes;
+DROP POLICY IF EXISTS pacientes_update_own_clinic ON public.pacientes;
+DROP POLICY IF EXISTS pacientes_delete_own_clinic ON public.pacientes;
+
+DROP POLICY IF EXISTS agendamentos_select_own_clinic ON public.agendamentos;
+DROP POLICY IF EXISTS agendamentos_insert_own_clinic ON public.agendamentos;
+DROP POLICY IF EXISTS agendamentos_update_own_clinic ON public.agendamentos;
+DROP POLICY IF EXISTS agendamentos_delete_own_clinic ON public.agendamentos;
+
+DROP POLICY IF EXISTS profissionais_select_own_clinic ON public.profissionais;
+DROP POLICY IF EXISTS profissionais_insert_own_clinic ON public.profissionais;
+DROP POLICY IF EXISTS profissionais_update_own_clinic ON public.profissionais;
+DROP POLICY IF EXISTS profissionais_delete_own_clinic ON public.profissionais;
+
+DROP POLICY IF EXISTS atendimentos_odonto_select_own ON public.atendimentos_odonto;
+DROP POLICY IF EXISTS atendimentos_odonto_insert_own ON public.atendimentos_odonto;
+DROP POLICY IF EXISTS atendimentos_odonto_update_own ON public.atendimentos_odonto;
+DROP POLICY IF EXISTS atendimentos_odonto_delete_own ON public.atendimentos_odonto;
+
+DROP POLICY IF EXISTS audit_logs_select_own_clinic ON public.audit_logs;
+DROP POLICY IF EXISTS audit_logs_insert_own_clinic ON public.audit_logs;
 
 -- ============================================================
 -- 5. PRONTUARIOS (legado: liga por paciente_id, sem clinica_id proprio)

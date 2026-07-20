@@ -43,3 +43,10 @@ where email = 'demo@rwdent.app' or nome_cli ilike '%demo%';
 -- 6. Quem são os admins cadastrados no banco (não é a lista do front-end)
 select user_id, email, created_at
 from public.admin_users;
+
+-- 7. Sobrou alguma policy insegura referenciando user_metadata?
+-- (deve retornar ZERO linhas depois de rodar supabase-seguranca.sql)
+select schemaname, tablename, policyname, cmd
+from pg_policies
+where schemaname in ('public','storage')
+  and (qual ilike '%user_metadata%' or with_check ilike '%user_metadata%');
