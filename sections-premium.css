@@ -1,0 +1,665 @@
+/* ══════════════════════════════════════════════════════════════════════════════
+   SEÇÕES PREMIUM - AGENDA | PRONTUÁRIO | ALERTAS
+   Agenda Day view com status visuais | Timeline vertical | Medical alerts
+   ══════════════════════════════════════════════════════════════════════════════ */
+
+/* ──────────────────────────────────────────────────────────── */
+/* SECTION: AGENDA DO DIA COM STATUS VISUAIS */
+/* ──────────────────────────────────────────────────────────── */
+
+.agenda-quick-filters {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.filter-btn {
+  background: #fff;
+  border: 1.5px solid rgba(212, 115, 90, 0.2);
+  color: var(--rose-dark);
+  border-radius: 10px;
+  padding: 8px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  letter-spacing: 0.2px;
+}
+
+.filter-btn:hover {
+  border-color: var(--rose);
+  background: var(--rose-lighter);
+  transform: translateY(-1px);
+}
+
+.filter-btn.active {
+  background: linear-gradient(135deg, var(--rose), var(--rose-dark));
+  color: #fff;
+  border-color: var(--rose-dark);
+  box-shadow: 0 4px 14px rgba(122, 48, 32, 0.22);
+}
+
+/* Status Badge System */
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border-radius: 16px;
+  padding: 5px 11px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.status-badge.agendado {
+  background: #e3f2fd;
+  color: #1565c0;
+  border: 1px solid rgba(21, 101, 192, 0.3);
+}
+
+.status-badge.confirmado {
+  background: #dcfce7;
+  color: #166534;
+  border: 1px solid rgba(34, 197, 94, 0.3);
+}
+
+.status-badge.em-atendimento {
+  background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%);
+  color: #e65100;
+  border: 1px solid rgba(230, 81, 0, 0.3);
+  font-weight: 700;
+}
+
+.status-badge.concluido {
+  background: #f0f9ff;
+  color: #0369a1;
+  border: 1px solid rgba(3, 105, 161, 0.3);
+}
+
+.status-badge.faltou {
+  background: #fee2e2;
+  color: #b91c1c;
+  border: 1px solid rgba(185, 28, 28, 0.3);
+}
+
+.status-badge.remarcado {
+  background: #fef08a;
+  color: #854d0e;
+  border: 1px solid rgba(133, 77, 14, 0.3);
+}
+
+.status-badge.cancelado {
+  background: #f3f4f6;
+  color: #6b7280;
+  border: 1px solid rgba(107, 114, 128, 0.3);
+  text-decoration: line-through;
+}
+
+/* APPT CARD - Enhanced */
+.appt-item {
+  background: #fff;
+  border: 1.5px solid rgba(212, 115, 90, 0.12);
+  border-radius: 14px;
+  padding: 16px;
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+}
+
+.appt-item::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: var(--rose);
+  transition: width 200ms ease;
+}
+
+.appt-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(122, 48, 32, 0.07), 0 12px 24px rgba(122, 48, 32, 0.12);
+  border-color: var(--rose-light);
+}
+
+.appt-item:hover::before {
+  width: 6px;
+}
+
+.appt-time {
+  background: linear-gradient(135deg, var(--rose-lighter) 0%, #f5ddd5 100%);
+  border-radius: 10px;
+  padding: 10px 12px;
+  min-width: 68px;
+  text-align: center;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--rose-dark);
+  flex-shrink: 0;
+  letter-spacing: -0.2px;
+  box-shadow: 0 2px 8px rgba(122, 48, 32, 0.08);
+}
+
+.appt-time small {
+  display: block;
+  font-size: 10px;
+  color: var(--rose-text);
+  margin-top: 3px;
+  font-weight: 500;
+}
+
+.appt-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.appt-info .name {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--rose-dark);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  letter-spacing: -0.2px;
+}
+
+.appt-info .detail {
+  font-size: 12px;
+  color: var(--rose-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.appt-actions {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.appt-action-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: var(--rose-lighter);
+  border: 1px solid rgba(212, 115, 90, 0.2);
+  color: var(--rose-dark);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  transition: all 150ms ease;
+}
+
+.appt-action-btn:hover {
+  background: var(--rose-light);
+  border-color: var(--rose);
+  transform: scale(1.08);
+  box-shadow: 0 2px 6px rgba(122, 48, 32, 0.15);
+}
+
+/* ──────────────────────────────────────────────────────────── */
+/* SECTION: TIMELINE VERTICAL (PRONTUÁRIO) */
+/* ──────────────────────────────────────────────────────────── */
+
+.timeline-container {
+  position: relative;
+  padding: 20px 0;
+}
+
+.timeline-item {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 20px;
+  margin-bottom: 24px;
+  position: relative;
+}
+
+.timeline-item::after {
+  content: '';
+  position: absolute;
+  left: 11px;
+  top: 48px;
+  width: 2px;
+  height: calc(100% + 16px);
+  background: linear-gradient(180deg, rgba(212, 115, 90, 0.2), transparent);
+}
+
+.timeline-item:last-child::after {
+  display: none;
+}
+
+.timeline-dot {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--rose), var(--rose-dark));
+  border: 3px solid #fff;
+  box-shadow: 0 2px 8px rgba(122, 48, 32, 0.25);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  color: #fff;
+  font-weight: 700;
+  position: relative;
+  z-index: 2;
+}
+
+.timeline-dot.consulta {
+  background: linear-gradient(135deg, #1565c0, #0d47a1);
+}
+
+.timeline-dot.procedimento {
+  background: linear-gradient(135deg, #2e7d32, #1b5e20);
+}
+
+.timeline-dot.pagamento {
+  background: linear-gradient(135deg, #6d28d9, #4c1d95);
+}
+
+.timeline-dot.alerta {
+  background: linear-gradient(135deg, #dc2626, #991b1b);
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { box-shadow: 0 2px 8px rgba(122, 48, 32, 0.25); }
+  50% { box-shadow: 0 2px 16px rgba(220, 38, 38, 0.4); }
+}
+
+.timeline-content {
+  background: #fff;
+  border: 1px solid rgba(212, 115, 90, 0.12);
+  border-radius: 12px;
+  padding: 14px 16px;
+  transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+  position: relative;
+  z-index: 1;
+}
+
+.timeline-content:hover {
+  box-shadow: 0 4px 12px rgba(122, 48, 32, 0.12);
+  border-color: var(--rose-light);
+  transform: translateX(4px);
+}
+
+.timeline-date {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--rose);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  margin-bottom: 4px;
+}
+
+.timeline-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--rose-dark);
+  margin-bottom: 6px;
+  letter-spacing: -0.1px;
+}
+
+.timeline-description {
+  font-size: 12px;
+  color: var(--rose-text);
+  line-height: 1.5;
+}
+
+.timeline-tag {
+  display: inline-block;
+  background: var(--rose-lighter);
+  color: var(--rose-dark);
+  border-radius: 12px;
+  padding: 2px 8px;
+  font-size: 10px;
+  font-weight: 600;
+  margin-top: 8px;
+  letter-spacing: 0.2px;
+}
+
+/* ──────────────────────────────────────────────────────────── */
+/* SECTION: MEDICAL ALERTS (DESTAQUE) */
+/* ──────────────────────────────────────────────────────────── */
+
+.medical-alerts-section {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+  margin-bottom: 28px;
+}
+
+.medical-alert-card {
+  background: #fff;
+  border-radius: 14px;
+  border-left: 5px solid var(--alert-color, var(--rose));
+  padding: 16px;
+  box-shadow: 0 2px 8px rgba(122, 48, 32, 0.08);
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  transition: all 200ms ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.medical-alert-card::before {
+  content: '';
+  position: absolute;
+  right: -20px;
+  top: -20px;
+  width: 80px;
+  height: 80px;
+  background: radial-gradient(circle, rgba(212, 115, 90, 0.06) 0%, transparent 70%);
+  border-radius: 50%;
+}
+
+.medical-alert-card:hover {
+  box-shadow: 0 6px 20px rgba(122, 48, 32, 0.15);
+  transform: translateY(-2px);
+}
+
+.medical-alert-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: var(--alert-bg, rgba(212, 115, 90, 0.1));
+  color: var(--alert-color, var(--rose));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 1;
+}
+
+.medical-alert-content {
+  flex: 1;
+  min-width: 0;
+  position: relative;
+  z-index: 1;
+}
+
+.medical-alert-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--rose-dark);
+  margin-bottom: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.medical-alert-description {
+  font-size: 12px;
+  color: var(--rose-text);
+  line-height: 1.5;
+}
+
+/* Alert Type Variations */
+.medical-alert-card.alergia {
+  --alert-color: #dc2626;
+  --alert-bg: rgba(220, 38, 38, 0.1);
+  border-left-color: #dc2626;
+}
+
+.medical-alert-card.contradicacao {
+  --alert-color: #ea580c;
+  --alert-bg: rgba(234, 88, 12, 0.1);
+  border-left-color: #ea580c;
+}
+
+.medical-alert-card.historico {
+  --alert-color: #0891b2;
+  --alert-bg: rgba(8, 145, 178, 0.1);
+  border-left-color: #0891b2;
+}
+
+.medical-alert-card.aviso {
+  --alert-color: #ca8a04;
+  --alert-bg: rgba(202, 138, 4, 0.1);
+  border-left-color: #ca8a04;
+}
+
+/* ──────────────────────────────────────────────────────────── */
+/* SECTION: ODONTOGRAMA MODERNO */
+/* ──────────────────────────────────────────────────────────── */
+
+.odontogram-container {
+  background: #fff;
+  border-radius: 14px;
+  border: 1px solid rgba(212, 115, 90, 0.12);
+  padding: 20px;
+}
+
+.odontogram-legend {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid rgba(212, 115, 90, 0.12);
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--rose-text);
+  font-weight: 500;
+}
+
+.legend-icon {
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  flex-shrink: 0;
+}
+
+.legend-icon.sem-tratamento {
+  background: #f5f5f5;
+  border: 1.5px solid #d1d5db;
+  color: #6b7280;
+}
+
+.legend-icon.com-tratamento {
+  background: linear-gradient(135deg, var(--rose), var(--rose-dark));
+  color: #fff;
+}
+
+.legend-icon.carie {
+  background: #fecaca;
+  color: #991b1b;
+}
+
+.legend-icon.raiz {
+  background: linear-gradient(135deg, #8b5cf6, #6d28d9);
+  color: #fff;
+}
+
+/* Arcada Display */
+.odontogram-arcada {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.odontogram-tooth {
+  background: #fff;
+  border: 1.5px solid rgba(212, 115, 90, 0.15);
+  border-radius: 10px;
+  padding: 12px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 150ms ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 100px;
+  position: relative;
+  overflow: hidden;
+}
+
+.odontogram-tooth::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(212, 115, 90, 0), rgba(212, 115, 90, 0.04));
+  opacity: 0;
+  transition: opacity 150ms ease;
+  pointer-events: none;
+}
+
+.odontogram-tooth:hover {
+  border-color: var(--rose);
+  box-shadow: 0 4px 12px rgba(212, 115, 90, 0.15);
+  transform: translateY(-2px);
+}
+
+.odontogram-tooth:hover::before {
+  opacity: 1;
+}
+
+.tooth-number {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--rose-text);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.tooth-icon {
+  font-size: 24px;
+  line-height: 1;
+}
+
+.tooth-status {
+  font-size: 10px;
+  color: var(--rose-dark);
+  font-weight: 600;
+}
+
+/* ──────────────────────────────────────────────────────────── */
+/* RESPONSIVE ADJUSTMENTS */
+/* ──────────────────────────────────────────────────────────── */
+
+@media (max-width: 768px) {
+  .appt-item {
+    padding: 12px;
+    gap: 10px;
+  }
+
+  .appt-time {
+    min-width: 60px;
+    font-size: 12px;
+    padding: 8px 10px;
+  }
+
+  .timeline-item {
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+
+  .timeline-dot {
+    width: 20px;
+    height: 20px;
+    border-width: 2px;
+    font-size: 8px;
+  }
+
+  .timeline-item::after {
+    left: 8px;
+  }
+
+  .odontogram-arcada {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+  }
+
+  .odontogram-tooth {
+    min-height: 80px;
+    padding: 10px;
+  }
+
+  .medical-alerts-section {
+    grid-template-columns: 1fr;
+  }
+
+  .filter-btn {
+    padding: 7px 12px;
+    font-size: 11px;
+  }
+}
+
+@media (max-width: 480px) {
+  .appt-item {
+    padding: 10px;
+    gap: 8px;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .appt-time {
+    width: 100%;
+    min-width: auto;
+    padding: 8px;
+    text-align: center;
+  }
+
+  .timeline-content {
+    padding: 12px;
+  }
+
+  .odontogram-arcada {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .odontogram-tooth {
+    min-height: 70px;
+    padding: 8px;
+    font-size: 11px;
+  }
+
+  .medical-alert-card {
+    padding: 12px;
+    gap: 10px;
+  }
+
+  .agenda-quick-filters {
+    gap: 6px;
+  }
+
+  .filter-btn {
+    padding: 6px 10px;
+    font-size: 10px;
+  }
+}
+
+/* ═════════════════════════════════════════════════════════════ */
+/* FIM DE SEÇÕES PREMIUM */
+/* ═════════════════════════════════════════════════════════════ */

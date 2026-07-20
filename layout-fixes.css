@@ -1,0 +1,458 @@
+/* ══════════════════════════════════════════════════════════════════════════════
+   LAYOUT FIXES - Correção de Erros de Sobreposição e Espaçamento
+   Addresses UI bugs: search icon overlap, dropdown positioning, z-index conflicts
+   ══════════════════════════════════════════════════════════════════════════════ */
+
+/* ──────────────────────────────────────────────────────────── */
+/* 1. CAMPO DE BUSCA DE PACIENTES - Icon + Input Alignment Fix */
+/* ──────────────────────────────────────────────────────────── */
+
+/* Container wrapper - position relative para z-index */
+#busca-paciente {
+  padding-left: 42px !important;
+  padding-right: 12px !important;
+  height: 44px !important;
+  line-height: 44px !important;
+  vertical-align: middle !important;
+}
+
+/* Icon positioning - absolute, doesn't overlap text */
+div:has(> #busca-paciente) {
+  position: relative !important;
+  display: block !important;
+}
+
+#busca-paciente::placeholder {
+  color: rgba(160, 80, 64, 0.6) !important;
+  font-weight: 400 !important;
+}
+
+/* Dropdown positioning - proper spacing below input */
+#pac-dropdown {
+  top: calc(100% + 6px) !important;
+  left: 0 !important;
+  right: 0 !important;
+  margin-top: 4px !important;
+  z-index: 300 !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.06) !important;
+  border-radius: 12px !important;
+  border: 1.5px solid var(--rose-light) !important;
+  background: #fff !important;
+  max-height: 360px !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+}
+
+/* Dropdown items - proper spacing */
+#pac-dropdown > div {
+  padding: 10px 14px !important;
+  border-bottom: 1px solid var(--rose-lighter) !important;
+  cursor: pointer !important;
+  transition: background 150ms ease !important;
+  font-size: 13px !important;
+  color: var(--rose-dark) !important;
+}
+
+#pac-dropdown > div:last-child {
+  border-bottom: none !important;
+}
+
+#pac-dropdown > div:hover {
+  background: var(--rose-lighter) !important;
+  color: var(--rose) !important;
+}
+
+/* ──────────────────────────────────────────────────────────── */
+/* 2. SEARCH OVERLAY FIX - Global search modal layout */
+/* ──────────────────────────────────────────────────────────── */
+
+.search-overlay {
+  z-index: 9999 !important;
+  backdrop-filter: blur(4px) !important;
+  -webkit-backdrop-filter: blur(4px) !important;
+}
+
+.search-box {
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15), 0 2px 12px rgba(0, 0, 0, 0.08) !important;
+  border-radius: 16px !important;
+  max-width: 600px !important;
+  width: 90vw !important;
+}
+
+.search-box input {
+  padding: 14px 16px !important;
+  font-size: 16px !important;
+  border-radius: 16px 16px 0 0 !important;
+  border: none !important;
+  outline: none !important;
+}
+
+.search-results {
+  max-height: 500px !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  z-index: 10000 !important;
+}
+
+.search-results > div {
+  padding: 12px 16px !important;
+  border-bottom: 1px solid var(--rose-lighter) !important;
+  font-size: 13px !important;
+  color: var(--rose-dark) !important;
+  cursor: pointer !important;
+  transition: background 150ms ease !important;
+}
+
+.search-results > div:hover {
+  background: var(--rose-lighter) !important;
+  color: var(--rose) !important;
+}
+
+/* ──────────────────────────────────────────────────────────── */
+/* 3. INPUTS & FORM FIELDS - Consistent padding & alignment */
+/* ──────────────────────────────────────────────────────────── */
+
+input[type="text"],
+input[type="email"],
+input[type="tel"],
+input[type="date"],
+input[type="number"],
+input[type="password"],
+select,
+textarea {
+  padding: 10px 12px !important;
+  min-height: 44px !important;
+  font-size: 13px !important;
+  line-height: 1.5 !important;
+  vertical-align: middle !important;
+  border-radius: 10px !important;
+}
+
+/* Override: inputs com ícone dentro usam padding-left maior */
+input[type="text"]:not(#busca-paciente) {
+  padding-left: 12px !important;
+}
+
+textarea {
+  padding: 10px 12px !important;
+  min-height: 80px !important;
+  line-height: 1.6 !important;
+  resize: vertical !important;
+  font-family: var(--font-primary, inherit) !important;
+}
+
+/* ──────────────────────────────────────────────────────────── */
+/* 4. MODAL DIALOG FIX - Proper z-index and stacking */
+/* ──────────────────────────────────────────────────────────── */
+
+.modal-overlay {
+  z-index: 1000 !important;
+  backdrop-filter: blur(3px) !important;
+  -webkit-backdrop-filter: blur(3px) !important;
+  background: rgba(0, 0, 0, 0.45) !important;
+}
+
+.modal-box {
+  z-index: 1001 !important;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.22) !important;
+  border-radius: 22px !important;
+  max-width: 500px !important;
+}
+
+/* Modal headers - proper padding */
+.modal-box h2,
+.modal-box h3,
+.modal-title {
+  padding: 0 !important;
+  margin: 0 0 14px 0 !important;
+  font-weight: 800 !important;
+  letter-spacing: -0.1px !important;
+}
+
+/* Modal body padding */
+.modal-box > div {
+  padding: 24px !important;
+  overflow-y: auto !important;
+}
+
+/* ──────────────────────────────────────────────────────────── */
+/* 5. DROPDOWN & LIST POSITIONING - z-index fix */
+/* ──────────────────────────────────────────────────────────── */
+
+.tn-dropdown {
+  z-index: 500 !important;
+  border-radius: 14px !important;
+  box-shadow: 0 12px 40px rgba(80, 25, 15, 0.2), 0 2px 8px rgba(0, 0, 0, 0.06) !important;
+  background: #fff !important;
+  border: 1px solid rgba(212, 115, 90, 0.08) !important;
+}
+
+.tn-group {
+  position: relative !important;
+  z-index: 500 !important;
+}
+
+.tn-dropdown-item {
+  padding: 10px 14px !important;
+  border-radius: 10px !important;
+  transition: all 150ms ease !important;
+  margin: 2px 4px !important;
+}
+
+.tn-dropdown-item:hover {
+  background: #fdf0eb !important;
+  color: #a05040 !important;
+  transform: translateX(2px) !important;
+}
+
+/* ──────────────────────────────────────────────────────────── */
+/* 6. TABLE & LIST ITEMS - Text alignment and padding */
+/* ──────────────────────────────────────────────────────────── */
+
+table th,
+table td {
+  padding: 12px 14px !important;
+  text-align: left !important;
+  vertical-align: middle !important;
+}
+
+table th {
+  font-weight: 800 !important;
+  letter-spacing: 0.5px !important;
+  text-transform: uppercase !important;
+  font-size: 10px !important;
+}
+
+.appt-item,
+.patient-card,
+.prof-card {
+  padding: 16px !important;
+  gap: 12px !important;
+  align-items: center !important;
+  border-radius: 14px !important;
+  transition: all 200ms ease !important;
+}
+
+.appt-item:hover,
+.patient-card:hover,
+.prof-card:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 8px 24px rgba(122, 48, 32, 0.12) !important;
+}
+
+/* ──────────────────────────────────────────────────────────── */
+/* 7. BADGE & STATUS ELEMENTS - Consistent sizing */
+/* ──────────────────────────────────────────────────────────── */
+
+.badge,
+.status-badge {
+  padding: 4px 10px !important;
+  border-radius: 20px !important;
+  font-weight: 700 !important;
+  font-size: 10px !important;
+  letter-spacing: 0.3px !important;
+  text-transform: uppercase !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+  white-space: nowrap !important;
+}
+
+/* ──────────────────────────────────────────────────────────── */
+/* 8. CARD ELEMENTS - Consistent spacing */
+/* ──────────────────────────────────────────────────────────── */
+
+.card {
+  padding: 28px !important;
+  margin-bottom: 24px !important;
+  background: #fff !important;
+  border: 1px solid rgba(212, 115, 90, 0.12) !important;
+  border-radius: 18px !important;
+  box-shadow: 0 2px 8px rgba(122, 48, 32, 0.08) !important;
+}
+
+.card:hover {
+  box-shadow: 0 4px 12px rgba(122, 48, 32, 0.12) !important;
+}
+
+.card h2 {
+  margin: 0 0 20px 0 !important;
+  padding: 0 !important;
+  font-size: 14px !important;
+  font-weight: 700 !important;
+  color: var(--rose-dark) !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.5px !important;
+}
+
+/* ──────────────────────────────────────────────────────────── */
+/* 9. BUTTONS - Consistent sizing and spacing */
+/* ──────────────────────────────────────────────────────────── */
+
+.btn-primary,
+.btn-secondary,
+.btn-danger {
+  padding: 11px 18px !important;
+  min-height: 44px !important;
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  border-radius: 10px !important;
+  transition: all 200ms ease !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 7px !important;
+  cursor: pointer !important;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, var(--rose) 0%, var(--rose-dark) 130%) !important;
+  color: #fff !important;
+  box-shadow: 0 4px 14px rgba(122, 48, 32, 0.22) !important;
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 8px 22px rgba(122, 48, 32, 0.3) !important;
+}
+
+.btn-primary:active {
+  transform: scale(0.98) !important;
+}
+
+.btn-secondary {
+  background: #fff !important;
+  color: var(--rose-dark) !important;
+  border: 1.5px solid var(--rose-light) !important;
+}
+
+.btn-secondary:hover {
+  background: var(--rose-lighter) !important;
+  border-color: var(--rose) !important;
+  transform: translateY(-1px) !important;
+}
+
+.btn-danger {
+  background: #fff5f5 !important;
+  color: #c62828 !important;
+  border: 1.5px solid #ffcccc !important;
+}
+
+.btn-danger:hover {
+  background: #ffebee !important;
+  border-color: #ef5350 !important;
+  transform: translateY(-1px) !important;
+}
+
+/* ──────────────────────────────────────────────────────────── */
+/* 10. MOBILE RESPONSIVE FIXES */
+/* ──────────────────────────────────────────────────────────── */
+
+@media (max-width: 768px) {
+  /* Input fields - bigger for touch */
+  input[type="text"],
+  input[type="email"],
+  input[type="tel"],
+  input[type="date"],
+  select,
+  textarea {
+    min-height: 44px !important;
+    font-size: 16px !important;
+    padding: 10px 12px !important;
+  }
+
+  /* Search field with icon */
+  #busca-paciente {
+    min-height: 44px !important;
+    padding-left: 42px !important;
+  }
+
+  /* Dropdown - better mobile sizing */
+  #pac-dropdown {
+    max-height: 280px !important;
+    margin-top: 4px !important;
+  }
+
+  /* Buttons - touch friendly */
+  .btn-primary,
+  .btn-secondary,
+  .btn-danger {
+    min-height: 44px !important;
+    font-size: 14px !important;
+    padding: 10px 16px !important;
+  }
+
+  /* Cards - responsive padding */
+  .card {
+    padding: 20px !important;
+    margin-bottom: 16px !important;
+  }
+
+  /* List items - touch friendly */
+  .appt-item,
+  .patient-card {
+    padding: 12px !important;
+    gap: 10px !important;
+  }
+
+  /* Modal - bottom sheet on mobile */
+  .modal-box {
+    border-radius: 22px 22px 0 0 !important;
+    margin: 0 !important;
+    max-height: 90vh !important;
+  }
+
+  /* Dropdown - avoid overlaps on mobile */
+  .tn-dropdown {
+    position: fixed !important;
+    margin-top: 4px !important;
+    max-width: calc(100vw - 16px) !important;
+  }
+}
+
+/* ──────────────────────────────────────────────────────────── */
+/* 11. FOCUS STATES - Accessibility */
+/* ──────────────────────────────────────────────────────────── */
+
+input:focus,
+select:focus,
+textarea:focus,
+button:focus,
+a:focus {
+  outline: 2px solid var(--rose) !important;
+  outline-offset: 2px !important;
+}
+
+/* Remove default outline for buttons with custom styling */
+button:focus-visible {
+  outline: 2px solid var(--rose) !important;
+  outline-offset: 2px !important;
+}
+
+/* ──────────────────────────────────────────────────────────── */
+/* 12. UTILITY FIXES - Overflow and scrolling */
+/* ──────────────────────────────────────────────────────────── */
+
+.overflow-hidden {
+  overflow: hidden !important;
+}
+
+.overflow-auto {
+  overflow: auto !important;
+}
+
+.overflow-y-auto {
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+}
+
+/* Smooth scrolling */
+html {
+  scroll-behavior: smooth !important;
+}
+
+/* ═════════════════════════════════════════════════════════════ */
+/* FIM DE LAYOUT FIXES */
+/* ═════════════════════════════════════════════════════════════ */
