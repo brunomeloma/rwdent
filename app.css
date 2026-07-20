@@ -1372,27 +1372,193 @@ body{-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;}
   border-radius:18px!important;
   border:1px solid rgba(122,48,32,.09)!important;
   box-shadow:0 1px 2px rgba(122,48,32,.04),0 8px 28px rgba(122,48,32,.08)!important;
+  transition:all .3s cubic-bezier(.4,0,.2,1)!important;
 }
-.card h2{font-size:12.5px!important;letter-spacing:.6px!important;font-weight:800!important;}
+.card h2{
+  font-size:12.5px!important;
+  letter-spacing:.6px!important;
+  font-weight:800!important;
+  color:var(--rose-dark)!important;
+}
+
+/* ── MEDICAL UI/UX STANDARDS ── */
+/* Soft Shadows e Espaçamento Generoso (Dentrix, Curve Dental benchmark) */
+.card {
+  padding:24px!important;
+  margin-bottom:24px!important;
+}
+.content {
+  padding:24px!important;
+}
+
+/* Tipografia legível e profissional */
+body {
+  line-height:1.6;
+  letter-spacing:.3px;
+  -webkit-font-smoothing:antialiased;
+}
+
+label {
+  font-weight:600!important;
+  color:var(--rose-dark)!important;
+  font-size:13px!important;
+  margin-bottom:8px!important;
+  display:block!important;
+}
+
+input[type=text],
+input[type=email],
+input[type=tel],
+input[type=date],
+input[type=time],
+input[type=number],
+select,
+textarea {
+  font-size:14px!important;
+  padding:12px 14px!important;
+  border:1.5px solid rgba(212,115,90,.12)!important;
+  border-radius:11px!important;
+  box-shadow:0 1px 2px rgba(122,48,32,.03)!important;
+  transition:border .2s,box-shadow .2s,background .2s!important;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  border-color:var(--rose)!important;
+  background:#fff!important;
+  box-shadow:0 0 0 3px rgba(212,115,90,.1),0 2px 6px rgba(122,48,32,.08)!important;
+  outline:none!important;
+}
+
+/* Cards de lista com hover suave */
+.appt-item,
+.patient-card,
+.prof-card,
+.record-card {
+  padding:16px 18px!important;
+  border:1px solid rgba(212,115,90,.08)!important;
+  border-radius:14px!important;
+  box-shadow:0 1px 3px rgba(122,48,32,.05),0 4px 12px rgba(122,48,32,.06)!important;
+  transition:all .3s cubic-bezier(.4,0,.2,1)!important;
+  background:#fff!important;
+}
+
+.appt-item:hover,
+.patient-card:hover,
+.prof-card:hover,
+.record-card:hover {
+  border-color:var(--rose-light)!important;
+  box-shadow:0 2px 6px rgba(122,48,32,.08),0 12px 28px rgba(122,48,32,.12)!important;
+  transform:translateY(-2px)!important;
+}
+
+/* Section headers com tipografia clara */
+.section-header {
+  margin-bottom:24px!important;
+  padding-bottom:16px!important;
+  border-bottom:1.5px solid var(--rose-light)!important;
+}
+
+.section-header h2 {
+  font-size:16px!important;
+  font-weight:700!important;
+  color:var(--rose-dark)!important;
+  letter-spacing:.3px!important;
+  margin:0!important;
+}
+
+/* Filter rows com espaço respirável */
+.filter-row {
+  gap:12px!important;
+  margin-bottom:20px!important;
+  padding:16px!important;
+  background:linear-gradient(135deg,rgba(212,115,90,.03),rgba(212,115,90,.01))!important;
+  border-radius:14px!important;
+  border:1px solid rgba(212,115,90,.06)!important;
+}
+
+.filter-row input,
+.filter-row select {
+  min-height:42px!important;
+}
+
+/* Badges e status indicators */
+.badge,
+.status-badge,
+.fin-badge,
+.home-badge {
+  padding:5px 12px!important;
+  border-radius:18px!important;
+  font-size:11px!important;
+  font-weight:700!important;
+  letter-spacing:.3px!important;
+  display:inline-flex!important;
+  align-items:center!important;
+  gap:5px!important;
+}
+
+/* Empty states com tipografia amigável */
+.empty,
+.home-empty {
+  font-size:14px!important;
+  line-height:1.7!important;
+  color:var(--rose-text)!important;
+  padding:32px 24px!important;
+}
+
+.empty i,
+.home-empty i {
+  font-size:40px!important;
+  opacity:.3!important;
+  margin-bottom:12px!important;
+}
 
 /* ── Botões: gradiente sutil + elevação no hover ── */
 .btn-primary{
   background:linear-gradient(160deg,var(--rose) 0%,var(--rose-dark) 130%)!important;
   border-radius:12px!important;
   padding:11px 20px!important;
-  box-shadow:0 4px 14px rgba(122,48,32,.22)!important;
-  transition:transform .18s cubic-bezier(.4,0,.2,1),box-shadow .18s!important;
+  box-shadow:0 2px 4px rgba(122,48,32,.08),0 8px 16px rgba(122,48,32,.16)!important;
+  transition:transform .25s cubic-bezier(.4,0,.2,1),box-shadow .25s cubic-bezier(.4,0,.2,1)!important;
   letter-spacing:.1px;
+  font-weight:600;
+  position:relative;
 }
-.btn-primary:hover{transform:translateY(-1.5px)!important;box-shadow:0 8px 22px rgba(122,48,32,.3)!important;}
-.btn-primary:active{transform:translateY(0) scale(.98)!important;}
+.btn-primary:hover{
+  transform:translateY(-2px) !important;
+  box-shadow:0 4px 8px rgba(122,48,32,.1),0 16px 32px rgba(122,48,32,.2)!important;
+}
+.btn-primary:active{
+  transform:translateY(0) scale(.98)!important;
+  box-shadow:0 2px 4px rgba(122,48,32,.12)!important;
+}
 .btn-secondary{
   border-radius:12px!important;
   border:1.5px solid var(--rose-light)!important;
-  transition:all .18s!important;
+  box-shadow:0 1px 3px rgba(122,48,32,.05)!important;
+  transition:all .25s cubic-bezier(.4,0,.2,1)!important;
+  font-weight:600;
 }
-.btn-secondary:hover{border-color:var(--rose)!important;transform:translateY(-1px);}
-.btn-danger{border-radius:12px!important;transition:all .18s;}
+.btn-secondary:hover{
+  border-color:var(--rose)!important;
+  background:var(--rose-lighter)!important;
+  transform:translateY(-1px);
+  box-shadow:0 4px 12px rgba(122,48,32,.12)!important;
+}
+.btn-secondary:active{
+  transform:translateY(0);
+  box-shadow:0 1px 3px rgba(122,48,32,.08)!important;
+}
+.btn-danger{
+  border-radius:12px!important;
+  transition:all .25s cubic-bezier(.4,0,.2,1)!important;
+  box-shadow:0 1px 3px rgba(122,48,32,.05)!important;
+}
+.btn-danger:hover{
+  box-shadow:0 4px 12px rgba(122,48,32,.12)!important;
+  transform:translateY(-1px);
+}
 
 /* ── Nav superior: mais profundidade e refinamento ── */
 .header{
