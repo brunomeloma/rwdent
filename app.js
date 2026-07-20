@@ -5171,6 +5171,10 @@ function recolRenderPecas(){
   const pecas = PECAS_ORTO[recolTipoAtual]||[];
   const el = document.getElementById('recol-pecas-btns');
   if(!el) return;
+  if(!pecas.length){
+    el.innerHTML = `<div style="font-size:12px;color:var(--rose-text);padding:6px 0;">Nenhuma peça cadastrada para este tipo de aparelho.</div>`;
+    return;
+  }
   el.innerHTML = pecas.map(p=>`
     <button type="button" onclick="recolTogglePeca('${p.id}')"
       data-recol-peca="${p.id}"
@@ -8301,7 +8305,10 @@ function pacOdontoAddOrc(){
 
   // Recolagem de braquete tem preço variável conforme o tipo de aparelho do paciente —
   // abre o modal de seleção em vez de adicionar direto com o preço fixo do procedimento.
-  if(/recolagem/i.test(proc.nome) && /braquete|aparelho/i.test(proc.nome)){
+  // Mesma detecção usada no resto do sistema (catálogo atual não tem mais "braquete"/
+  // "aparelho" no nome — só "Recolagem (peça quebrada) — X" — a checagem antiga nunca
+  // disparava para procedimentos com o nome atual).
+  if(PROC_IDS_RECOLAGEM.has(proc.id) || /recolagem/i.test(proc.nome)){
     abrirModalRecolagem(proc);
     return;
   }
