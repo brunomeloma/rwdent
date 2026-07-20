@@ -13,6 +13,9 @@
 <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 <title>RWDent — Gestão Odontológica</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css"/>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet">
 <script>
   const SUPABASE_URL      = 'https://xdncwmxjdqiwykbcaddd.supabase.co';
   const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhkbmN3bXhqZHFpd3lrYmNhZGRkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEyMjMwNDMsImV4cCI6MjA5Njc5OTA0M30.9qBm7G2xg-DifQu5NPrcNIw6YG0dbVkZ725I4WhG6yM';
@@ -25,7 +28,8 @@
   --rose-mid:#e0a090;--rose-dark:#7a3020;--rose-text:#a05040;
 }
 html,body{height:100%;overflow:hidden;}
-body{font-family:'Segoe UI',Arial,sans-serif;background:#fdf0eb;display:flex;min-height:100vh;}
+body{font-family:'Plus Jakarta Sans',Arial,sans-serif;background:#fdf0eb;display:flex;min-height:100vh;-webkit-font-smoothing:antialiased;}
+h1, h2, .login-header h2, .brand-title {font-family: 'Instrument Serif', Georgia, serif;font-weight: 400;letter-spacing: -0.5px;}
 
 /* ── LAYOUT SPLIT ── */
 .login-page{display:flex;width:100%;min-height:100vh;}
@@ -51,7 +55,7 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#fdf0eb;display:flex;min
   box-shadow:0 8px 28px rgba(122,48,32,.12);backdrop-filter:blur(8px);
   border:1px solid rgba(212,115,90,.1);
 }
-.brand-title{font-size:2.2rem;font-weight:900;color:var(--rose-dark);letter-spacing:-1px;position:relative;z-index:1;}
+.brand-title{font-size:2.2rem;font-weight:400;color:var(--rose-dark);letter-spacing:-1px;position:relative;z-index:1;}
 .brand-subtitle{font-size:.95rem;color:var(--rose-text);margin-top:6px;position:relative;z-index:1;opacity:.85;}
 
 .brand-features{
@@ -77,7 +81,7 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#fdf0eb;display:flex;min
 }
 
 .login-header{text-align:center;margin-bottom:32px;}
-.login-header h2{font-size:1.5rem;font-weight:800;color:var(--rose-dark);}
+.login-header h2{font-size:1.5rem;font-weight:400;color:var(--rose-dark);}
 .login-header p{font-size:13px;color:var(--rose-text);margin-top:6px;}
 
 .login-form{width:100%;max-width:360px;}
@@ -96,11 +100,11 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#fdf0eb;display:flex;min
 .btn-primary{
   width:100%;background:linear-gradient(135deg,var(--rose),var(--rose-dark));color:#fff;border:none;
   border-radius:12px;padding:14px;font-size:15px;font-weight:700;cursor:pointer;
-  transition:opacity .2s,transform .15s;margin-top:6px;
+  transition:all .3s cubic-bezier(0.16, 1, 0.3, 1);margin-top:6px;
   display:flex;align-items:center;justify-content:center;gap:8px;font-family:inherit;
-  box-shadow:0 4px 16px rgba(212,115,90,.3);
+  box-shadow:0 8px 24px rgba(212,115,90,.3);
 }
-.btn-primary:hover{opacity:.92;}
+.btn-primary:hover{opacity:.95;transform:translateY(-2px);box-shadow:0 12px 35px rgba(212,115,90,.45);}
 .btn-primary:active{transform:scale(.98);}
 .btn-primary:disabled{opacity:.6;cursor:not-allowed;}
 
@@ -117,8 +121,8 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#fdf0eb;display:flex;min
 .pending-icon{font-size:52px;color:var(--rose);margin-bottom:14px;}
 .pending-box h2{font-size:18px;font-weight:800;color:var(--rose-dark);margin-bottom:8px;}
 .pending-box p{font-size:13px;color:var(--rose-text);line-height:1.6;}
-.btn-secondary{background:var(--rose-lighter);color:var(--rose-dark);border:1px solid var(--rose-light);border-radius:12px;padding:11px 18px;font-size:13px;font-weight:700;cursor:pointer;margin-top:18px;width:100%;font-family:inherit;transition:background .2s;}
-.btn-secondary:hover{background:var(--rose-light);}
+.btn-secondary{background:var(--rose-lighter);color:var(--rose-dark);border:1px solid rgba(212,115,90,0.2);border-radius:12px;padding:11px 18px;font-size:13px;font-weight:700;cursor:pointer;margin-top:18px;width:100%;font-family:inherit;transition:all .3s cubic-bezier(0.16, 1, 0.3, 1);box-shadow:0 4px 12px rgba(212,115,90,0.08);}
+.btn-secondary:hover{background:var(--rose-light);border-color:var(--rose);transform:translateY(-1px);box-shadow:0 8px 20px rgba(212,115,90,0.15);}
 
 .init-loading{text-align:center;padding:40px 0;color:var(--rose-text);font-size:13px;}
 .spinner{width:36px;height:36px;border:3px solid var(--rose-light);border-top-color:var(--rose);border-radius:50%;animation:spin .7s linear infinite;margin:0 auto 12px;}
