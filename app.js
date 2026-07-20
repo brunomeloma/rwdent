@@ -411,6 +411,8 @@ async function loadAll(){
 }
 
 function initApp(){
+  // Garante que todas as modais estejam fechadas ao inicializar
+  document.querySelectorAll('.modal-overlay, .sign-overlay').forEach(m=>m.classList.remove('open'));
   document.getElementById('data').value = hoje();
   renderSelectProf();
   renderProfissionais();
