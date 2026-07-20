@@ -795,58 +795,20 @@ a:hover {
 }
 
 /* ──────────────────────────────────────────────────────────── */
-/* DARK MODE SUPPORT */
+/* DARK MODE: removido daqui de propósito.
+   O app já tem um sistema de modo escuro completo e testado, ligado
+   manualmente em Configurações → Aparência (classe .dark-mode no
+   body, ~60 seletores específicos em app.css). Esse bloco baseado em
+   @media (prefers-color-scheme: dark) aplicava um segundo modo escuro
+   incompleto por cima, disparado pela configuração do SISTEMA do
+   celular — não pela escolha do usuário dentro do app. Como só
+   cobria alguns seletores genéricos (body, input, table) e não os
+   outros ~60 que o modo escuro real do app ajusta, o resultado era
+   uma tela pela metade clara e pela metade escura (fundo preto atrás
+   dos cards, campos de formulário escuros, cards e textos claros)
+   pra qualquer pessoa com o celular em modo escuro — reportado em
+   produção em 20/jul/2026 no consultório da Rhaiza. */
 /* ──────────────────────────────────────────────────────────── */
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --rose: #c46a52;
-    --rose-light: #3a2a24;
-    --rose-lighter: #1e1412;
-    --rose-mid: #9a5a48;
-    --rose-dark: #f0c0b0;
-    --rose-text: #c8a090;
-  }
-
-  body {
-    background: #0d0805;
-    color: #e0c8c0;
-  }
-
-  .card {
-    background: #1e1612;
-    border-color: rgba(224, 200, 192, 0.12);
-  }
-
-  input, select, textarea {
-    background: #2a1e1a;
-    color: #e0c8c0;
-    border-color: rgba(224, 200, 192, 0.2);
-  }
-
-  table thead {
-    background: linear-gradient(180deg, #2a1e1a 0%, #241814 100%);
-  }
-
-  table th {
-    color: #e0c8c0;
-    border-color: rgba(224, 200, 192, 0.12);
-  }
-
-  table td {
-    color: #d0b8b0;
-    border-color: rgba(224, 200, 192, 0.08);
-  }
-
-  .modal-box {
-    background: #1e1612;
-    color: #e0c8c0;
-  }
-
-  .modal-header, .modal-footer {
-    border-color: rgba(224, 200, 192, 0.12);
-  }
-}
 
 /* ═════════════════════════════════════════════════════════════ */
 /* FIM DO PREMIUM DESIGN SYSTEM */

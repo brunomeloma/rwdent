@@ -7,6 +7,11 @@
   --st-agendado:#7089a3;--st-confirmado:#3a72c4;--st-compareceu:#3b9f76;
   --st-faltou:#d2564b;--st-remarcado:#d6902b;--st-cancelado:#a99b95;
 }
+/* overflow-x:hidden só no body não basta no mobile — quem controla o
+   pan/rolagem horizontal da página é o html (root). Sem isso aqui, um
+   elemento largo demais (ex.: tabela de comparação) deixa a tela inteira
+   deslizar pro lado, revelando fundo preto do navegador atrás do body. */
+html{overflow-x:hidden;background:#fdf6f3;}
 body{font-family:'Segoe UI',Arial,sans-serif;background:#fdf6f3;color:#3a2020;min-height:100vh;overscroll-behavior:none;overflow-x:hidden;}
 
 /* ── HOME STAT CARDS ── */
