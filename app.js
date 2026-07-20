@@ -411,6 +411,8 @@ async function loadAll(){
 }
 
 function initApp(){
+  // Garante que todas as modais estejam fechadas ao inicializar
+  document.querySelectorAll('.modal-overlay, .sign-overlay').forEach(m=>m.classList.remove('open'));
   document.getElementById('data').value = hoje();
   renderSelectProf();
   renderProfissionais();
@@ -2450,57 +2452,107 @@ document.addEventListener('keydown',e=>{
   }
 });
 
+// Cor/rótulo por status do agendamento (status vive em obs — ver agGetStatus)
+function agStatusInfo(a){
+  const s=(agGetStatus(a)||'').toLowerCase();
+  const M={
+    '':        {k:'agendado',  label:'Agendado',  v:'--st-agendado'},
+    confirmado:{k:'confirmado',label:'Confirmado',v:'--st-confirmado'},
+    compareceu:{k:'compareceu',label:'Compareceu',v:'--st-compareceu'},
+    faltou:    {k:'faltou',    label:'Faltou',    v:'--st-faltou'},
+    remarcado: {k:'remarcado', label:'Remarcado', v:'--st-remarcado'},
+    cancelado: {k:'cancelado', label:'Cancelado', v:'--st-cancelado'}
+  };
+  return M[s]||M[''];
+}
+function _calIni(nome){ const p=(nome||'').trim().split(/\s+/); return (((p[0]||'')[0]||'')+((p[1]||'')[0]||'')).toUpperCase(); }
+
 function renderCalendario(){
   const profFiltro=document.getElementById('cal-prof')?.value;
   const filtered=profFiltro?agendamentos.filter(a=>a.prof_id===parseInt(profFiltro)):agendamentos;
   const body=document.getElementById('cal-body');
   if(!body) return;
   const rangeEl=document.getElementById('cal-range');
+  const slot=document.getElementById('cal-summary-slot');
+  if(slot) slot.innerHTML='';
   const today=hoje();
+  const totalH=(CAL_END_HOUR-CAL_START_HOUR)*2, height=totalH*CAL_SLOT_PX;
 
-  if(calView==='semana'||calView==='dia'){
-    const days=calView==='dia'?[new Date(calRef)]:Array.from({length:7},(_,i)=>{ const d=calWeekStart(calRef); d.setDate(d.getDate()+i); return d; });
-    const cols=days.length+1;
-    if(rangeEl) rangeEl.textContent=calView==='dia'?days[0].toLocaleDateString('pt-BR',{weekday:'long',day:'numeric',month:'long',year:'numeric'}):
-      `${days[0].getDate()} ${MONTHS_PT[days[0].getMonth()].slice(0,3)} – ${days[6].getDate()} ${MONTHS_PT[days[6].getMonth()].slice(0,3)} ${days[0].getFullYear()}`;
-    const totalH=(CAL_END_HOUR-CAL_START_HOUR)*2;
-    let html=`<div class="cal-grid${calView==='dia'?' dia':''}" style="grid-template-columns:52px ${days.map(()=>'1fr').join(' ')};">
-      <div class="cal-grid-head">
-        <div class="cal-corner"></div>
-        ${days.map(d=>`<div class="cal-day-head${calISO(d)===today?' is-today':''}">
-          <div class="dow">${DAYS_PT[d.getDay()]}</div>
-          <div class="dnum">${d.getDate()}</div>
-        </div>`).join('')}
+  if(calView==='dia'){
+    const d=new Date(calRef), iso=calISO(d);
+    if(rangeEl) rangeEl.textContent=d.toLocaleDateString('pt-BR',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+    const dayAppts=filtered.filter(a=>a.data===iso);
+    // Colunas por profissional
+    let cols=[];
+    if(profFiltro){ const p=profissionais.find(x=>x.id===parseInt(profFiltro)); if(p) cols=[{id:p.id,nome:p.nome,cor:p.cor,esp:p.especialidade||p.funcao||''}]; }
+    else { cols=profissionais.map(p=>({id:p.id,nome:p.nome,cor:p.cor,esp:p.especialidade||p.funcao||''})); }
+    const known=new Set(cols.map(c=>c.id));
+    const hasOrphan=dayAppts.some(a=>!known.has(a.prof_id));
+    if(hasOrphan||cols.length===0) cols.push({id:null,nome:cols.length?'Sem profissional':'Agenda',cor:'#b0a09a',esp:''});
+    // Resumo do dia (fica fixo acima da grade)
+    const cnt={agendado:0,confirmado:0,compareceu:0,faltou:0,remarcado:0,cancelado:0};
+    dayAppts.forEach(a=>cnt[agStatusInfo(a).k]++);
+    if(slot) slot.innerHTML=`<div class="cal-summary">
+      <div class="cs-item"><b>${dayAppts.length}</b><span>Consultas</span></div>
+      <div class="cs-item"><b style="color:var(--st-compareceu)">${cnt.confirmado+cnt.compareceu}</b><span>Confirmadas</span></div>
+      <div class="cs-item"><b style="color:var(--rose)">${cnt.agendado}</b><span>A confirmar</span></div>
+      <div class="cs-item"><b style="color:var(--st-faltou)">${cnt.faltou}</b><span>Faltas</span></div>
+    </div>`;
+    const gtc=`52px ${cols.map(()=>'minmax(150px,1fr)').join(' ')}`;
+    let html=`<div class="cal-grid cal-day" style="grid-template-columns:${gtc};">
+      <div class="cal-grid-head"><div class="cal-corner"></div>
+        ${cols.map(c=>`<div class="cal-pro-head"><div class="cal-pro-av" style="background:${c.cor||'var(--rose)'}">${escapeHtml(_calIni(c.nome))||'•'}</div>
+          <div><div class="cal-pro-nm">${escapeHtml(c.nome)}</div>${c.esp?`<div class="cal-pro-sub">${escapeHtml(c.esp)}</div>`:''}</div></div>`).join('')}
       </div>
-      <div class="cal-timecol">
-        ${Array.from({length:totalH},(_,i)=>{
-          const h=CAL_START_HOUR+Math.floor(i/2), m=i%2===0?'00':'30';
-          return`<div class="cal-time-label">${i%2===0?`<span>${String(h).padStart(2,'0')}:00</span>`:''}</div>`;
-        }).join('')}
-      </div>
-      ${days.map(d=>{
-        const iso=calISO(d), height=totalH*CAL_SLOT_PX;
-        const dayAppts=filtered.filter(a=>a.data===iso);
-        const events=dayAppts.map(a=>{
+      <div class="cal-timecol">${Array.from({length:totalH},(_,i)=>{const h=CAL_START_HOUR+Math.floor(i/2);return`<div class="cal-time-label">${i%2===0?`<span>${String(h).padStart(2,'0')}:00</span>`:''}</div>`;}).join('')}</div>
+      ${cols.map(c=>{
+        const colAppts=dayAppts.filter(a=> c.id===null ? !known.has(a.prof_id) : a.prof_id===c.id);
+        const events=colAppts.map(a=>{
           const [hh,mm]=((a.horario||'00:00')+':00').split(':').map(Number);
-          const startMin=hh*60+mm, topPct=(startMin-CAL_START_MIN)/((CAL_END_MIN-CAL_START_MIN))*height;
-          const _st=agGetStatus(a);const _bl=_st==='compareceu'?'3px solid #2e7d32':_st==='faltou'?'3px solid #dc2626':'3px solid rgba(0,0,0,.18)';const _op=_st==='faltou'?'.55':'1';
-          return`<div class="cal-event" style="background:${a.prof_cor||'#d4735a'};top:${topPct}px;height:44px;border-left:${_bl};opacity:${_op};" onclick="calOpenEvent(event,${a.id})">
-            <div class="ev-time">${a.horario}</div>
-            <div class="ev-name">${escapeHtml(a.nome)}</div>
-            <div class="ev-meta">${escapeHtml(a.procedimento||'Consulta')}</div>
-          </div>`;
+          const top=(hh*60+mm-CAL_START_MIN)/(CAL_END_MIN-CAL_START_MIN)*height;
+          const info=agStatusInfo(a);
+          return`<div class="cal-event st-${info.k}" style="--sc:var(${info.v});top:${top}px;height:44px;" onclick="calOpenEvent(event,${a.id})" title="${escapeHtml(a.nome)} — ${info.label}">
+            <span class="ev-dot"></span><div class="ev-time">${a.horario}</div>
+            <div class="ev-name">${escapeHtml(a.nome)}</div><div class="ev-meta">${escapeHtml(a.procedimento||'Consulta')}</div></div>`;
         }).join('');
+        return`<div class="cal-daycol${iso===today?' is-today':''}" style="height:${height}px;" onclick="calDayColClick(event,'${iso}')">${events}</div>`;
+      }).join('')}
+      ${iso===today?`<div class="cal-nowline" id="cal-nowline"></div>`:''}
+    </div>`;
+    body.innerHTML=html;
+    requestAnimationFrame(()=>{
+      const corner=body.querySelector('.cal-corner'), headH=corner?corner.offsetHeight:40;
+      const now=new Date(), minNow=now.getHours()*60+now.getMinutes(), nl=document.getElementById('cal-nowline');
+      if(nl){ if(minNow>=CAL_START_MIN&&minNow<=CAL_END_MIN){ nl.style.top=(headH+(minNow-CAL_START_MIN)/(CAL_END_MIN-CAL_START_MIN)*height)+'px'; } else { nl.style.display='none'; } }
+      const st=headH+((minNow-CAL_START_MIN)/(CAL_END_MIN-CAL_START_MIN))*height-body.clientHeight/3;
+      if(st>0) body.scrollTop=Math.max(0,st);
+    });
+
+  } else if(calView==='semana'){
+    const days=Array.from({length:7},(_,i)=>{ const dd=calWeekStart(calRef); dd.setDate(dd.getDate()+i); return dd; });
+    if(rangeEl) rangeEl.textContent=`${days[0].getDate()} ${MONTHS_PT[days[0].getMonth()].slice(0,3)} – ${days[6].getDate()} ${MONTHS_PT[days[6].getMonth()].slice(0,3)} ${days[0].getFullYear()}`;
+    let html=`<div class="cal-grid" style="grid-template-columns:52px ${days.map(()=>'1fr').join(' ')};">
+      <div class="cal-grid-head"><div class="cal-corner"></div>
+        ${days.map(d=>`<div class="cal-day-head${calISO(d)===today?' is-today':''}"><div class="dow">${DAYS_PT[d.getDay()]}</div><div class="dnum">${d.getDate()}</div></div>`).join('')}
+      </div>
+      <div class="cal-timecol">${Array.from({length:totalH},(_,i)=>{const h=CAL_START_HOUR+Math.floor(i/2);return`<div class="cal-time-label">${i%2===0?`<span>${String(h).padStart(2,'0')}:00</span>`:''}</div>`;}).join('')}</div>
+      ${days.map(d=>{const iso=calISO(d);const dayAppts=filtered.filter(a=>a.data===iso);
+        const events=dayAppts.map(a=>{const [hh,mm]=((a.horario||'00:00')+':00').split(':').map(Number);
+          const top=(hh*60+mm-CAL_START_MIN)/(CAL_END_MIN-CAL_START_MIN)*height;const info=agStatusInfo(a);
+          return`<div class="cal-event st-${info.k}" style="--sc:var(${info.v});top:${top}px;height:44px;" onclick="calOpenEvent(event,${a.id})" title="${escapeHtml(a.nome)} — ${info.label}">
+            <span class="ev-dot"></span><div class="ev-time">${a.horario}</div><div class="ev-name">${escapeHtml(a.nome)}</div>
+            <div class="ev-meta">${escapeHtml(a.procedimento||'Consulta')}</div>
+            <span class="ev-prof" style="background:${a.prof_cor||'transparent'}"></span></div>`;}).join('');
         return`<div class="cal-daycol${iso===today?' is-today':''}" style="height:${height}px;" onclick="calDayColClick(event,'${iso}')">${events}</div>`;
       }).join('')}
     </div>`;
     body.innerHTML=html;
     requestAnimationFrame(()=>{
-      const now=new Date();
-      const minNow=now.getHours()*60+now.getMinutes();
-      const scrollTarget=((minNow-CAL_START_MIN)/(CAL_END_MIN-CAL_START_MIN))*(totalH*CAL_SLOT_PX)-body.clientHeight/3;
-      if(scrollTarget>0) body.scrollTop=Math.max(0,scrollTarget);
+      const now=new Date(), minNow=now.getHours()*60+now.getMinutes();
+      const st=((minNow-CAL_START_MIN)/(CAL_END_MIN-CAL_START_MIN))*height-body.clientHeight/3;
+      if(st>0) body.scrollTop=Math.max(0,st);
     });
+
   } else {
     // Mês
     const year=calRef.getFullYear(), month=calRef.getMonth();
@@ -2511,12 +2563,12 @@ function renderCalendario(){
     let cells=[];
     for(let i=firstDay-1;i>=0;i--) cells.push({day:prevDays-i,cur:false,iso:calISO(new Date(year,month-1,prevDays-i))});
     for(let d=1;d<=daysInMonth;d++) cells.push({day:d,cur:true,iso:calISO(new Date(year,month,d))});
-    while(cells.length%7!==0) cells.push({day:cells.length-daysInMonth-firstDay+1,cur:false,iso:''});
+    while(cells.length%7!==0) cells.push({day:'',cur:false,iso:''});
     let html=`<div class="cal-month">
       ${DAYS_PT.map(d=>`<div class="cal-month-dow">${d}</div>`).join('')}
       ${cells.map(cell=>{
         const dayAppts=filtered.filter(a=>a.data===cell.iso);
-        const pills=dayAppts.slice(0,3).map(a=>`<div class="cal-pill" style="background:${a.prof_cor||'#d4735a'}" onclick="event.stopPropagation();calOpenEvent(event,${a.id})">${escapeHtml(a.nome.split(' ')[0])}</div>`).join('');
+        const pills=dayAppts.slice(0,3).map(a=>{const info=agStatusInfo(a);return`<div class="cal-pill" style="--sc:var(${info.v})" onclick="event.stopPropagation();calOpenEvent(event,${a.id})"><span style="width:5px;height:5px;border-radius:50%;background:${a.prof_cor||'#fff'};flex-shrink:0"></span>${escapeHtml((a.nome||'').split(' ')[0])}</div>`;}).join('');
         const more=dayAppts.length>3?`<div class="cal-more">+${dayAppts.length-3} mais</div>`:'';
         return`<div class="cal-cell${!cell.cur?' out':''}${cell.iso===today?' is-today':''}" onclick="calDayClick('${cell.iso}')">
           <div class="cell-num">${cell.day}</div>${pills}${more}

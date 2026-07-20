@@ -11,3 +11,16 @@ DEMO_SETUP.md
 .prettierrc.json
 .prettierignore
 .env.example
+
+# Documentação interna trazida por outra rodada de mudanças (mesclada em
+# 08/jul/2026) — mesmo motivo: relatórios de auditoria e templates de
+# variáveis de ambiente não devem ficar publicamente acessíveis.
+SECURITY_AUDIT.md
+SECURITY_REMEDIATION.md
+SECURITY_REPORT.txt
+ENV_TEMPLATE.txt
+DESIGN_QUICK_START.md
+LAYOUT_FIXES_DOCUMENTATION.md
+PREMIUM_DESIGN_GUIDE.md
+QUICK_START.txt
+REFACTORING_SUMMARY.md

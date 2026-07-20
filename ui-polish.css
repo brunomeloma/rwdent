@@ -1,0 +1,565 @@
+/* ══════════════════════════════════════════════════════════
+   UI/UX POLISH & GENERAL IMPROVEMENTS 2025
+   Melhorias gerais de visual, animações suaves, e client-ready
+══════════════════════════════════════════════════════════ */
+
+/* ── SMOOTH TRANSITIONS & ANIMATIONS ── */
+
+* {
+  transition-timing-function: cubic-bezier(.4, 0, .2, 1);
+}
+
+/* Page transitions */
+.page-content {
+  animation: pageIn .3s ease-out;
+}
+
+@keyframes pageIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ── BETTER HEADER ── */
+
+.header {
+  box-shadow: 0 1px 0 rgba(255,255,255,.08) inset, 0 4px 24px rgba(80,25,15,.28) !important;
+  background: linear-gradient(135deg, #8b3a2a 0%, #a0452e 40%, #c25838 100%) !important;
+}
+
+/* ── TOPNAV IMPROVEMENTS ── */
+
+.topnav-brand-icon {
+  box-shadow: 0 2px 8px rgba(0,0,0,.12);
+  transition: all .2s ease;
+}
+
+.topnav-brand-icon:hover {
+  transform: scale(1.08);
+  box-shadow: 0 4px 12px rgba(0,0,0,.18);
+}
+
+.topnav-item {
+  border-radius: 10px !important;
+  font-weight: 500;
+  transition: all .2s ease;
+}
+
+.topnav-item:hover {
+  background: rgba(255,255,255,.14) !important;
+  transform: translateY(-1px);
+}
+
+.topnav-item.active {
+  background: rgba(255,255,255,.18) !important;
+  font-weight: 600;
+  box-shadow: 0 1px 6px rgba(0,0,0,.1);
+}
+
+/* ── MODAL IMPROVEMENTS ── */
+
+.modal-overlay {
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+}
+
+.modal-box {
+  border-radius: 22px !important;
+  box-shadow: 0 24px 70px rgba(0,0,0,.22) !important;
+  animation: modalIn .25s cubic-bezier(.34, 1.56, .64, 1);
+}
+
+@keyframes modalIn {
+  from {
+    opacity: 0;
+    transform: scale(.95) translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.modal-title {
+  font-weight: 800 !important;
+  letter-spacing: -.1px;
+}
+
+.modal-footer {
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+/* ── FORM IMPROVEMENTS ── */
+
+.form-group {
+  margin-bottom: 14px;
+}
+
+.form-group label {
+  font-weight: 700 !important;
+  letter-spacing: .5px !important;
+  color: var(--rose-dark) !important;
+  font-size: 11px !important;
+  text-transform: uppercase;
+}
+
+input, select, textarea {
+  border-radius: 12px !important;
+  font-size: 13px;
+  transition: all .2s ease !important;
+}
+
+input:hover, select:hover, textarea:hover {
+  border-color: var(--rose-light) !important;
+}
+
+input:focus, select:focus, textarea:focus {
+  border-color: var(--rose) !important;
+  box-shadow: 0 0 0 4px rgba(212,115,90,.14), inset 0 0 0 1px var(--rose) !important;
+  transform: scale(1.01);
+}
+
+/* ── TABLE IMPROVEMENTS ── */
+
+table {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+table thead tr {
+  background: linear-gradient(180deg, #faf0eb 0%, #f5e5dc 100%);
+}
+
+table th {
+  font-weight: 800 !important;
+  letter-spacing: .5px !important;
+  padding: 12px 14px !important;
+  text-transform: uppercase;
+  font-size: 10px !important;
+  border-bottom: 2px solid rgba(212,115,90,.15) !important;
+}
+
+table td {
+  padding: 12px 14px !important;
+  border-bottom: 1px solid rgba(212,115,90,.08) !important;
+  transition: background .15s ease;
+}
+
+table tr:hover td {
+  background: rgba(212,115,90,.03);
+}
+
+table tr:last-child td {
+  border-bottom: none;
+}
+
+/* ── BADGE IMPROVEMENTS ── */
+
+.badge, .status-badge, .fin-badge, .home-badge {
+  border-radius: 20px !important;
+  font-weight: 700 !important;
+  letter-spacing: .4px !important;
+  font-size: 10px !important;
+  padding: 4px 10px !important;
+  transition: all .15s ease;
+}
+
+.badge:hover, .status-badge:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(0,0,0,.1);
+}
+
+/* ── HOME DASHBOARD POLISH ── */
+
+.home-hero-banner {
+  background: linear-gradient(150deg, #d4735a 0%, #a05040 60%, #8a3a2a 120%) !important;
+  border-radius: 20px !important;
+  box-shadow: 0 10px 32px rgba(122,48,32,.22) !important;
+  padding: 24px 26px 26px !important;
+  position: relative;
+  overflow: hidden;
+}
+
+.home-hero-banner::after {
+  content: '';
+  position: absolute;
+  right: -40px;
+  top: -40px;
+  width: 200px;
+  height: 200px;
+  background: radial-gradient(circle, rgba(255,255,255,.08) 0%, transparent 70%);
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.home-hero-greeting {
+  font-size: 20px !important;
+  font-weight: 800 !important;
+  color: #fff;
+  letter-spacing: -.2px;
+  margin-bottom: 16px;
+}
+
+.home-stat-card {
+  border-radius: 16px !important;
+  box-shadow: 0 1px 3px rgba(122,48,32,.05), 0 6px 18px rgba(122,48,32,.07) !important;
+  border: 1px solid rgba(212,115,90,.12) !important;
+  transition: all .18s cubic-bezier(.4, 0, .2, 1);
+  cursor: default;
+}
+
+.home-stat-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 28px rgba(122,48,32,.14) !important;
+}
+
+.home-stat-num {
+  font-weight: 800 !important;
+  font-size: 24px !important;
+  color: var(--rose-dark);
+  letter-spacing: -.3px;
+}
+
+.home-stat-label {
+  font-size: 11px !important;
+  color: var(--rose-text);
+  text-transform: uppercase;
+  letter-spacing: .3px;
+  margin-top: 6px;
+}
+
+/* ── LIST ITEMS POLISH ── */
+
+.appt-item, .patient-card, .prof-card, .fin-pac-cob {
+  border-radius: 14px !important;
+  border: 1px solid rgba(212,115,90,.12) !important;
+  transition: all .2s cubic-bezier(.4, 0, .2, 1);
+}
+
+.appt-item:hover, .patient-card:hover, .prof-card:hover, .fin-pac-cob:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(122,48,32,.12) !important;
+  border-color: var(--rose-light);
+}
+
+/* ── APPOINTMENT TIME BADGE ── */
+
+.appt-time {
+  background: linear-gradient(135deg, var(--rose-lighter) 0%, #f5d9d0 100%);
+  color: var(--rose-dark);
+  border-radius: 10px !important;
+  font-weight: 700 !important;
+  letter-spacing: -.2px;
+}
+
+/* ── FLOATING ACTION BUTTONS ── */
+
+.fab, .fab-btn {
+  border-radius: 14px !important;
+  box-shadow: 0 4px 14px rgba(122,48,32,.22) !important;
+  transition: all .2s ease;
+}
+
+.fab:hover, .fab-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 22px rgba(122,48,32,.3) !important;
+}
+
+.fab:active, .fab-btn:active {
+  transform: scale(.97);
+}
+
+/* ── TOAST NOTIFICATIONS ── */
+
+.toast {
+  border-radius: 14px !important;
+  box-shadow: 0 10px 30px rgba(0,0,0,.14) !important;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  animation: toastIn .3s cubic-bezier(.34, 1.56, .64, 1);
+}
+
+@keyframes toastIn {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* ── LOADING SPINNER IMPROVEMENTS ── */
+
+.spinner {
+  border: 3px solid rgba(212,115,90,.15);
+  border-top-color: var(--rose);
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ── DROPDOWN IMPROVEMENTS ── */
+
+.tn-dropdown {
+  border-radius: 16px !important;
+  box-shadow: 0 16px 44px rgba(80,25,15,.22), 0 2px 10px rgba(0,0,0,.08) !important;
+  animation: dropdownIn .15s ease;
+}
+
+@keyframes dropdownIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.tn-dropdown-item {
+  border-radius: 10px !important;
+  transition: all .15s ease;
+}
+
+.tn-dropdown-item:hover {
+  background: rgba(212,115,90,.08);
+  transform: translateX(3px);
+}
+
+/* ── MOBILE BOTTOM NAV POLISH ── */
+
+.mobile-bottom-nav {
+  box-shadow: 0 -4px 24px rgba(122,48,32,.1) !important;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  background: rgba(255,255,255,.98) !important;
+}
+
+.mobile-nav-item {
+  border-radius: 14px !important;
+  transition: all .2s ease;
+}
+
+.mobile-nav-item.active {
+  color: var(--rose-dark);
+}
+
+.mobile-nav-item.active i {
+  background: var(--rose-lighter);
+  color: var(--rose);
+  box-shadow: 0 2px 8px rgba(212,115,90,.25);
+  transform: scale(1.1);
+}
+
+/* ── MOBILE MORE SHEET ── */
+
+.mobile-more-sheet {
+  border-radius: 26px 26px 0 0 !important;
+  box-shadow: 0 -12px 50px rgba(0,0,0,.15) !important;
+}
+
+.mobile-more-handle {
+  background: var(--rose-light);
+  border-radius: 4px;
+  width: 40px;
+  height: 4px;
+}
+
+.mobile-more-grid button {
+  border-radius: 18px !important;
+  transition: all .2s ease;
+  border: 1.5px solid var(--rose-light) !important;
+}
+
+.mobile-more-grid button:hover {
+  border-color: var(--rose) !important;
+  background: rgba(212,115,90,.08) !important;
+  transform: translateY(-2px);
+}
+
+/* ── ACCESSIBILITY ── */
+
+:focus-visible {
+  outline: 2px solid var(--rose) !important;
+  outline-offset: 2px !important;
+}
+
+button:focus-visible {
+  outline: 2px solid var(--rose) !important;
+  outline-offset: 2px !important;
+}
+
+/* ── RESPONSIVE POLISH ── */
+
+@media (max-width: 768px) {
+  .home-stat-card {
+    min-height: 100px;
+  }
+  
+  .appt-item, .patient-card {
+    padding: 14px !important;
+  }
+  
+  .modal-box {
+    border-radius: 22px 22px 0 0 !important;
+  }
+  
+  input, select, textarea {
+    min-height: 44px !important;
+    font-size: 16px !important;
+  }
+  
+  .btn-primary, .btn-secondary {
+    min-height: 44px !important;
+    font-size: 14px !important;
+  }
+  
+  .home-hero-banner {
+    padding: 20px 22px 22px !important;
+  }
+  
+  .home-hero-greeting {
+    font-size: 18px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .home-stat-card {
+    padding: 12px !important;
+  }
+  
+  table {
+    font-size: 12px;
+  }
+  
+  table th, table td {
+    padding: 8px 6px !important;
+  }
+  
+  .badge {
+    font-size: 9px !important;
+    padding: 3px 8px !important;
+  }
+}
+
+/* ── DARK MODE POLISH ── */
+
+.dark-mode {
+  --rose: #c46a52;
+  --rose-light: #3a2a24;
+  --rose-lighter: #1e1412;
+  --rose-mid: #9a5a48;
+  --rose-dark: #f0c0b0;
+  --rose-text: #c8a090;
+}
+
+.dark-mode .home-stat-card {
+  background: #1e1612 !important;
+  box-shadow: 0 1px 3px rgba(0,0,0,.1), 0 6px 18px rgba(0,0,0,.15) !important;
+}
+
+.dark-mode .appt-item,
+.dark-mode .patient-card,
+.dark-mode .prof-card {
+  background: #1e1612 !important;
+  border-color: #3a2a24 !important;
+}
+
+.dark-mode input, 
+.dark-mode select, 
+.dark-mode textarea {
+  background: #2a1e1a !important;
+  color: #e0c8c0 !important;
+  border-color: #3a2a24 !important;
+}
+
+.dark-mode .btn-primary {
+  background: linear-gradient(160deg, #c46a52 0%, #a04030 130%) !important;
+}
+
+.dark-mode .modal-box {
+  background: #1e1612 !important;
+  color: #e0c8c0 !important;
+}
+
+.dark-mode table thead {
+  background: linear-gradient(180deg, #2a1e1a 0%, #241814 100%);
+}
+
+.dark-mode table th {
+  color: #e0c8c0 !important;
+  border-bottom-color: #3a2a24 !important;
+}
+
+.dark-mode table td {
+  border-color: #2a1e1a !important;
+  color: #d0b8b0 !important;
+}
+
+.dark-mode .toast {
+  background: #1e1612 !important;
+  color: #e0c8c0 !important;
+}
+
+/* ── SCROLL BEHAVIOR ── */
+
+html {
+  scroll-behavior: smooth;
+}
+
+.page-content {
+  scroll-behavior: smooth;
+}
+
+/* ── LINK STYLING ── */
+
+a {
+  color: var(--rose);
+  text-decoration: none;
+  transition: color .2s ease;
+}
+
+a:hover {
+  color: var(--rose-dark);
+  text-decoration: underline;
+}
+
+/* ── SELECTION STYLING ── */
+
+::selection {
+  background: rgba(212,115,90,.22);
+  color: var(--rose-dark);
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(212,115,90,.05);
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(212,115,90,.2);
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(212,115,90,.3);
+}

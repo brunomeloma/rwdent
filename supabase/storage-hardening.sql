@@ -2,6 +2,13 @@
 -- Execute no Supabase SQL Editor após backup.
 -- Não apaga nenhum arquivo, paciente ou registro — só corrige permissões.
 --
+-- NOTA: a versão atual de ../supabase-seguranca.sql (script principal) já
+-- inclui esta mesma correção desde a reconciliação de 08/jul/2026. Rodar
+-- este arquivo continua seguro (é idempotente), mas só é necessário caso
+-- você já tenha rodado uma versão ANTERIOR do supabase-seguranca.sql (a
+-- que deixava o bucket público e sem isolamento por clínica) e ainda não
+-- tenha atualizado.
+--
 -- Achado (pentest): o bucket "galeria" foi criado como público
 -- (supabase-seguranca.sql) e as policies de storage.objects não
 -- verificavam a clínica do usuário — qualquer pessoa autenticada de
