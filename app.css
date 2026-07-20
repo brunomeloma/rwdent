@@ -1277,9 +1277,10 @@ select, textarea {
 .search-result-item:hover,.search-result-item.active{background:var(--rose-lighter);}
 
 /* ── VENDAS SUB-TABS ── */
-.vendas-subtab{padding:12px 20px;font-size:13px;font-weight:700;color:var(--rose-text);background:none;border:none;border-bottom:3px solid transparent;cursor:pointer;display:flex;align-items:center;gap:6px;transition:all .2s;}
+.vendas-subtab{padding:12px 20px;font-size:13px;font-weight:700;color:var(--rose-text);background:none;border:none;border-bottom:3px solid transparent;cursor:pointer;display:flex;align-items:center;gap:6px;transition:all .2s;flex-shrink:0;white-space:nowrap;}
 .vendas-subtab:hover{color:var(--rose-dark);background:var(--rose-lighter);}
 .vendas-subtab.active{color:var(--rose-dark);border-bottom-color:var(--rose);}
+#vendas-subtabs::-webkit-scrollbar{display:none;}
 
 /* ── APARELHOS CARDS ── */
 .ap-card{background:#fff;border-radius:16px;border:1.5px solid var(--rose-light);overflow:hidden;transition:box-shadow .2s,transform .2s;}
