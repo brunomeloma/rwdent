@@ -268,6 +268,34 @@ async function adminRenovar(id){
   loadAdminPanel();
 }
 
+async function redefinirSenhaDemo(){
+  if(!_ADMIN_IDS.includes(currentUser?.id)) return;
+  if(!confirm('Gerar uma senha nova para demo@rwdent.app? A senha atual deixa de funcionar.')) return;
+  const resultEl = document.getElementById('demo-pass-result');
+  showLoading(true);
+  try{
+    const { data: { session } } = await _sb.auth.getSession();
+    const resp = await fetch('/api/admin-reset-demo-password', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + (session?.access_token || '') }
+    });
+    const json = await resp.json();
+    showLoading(false);
+    if(!resp.ok){ showToast('Erro: ' + (json.error || 'falha ao trocar senha'), 'error'); return; }
+    resultEl.innerHTML = `<div style="background:var(--rose-lighter);border:1px solid var(--rose-light);border-radius:10px;padding:12px 14px;font-size:13px;">
+      <div>E-mail: <strong>${json.email}</strong></div>
+      <div style="margin-top:4px;">Senha nova: <strong style="font-family:monospace;font-size:14px;">${json.password}</strong>
+        <button class="btn-secondary" style="padding:4px 10px;font-size:11px;margin-left:8px;" onclick="navigator.clipboard.writeText('${json.password}');showToast('Copiado!')"><i class="ti ti-copy"></i> Copiar</button>
+      </div>
+      <div style="font-size:11px;color:var(--rose-text);margin-top:6px;">Anote agora — essa senha não fica salva em lugar nenhum do painel.</div>
+    </div>`;
+    showToast('Senha da conta demo redefinida!','ok');
+  }catch(e){
+    showLoading(false);
+    showToast('Erro: ' + e.message, 'error');
+  }
+}
+
 async function esqueciSenha(){
   const email = document.getElementById('login-email').value.trim();
   const errEl = document.getElementById('login-err');
