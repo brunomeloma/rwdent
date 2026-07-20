@@ -182,59 +182,120 @@
     <!-- HOME -->
     <div id="tab-home" class="content">
 
-      <!-- ── HERO BANNER MODELO 2 ── -->
-      <div class="home-hero-banner" id="home-hero-banner">
-        <div class="home-hero-date" id="home-hero-date"></div>
-        <div class="home-hero-greeting" id="home-hero-greeting">Bem-vinda à sua clínica! 👋</div>
-        <div class="home-hero-stats" id="home-hero-stats"></div>
+      <!-- ── HERO BANNER PREMIUM ── -->
+      <div class="home-hero-banner" id="home-hero-banner" style="background:linear-gradient(150deg,#d4735a 0%,#a05040 60%,#8a3a2a 120%);border-radius:20px;box-shadow:0 10px 32px rgba(122,48,32,.22);padding:24px 26px;margin-bottom:20px;position:relative;overflow:hidden;">
+        <div style="position:absolute;right:-30px;top:-30px;width:160px;height:160px;border-radius:50%;background:rgba(255,255,255,.07);pointer-events:none;"></div>
+        <div style="position:absolute;right:80px;bottom:-50px;width:100px;height:100px;border-radius:50%;background:rgba(255,255,255,.05);pointer-events:none;"></div>
+        <div class="home-hero-date" id="home-hero-date" style="font-size:11px;color:rgba(255,255,255,.7);margin-bottom:4px;"></div>
+        <div class="home-hero-greeting" id="home-hero-greeting" style="font-size:20px;font-weight:700;color:#fff;margin-bottom:16px;letter-spacing:-.2px;">Bem-vinda à sua clínica! 👋</div>
+        <div class="home-hero-stats" id="home-hero-stats" style="display:flex;gap:10px;flex-wrap:wrap;position:relative;z-index:1;"></div>
       </div>
 
-      <!-- ── STATS CARDS ── -->
-      <div id="home-stats" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:18px;"></div>
+      <!-- ── METRICS ROW (4 colunas) ── -->
+      <div id="home-stats" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:22px;"></div>
 
-      <!-- ── TABLES ROW ── -->
-      <div class="home-tables-row">
-        <!-- Próximas consultas hoje -->
-        <div class="card home-table-card">
-          <h3 class="home-table-title"><i class="ti ti-clock"></i> Próximas consultas hoje</h3>
-          <div id="home-today-list"><div class="home-empty">Nenhuma consulta hoje.</div></div>
+      <!-- ── QUICK ACTIONS BAR ── -->
+      <div style="display:flex;gap:8px;margin-bottom:22px;flex-wrap:wrap;padding:14px;background:linear-gradient(135deg,rgba(212,115,90,.08),rgba(212,115,90,.04));border-radius:16px;border:1px solid var(--rose-light);">
+        <button class="btn-primary" onclick="switchTab('agendar')" style="font-size:12px;padding:8px 14px;display:flex;align-items:center;gap:5px;">
+          <i class="ti ti-calendar-plus"></i> Novo Agendamento
+        </button>
+        <button class="btn-primary" onclick="switchTab('pacientes')" style="font-size:12px;padding:8px 14px;display:flex;align-items:center;gap:5px;background:rgba(212,115,90,.15);color:var(--rose);border:1.5px solid var(--rose-light);">
+          <i class="ti ti-user-plus"></i> Novo Paciente
+        </button>
+        <button class="btn-secondary" onclick="relProdutividade()" style="font-size:12px;padding:8px 14px;display:flex;align-items:center;gap:5px;margin-left:auto;">
+          <i class="ti ti-chart-dots-3"></i> Relatórios
+        </button>
+      </div>
+
+      <!-- ── SECTION 1: PRÓXIMAS CONSULTAS (Premium Card) ── -->
+      <div class="card" style="border-radius:18px;border:1px solid rgba(122,48,32,.09);box-shadow:0 1px 2px rgba(122,48,32,.04),0 8px 28px rgba(122,48,32,.08);padding:20px;margin-bottom:18px;">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
+          <div style="width:10px;height:10px;border-radius:50%;background:linear-gradient(135deg,var(--rose),var(--rose-dark));"></div>
+          <h3 class="home-table-title" style="margin:0;font-size:13px;letter-spacing:.5px;">
+            <i class="ti ti-clock" style="color:var(--rose);font-size:16px;"></i> Próximas Consultas Hoje
+          </h3>
         </div>
-        <!-- Últimos pacientes registrados -->
-        <div class="card home-table-card">
-          <h3 class="home-table-title"><i class="ti ti-user-plus"></i> Últimos pacientes registrados</h3>
-          <div id="home-recent-patients"><div class="home-empty">Nenhum paciente cadastrado.</div></div>
+        <div id="home-today-list" style="display:flex;flex-direction:column;gap:8px;">
+          <div class="home-empty" style="padding:20px;color:var(--rose-text);">Nenhuma consulta agendada.</div>
         </div>
       </div>
 
-      <!-- ── PAGAMENTOS PENDENTES + ANAMNESES ── -->
-      <div class="home-tables-row" style="margin-top:16px;">
-        <div class="card home-table-card">
-          <h3 class="home-table-title"><i class="ti ti-alert-circle" style="color:#e65100;"></i> Pagamentos pendentes</h3>
-          <div id="home-pag-pendentes"><div class="home-empty">Nenhum pagamento pendente.</div></div>
+      <!-- ── SECTION 2: DOIS CARDS LADO A LADO ── -->
+      <div class="home-tables-row" style="gap:16px;margin-bottom:18px;">
+        <!-- Últimos Pacientes -->
+        <div class="card" style="border-radius:18px;border:1px solid rgba(122,48,32,.09);box-shadow:0 1px 2px rgba(122,48,32,.04),0 8px 28px rgba(122,48,32,.08);padding:20px;">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
+            <div style="width:10px;height:10px;border-radius:50%;background:linear-gradient(135deg,#2e7d32,#1b5e20);"></div>
+            <h3 class="home-table-title" style="margin:0;font-size:13px;letter-spacing:.5px;">
+              <i class="ti ti-user-plus" style="color:#2e7d32;font-size:16px;"></i> Últimos Pacientes
+            </h3>
+          </div>
+          <div id="home-recent-patients" style="display:flex;flex-direction:column;gap:8px;">
+            <div class="home-empty" style="padding:20px;color:var(--rose-text);">Nenhum paciente cadastrado.</div>
+          </div>
         </div>
-        <div class="card home-table-card">
-          <h3 class="home-table-title"><i class="ti ti-clipboard-check" style="color:#2e7d32;"></i> Anamneses recebidas</h3>
-          <div id="home-anamneses-recebidas"><div class="home-empty">Nenhuma anamnese recente.</div></div>
+
+        <!-- Pagamentos Pendentes -->
+        <div class="card" style="border-radius:18px;border:1px solid rgba(122,48,32,.09);box-shadow:0 1px 2px rgba(122,48,32,.04),0 8px 28px rgba(122,48,32,.08);padding:20px;">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
+            <div style="width:10px;height:10px;border-radius:50%;background:linear-gradient(135deg,#e65100,#bf360c);"></div>
+            <h3 class="home-table-title" style="margin:0;font-size:13px;letter-spacing:.5px;">
+              <i class="ti ti-alert-circle" style="color:#e65100;font-size:16px;"></i> Pendências
+            </h3>
+          </div>
+          <div id="home-pag-pendentes" style="display:flex;flex-direction:column;gap:8px;">
+            <div class="home-empty" style="padding:20px;color:var(--rose-text);">Tudo em dia!</div>
+          </div>
         </div>
       </div>
 
-      <!-- ── RECALL + ANIVERSARIANTES ── -->
-      <div class="home-tables-row" style="margin-top:16px;">
-        <div class="card home-table-card">
-          <h3 class="home-table-title"><i class="ti ti-phone-outgoing" style="color:#1565c0;"></i> Retornos atrasados (6+ meses)</h3>
-          <div id="home-recall"><div class="home-empty">Nenhum retorno atrasado.</div></div>
+      <!-- ── SECTION 3: ANAMNESES + RECALLS ── -->
+      <div class="home-tables-row" style="gap:16px;margin-bottom:18px;">
+        <!-- Anamneses Recebidas -->
+        <div class="card" style="border-radius:18px;border:1px solid rgba(122,48,32,.09);box-shadow:0 1px 2px rgba(122,48,32,.04),0 8px 28px rgba(122,48,32,.08);padding:20px;">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
+            <div style="width:10px;height:10px;border-radius:50%;background:linear-gradient(135deg,#2e7d32,#1b5e20);"></div>
+            <h3 class="home-table-title" style="margin:0;font-size:13px;letter-spacing:.5px;">
+              <i class="ti ti-clipboard-check" style="color:#2e7d32;font-size:16px;"></i> Anamneses
+            </h3>
+          </div>
+          <div id="home-anamneses-recebidas" style="display:flex;flex-direction:column;gap:8px;">
+            <div class="home-empty" style="padding:20px;color:var(--rose-text);">Nenhuma pendente.</div>
+          </div>
         </div>
-        <div class="card home-table-card">
-          <h3 class="home-table-title"><i class="ti ti-cake" style="color:#c2185b;"></i> Aniversariantes do mês</h3>
-          <div id="home-aniversariantes"><div class="home-empty">Nenhum aniversariante este mês.</div></div>
+
+        <!-- Retornos Atrasados -->
+        <div class="card" style="border-radius:18px;border:1px solid rgba(122,48,32,.09);box-shadow:0 1px 2px rgba(122,48,32,.04),0 8px 28px rgba(122,48,32,.08);padding:20px;">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
+            <div style="width:10px;height:10px;border-radius:50%;background:linear-gradient(135deg,#1565c0,#0d47a1);"></div>
+            <h3 class="home-table-title" style="margin:0;font-size:13px;letter-spacing:.5px;">
+              <i class="ti ti-phone-outgoing" style="color:#1565c0;font-size:16px;"></i> Retornos Atrasados
+            </h3>
+          </div>
+          <div id="home-recall" style="display:flex;flex-direction:column;gap:8px;">
+            <div class="home-empty" style="padding:20px;color:var(--rose-text);">Tudo em dia!</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── SECTION 4: ANIVERSARIANTES ── -->
+      <div class="card" style="border-radius:18px;border:1px solid rgba(122,48,32,.09);box-shadow:0 1px 2px rgba(122,48,32,.04),0 8px 28px rgba(122,48,32,.08);padding:20px;margin-bottom:18px;">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
+          <div style="width:10px;height:10px;border-radius:50%;background:linear-gradient(135deg,#c2185b,#880e4f);"></div>
+          <h3 class="home-table-title" style="margin:0;font-size:13px;letter-spacing:.5px;">
+            <i class="ti ti-cake" style="color:#c2185b;font-size:16px;"></i> Aniversariantes do Mês
+          </h3>
+        </div>
+        <div id="home-aniversariantes" style="display:flex;flex-direction:column;gap:8px;">
+          <div class="home-empty" style="padding:20px;color:var(--rose-text);">Nenhum aniversariante este mês.</div>
         </div>
       </div>
 
       <!-- ── LEMBRETE DE BACKUP ── -->
-      <div id="home-backup-banner" style="display:none;margin-top:16px;"></div>
+      <div id="home-backup-banner" style="display:none;margin-bottom:18px;border-radius:18px;border:1px solid rgba(122,48,32,.09);box-shadow:0 1px 2px rgba(122,48,32,.04),0 8px 28px rgba(122,48,32,.08);"></div>
 
       <!-- ── ALERTAS DE ESTOQUE ── -->
-      <div id="home-estoque-alertas" style="display:none;margin-top:16px;"></div>
+      <div id="home-estoque-alertas" style="display:none;margin-bottom:18px;border-radius:18px;border:1px solid rgba(122,48,32,.09);box-shadow:0 1px 2px rgba(122,48,32,.04),0 8px 28px rgba(122,48,32,.08);"></div>
 
     </div>
 
