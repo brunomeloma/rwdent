@@ -5009,8 +5009,8 @@ function abrirLancamentoAvulso(){
 }
 
 async function salvarLancamentoAvulso(){
-  const nome  = document.getElementById('lav-nome').value.trim();
-  const proc  = document.getElementById('lav-proc').value.trim();
+  const nome  = document.getElementById('lav-nome').value.trim() || 'Não identificado';
+  const proc  = document.getElementById('lav-proc').value.trim() || 'Recebimento avulso';
   const valor = parseFloat(document.getElementById('lav-valor').value);
   const data  = document.getElementById('lav-data').value || hoje();
   const forma = document.getElementById('lav-forma').value;
@@ -5019,8 +5019,6 @@ async function salvarLancamentoAvulso(){
   const profNome = profId ? (profissionais.find(p=>p.id==profId)?.nome||'') : '';
   const obs = document.getElementById('lav-obs').value.trim();
 
-  if(!nome){ showToast('Digite o nome do paciente.','warn'); return; }
-  if(!proc){ showToast('Digite o procedimento realizado.','warn'); return; }
   if(!valor || valor<=0){ showToast('Digite o valor cobrado.','warn'); return; }
 
   showLoading(true);

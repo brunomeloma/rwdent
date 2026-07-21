@@ -162,20 +162,20 @@ const TOOLS = [
     type: 'function',
     function: {
       name: 'registrar_venda_avulsa',
-      description: 'Lança no faturamento um valor recebido de um paciente sem cadastro/prontuário na clínica (ex: paciente de outra dentista que só passou pra um procedimento pontual). Não cria paciente nem prontuário, só entra no financeiro. ESCRITA — só chame após o usuário confirmar com "sim", "pode" ou "confirmo".',
+      description: 'Lança no faturamento um valor recebido sem cadastro/prontuário na clínica — ex: paciente de outra dentista que só passou pra um procedimento pontual, ou uma cobrança na maquininha (InfinitePay etc.) onde só se sabe o valor e a forma de pagamento, sem nome nem procedimento. Nome e procedimento são opcionais. Não cria paciente nem prontuário, só entra no financeiro. ESCRITA — só chame após o usuário confirmar com "sim", "pode" ou "confirmo".',
       parameters: {
         type: 'object',
         additionalProperties: false,
         properties: {
-          paciente_nome:    { type: 'string', description: 'Nome do paciente (não precisa estar cadastrado)' },
-          procedimento:     { type: 'string', description: 'Procedimento realizado, ex: "Profilaxia", "Restauração"' },
+          paciente_nome:    { type: 'string', description: 'Nome do paciente, se souber (opcional — não precisa estar cadastrado)' },
+          procedimento:     { type: 'string', description: 'Procedimento realizado, se souber, ex: "Profilaxia", "Restauração" (opcional)' },
           valor:            { type: 'number', description: 'Valor cobrado em reais' },
           forma_pagamento:  { type: 'string', enum: ['pix','dinheiro','debito','credito'], description: 'Forma de pagamento (padrão: pix)' },
           parcelas:         { type: 'integer', description: 'Número de parcelas, só se crédito (padrão: 1)' },
           profissional:     { type: 'string', description: 'Nome do profissional que atendeu, se informado (opcional)' },
           data:             { type: 'string', description: 'Data do atendimento YYYY-MM-DD (padrão: hoje)' }
         },
-        required: ['paciente_nome', 'procedimento', 'valor']
+        required: ['valor']
       }
     }
   },
@@ -531,11 +531,9 @@ async function runTool(name, args, sb, clinicId) {
     }
 
     case 'registrar_venda_avulsa': {
-      const nomePac = String(args.paciente_nome || '').trim().slice(0, 200);
-      const proc    = String(args.procedimento || '').trim().slice(0, 200);
+      const nomePac = String(args.paciente_nome || '').trim().slice(0, 200) || 'Não identificado';
+      const proc    = String(args.procedimento || '').trim().slice(0, 200) || 'Recebimento avulso';
       const valor   = Number(args.valor);
-      if (!nomePac) throw new Error('Informe o nome do paciente.');
-      if (!proc) throw new Error('Informe o procedimento.');
       if (!Number.isFinite(valor) || valor <= 0) throw new Error('Informe um valor válido.');
 
       const formaRaw = String(args.forma_pagamento || 'pix').toLowerCase();
