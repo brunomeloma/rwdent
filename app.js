@@ -7672,7 +7672,6 @@ async function vrFinalizarMobile(){
 }
 
 function vendasSubTab(tab){
-  if(!_isRhaizaClinic && (tab==='aparelhos'||tab==='alinhador'||tab==='clareamento')) tab='vr';
   document.querySelectorAll('.vendas-subtab').forEach(b=>b.classList.remove('active'));
   document.querySelector(`.vendas-subtab[onclick*="'${tab}'"]`)?.classList.add('active');
   document.getElementById('vendas-sub-aparelhos').style.display = tab==='aparelhos'?'':'none';

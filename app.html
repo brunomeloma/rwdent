@@ -26,7 +26,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
-<link rel="stylesheet" href="app.css?v=7"/>
+<link rel="stylesheet" href="app.css?v=8"/>
 <link rel="stylesheet" href="premium-design.css"/>
 <link rel="stylesheet" href="sections-premium.css"/>
 <link rel="stylesheet" href="layout-fixes.css"/>
@@ -798,9 +798,9 @@
 
       <!-- SUB-ABAS VENDAS -->
       <div style="display:flex;gap:0;border-bottom:2px solid var(--rose-light);background:#fff;padding:0 16px;flex-shrink:0;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;" id="vendas-subtabs">
-        <button class="vendas-subtab rhaiza-only" onclick="vendasSubTab('aparelhos')"><i class="ti ti-dental"></i> Aparelhos</button>
-        <button class="vendas-subtab rhaiza-only" onclick="vendasSubTab('alinhador')"><i class="ti ti-sparkles"></i> Alinhador Invisível</button>
-        <button class="vendas-subtab rhaiza-only" onclick="vendasSubTab('clareamento')"><i class="ti ti-sun"></i> Clareamento</button>
+        <button class="vendas-subtab" onclick="vendasSubTab('aparelhos')"><i class="ti ti-dental"></i> Aparelhos</button>
+        <button class="vendas-subtab" onclick="vendasSubTab('alinhador')"><i class="ti ti-sparkles"></i> Alinhador Invisível</button>
+        <button class="vendas-subtab" onclick="vendasSubTab('clareamento')"><i class="ti ti-sun"></i> Clareamento</button>
         <button class="vendas-subtab" onclick="vendasSubTab('vr')"><i class="ti ti-shopping-cart"></i> Venda Rápida</button>
       </div>
 
@@ -2023,7 +2023,7 @@
   <div style="color:var(--rose-text);font-size:14px;">Carregando...</div>
 </div>
 
-<script src="app.js?v=7"></script>
+<script src="app.js?v=8"></script>
 
 <!-- ══ MODAL RELATÓRIO MENSAL ══ -->
 <div class="modal-overlay" id="modal-relatorio" onclick="if(event.target===this)closeModal('modal-relatorio')" style="align-items:flex-start;padding-top:40px;overflow-y:auto;">
