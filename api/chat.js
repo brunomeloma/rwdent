@@ -161,6 +161,27 @@ const TOOLS = [
   {
     type: 'function',
     function: {
+      name: 'registrar_venda_avulsa',
+      description: 'Lança no faturamento um valor recebido de um paciente sem cadastro/prontuário na clínica (ex: paciente de outra dentista que só passou pra um procedimento pontual). Não cria paciente nem prontuário, só entra no financeiro. ESCRITA — só chame após o usuário confirmar com "sim", "pode" ou "confirmo".',
+      parameters: {
+        type: 'object',
+        additionalProperties: false,
+        properties: {
+          paciente_nome:    { type: 'string', description: 'Nome do paciente (não precisa estar cadastrado)' },
+          procedimento:     { type: 'string', description: 'Procedimento realizado, ex: "Profilaxia", "Restauração"' },
+          valor:            { type: 'number', description: 'Valor cobrado em reais' },
+          forma_pagamento:  { type: 'string', enum: ['pix','dinheiro','debito','credito'], description: 'Forma de pagamento (padrão: pix)' },
+          parcelas:         { type: 'integer', description: 'Número de parcelas, só se crédito (padrão: 1)' },
+          profissional:     { type: 'string', description: 'Nome do profissional que atendeu, se informado (opcional)' },
+          data:             { type: 'string', description: 'Data do atendimento YYYY-MM-DD (padrão: hoje)' }
+        },
+        required: ['paciente_nome', 'procedimento', 'valor']
+      }
+    }
+  },
+  {
+    type: 'function',
+    function: {
       name: 'ver_agenda',
       description: 'Mostra os agendamentos da clínica em uma data ou período. Leitura — execute direto, sem confirmação.',
       parameters: {
@@ -340,6 +361,7 @@ FERRAMENTAS DISPONÍVEIS:
 • agendar_consulta    → cria consulta/agendamento (⚠️ ESCRITA — exige confirmação)
 • remarcar_consulta   → muda data/horário de consulta existente (⚠️ ESCRITA — exige confirmação)
 • cancelar_consulta   → marca consulta como cancelada, sem apagar (⚠️ ESCRITA — exige confirmação)
+• registrar_venda_avulsa → lança no faturamento um valor recebido de paciente sem cadastro/prontuário, ex: "entrou uma paciente da outra dentista, cobrei 150 de profilaxia no pix" (⚠️ ESCRITA — exige confirmação). Não cadastra paciente nem cria prontuário.
 
 Converta SEMPRE datas relativas ("hoje", "amanhã", "sexta", "semana que vem") para YYYY-MM-DD usando a data de hoje acima antes de chamar as ferramentas de agenda. Para "esta semana", use data + data_fim.${ctx?.currentPatient ? `
 
@@ -505,6 +527,59 @@ async function runTool(name, args, sb, clinicId) {
           nome: data.nome,
           telefone: data.telefone || null
         }
+      });
+    }
+
+    case 'registrar_venda_avulsa': {
+      const nomePac = String(args.paciente_nome || '').trim().slice(0, 200);
+      const proc    = String(args.procedimento || '').trim().slice(0, 200);
+      const valor   = Number(args.valor);
+      if (!nomePac) throw new Error('Informe o nome do paciente.');
+      if (!proc) throw new Error('Informe o procedimento.');
+      if (!Number.isFinite(valor) || valor <= 0) throw new Error('Informe um valor válido.');
+
+      const formaRaw = String(args.forma_pagamento || 'pix').toLowerCase();
+      const forma = ['pix', 'dinheiro', 'debito', 'credito'].includes(formaRaw) ? formaRaw : 'pix';
+      const parcelas = forma === 'credito' ? Math.min(12, Math.max(1, Number(args.parcelas) || 1)) : 1;
+      const dataStr = normalizeDate(args.data) || new Date().toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' });
+
+      let profId = null, profNome = '';
+      if (args.profissional) {
+        const { data: profsEnc } = await sb.from('profissionais').select('id, nome')
+          .eq('clinica_id', clinicId).ilike('nome', `%${String(args.profissional).replace(/[,()%]/g,' ').slice(0, 100)}%`).limit(1);
+        if (profsEnc?.length) { profId = profsEnc[0].id; profNome = profsEnc[0].nome; }
+      }
+
+      // vendas vive como JSON dentro de financeiro_config (não é tabela normal) —
+      // por isso lê, adiciona e grava só essa coluna (update parcial, não mexe
+      // em procs/mats/estoque/cfg que também moram nessa mesma linha).
+      const { data: fc, error: fcErr } = await sb.from('financeiro_config').select('vendas').eq('clinica_id', clinicId).single();
+      if (fcErr) throw new Error(fcErr.message);
+      let vendasAtuais = [];
+      try { vendasAtuais = JSON.parse(fc?.vendas || '[]'); } catch { vendasAtuais = []; }
+      const nextId = vendasAtuais.length ? Math.max(...vendasAtuais.map(v => Number(v.id) || 0)) + 1 : 1;
+      const isoData = new Date(dataStr + 'T12:00:00').toISOString();
+
+      const novaVenda = {
+        id: nextId, status: 'finalizada', origem: 'avulso',
+        formaPagamento: forma, parcelas,
+        pacienteId: null, pacienteNome: nomePac,
+        itens: [{ procId: null, qtd: 1, nome: proc, precoUnit: valor, dente: '', descDente: '' }],
+        subtotal: valor, desconto: 0, entrada: 0, restante: 0, total: valor,
+        obs: 'Lançado via assistente de IA',
+        profissional_id: profId, profissional_nome: profNome,
+        data: isoData, dataFinal: isoData,
+        pagamentos: [{ id: Date.now(), valor, forma, parcelas_cartao: parcelas, data: new Date().toISOString(), obs: 'Lançamento avulso (IA)' }]
+      };
+      vendasAtuais.push(novaVenda);
+
+      const { error: updErr } = await sb.from('financeiro_config')
+        .update({ vendas: JSON.stringify(vendasAtuais) }).eq('clinica_id', clinicId);
+      if (updErr) throw new Error(updErr.message);
+
+      return JSON.stringify({
+        tool: name, ok: true, kind: 'sale_created',
+        venda: { nome: nomePac, procedimento: proc, valor, forma_pagamento: forma, profissional: profNome || null, data: dataStr }
       });
     }
 
@@ -989,6 +1064,13 @@ function formatToolReply(outputs) {
     return `Agendamento criado com sucesso:\n\n${a.nome}\n${formatDateBR(a.data)} às ${a.horario}\n${a.procedimento || 'Consulta'} com ${a.prof_nome || 'profissional'}${link}`;
   }
 
+  if (data.kind === 'sale_created' && data.venda) {
+    const v = data.venda;
+    const valorTxt = Number(v.valor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    const profTxt = v.profissional ? `\nProfissional: ${v.profissional}` : '';
+    return `Lançado no faturamento! ✅\n\n${v.nome} — ${v.procedimento}\n${valorTxt} via ${v.forma_pagamento}${profTxt}\n${formatDateBR(v.data)}`;
+  }
+
   // Mensagens que começam com "Erro:" vêm do catch técnico (ex.: exceção do
   // banco) — não mostra o texto cru para o usuário, troca por algo seguro.
   if (typeof data.message === 'string' && data.message.startsWith('Erro:'))
@@ -1013,7 +1095,7 @@ function _resultadoTemDadosReais(data) {
   if (data.kind === 'patient_created' || data.kind === 'appointment_created' ||
       data.kind === 'appointment_rescheduled' || data.kind === 'appointment_cancelled' ||
       data.kind === 'patient_profile' || data.kind === 'appointment_choose' ||
-      data.kind === 'appointment_patient_ambiguous') return true;
+      data.kind === 'appointment_patient_ambiguous' || data.kind === 'sale_created') return true;
   if (data.ok === false) return false;
   if (typeof data.total === 'number') return data.total > 0;
   if (Array.isArray(data.livres)) return data.livres.length > 0;
@@ -1021,7 +1103,7 @@ function _resultadoTemDadosReais(data) {
 }
 
 function shouldRefreshApp(toolOutputs) {
-  return toolOutputs.some(o => ['patient_created', 'appointment_created', 'appointment_rescheduled', 'appointment_cancelled'].includes(o?.data?.kind));
+  return toolOutputs.some(o => ['patient_created', 'appointment_created', 'appointment_rescheduled', 'appointment_cancelled', 'sale_created'].includes(o?.data?.kind));
 }
 
 // ══════════════════════════════════════════════

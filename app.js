@@ -4993,6 +4993,86 @@ async function injetarNovosMatsOrto(){
 
 
 // ── RELATÓRIO MENSAL ──
+function abrirLancamentoAvulso(){
+  document.getElementById('lav-nome').value = '';
+  document.getElementById('lav-proc').value = '';
+  document.getElementById('lav-valor').value = '';
+  document.getElementById('lav-data').value = hoje();
+  document.getElementById('lav-forma').value = 'pix';
+  document.getElementById('lav-parcelas').value = 1;
+  document.getElementById('lav-parcelas-wrap').style.display = 'none';
+  document.getElementById('lav-obs').value = '';
+  document.getElementById('lav-proc-lista').innerHTML = procs.filter(p=>p.ativo!==false).map(p=>`<option value="${escapeHtml(p.nome)}">`).join('');
+  const selProf = document.getElementById('lav-prof');
+  if(selProf) selProf.innerHTML = '<option value="">— Não informado —</option>' + profissionais.map(p=>`<option value="${p.id}">${escapeHtml(p.nome)}</option>`).join('');
+  openModal('modal-lancamento-avulso');
+}
+
+async function salvarLancamentoAvulso(){
+  const nome  = document.getElementById('lav-nome').value.trim();
+  const proc  = document.getElementById('lav-proc').value.trim();
+  const valor = parseFloat(document.getElementById('lav-valor').value);
+  const data  = document.getElementById('lav-data').value || hoje();
+  const forma = document.getElementById('lav-forma').value;
+  const parcelas = forma==='credito' ? (parseInt(document.getElementById('lav-parcelas').value)||1) : 1;
+  const profId = document.getElementById('lav-prof').value || '';
+  const profNome = profId ? (profissionais.find(p=>p.id==profId)?.nome||'') : '';
+  const obs = document.getElementById('lav-obs').value.trim();
+
+  if(!nome){ showToast('Digite o nome do paciente.','warn'); return; }
+  if(!proc){ showToast('Digite o procedimento realizado.','warn'); return; }
+  if(!valor || valor<=0){ showToast('Digite o valor cobrado.','warn'); return; }
+
+  showLoading(true);
+  nextVendaId = vendas.length ? Math.max(...vendas.map(v=>Number(v.id)||0)) + 1 : 1;
+
+  const venda = {
+    id: nextVendaId++,
+    status: 'finalizada',
+    origem: 'avulso',
+    formaPagamento: forma,
+    parcelas: parcelas,
+    pacienteId: null,
+    pacienteNome: nome,
+    itens: [{ procId:null, qtd:1, nome:proc, precoUnit:valor, dente:'', descDente:'' }],
+    subtotal: valor,
+    desconto: 0,
+    entrada: 0,
+    restante: 0,
+    obs: obs,
+    total: valor,
+    profissional_id: profId||null,
+    profissional_nome: profNome,
+    data: new Date(data+'T12:00:00').toISOString(),
+    dataFinal: new Date(data+'T12:00:00').toISOString(),
+    pagamentos: [{ id:Date.now(), valor:valor, forma:forma, parcelas_cartao:parcelas, data:new Date().toISOString(), obs:'Lançamento avulso' }]
+  };
+  vendas.push(venda);
+
+  const { data: existing } = await _sb.from('financeiro_config').select('id').eq('clinica_id',clinicaId).single();
+  const payload = {
+    clinica_id:clinicaId, procs:JSON.stringify(procs), mats:JSON.stringify(mats),
+    estoque:JSON.stringify(estoque), proc_insumos:JSON.stringify(procInsumos),
+    vendas:JSON.stringify(vendas), cfg:JSON.stringify(cfg),
+    taxas_cfg:JSON.stringify(taxasCfg), updated_at:new Date().toISOString(),
+    combos:JSON.stringify(combos), desc_cfg:JSON.stringify(descCfg)
+  };
+  const { error: saveErr } = existing
+    ? await _sb.from('financeiro_config').update(payload).eq('clinica_id',clinicaId)
+    : await _sb.from('financeiro_config').insert([payload]);
+
+  showLoading(false);
+  if(saveErr){
+    vendas.pop();
+    nextVendaId--;
+    showToast('Erro ao salvar: '+saveErr.message,'error');
+    return;
+  }
+  closeModal('modal-lancamento-avulso');
+  showToast(`✅ ${fmtBRL(valor)} adicionado ao faturamento!`);
+  if(typeof renderFinanceiroDash==='function' && document.getElementById('tab-financeiro')?.style.display!=='none') renderFinanceiroDash();
+}
+
 function abrirRelatorioMensal(){
   openModal('modal-relatorio');
   const anos = [...new Set(vendas.map(v=>(v.data||v.dataFinal||'').slice(0,4)).filter(Boolean))].sort().reverse();

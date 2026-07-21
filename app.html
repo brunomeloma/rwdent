@@ -618,6 +618,7 @@
           <h2><i class="ti ti-chart-bar"></i> Painel Financeiro</h2>
           <button class="btn-secondary" onclick="relProdutividade()" style="font-size:12px;"><i class="ti ti-chart-dots-3"></i> Produtividade</button>
           <button class="btn-secondary" onclick="abrirRelatorioMensal()" style="font-size:12px;"><i class="ti ti-file-analytics"></i> Relatório Mensal</button>
+          <button class="btn-primary" onclick="abrirLancamentoAvulso()" style="font-size:12px;"><i class="ti ti-cash-register"></i> Lançamento avulso</button>
         </div>
         <div style="display:flex;gap:8px;align-items:center;margin-bottom:14px;flex-wrap:wrap;">
           <span style="font-size:12px;color:var(--rose-text);font-weight:600;">Período:</span>
@@ -2031,6 +2032,38 @@
   </div>
 </div>
 
+<!-- ══ MODAL LANÇAMENTO AVULSO (faturamento sem prontuário) ══ -->
+<div class="modal-overlay" id="modal-lancamento-avulso" onclick="if(event.target===this)closeModal('modal-lancamento-avulso')">
+  <div class="modal-box">
+    <h2 class="modal-title"><i class="ti ti-cash-register"></i> Lançamento avulso</h2>
+    <p style="font-size:12px;color:var(--rose-text);margin-bottom:14px;">Para dinheiro que entrou (ex: paciente de outra dentista) sem precisar cadastrar prontuário. Entra direto no faturamento.</p>
+    <div class="form-group"><label>Nome do paciente</label><input type="text" id="lav-nome" placeholder="Ex: Carlos Andrade"/></div>
+    <div class="form-group"><label>Procedimento</label><input type="text" id="lav-proc" list="lav-proc-lista" placeholder="Ex: Profilaxia"/><datalist id="lav-proc-lista"></datalist></div>
+    <div class="form-row-2">
+      <div class="form-group"><label>Valor cobrado (R$)</label><input type="number" id="lav-valor" step="0.01" min="0" placeholder="150.00"/></div>
+      <div class="form-group"><label>Data</label><input type="date" id="lav-data"/></div>
+      <div class="form-group"><label>Forma de pagamento</label>
+        <select id="lav-forma" onchange="document.getElementById('lav-parcelas-wrap').style.display=this.value==='credito'?'':'none'">
+          <option value="pix">Pix</option>
+          <option value="dinheiro">Dinheiro</option>
+          <option value="debito">Débito</option>
+          <option value="credito">Crédito</option>
+        </select>
+      </div>
+      <div class="form-group" id="lav-parcelas-wrap" style="display:none;"><label>Parcelas</label><input type="number" id="lav-parcelas" min="1" max="12" value="1"/></div>
+      <div class="form-group"><label>Profissional que atendeu</label><select id="lav-prof"><option value="">— Não informado —</option></select></div>
+    </div>
+    <div class="form-group"><label>Observação (opcional)</label><input type="text" id="lav-obs" placeholder="Ex: paciente da Dra. Fulana"/></div>
+    <div style="background:var(--rose-lighter);border-radius:10px;padding:10px 14px;margin:6px 0 14px;font-size:11px;color:var(--rose-dark);">
+      <i class="ti ti-info-circle"></i> Não cria cadastro de paciente nem prontuário — é só o valor entrando no faturamento. Se o profissional tiver % de comissão configurado (Financeiro → Relatório de comissão), a divisão clínica/profissional é calculada automaticamente.
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="closeModal('modal-lancamento-avulso')">Cancelar</button>
+      <button class="btn-primary" onclick="salvarLancamentoAvulso()"><i class="ti ti-check"></i> Adicionar ao faturamento</button>
+    </div>
+  </div>
+</div>
+
 <!-- ══ MODAIS FINANCEIRO ══ -->
 <!-- Modal Procedimento -->
 <div class="modal-overlay" id="modal-proc" onclick="if(event.target===this)closeModal('modal-proc')">
@@ -2747,28 +2780,31 @@
   }
 
   async function _refreshAppData(){
-    // Recarrega só o que as ferramentas de escrita da IA tocam (pacientes e
-    // agendamentos) — sem chamar loadAll(), que reinicia a visão do
-    // calendário, o campo de data e mostra o spinner global de carregamento.
+    // Recarrega só o que as ferramentas de escrita da IA tocam (pacientes,
+    // agendamentos e vendas/faturamento) — sem chamar loadAll(), que reinicia
+    // a visão do calendário, o campo de data e mostra o spinner global.
     try {
       if(typeof _sb !== 'undefined' && typeof clinicaId !== 'undefined'){
-        const [{ data: ag }, { data: pa }] = await Promise.all([
+        const [{ data: ag }, { data: pa }, { data: fc }] = await Promise.all([
           _sb.from('agendamentos').select('*').eq('clinica_id', clinicaId).order('data').order('horario'),
-          _sb.from('pacientes').select('*, prontuarios(*)').eq('clinica_id', clinicaId)
+          _sb.from('pacientes').select('*, prontuarios(*)').eq('clinica_id', clinicaId),
+          _sb.from('financeiro_config').select('vendas').eq('clinica_id', clinicaId).single()
         ]);
-        // "agendamentos"/"pacientes" são `let` no topo de app.js — atribuir
-        // via window.agendamentos=... criaria uma propriedade solta em vez
-        // de atualizar essa variável. Precisa ser atribuição direta ao
+        // "agendamentos"/"pacientes"/"vendas" são `let` no topo de app.js —
+        // atribuir via window.agendamentos=... criaria uma propriedade solta
+        // em vez de atualizar essa variável. Precisa ser atribuição direta ao
         // identificador para o resto do app (renderLista, renderPatients
         // etc.) enxergar os dados novos.
         if(ag) agendamentos = ag;
         if(pa) pacientes = pa.map(p=>({ ...p, prontuarios: p.prontuarios||[] }));
+        if(fc?.vendas){ try{ vendas = JSON.parse(fc.vendas); }catch(e){} }
       }
       if(typeof renderLista === 'function') renderLista();
       if(typeof renderHomeStats === 'function') renderHomeStats();
       if(typeof renderCalendario === 'function') renderCalendario();
       if(typeof renderPatients === 'function') renderPatients();
       if(typeof renderScheduleOptions === 'function') renderScheduleOptions();
+      if(typeof renderFinanceiroDash === 'function' && document.getElementById('tab-financeiro')?.style.display!=='none') renderFinanceiroDash();
     } catch(e){
       console.warn('Falha ao atualizar dados após ação da IA:', e);
     }
