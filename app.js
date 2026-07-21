@@ -11196,25 +11196,12 @@ async function salvarPrecificacao(){
   cfg.margem   = Number(document.getElementById('cfg-margem')?.value)||100;
   cfg.pct_manut = Number(document.getElementById('cfg-pct-manut')?.value)||15;
 
+  // Salva só a configuração (hora clínica/margem padrão) — NÃO mexe no preço
+  // já salvo de nenhum procedimento. O preço só muda quando o usuário pedir
+  // explicitamente ("Recalcular custos" ou o ícone de recalcular de cada
+  // procedimento); mudar o pró-labore aqui não pode alterar em massa o que
+  // já está precificado.
   showLoading(true);
-
-  const _hora = calcHora();
-  procs.forEach(p=>{
-    const ins = procInsumos[p.id]||[];
-    if(ins.length){
-      p.insumos = parseFloat(ins.reduce((acc,item)=>{const m=mats.find(x=>x.id===item.matId);return acc+(m?m.custo*item.qtd:0);},0).toFixed(2));
-    }
-    if(!p._margemManual) p.margem = cfg.margem;
-    p.horaClin = parseFloat(((p.tempo/60)*_hora).toFixed(2));
-    if(!p._precoManual) p.precoFinal = calcPrecoFinal(p);
-  });
-  // Manutenção: preço = % da instalação correspondente
-  procs.forEach(p=>{
-    if(p._precoManual) return;
-    const pm = calcPrecoManut(p.id);
-    if(pm !== null) p.precoFinal = pm;
-  });
-
   const _ePrec=await saveFinanceiro();
   showLoading(false);
   renderProcs();
