@@ -361,7 +361,7 @@ FERRAMENTAS DISPONÍVEIS:
 • agendar_consulta    → cria consulta/agendamento (⚠️ ESCRITA — exige confirmação)
 • remarcar_consulta   → muda data/horário de consulta existente (⚠️ ESCRITA — exige confirmação)
 • cancelar_consulta   → marca consulta como cancelada, sem apagar (⚠️ ESCRITA — exige confirmação)
-• registrar_venda_avulsa → lança no faturamento um valor recebido de paciente sem cadastro/prontuário, ex: "entrou uma paciente da outra dentista, cobrei 150 de profilaxia no pix" (⚠️ ESCRITA — exige confirmação). Não cadastra paciente nem cria prontuário.
+• registrar_venda_avulsa → lança no faturamento um valor recebido de paciente sem cadastro/prontuário, ex: "entrou uma paciente da outra dentista, cobrei 150 de profilaxia no pix" (⚠️ ESCRITA — exige confirmação). Não cadastra paciente nem cria prontuário. Se o usuário pedir vários valores de uma vez (ex: "adiciona 250, 500 e 1000"), depois de confirmado chame essa ferramenta uma vez pra cada valor na mesma resposta — não precisa fazer um por vez em mensagens separadas.
 
 Converta SEMPRE datas relativas ("hoje", "amanhã", "sexta", "semana que vem") para YYYY-MM-DD usando a data de hoje acima antes de chamar as ferramentas de agenda. Para "esta semana", use data + data_fim.${ctx?.currentPatient ? `
 
@@ -960,6 +960,23 @@ function formatPhone(phone) {
 }
 
 function formatToolReply(outputs) {
+  // Vários lançamentos avulsos na mesma mensagem (ex: "adiciona 250, 500 e
+  // 1000") viram várias chamadas da mesma ferramenta numa resposta só — sem
+  // isso, só o último lançamento apareceria na resposta pro usuário, mesmo
+  // com todos já salvos.
+  const vendasCriadas = outputs.filter(o => o?.data?.kind === 'sale_created' && o.data.venda);
+  if (vendasCriadas.length > 1) {
+    const linhas = vendasCriadas.map(o => {
+      const v = o.data.venda;
+      const valorTxt = Number(v.valor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+      return `• ${v.nome} — ${v.procedimento} — ${valorTxt} via ${v.forma_pagamento}`;
+    });
+    const total = vendasCriadas
+      .reduce((s, o) => s + (Number(o.data.venda.valor) || 0), 0)
+      .toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    return `${vendasCriadas.length} lançamentos adicionados ao faturamento! ✅\n\n${linhas.join('\n')}\n\nTotal: ${total}`;
+  }
+
   const last = outputs[outputs.length - 1];
   if (!last) return null;
 
