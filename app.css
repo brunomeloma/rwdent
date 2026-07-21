@@ -503,6 +503,10 @@ button{font-family:inherit;}
 .prog-ok{background:var(--rose);}
 .prog-warn{background:#f59e0b;}
 .prog-danger{background:#dc2626;}
+.comissao-header-row{display:grid;grid-template-columns:1fr 90px 110px 70px 110px;gap:8px;padding:8px 16px;background:var(--rose-lighter);font-size:10px;font-weight:700;color:var(--rose-text);text-transform:uppercase;}
+.comissao-row{display:grid;grid-template-columns:1fr 90px 110px 70px 110px;gap:8px;align-items:center;padding:10px 16px;border-bottom:1px solid var(--rose-light);font-size:13px;}
+.comissao-cell::before{content:none;}
+.comissao-pct-input{width:60px;padding:4px 6px;border:1px solid var(--rose-light);border-radius:8px;text-align:center;font-size:12px;font-family:inherit;}
 /* Plano de tratamento — simulador */
 .sim-orcamento-item{display:flex;align-items:center;gap:8px;padding:8px 10px;border-bottom:1px solid var(--rose-light);font-size:13px;flex-wrap:wrap;}
 .sim-orcamento-item:last-child{border-bottom:none;}
@@ -733,6 +737,27 @@ button{font-family:inherit;}
   /* Tabelas financeiras */
   .fin-table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;border-radius:10px;}
   table{min-width:480px;}
+
+  /* Procedimentos/Materiais/Estoque/Vendas: era só scroll horizontal, o que
+     deixava campos de edição (estoque atual/mínimo/compra etc.) fora da tela
+     e praticamente impossíveis de tocar. Vira cartão empilhado por linha. */
+  .fin-table{min-width:0!important;width:100%;}
+  .fin-table thead{display:none;}
+  .fin-table, .fin-table tbody, .fin-table tr{display:block;width:100%;}
+  .fin-table tr{border:1.5px solid var(--rose-light);border-radius:12px;margin-bottom:10px;padding:2px 0;background:#fff;}
+  .fin-table tr[id^="vd-"]{border:none;border-radius:0;margin:-10px 0 10px;padding:0;background:var(--rose-lighter)!important;}
+  .fin-table td{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:9px 12px!important;border-bottom:1px dashed var(--rose-light);text-align:right!important;}
+  .fin-table tr:last-child td:last-child, .fin-table td:last-child{border-bottom:none;}
+  .fin-table td[data-label]::before{content:attr(data-label);font-size:10px;font-weight:700;color:var(--rose-text);text-transform:uppercase;letter-spacing:.3px;text-align:left;flex-shrink:0;}
+  .fin-table td:not([data-label]){display:block;text-align:left!important;}
+  .fin-table .edit-input-fin, .fin-table input[type="number"]{width:auto!important;max-width:130px;}
+
+  /* Comissões (painel financeiro): mesma lógica, vira cartão no celular */
+  .comissao-header-row{display:none;}
+  .comissao-row{display:flex!important;flex-direction:column;align-items:stretch;gap:6px;padding:14px 16px!important;}
+  .comissao-cell{display:flex;justify-content:space-between;align-items:center;gap:10px;}
+  .comissao-cell::before{content:attr(data-label);font-size:10px;font-weight:700;color:var(--rose-text);text-transform:uppercase;letter-spacing:.3px;}
+  .comissao-pct-input{width:90px!important;padding:8px!important;}
 
   /* Paciente: abas */
   .pac-tabs{gap:2px;overflow-x:auto;flex-wrap:nowrap;padding-bottom:2px;}

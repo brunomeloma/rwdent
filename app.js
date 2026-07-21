@@ -6175,15 +6175,15 @@ function renderProcs(){
       : '';
     const _inativo = p.ativo===false;
     return `<tr style="border-bottom:1px solid var(--rose-light);${_inativo?'opacity:.5;':''}">
-      <td style="padding:10px;"><div style="font-weight:500;">${escapeHtml(p.nome)}${_inativo?' <span style="font-size:9px;background:#eee;color:#999;border-radius:4px;padding:1px 6px;font-weight:600;">INATIVO</span>':''}</div><div style="margin-top:3px;display:flex;gap:4px;flex-wrap:wrap;">${_recolagBadge}${_tipoBadge}${_manutBadge}</div></td>
-      <td style="padding:10px;"><span style="background:var(--rose-lighter);color:var(--rose-dark);border-radius:6px;padding:2px 8px;font-size:11px;">${escapeHtml(p.grupo||'—')}</span></td>
-      <td style="padding:10px;text-align:right;">${p.tempo||0} min</td>
-      <td style="padding:10px;text-align:right;">${fmtBRL(_insValReal)}</td>
-      <td style="padding:10px;text-align:right;">${fmtBRL(_hc)}</td>
-      <td style="padding:10px;text-align:right;">${fmtBRL(_custo)}</td>
-      <td style="padding:10px;text-align:right;">${p.margem||cfg.margem||100}%</td>
-      <td style="padding:10px;text-align:right;font-weight:700;color:var(--rose-dark);">${fmtBRL(p.precoFinal||0)}</td>
-      <td style="padding:10px;">
+      <td data-label="Procedimento" style="padding:10px;"><div style="font-weight:500;">${escapeHtml(p.nome)}${_inativo?' <span style="font-size:9px;background:#eee;color:#999;border-radius:4px;padding:1px 6px;font-weight:600;">INATIVO</span>':''}</div><div style="margin-top:3px;display:flex;gap:4px;flex-wrap:wrap;">${_recolagBadge}${_tipoBadge}${_manutBadge}</div></td>
+      <td data-label="Grupo" style="padding:10px;"><span style="background:var(--rose-lighter);color:var(--rose-dark);border-radius:6px;padding:2px 8px;font-size:11px;">${escapeHtml(p.grupo||'—')}</span></td>
+      <td data-label="Tempo" style="padding:10px;text-align:right;">${p.tempo||0} min</td>
+      <td data-label="Insumos" style="padding:10px;text-align:right;">${fmtBRL(_insValReal)}</td>
+      <td data-label="Hora Clínica" style="padding:10px;text-align:right;">${fmtBRL(_hc)}</td>
+      <td data-label="Custo Total" style="padding:10px;text-align:right;">${fmtBRL(_custo)}</td>
+      <td data-label="Margem %" style="padding:10px;text-align:right;">${p.margem||cfg.margem||100}%</td>
+      <td data-label="Preço Final" style="padding:10px;text-align:right;font-weight:700;color:var(--rose-dark);">${fmtBRL(p.precoFinal||0)}</td>
+      <td data-label="Ações" style="padding:10px;">
         <div style="display:flex;gap:6px;justify-content:flex-end;align-items:center;">
           <button class="btn-secondary" style="padding:4px 8px;font-size:11px;position:relative;${_flaskColor}" onclick="openInsumos(${p.id})" title="${_insCount>0?_insCount+' insumo(s) configurado(s)':'Adicionar insumos'}">${_flaskBadge}<i class="ti ti-flask"></i></button>
           <button class="btn-secondary" style="padding:4px 8px;font-size:11px;color:#1565c0;border-color:#90caf9;" onclick="recalcularProc(${p.id})" title="Recalcular preço deste procedimento"><i class="ti ti-refresh"></i></button>
@@ -6314,13 +6314,13 @@ function renderMats(){
   if(!tb) return;
   if(!list.length){ tb.innerHTML='<tr><td colspan="7" style="text-align:center;color:var(--rose-text);padding:20px;">Nenhum material cadastrado.</td></tr>'; return; }
   tb.innerHTML = list.map(m=>`<tr style="border-bottom:1px solid var(--rose-light);">
-    <td style="padding:10px;font-weight:500;">${escapeHtml(m.nome)}</td>
-    <td style="padding:10px;"><span style="background:var(--rose-lighter);color:var(--rose-dark);border-radius:6px;padding:2px 8px;font-size:11px;">${escapeHtml(m.cat||'—')}</span></td>
-    <td style="padding:10px;text-align:right;">${escapeHtml(m.unid||'—')}</td>
-    <td style="padding:10px;text-align:right;">${fmtN2(m.qtde||0)}</td>
-    <td style="padding:10px;text-align:right;">${fmtBRL(m.preco||0)}</td>
-    <td style="padding:10px;text-align:right;font-weight:700;color:var(--rose-dark);">${m.preco&&m.qtde?fmtN2(m.preco/m.qtde):'—'}</td>
-    <td style="padding:10px;">
+    <td data-label="Material" style="padding:10px;font-weight:500;">${escapeHtml(m.nome)}</td>
+    <td data-label="Categoria" style="padding:10px;"><span style="background:var(--rose-lighter);color:var(--rose-dark);border-radius:6px;padding:2px 8px;font-size:11px;">${escapeHtml(m.cat||'—')}</span></td>
+    <td data-label="Unidade" style="padding:10px;text-align:right;">${escapeHtml(m.unid||'—')}</td>
+    <td data-label="Qtde/Emb." style="padding:10px;text-align:right;">${fmtN2(m.qtde||0)}</td>
+    <td data-label="Preço Emb." style="padding:10px;text-align:right;">${fmtBRL(m.preco||0)}</td>
+    <td data-label="Custo Unit." style="padding:10px;text-align:right;font-weight:700;color:var(--rose-dark);">${m.preco&&m.qtde?fmtN2(m.preco/m.qtde):'—'}</td>
+    <td data-label="Ações" style="padding:10px;">
       <div style="display:flex;gap:6px;justify-content:flex-end;">
         <button class="btn-secondary" style="padding:4px 8px;font-size:11px;" onclick="openEditMat(${m.id})"><i class="ti ti-pencil"></i></button>
         <button class="btn-danger" style="padding:4px 8px;font-size:11px;" onclick="deleteMat(${m.id})"><i class="ti ti-trash"></i></button>
@@ -6420,16 +6420,16 @@ function renderEstoque(){
     const stLbl  = st==='danger'?'Crítico':st==='warn'?'Atenção':st==='ok'?'OK':'—';
     const stCls  = st==='danger'?'danger':st==='warn'?'warn':st==='ok'?'ok':'';
     return `<tr style="border-bottom:1px solid var(--rose-light);">
-      <td style="padding:10px;"><input type="checkbox" ${estSelected.has(m.id)?'checked':''} onchange="toggleEstSel(${m.id},this.checked)"/></td>
-      <td style="padding:10px;font-weight:500;">${escapeHtml(m.nome)}</td>
-      <td style="padding:10px;"><span style="background:var(--rose-lighter);color:var(--rose-dark);border-radius:6px;padding:2px 8px;font-size:11px;">${escapeHtml(m.cat||'—')}</span></td>
-      <td style="padding:10px;text-align:right;">${escapeHtml(m.unid||'—')}</td>
-      <td style="padding:10px;text-align:right;"><input class="edit-input-fin" type="number" min="0" step="0.01" value="${e.atual||0}" onchange="updateEstField(${m.id},'atual',this.value)" style="width:72px;text-align:right;font-weight:700;"/></td>
-      <td style="padding:10px;text-align:right;"><input class="edit-input-fin" type="number" min="0" step="0.01" value="${e.min||0}" onchange="updateEstField(${m.id},'min',this.value)" style="width:66px;text-align:right;color:#dc2626;"/></td>
-      <td style="padding:10px;text-align:right;"><input class="edit-input-fin" type="number" min="0" step="0.01" value="${e.compra||0}" onchange="updateEstField(${m.id},'compra',this.value)" style="width:66px;text-align:right;color:#856404;"/></td>
-      <td style="padding:10px;">${pct!==null?`<div class="prog-wrap"><div class="prog-bar ${barCls}" style="width:${pct}%;"></div></div> <span style="font-size:11px;color:var(--rose-text);">${pct}%</span>`:'<span style="font-size:11px;color:var(--rose-text);">—</span>'}</td>
-      <td style="padding:10px;"><span class="fin-badge ${stCls}">${stLbl}</span></td>
-      <td style="padding:10px;">
+      <td data-label="Selecionar" style="padding:10px;"><input type="checkbox" ${estSelected.has(m.id)?'checked':''} onchange="toggleEstSel(${m.id},this.checked)"/></td>
+      <td data-label="Material" style="padding:10px;font-weight:500;">${escapeHtml(m.nome)}</td>
+      <td data-label="Categoria" style="padding:10px;"><span style="background:var(--rose-lighter);color:var(--rose-dark);border-radius:6px;padding:2px 8px;font-size:11px;">${escapeHtml(m.cat||'—')}</span></td>
+      <td data-label="Unid." style="padding:10px;text-align:right;">${escapeHtml(m.unid||'—')}</td>
+      <td data-label="Atual" style="padding:10px;text-align:right;"><input class="edit-input-fin" type="number" min="0" step="0.01" value="${e.atual||0}" onchange="updateEstField(${m.id},'atual',this.value)" style="width:72px;text-align:right;font-weight:700;"/></td>
+      <td data-label="Mínimo" style="padding:10px;text-align:right;"><input class="edit-input-fin" type="number" min="0" step="0.01" value="${e.min||0}" onchange="updateEstField(${m.id},'min',this.value)" style="width:66px;text-align:right;color:#dc2626;"/></td>
+      <td data-label="Compra" style="padding:10px;text-align:right;"><input class="edit-input-fin" type="number" min="0" step="0.01" value="${e.compra||0}" onchange="updateEstField(${m.id},'compra',this.value)" style="width:66px;text-align:right;color:#856404;"/></td>
+      <td data-label="Nível" style="padding:10px;">${pct!==null?`<div class="prog-wrap"><div class="prog-bar ${barCls}" style="width:${pct}%;"></div></div> <span style="font-size:11px;color:var(--rose-text);">${pct}%</span>`:'<span style="font-size:11px;color:var(--rose-text);">—</span>'}</td>
+      <td data-label="Status" style="padding:10px;"><span class="fin-badge ${stCls}">${stLbl}</span></td>
+      <td data-label="Ações" style="padding:10px;">
         <div style="display:flex;gap:6px;justify-content:flex-end;">
           <button class="btn-secondary" style="padding:4px 8px;font-size:11px;" onclick="openEstEdit(${m.id})"><i class="ti ti-pencil"></i></button>
           <button class="btn-danger" style="padding:4px 8px;font-size:11px;" onclick="deleteMat(${m.id})"><i class="ti ti-trash"></i></button>
@@ -6716,12 +6716,12 @@ function renderVendas(){
     const ci = v.status==='finalizada'?{dir:'saiu',consumo:v.consumo||[]}:v.status==='cancelada'?{dir:'voltou',consumo:v.consumoRevertido||[]}:{dir:'previsto',consumo:computeConsumo(v.itens||[])};
     const matLi = ci.consumo.length?ci.consumo.map(c=>{const m=mats.find(x=>x.id===c.matId);return `<li style="display:flex;justify-content:space-between;font-size:12px;padding:2px 0;"><span>${m?escapeHtml(m.nome):'Material #'+c.matId}</span><span>${fmtN2(c.qtd)}</span></li>`;}).join(''):'<li style="color:var(--rose-text);font-size:12px;">Nenhum insumo vinculado.</li>';
     return `<tr style="border-bottom:1px solid var(--rose-light);">
-      <td style="padding:10px;font-size:12px;white-space:nowrap;">${data}</td>
-      <td style="padding:10px;">${escapeHtml(v.pacienteNome||'—')}</td>
-      <td style="padding:10px;font-size:12px;color:var(--rose-text);max-width:280px;">${itensRes||'—'}</td>
-      <td style="padding:10px;text-align:right;font-weight:700;color:var(--rose-dark);">${fmtBRL(v.total)}</td>
-      <td style="padding:10px;"><span class="fin-badge ${si.cls}"><i class="ti ${si.icon}"></i> ${si.lbl}</span></td>
-      <td style="padding:10px;"><div style="display:flex;gap:4px;justify-content:flex-end;">${acoes}</div></td>
+      <td data-label="Data" style="padding:10px;font-size:12px;white-space:nowrap;">${data}</td>
+      <td data-label="Paciente" style="padding:10px;">${escapeHtml(v.pacienteNome||'—')}</td>
+      <td data-label="Itens" style="padding:10px;font-size:12px;color:var(--rose-text);max-width:280px;">${itensRes||'—'}</td>
+      <td data-label="Total" style="padding:10px;text-align:right;font-weight:700;color:var(--rose-dark);">${fmtBRL(v.total)}</td>
+      <td data-label="Status" style="padding:10px;"><span class="fin-badge ${si.cls}"><i class="ti ${si.icon}"></i> ${si.lbl}</span></td>
+      <td data-label="Ações" style="padding:10px;"><div style="display:flex;gap:4px;justify-content:flex-end;">${acoes}</div></td>
     </tr>
     <tr id="vd-${v.id}" style="display:none;background:var(--rose-lighter);">
       <td colspan="6" style="padding:10px 16px;">
@@ -6731,7 +6731,7 @@ function renderVendas(){
     </tr>`;
   }).join('');
 }
-function toggleVendaMat(id){ const r=document.getElementById('vd-'+id); if(r) r.style.display=r.style.display==='none'?'table-row':'none'; }
+function toggleVendaMat(id){ const r=document.getElementById('vd-'+id); if(r) r.style.display=r.style.display==='none'?'':'none'; }
 async function finalizarVendaSalva(id){
   const v=vendas.find(x=>x.id===id); if(!v||v.status!=='orcamento') return;
   if(!confirm('Finalizar venda? O estoque dos materiais usados será descontado.')) return;
@@ -11742,12 +11742,12 @@ function renderComissoes(){
     const pct = Number(cfg.comissoes[pid])||0;
     const val = d.total*pct/100;
     totalComissoes += val;
-    return `<div style="display:grid;grid-template-columns:1fr 90px 110px 70px 110px;gap:8px;align-items:center;padding:10px 16px;border-bottom:1px solid var(--rose-light);font-size:13px;">
-      <span style="font-weight:600;">${escapeHtml(d.nome)}</span>
-      <span style="text-align:center;color:var(--rose-text);">${d.qtd} venda(s)</span>
-      <span style="text-align:right;font-weight:700;">${fmtBRL(d.total)}</span>
-      <input type="number" min="0" max="100" step="0.5" value="${pct}" onchange="setComissaoPct(${pid},this.value)" style="width:60px;padding:4px 6px;border:1px solid var(--rose-light);border-radius:8px;text-align:center;font-size:12px;" title="% de comissão"/>
-      <span style="text-align:right;font-weight:800;color:#2e7d32;">${fmtBRL(val)}</span>
+    return `<div class="comissao-row">
+      <span class="comissao-cell" data-label="Profissional" style="font-weight:600;">${escapeHtml(d.nome)}</span>
+      <span class="comissao-cell" data-label="Vendas" style="color:var(--rose-text);">${d.qtd} venda(s)</span>
+      <span class="comissao-cell" data-label="Produção" style="font-weight:700;">${fmtBRL(d.total)}</span>
+      <span class="comissao-cell" data-label="% comissão"><input type="number" min="0" max="100" step="0.5" value="${pct}" onchange="setComissaoPct(${pid},this.value)" class="comissao-pct-input" title="% de comissão"/></span>
+      <span class="comissao-cell" data-label="Comissão" style="font-weight:800;color:#2e7d32;">${fmtBRL(val)}</span>
     </div>`;
   }).join('');
   panel.innerHTML = `
@@ -11756,12 +11756,10 @@ function renderComissoes(){
         <div style="font-size:14px;font-weight:800;color:var(--rose-dark);"><i class="ti ti-percentage"></i> Comissões — ${_periodo}</div>
         <div style="font-size:13px;color:var(--rose-text);">Total em comissões: <strong style="color:#2e7d32;font-size:15px;">${fmtBRL(totalComissoes)}</strong></div>
       </div>
-      <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;"><div style="min-width:520px;">
-      <div style="display:grid;grid-template-columns:1fr 90px 110px 70px 110px;gap:8px;padding:8px 16px;background:var(--rose-lighter);font-size:10px;font-weight:700;color:var(--rose-text);text-transform:uppercase;">
+      <div class="comissao-header-row">
         <span>Profissional</span><span style="text-align:center;">Vendas</span><span style="text-align:right;">Produção</span><span style="text-align:center;">%</span><span style="text-align:right;">Comissão</span>
       </div>
       <div style="max-height:320px;overflow-y:auto;">${linhas||'<div style="padding:20px;text-align:center;color:var(--rose-text);font-size:13px;">Nenhum profissional cadastrado.</div>'}</div>
-      </div></div>
       ${semProf>0?`<div style="padding:10px 16px;font-size:11px;color:var(--rose-text);background:#fffde7;border-top:1px solid #ffe082;"><i class="ti ti-info-circle"></i> ${fmtBRL(semProf)} em vendas do período sem profissional vinculado (não entram na comissão). Nas próximas finalizações, selecione quem atendeu.</div>`:''}
       <div style="padding:8px 16px;font-size:11px;color:var(--rose-text);border-top:1px solid var(--rose-light);">O período segue os filtros de mês/ano da lista de vendas acima. A % fica salva por profissional.</div>
     </div>`;
