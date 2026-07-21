@@ -26,7 +26,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
-<link rel="stylesheet" href="app.css?v=8"/>
+<link rel="stylesheet" href="app.css?v=9"/>
 <link rel="stylesheet" href="premium-design.css"/>
 <link rel="stylesheet" href="sections-premium.css"/>
 <link rel="stylesheet" href="layout-fixes.css"/>
@@ -977,8 +977,8 @@
               <th>CRITÉRIO</th><th>Metálico</th><th>Met. Autoligado</th><th>Cerâmico</th><th>Safira</th><th>Est. Autoligado</th><th>Alinhador invisível</th>
             </tr></thead>
             <tbody>
-              <tr><td>💰 Instalação</td><td>R$ 599,99</td><td>R$ 1.599,99</td><td>R$ 1.990,00</td><td>R$ 2.999,90</td><td>R$ 3.199,99</td><td>R$ 9.990,00</td></tr>
-              <tr><td>🔧 Manutenção/mês</td><td>R$ 150</td><td>R$ 250</td><td>R$ 300</td><td>R$ 470,00</td><td>R$ 500</td><td>Refinamento<br>R$ 1.200</td></tr>
+              <tr><td>💰 Instalação</td><td id="ap-tab-inst-metalico">—</td><td id="ap-tab-inst-autoligado">—</td><td id="ap-tab-inst-ceramico">—</td><td id="ap-tab-inst-safira">—</td><td id="ap-tab-inst-est-autoligado">—</td><td id="ap-tab-inst-alinhador">—</td></tr>
+              <tr><td>🔧 Manutenção/mês</td><td id="ap-tab-manut-metalico">—</td><td id="ap-tab-manut-autoligado">—</td><td id="ap-tab-manut-ceramico">—</td><td id="ap-tab-manut-safira">—</td><td id="ap-tab-manut-est-autoligado">—</td><td>Refinamento<br><span id="ap-tab-manut-alinhador">—</span></td></tr>
               <tr><td>🔩 Bracket (peça)</td><td>R$ 35</td><td>R$ 60</td><td>R$ 80</td><td>R$ 120</td><td>R$ 140</td><td>—</td></tr>
               <tr><td>👁️ Estética</td><td>⭐⭐</td><td>⭐⭐</td><td>⭐⭐⭐</td><td>⭐⭐⭐⭐</td><td>⭐⭐⭐⭐</td><td>⭐⭐⭐⭐⭐</td></tr>
               <tr><td>😊 Conforto</td><td>⭐⭐⭐</td><td>⭐⭐⭐⭐</td><td>⭐⭐⭐</td><td>⭐⭐⭐</td><td>⭐⭐⭐⭐</td><td>⭐⭐⭐⭐⭐</td></tr>
@@ -1014,8 +1014,8 @@
               <div style="background:#e8f5e9;border-radius:12px;padding:14px;">
                 <div style="font-size:11px;font-weight:700;color:#2e7d32;text-transform:uppercase;margin-bottom:6px;">Valores</div>
                 <div style="font-size:13px;color:#1b5e20;line-height:1.8;">
-                  💰 Instalação: <strong>R$ 9.990,00</strong><br>
-                  🔧 Refinamento: <strong>R$ 1.200</strong><br>
+                  💰 Instalação: <strong id="alin-preco-instalacao">R$ 9.990,00</strong><br>
+                  🔧 Refinamento: <strong id="alin-preco-refinamento">R$ 1.200</strong><br>
                   🔗 Removível: <strong>Sim ✅</strong><br>
                   ⏱️ Duração: <strong>12–18 meses</strong>
                 </div>
@@ -2023,7 +2023,7 @@
   <div style="color:var(--rose-text);font-size:14px;">Carregando...</div>
 </div>
 
-<script src="app.js?v=8"></script>
+<script src="app.js?v=9"></script>
 
 <!-- ══ MODAL RELATÓRIO MENSAL ══ -->
 <div class="modal-overlay" id="modal-relatorio" onclick="if(event.target===this)closeModal('modal-relatorio')" style="align-items:flex-start;padding-top:40px;overflow-y:auto;">

@@ -624,8 +624,9 @@ function switchTab(tab){
     else atualizarPrecosAlinhador();
   }
   if(tab==='venda_rapida'){
-    // Para não-Rhaiza, garante que abre na aba Venda Rápida (não Aparelhos)
-    if(!_isRhaizaClinic) vendasSubTab('vr');
+    // Sempre abre na Venda Rápida — Aparelhos/Alinhador/Clareamento ficam a
+    // um clique, mas não são mais a aba padrão (nem pra Rhaiza).
+    vendasSubTab('vr');
     // No mobile, foca busca automaticamente
     setTimeout(()=>{ const _s=document.getElementById('vr-search-m'); if(_s&&window.innerWidth<=768) _s.focus(); },200);
   }
@@ -7679,7 +7680,35 @@ function vendasSubTab(tab){
   document.getElementById('vendas-sub-clareamento').style.display = tab==='clareamento'?'':'none';
   document.getElementById('vendas-sub-vr').style.display = tab==='vr'?'':'none';
   if(tab==='vr'){ vrInit(); vrInitMobile(); }
+  if(tab==='aparelhos'||tab==='alinhador') atualizarPrecosAparelhos();
   if(tab==='clareamento') atualizarPrecosClareamento();
+}
+
+// Preços da tabela comparativa e do card do Alinhador vêm da tabela de
+// Procedimentos (por nome) — editar lá muda aqui também, em vez de ficar
+// fixo no HTML como estava antes.
+function atualizarPrecosAparelhos(){
+  const fmtBRL = v => 'R$ '+Number(v).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+  const lista = typeof procs!=='undefined' && Array.isArray(procs) ? procs : [];
+  const setar = (id, nomeProc) => {
+    const el = document.getElementById(id); if(!el) return;
+    const p = lista.find(x=>x.nome===nomeProc);
+    el.textContent = p ? fmtBRL(p.precoFinal||0) : 'Consulte a equipe';
+  };
+  setar('ap-tab-inst-metalico',       'Instalação Aparelho Metálico Tradicional');
+  setar('ap-tab-inst-autoligado',     'Instalação Aparelho Metálico Autoligado');
+  setar('ap-tab-inst-ceramico',       'Instalação Aparelho Estético Cerâmico');
+  setar('ap-tab-inst-safira',         'Instalação Aparelho Estético Safira');
+  setar('ap-tab-inst-est-autoligado', 'Instalação Aparelho Estético Autoligado');
+  setar('ap-tab-inst-alinhador',      'Instalação Alinhador Transparente (tratamento completo)');
+  setar('ap-tab-manut-metalico',       'Manutenção Mensal — Aparelho Metálico Tradicional');
+  setar('ap-tab-manut-autoligado',     'Manutenção Mensal — Aparelho Metálico Autoligado');
+  setar('ap-tab-manut-ceramico',       'Manutenção Mensal — Aparelho Estético Cerâmico');
+  setar('ap-tab-manut-safira',         'Manutenção Mensal — Aparelho Estético Safira');
+  setar('ap-tab-manut-est-autoligado', 'Manutenção Mensal — Aparelho Estético Autoligado');
+  setar('ap-tab-manut-alinhador',      'Manutenção Mensal — Alinhador Transparente (refinamento)');
+  setar('alin-preco-instalacao',  'Instalação Alinhador Transparente (tratamento completo)');
+  setar('alin-preco-refinamento', 'Manutenção Mensal — Alinhador Transparente (refinamento)');
 }
 
 function atualizarPrecosClareamento(){
