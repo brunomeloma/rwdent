@@ -26,7 +26,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
-<link rel="stylesheet" href="app.css?v=3"/>
+<link rel="stylesheet" href="app.css?v=4"/>
 <link rel="stylesheet" href="premium-design.css"/>
 <link rel="stylesheet" href="sections-premium.css"/>
 <link rel="stylesheet" href="layout-fixes.css"/>
@@ -1988,6 +1988,10 @@
         <button onclick="switchTab('agendar');toggleMobileMore()"><i class="ti ti-calendar-plus"></i>Agendar</button>
         <button onclick="switchTab('calendario');toggleMobileMore()"><i class="ti ti-calendar-month"></i>Calendário</button>
         <button onclick="switchTab('financeiro');toggleMobileMore()"><i class="ti ti-chart-bar"></i>Financeiro</button>
+        <button onclick="switchTab('vendas_fin');toggleMobileMore()"><i class="ti ti-receipt"></i>Vendas</button>
+        <button onclick="switchTab('procedimentos_fin');toggleMobileMore()"><i class="ti ti-list-check"></i>Procedimentos</button>
+        <button onclick="switchTab('materiais_fin');toggleMobileMore()"><i class="ti ti-box"></i>Materiais</button>
+        <button onclick="switchTab('estoque_fin');toggleMobileMore()"><i class="ti ti-package"></i>Estoque</button>
         <button onclick="switchTab('profissionais');toggleMobileMore()"><i class="ti ti-stethoscope"></i>Equipe</button>
         <button onclick="switchTab('resgate');toggleMobileMore()"><i class="ti ti-heart-handshake"></i>Resgate</button>
         <button onclick="switchTab('captacao');toggleMobileMore()"><i class="ti ti-address-book"></i>Captação</button>
@@ -2015,7 +2019,7 @@
   <div style="color:var(--rose-text);font-size:14px;">Carregando...</div>
 </div>
 
-<script src="app.js?v=3"></script>
+<script src="app.js?v=4"></script>
 
 <!-- ══ MODAL RELATÓRIO MENSAL ══ -->
 <div class="modal-overlay" id="modal-relatorio" onclick="if(event.target===this)closeModal('modal-relatorio')" style="align-items:flex-start;padding-top:40px;overflow-y:auto;">
