@@ -4533,6 +4533,8 @@ let _financeiroCarregado = false;  // evita duplo carregamento
 let nextMatId   = 1;
 let nextVendaId = 1;
 let nextComboId = 201;
+let despesas = [];
+let nextDespesaId = 1;
 
 // Orçamento atual do simulador (dentro do plano do paciente)
 let orcamento      = [];
@@ -4992,10 +4994,38 @@ async function injetarNovosMatsOrto(){
 
 
 
-// ── RELATÓRIO MENSAL ──
+// ── LANÇAMENTO AVULSO (entrada/saída) ──
+let _lavTipo = 'entrada';
+
+function lavSetTipo(tipo){
+  _lavTipo = tipo;
+  const ehEntrada = tipo==='entrada';
+  document.getElementById('lav-campos-entrada').style.display = ehEntrada?'':'none';
+  document.getElementById('lav-campos-saida').style.display   = ehEntrada?'none':'';
+  document.getElementById('lav-desc-entrada').style.display   = ehEntrada?'':'none';
+  document.getElementById('lav-desc-saida').style.display     = ehEntrada?'none':'';
+  document.getElementById('lav-info-entrada').style.display   = ehEntrada?'':'none';
+  document.getElementById('lav-info-saida').style.display     = ehEntrada?'none':'';
+  document.getElementById('lav-prof-wrap').style.display      = ehEntrada?'':'none';
+  document.getElementById('lav-valor-label').textContent      = ehEntrada?'Valor cobrado (R$)':'Valor pago (R$)';
+  document.getElementById('lav-btn-salvar').innerHTML = ehEntrada
+    ? '<i class="ti ti-check"></i> Adicionar ao faturamento'
+    : '<i class="ti ti-check"></i> Registrar despesa';
+  const tabEntrada = document.getElementById('lav-tab-entrada');
+  const tabSaida   = document.getElementById('lav-tab-saida');
+  tabEntrada.style.background = ehEntrada?'var(--rose)':'#fff';
+  tabEntrada.style.color      = ehEntrada?'#fff':'var(--rose-dark)';
+  tabEntrada.style.borderColor= ehEntrada?'var(--rose)':'var(--rose-light)';
+  tabSaida.style.background   = ehEntrada?'#fff':'var(--rose)';
+  tabSaida.style.color        = ehEntrada?'var(--rose-dark)':'#fff';
+  tabSaida.style.borderColor  = ehEntrada?'var(--rose-light)':'var(--rose)';
+}
+
 function abrirLancamentoAvulso(){
   document.getElementById('lav-nome').value = '';
   document.getElementById('lav-proc').value = '';
+  document.getElementById('lav-categoria').value = 'Protético';
+  document.getElementById('lav-descricao').value = '';
   document.getElementById('lav-valor').value = '';
   document.getElementById('lav-data').value = hoje();
   document.getElementById('lav-forma').value = 'pix';
@@ -5005,23 +5035,54 @@ function abrirLancamentoAvulso(){
   document.getElementById('lav-proc-lista').innerHTML = procs.filter(p=>p.ativo!==false).map(p=>`<option value="${escapeHtml(p.nome)}">`).join('');
   const selProf = document.getElementById('lav-prof');
   if(selProf) selProf.innerHTML = '<option value="">— Não informado —</option>' + profissionais.map(p=>`<option value="${p.id}">${escapeHtml(p.nome)}</option>`).join('');
+  lavSetTipo('entrada');
   openModal('modal-lancamento-avulso');
 }
 
 async function salvarLancamentoAvulso(){
-  const nome  = document.getElementById('lav-nome').value.trim() || 'Não identificado';
-  const proc  = document.getElementById('lav-proc').value.trim() || 'Recebimento avulso';
   const valor = parseFloat(document.getElementById('lav-valor').value);
   const data  = document.getElementById('lav-data').value || hoje();
   const forma = document.getElementById('lav-forma').value;
   const parcelas = forma==='credito' ? (parseInt(document.getElementById('lav-parcelas').value)||1) : 1;
-  const profId = document.getElementById('lav-prof').value || '';
-  const profNome = profId ? (profissionais.find(p=>p.id==profId)?.nome||'') : '';
   const obs = document.getElementById('lav-obs').value.trim();
 
-  if(!valor || valor<=0){ showToast('Digite o valor cobrado.','warn'); return; }
+  if(!valor || valor<=0){ showToast('Digite o valor.','warn'); return; }
 
   showLoading(true);
+
+  if(_lavTipo==='saida'){
+    const categoria = document.getElementById('lav-categoria').value;
+    const descricao = document.getElementById('lav-descricao').value.trim();
+    const despesa = {
+      id: nextDespesaId++,
+      categoria,
+      descricao,
+      valor,
+      formaPagamento: forma,
+      parcelas,
+      obs,
+      data: new Date(data+'T12:00:00').toISOString()
+    };
+    despesas.push(despesa);
+    const _eDesp = await saveFinanceiro();
+    showLoading(false);
+    if(_eDesp){
+      despesas.pop();
+      nextDespesaId--;
+      showToast('Erro ao salvar: '+_eDesp.message,'error');
+      return;
+    }
+    closeModal('modal-lancamento-avulso');
+    showToast(`✅ Despesa de ${fmtBRL(valor)} (${categoria}) registrada!`);
+    if(typeof renderFinanceiroDash==='function' && document.getElementById('tab-financeiro')?.style.display!=='none') renderFinanceiroDash();
+    return;
+  }
+
+  const nome = document.getElementById('lav-nome').value.trim() || 'Não identificado';
+  const proc = document.getElementById('lav-proc').value.trim() || 'Recebimento avulso';
+  const profId = document.getElementById('lav-prof').value || '';
+  const profNome = profId ? (profissionais.find(p=>p.id==profId)?.nome||'') : '';
+
   nextVendaId = vendas.length ? Math.max(...vendas.map(v=>Number(v.id)||0)) + 1 : 1;
 
   const venda = {
@@ -5047,23 +5108,12 @@ async function salvarLancamentoAvulso(){
   };
   vendas.push(venda);
 
-  const { data: existing } = await _sb.from('financeiro_config').select('id').eq('clinica_id',clinicaId).single();
-  const payload = {
-    clinica_id:clinicaId, procs:JSON.stringify(procs), mats:JSON.stringify(mats),
-    estoque:JSON.stringify(estoque), proc_insumos:JSON.stringify(procInsumos),
-    vendas:JSON.stringify(vendas), cfg:JSON.stringify(cfg),
-    taxas_cfg:JSON.stringify(taxasCfg), updated_at:new Date().toISOString(),
-    combos:JSON.stringify(combos), desc_cfg:JSON.stringify(descCfg)
-  };
-  const { error: saveErr } = existing
-    ? await _sb.from('financeiro_config').update(payload).eq('clinica_id',clinicaId)
-    : await _sb.from('financeiro_config').insert([payload]);
-
+  const _eVenda = await saveFinanceiro();
   showLoading(false);
-  if(saveErr){
+  if(_eVenda){
     vendas.pop();
     nextVendaId--;
-    showToast('Erro ao salvar: '+saveErr.message,'error');
+    showToast('Erro ao salvar: '+_eVenda.message,'error');
     return;
   }
   closeModal('modal-lancamento-avulso');
@@ -5071,6 +5121,25 @@ async function salvarLancamentoAvulso(){
   if(typeof renderFinanceiroDash==='function' && document.getElementById('tab-financeiro')?.style.display!=='none') renderFinanceiroDash();
 }
 
+async function excluirDespesa(id){
+  const d = despesas.find(x=>x.id===id); if(!d) return;
+  if(!confirm(`Excluir despesa de ${fmtBRL(d.valor)} (${d.categoria})?`)) return;
+  const idx = despesas.findIndex(x=>x.id===id);
+  const backup = despesas[idx];
+  despesas.splice(idx,1);
+  showLoading(true);
+  const _eDel = await saveFinanceiro();
+  showLoading(false);
+  if(_eDel){
+    despesas.splice(idx,0,backup);
+    showToast('Erro ao excluir: '+_eDel.message,'error');
+    return;
+  }
+  showToast('Despesa excluída.');
+  renderFinanceiroDash();
+}
+
+// ── RELATÓRIO MENSAL ──
 function abrirRelatorioMensal(){
   openModal('modal-relatorio');
   const anos = [...new Set(vendas.map(v=>(v.data||v.dataFinal||'').slice(0,4)).filter(Boolean))].sort().reverse();
@@ -5597,6 +5666,7 @@ async function loadFinanceiro(){
     estoque     = safe(data.estoque,     {});
     procInsumos = safe(data.proc_insumos,{});
     vendas      = safe(data.vendas,      []);
+    despesas    = safe(data.despesas,    []);
     combos      = safe(data.combos,      []);
     cfg         = safe(data.cfg,         cfg);
     pagPac      = Array.isArray(cfg._pagPac) ? cfg._pagPac : [];
@@ -5630,6 +5700,7 @@ async function loadFinanceiro(){
   nextMatId   = mats.length   ? Math.max(...mats.map(m=>m.id||0))    + 1 : 91;
   nextVendaId = vendas.length ? Math.max(...vendas.map(v=>v.id||0))  + 1 : 1;
   nextComboId = combos.length ? Math.max(...combos.map(c=>c.id||200))+ 1 : 207;
+  nextDespesaId = despesas.length ? Math.max(...despesas.map(d=>d.id||0)) + 1 : 1;
 
   recalcularInsumos(true);
 
@@ -5685,6 +5756,7 @@ async function _saveFinanceiroImpl(){
     estoque      : JSON.stringify(estoque),
     proc_insumos : JSON.stringify(procInsumos),
     vendas       : JSON.stringify(vendas),
+    despesas     : JSON.stringify(despesas),
     cfg          : JSON.stringify(cfg),
     taxas_cfg    : JSON.stringify(taxasCfg),
     updated_at   : new Date().toISOString(),
@@ -5818,11 +5890,16 @@ function renderFinanceiroDash(){
   const fin = _filtrarVendasPorPeriodo(vendas.filter(v=>v.status==='finalizada'), 'fin-mes','fin-ano');
   const orc = vendas.filter(v=>v.status==='orcamento');
   const fat = fin.reduce((a,v)=>a+(Number(v.total)||0),0);
+  const despFin = _filtrarVendasPorPeriodo(despesas, 'fin-mes','fin-ano');
+  const totalDesp = despFin.reduce((a,d)=>a+(Number(d.valor)||0),0);
+  const fatLiquido = fat - totalDesp;
   const ticket = fin.length ? fat/fin.length : 0;
   const criticos = mats.filter(m=>getEstStatus(m.id)==='danger').length;
 
   document.getElementById('fin-metrics').innerHTML = [
-    {lbl:'Faturamento ('+_periodo+')',val:fmtBRL(fat),cor:'var(--rose-dark)'},
+    {lbl:'Faturamento bruto ('+_periodo+')',val:fmtBRL(fat),cor:'var(--rose-dark)'},
+    {lbl:'Despesas (protético etc.)',val:fmtBRL(totalDesp),cor:'#c0392b'},
+    {lbl:'Faturamento líquido',val:fmtBRL(fatLiquido),cor:'#2e7d32'},
     {lbl:'Vendas finalizadas',val:fin.length,cor:'#2e7d32'},
     {lbl:'Ticket médio',val:fmtBRL(ticket),cor:'#1565c0'},
     {lbl:'Orçamentos abertos',val:orc.length,cor:'#856404'},
@@ -5840,6 +5917,21 @@ function renderFinanceiroDash(){
         <span>${fmtBRL(v.total)} <span class="fin-badge ${v.status}">${v.status}</span></span>
       </div>`).join('')
     : '<div style="color:var(--rose-text);font-size:13px;">Nenhuma venda no período.</div>';
+
+  // Despesas recentes do período
+  const despRecentesEl = document.getElementById('fin-despesas-recentes');
+  if(despRecentesEl){
+    const despRecentes = despFin.slice().reverse().slice(0,5);
+    despRecentesEl.innerHTML = despRecentes.length
+      ? despRecentes.map(d=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--rose-light);font-size:13px;">
+          <span>${escapeHtml(d.categoria||'—')}${d.descricao?' — '+escapeHtml(d.descricao):''}</span>
+          <span style="display:flex;align-items:center;gap:8px;">
+            <span style="color:#c0392b;font-weight:700;">− ${fmtBRL(d.valor)}</span>
+            <button class="btn-danger" style="padding:3px 7px;font-size:10px;" onclick="excluirDespesa(${d.id})" title="Excluir"><i class="ti ti-trash"></i></button>
+          </span>
+        </div>`).join('')
+      : '<div style="color:var(--rose-text);font-size:13px;">Nenhuma despesa no período.</div>';
+  }
 
   // Estoque crítico
   const crit = mats.filter(m=>getEstStatus(m.id)==='danger').slice(0,5);
@@ -7550,7 +7642,7 @@ async function vrFinalizarMobile(){
   const payload = {
     clinica_id:clinicaId, procs:JSON.stringify(procs), mats:JSON.stringify(mats),
     estoque:JSON.stringify(estoque), proc_insumos:JSON.stringify(procInsumos),
-    vendas:JSON.stringify(vendas), cfg:JSON.stringify(cfg),
+    vendas:JSON.stringify(vendas), despesas:JSON.stringify(despesas), cfg:JSON.stringify(cfg),
     taxas_cfg:JSON.stringify(taxasCfg), updated_at:new Date().toISOString(),
     combos:JSON.stringify(combos), desc_cfg:JSON.stringify(descCfg)
   };
@@ -7868,6 +7960,7 @@ async function vrFinalizar(){
     estoque      : JSON.stringify(estoque),
     proc_insumos : JSON.stringify(procInsumos),
     vendas       : JSON.stringify(vendas),
+    despesas     : JSON.stringify(despesas),
     cfg          : JSON.stringify(cfg),
     taxas_cfg    : JSON.stringify(taxasCfg),
     updated_at   : new Date().toISOString(),

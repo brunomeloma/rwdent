@@ -182,6 +182,25 @@ const TOOLS = [
   {
     type: 'function',
     function: {
+      name: 'registrar_despesa',
+      description: 'Lança uma despesa/saída no financeiro — ex: pagamento ao protético/laboratório por uma coroa ou aparelho, material comprado à parte. Entra como negativo, descontado no faturamento líquido (não mexe no faturamento bruto nem nas comissões). ESCRITA — só chame após o usuário confirmar com "sim", "pode" ou "confirmo".',
+      parameters: {
+        type: 'object',
+        additionalProperties: false,
+        properties: {
+          categoria:        { type: 'string', enum: ['Protético','Laboratório','Material','Aluguel','Outros'], description: 'Categoria da despesa (padrão: Protético)' },
+          descricao:        { type: 'string', description: 'Descrição livre, ex: "Coroa - paciente Carlos" (opcional)' },
+          valor:            { type: 'number', description: 'Valor pago em reais' },
+          forma_pagamento:  { type: 'string', enum: ['pix','dinheiro','debito','credito'], description: 'Forma de pagamento (padrão: pix)' },
+          data:             { type: 'string', description: 'Data do pagamento YYYY-MM-DD (padrão: hoje)' }
+        },
+        required: ['valor']
+      }
+    }
+  },
+  {
+    type: 'function',
+    function: {
       name: 'ver_agenda',
       description: 'Mostra os agendamentos da clínica em uma data ou período. Leitura — execute direto, sem confirmação.',
       parameters: {
@@ -362,6 +381,7 @@ FERRAMENTAS DISPONÍVEIS:
 • remarcar_consulta   → muda data/horário de consulta existente (⚠️ ESCRITA — exige confirmação)
 • cancelar_consulta   → marca consulta como cancelada, sem apagar (⚠️ ESCRITA — exige confirmação)
 • registrar_venda_avulsa → lança no faturamento um valor recebido de paciente sem cadastro/prontuário, ex: "entrou uma paciente da outra dentista, cobrei 150 de profilaxia no pix" (⚠️ ESCRITA — exige confirmação). Não cadastra paciente nem cria prontuário. Se o usuário pedir vários valores de uma vez (ex: "adiciona 250, 500 e 1000"), depois de confirmado chame essa ferramenta uma vez pra cada valor na mesma resposta — não precisa fazer um por vez em mensagens separadas.
+• registrar_despesa → lança uma saída/despesa (protético, laboratório, material etc.), ex: "paguei 300 pro protético da coroa do Carlos" (⚠️ ESCRITA — exige confirmação). Entra como negativo, descontado só no faturamento líquido.
 
 Converta SEMPRE datas relativas ("hoje", "amanhã", "sexta", "semana que vem") para YYYY-MM-DD usando a data de hoje acima antes de chamar as ferramentas de agenda. Para "esta semana", use data + data_fim.${ctx?.currentPatient ? `
 
@@ -578,6 +598,44 @@ async function runTool(name, args, sb, clinicId) {
       return JSON.stringify({
         tool: name, ok: true, kind: 'sale_created',
         venda: { nome: nomePac, procedimento: proc, valor, forma_pagamento: forma, profissional: profNome || null, data: dataStr }
+      });
+    }
+
+    case 'registrar_despesa': {
+      const categoriaRaw = String(args.categoria || 'Protético');
+      const categoria = ['Protético','Laboratório','Material','Aluguel','Outros'].includes(categoriaRaw) ? categoriaRaw : 'Protético';
+      const descricao = String(args.descricao || '').trim().slice(0, 200);
+      const valor = Number(args.valor);
+      if (!Number.isFinite(valor) || valor <= 0) throw new Error('Informe um valor válido.');
+
+      const formaRaw = String(args.forma_pagamento || 'pix').toLowerCase();
+      const forma = ['pix', 'dinheiro', 'debito', 'credito'].includes(formaRaw) ? formaRaw : 'pix';
+      const dataStr = normalizeDate(args.data) || new Date().toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' });
+
+      // despesas também vive como JSON dentro de financeiro_config, mesmo
+      // esquema de update parcial que registrar_venda_avulsa usa pra vendas.
+      const { data: fc, error: fcErr } = await sb.from('financeiro_config').select('despesas').eq('clinica_id', clinicId).single();
+      if (fcErr) throw new Error(fcErr.message);
+      let despesasAtuais = [];
+      try { despesasAtuais = JSON.parse(fc?.despesas || '[]'); } catch { despesasAtuais = []; }
+      const nextId = despesasAtuais.length ? Math.max(...despesasAtuais.map(d => Number(d.id) || 0)) + 1 : 1;
+      const isoData = new Date(dataStr + 'T12:00:00').toISOString();
+
+      const novaDespesa = {
+        id: nextId, categoria, descricao, valor,
+        formaPagamento: forma, parcelas: 1,
+        obs: 'Lançado via assistente de IA',
+        data: isoData
+      };
+      despesasAtuais.push(novaDespesa);
+
+      const { error: updErr } = await sb.from('financeiro_config')
+        .update({ despesas: JSON.stringify(despesasAtuais) }).eq('clinica_id', clinicId);
+      if (updErr) throw new Error(updErr.message);
+
+      return JSON.stringify({
+        tool: name, ok: true, kind: 'expense_created',
+        despesa: { categoria, descricao, valor, forma_pagamento: forma, data: dataStr }
       });
     }
 
@@ -960,21 +1018,30 @@ function formatPhone(phone) {
 }
 
 function formatToolReply(outputs) {
-  // Vários lançamentos avulsos na mesma mensagem (ex: "adiciona 250, 500 e
-  // 1000") viram várias chamadas da mesma ferramenta numa resposta só — sem
-  // isso, só o último lançamento apareceria na resposta pro usuário, mesmo
-  // com todos já salvos.
-  const vendasCriadas = outputs.filter(o => o?.data?.kind === 'sale_created' && o.data.venda);
-  if (vendasCriadas.length > 1) {
-    const linhas = vendasCriadas.map(o => {
-      const v = o.data.venda;
-      const valorTxt = Number(v.valor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-      return `• ${v.nome} — ${v.procedimento} — ${valorTxt} via ${v.forma_pagamento}`;
-    });
-    const total = vendasCriadas
-      .reduce((s, o) => s + (Number(o.data.venda.valor) || 0), 0)
-      .toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-    return `${vendasCriadas.length} lançamentos adicionados ao faturamento! ✅\n\n${linhas.join('\n')}\n\nTotal: ${total}`;
+  // Vários lançamentos avulsos (entrada e/ou saída) na mesma mensagem (ex:
+  // "adiciona 250, 500 e 1000") viram várias chamadas de ferramenta numa
+  // resposta só — sem isso, só o último apareceria na resposta pro usuário,
+  // mesmo com todos já salvos.
+  const vendasCriadas   = outputs.filter(o => o?.data?.kind === 'sale_created' && o.data.venda);
+  const despesasCriadas = outputs.filter(o => o?.data?.kind === 'expense_created' && o.data.despesa);
+  if (vendasCriadas.length + despesasCriadas.length > 1) {
+    const linhas = [
+      ...vendasCriadas.map(o => {
+        const v = o.data.venda;
+        const valorTxt = Number(v.valor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+        return `• (+) ${v.nome} — ${v.procedimento} — ${valorTxt} via ${v.forma_pagamento}`;
+      }),
+      ...despesasCriadas.map(o => {
+        const d = o.data.despesa;
+        const valorTxt = Number(d.valor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+        return `• (−) ${d.categoria}${d.descricao ? ' — ' + d.descricao : ''} — ${valorTxt} via ${d.forma_pagamento}`;
+      })
+    ];
+    const totalEntradas = vendasCriadas.reduce((s, o) => s + (Number(o.data.venda.valor) || 0), 0);
+    const totalSaidas   = despesasCriadas.reduce((s, o) => s + (Number(o.data.despesa.valor) || 0), 0);
+    const totalTxt = (totalEntradas - totalSaidas).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    const qtd = vendasCriadas.length + despesasCriadas.length;
+    return `${qtd} lançamentos registrados! ✅\n\n${linhas.join('\n')}\n\nSaldo: ${totalTxt}`;
   }
 
   const last = outputs[outputs.length - 1];
@@ -1086,6 +1153,13 @@ function formatToolReply(outputs) {
     return `Lançado no faturamento! ✅\n\n${v.nome} — ${v.procedimento}\n${valorTxt} via ${v.forma_pagamento}${profTxt}\n${formatDateBR(v.data)}`;
   }
 
+  if (data.kind === 'expense_created' && data.despesa) {
+    const d = data.despesa;
+    const valorTxt = Number(d.valor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    const descTxt = d.descricao ? `\n${d.descricao}` : '';
+    return `Despesa registrada! ✅\n\n${d.categoria}${descTxt}\n− ${valorTxt} via ${d.forma_pagamento}\n${formatDateBR(d.data)}\n\nDescontado do faturamento líquido.`;
+  }
+
   // Mensagens que começam com "Erro:" vêm do catch técnico (ex.: exceção do
   // banco) — não mostra o texto cru para o usuário, troca por algo seguro.
   if (typeof data.message === 'string' && data.message.startsWith('Erro:'))
@@ -1110,7 +1184,8 @@ function _resultadoTemDadosReais(data) {
   if (data.kind === 'patient_created' || data.kind === 'appointment_created' ||
       data.kind === 'appointment_rescheduled' || data.kind === 'appointment_cancelled' ||
       data.kind === 'patient_profile' || data.kind === 'appointment_choose' ||
-      data.kind === 'appointment_patient_ambiguous' || data.kind === 'sale_created') return true;
+      data.kind === 'appointment_patient_ambiguous' || data.kind === 'sale_created' ||
+      data.kind === 'expense_created') return true;
   if (data.ok === false) return false;
   if (typeof data.total === 'number') return data.total > 0;
   if (Array.isArray(data.livres)) return data.livres.length > 0;
@@ -1118,7 +1193,7 @@ function _resultadoTemDadosReais(data) {
 }
 
 function shouldRefreshApp(toolOutputs) {
-  return toolOutputs.some(o => ['patient_created', 'appointment_created', 'appointment_rescheduled', 'appointment_cancelled', 'sale_created'].includes(o?.data?.kind));
+  return toolOutputs.some(o => ['patient_created', 'appointment_created', 'appointment_rescheduled', 'appointment_cancelled', 'sale_created', 'expense_created'].includes(o?.data?.kind));
 }
 
 // ══════════════════════════════════════════════

@@ -26,7 +26,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
-<link rel="stylesheet" href="app.css?v=6"/>
+<link rel="stylesheet" href="app.css?v=7"/>
 <link rel="stylesheet" href="premium-design.css"/>
 <link rel="stylesheet" href="sections-premium.css"/>
 <link rel="stylesheet" href="layout-fixes.css"/>
@@ -641,6 +641,10 @@
           <div>
             <h2 style="font-size:13px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;"><span><i class="ti ti-trending-up"></i> Vendas recentes</span> <button class="btn-secondary" style="font-size:11px;padding:4px 10px;" onclick="switchTab('vendas_fin')">Ver todas</button></h2>
             <div id="fin-vendas-recentes"></div>
+          </div>
+          <div>
+            <h2 style="font-size:13px;margin-bottom:10px;"><i class="ti ti-arrow-up-right"></i> Despesas recentes (protético etc.)</h2>
+            <div id="fin-despesas-recentes"></div>
           </div>
           <div>
             <h2 style="font-size:13px;margin-bottom:10px;"><i class="ti ti-alert-triangle"></i> Estoque crítico</h2>
@@ -2019,7 +2023,7 @@
   <div style="color:var(--rose-text);font-size:14px;">Carregando...</div>
 </div>
 
-<script src="app.js?v=6"></script>
+<script src="app.js?v=7"></script>
 
 <!-- ══ MODAL RELATÓRIO MENSAL ══ -->
 <div class="modal-overlay" id="modal-relatorio" onclick="if(event.target===this)closeModal('modal-relatorio')" style="align-items:flex-start;padding-top:40px;overflow-y:auto;">
@@ -2040,11 +2044,32 @@
 <div class="modal-overlay" id="modal-lancamento-avulso" onclick="if(event.target===this)closeModal('modal-lancamento-avulso')">
   <div class="modal-box">
     <h2 class="modal-title"><i class="ti ti-cash-register"></i> Lançamento avulso</h2>
-    <p style="font-size:12px;color:var(--rose-text);margin-bottom:14px;">Para dinheiro que entrou sem precisar cadastrar prontuário — ex: paciente de outra dentista, ou uma cobrança na maquininha (InfinitePay etc.) sem nome nenhum. Só o valor e a forma de pagamento já bastam. Entra direto no faturamento.</p>
-    <div class="form-group"><label>Nome do paciente (opcional)</label><input type="text" id="lav-nome" placeholder="Deixe em branco se não souber"/></div>
-    <div class="form-group"><label>Procedimento (opcional)</label><input type="text" id="lav-proc" list="lav-proc-lista" placeholder="Deixe em branco se não souber"/><datalist id="lav-proc-lista"></datalist></div>
+    <div style="display:flex;gap:8px;margin-bottom:14px;">
+      <button type="button" id="lav-tab-entrada" onclick="lavSetTipo('entrada')" style="flex:1;padding:10px;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;border:1.5px solid var(--rose);background:var(--rose);color:#fff;"><i class="ti ti-arrow-down-left"></i> Entrada (recebi)</button>
+      <button type="button" id="lav-tab-saida" onclick="lavSetTipo('saida')" style="flex:1;padding:10px;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;border:1.5px solid var(--rose-light);background:#fff;color:var(--rose-dark);"><i class="ti ti-arrow-up-right"></i> Saída (protético etc.)</button>
+    </div>
+    <p id="lav-desc-entrada" style="font-size:12px;color:var(--rose-text);margin-bottom:14px;">Para dinheiro que entrou sem precisar cadastrar prontuário — ex: paciente de outra dentista, ou uma cobrança na maquininha (InfinitePay etc.) sem nome nenhum. Só o valor e a forma de pagamento já bastam. Entra direto no faturamento.</p>
+    <p id="lav-desc-saida" style="display:none;font-size:12px;color:var(--rose-text);margin-bottom:14px;">Para dinheiro que saiu — protético, laboratório, material comprado à parte etc. Entra como negativo, pra o faturamento líquido refletir o que sobrou de verdade.</p>
+
+    <div id="lav-campos-entrada">
+      <div class="form-group"><label>Nome do paciente (opcional)</label><input type="text" id="lav-nome" placeholder="Deixe em branco se não souber"/></div>
+      <div class="form-group"><label>Procedimento (opcional)</label><input type="text" id="lav-proc" list="lav-proc-lista" placeholder="Deixe em branco se não souber"/><datalist id="lav-proc-lista"></datalist></div>
+    </div>
+    <div id="lav-campos-saida" style="display:none;">
+      <div class="form-group"><label>Categoria</label>
+        <select id="lav-categoria">
+          <option value="Protético">Protético</option>
+          <option value="Laboratório">Laboratório</option>
+          <option value="Material">Material</option>
+          <option value="Aluguel">Aluguel</option>
+          <option value="Outros">Outros</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Descrição (opcional)</label><input type="text" id="lav-descricao" placeholder="Ex: Coroa - paciente Carlos"/></div>
+    </div>
+
     <div class="form-row-2">
-      <div class="form-group"><label>Valor cobrado (R$)</label><input type="number" id="lav-valor" step="0.01" min="0" placeholder="150.00"/></div>
+      <div class="form-group"><label id="lav-valor-label">Valor cobrado (R$)</label><input type="number" id="lav-valor" step="0.01" min="0" placeholder="150.00"/></div>
       <div class="form-group"><label>Data</label><input type="date" id="lav-data"/></div>
       <div class="form-group"><label>Forma de pagamento</label>
         <select id="lav-forma" onchange="document.getElementById('lav-parcelas-wrap').style.display=this.value==='credito'?'':'none'">
@@ -2055,15 +2080,18 @@
         </select>
       </div>
       <div class="form-group" id="lav-parcelas-wrap" style="display:none;"><label>Parcelas</label><input type="number" id="lav-parcelas" min="1" max="12" value="1"/></div>
-      <div class="form-group"><label>Profissional que atendeu</label><select id="lav-prof"><option value="">— Não informado —</option></select></div>
+      <div class="form-group" id="lav-prof-wrap"><label>Profissional que atendeu</label><select id="lav-prof"><option value="">— Não informado —</option></select></div>
     </div>
     <div class="form-group"><label>Observação (opcional)</label><input type="text" id="lav-obs" placeholder="Ex: paciente da Dra. Fulana"/></div>
-    <div style="background:var(--rose-lighter);border-radius:10px;padding:10px 14px;margin:6px 0 14px;font-size:11px;color:var(--rose-dark);">
+    <div id="lav-info-entrada" style="background:var(--rose-lighter);border-radius:10px;padding:10px 14px;margin:6px 0 14px;font-size:11px;color:var(--rose-dark);">
       <i class="ti ti-info-circle"></i> Não cria cadastro de paciente nem prontuário — é só o valor entrando no faturamento. Se o profissional tiver % de comissão configurado (Financeiro → Relatório de comissão), a divisão clínica/profissional é calculada automaticamente.
+    </div>
+    <div id="lav-info-saida" style="display:none;background:var(--rose-lighter);border-radius:10px;padding:10px 14px;margin:6px 0 14px;font-size:11px;color:var(--rose-dark);">
+      <i class="ti ti-info-circle"></i> Entra como despesa do período e é descontada no "Faturamento líquido" do Painel Financeiro — não mexe no faturamento bruto nem nas comissões, que continuam calculadas em cima do que foi cobrado.
     </div>
     <div class="modal-footer">
       <button class="btn-secondary" onclick="closeModal('modal-lancamento-avulso')">Cancelar</button>
-      <button class="btn-primary" onclick="salvarLancamentoAvulso()"><i class="ti ti-check"></i> Adicionar ao faturamento</button>
+      <button class="btn-primary" id="lav-btn-salvar" onclick="salvarLancamentoAvulso()"><i class="ti ti-check"></i> Adicionar ao faturamento</button>
     </div>
   </div>
 </div>
@@ -2792,16 +2820,17 @@
         const [{ data: ag }, { data: pa }, { data: fc }] = await Promise.all([
           _sb.from('agendamentos').select('*').eq('clinica_id', clinicaId).order('data').order('horario'),
           _sb.from('pacientes').select('*, prontuarios(*)').eq('clinica_id', clinicaId),
-          _sb.from('financeiro_config').select('vendas').eq('clinica_id', clinicaId).single()
+          _sb.from('financeiro_config').select('vendas, despesas').eq('clinica_id', clinicaId).single()
         ]);
-        // "agendamentos"/"pacientes"/"vendas" são `let` no topo de app.js —
-        // atribuir via window.agendamentos=... criaria uma propriedade solta
-        // em vez de atualizar essa variável. Precisa ser atribuição direta ao
-        // identificador para o resto do app (renderLista, renderPatients
-        // etc.) enxergar os dados novos.
+        // "agendamentos"/"pacientes"/"vendas"/"despesas" são `let` no topo de
+        // app.js — atribuir via window.agendamentos=... criaria uma
+        // propriedade solta em vez de atualizar essa variável. Precisa ser
+        // atribuição direta ao identificador para o resto do app
+        // (renderLista, renderPatients etc.) enxergar os dados novos.
         if(ag) agendamentos = ag;
         if(pa) pacientes = pa.map(p=>({ ...p, prontuarios: p.prontuarios||[] }));
         if(fc?.vendas){ try{ vendas = JSON.parse(fc.vendas); }catch(e){} }
+        if(fc?.despesas){ try{ despesas = JSON.parse(fc.despesas); }catch(e){} }
       }
       if(typeof renderLista === 'function') renderLista();
       if(typeof renderHomeStats === 'function') renderHomeStats();
