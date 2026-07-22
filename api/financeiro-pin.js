@@ -21,13 +21,17 @@ async function verificarPin(sbAdmin, clinicaId, existing, pinDigitado) {
     return { ok: false, status: 429, error: `Muitas tentativas erradas. Tente de novo em ${minutos} min.` };
   }
   if (hashPin(String(pinDigitado || '')) !== existing.pin_hash) {
-    const tentativas = (existing.tentativas_erradas || 0) + 1;
-    const update = { tentativas_erradas: tentativas };
-    if (tentativas >= 5) {
-      update.bloqueado_ate = new Date(Date.now() + 15 * 60 * 1000).toISOString();
-      update.tentativas_erradas = 0;
+    // Incremento ATÔMICO via RPC (UPDATE de uma linha só, travado pelo
+    // Postgres) — em vez de ler e escrever separado aqui em JS, o que
+    // deixava a contagem burlável mandando várias tentativas em paralelo
+    // (achado em pentest; ver supabase/financeiro-pin-atomic.sql).
+    const { data: novoEstado, error: rpcErr } = await sbAdmin.rpc('financeiro_pin_registrar_erro', { p_clinica_id: clinicaId });
+    const estado = Array.isArray(novoEstado) ? novoEstado[0] : novoEstado;
+    if (rpcErr) console.error('[financeiro-pin] erro ao registrar tentativa errada:', rpcErr.message);
+    const agoraBloqueado = estado?.bloqueado_ate && new Date(estado.bloqueado_ate) > new Date();
+    if (agoraBloqueado) {
+      return { ok: false, status: 429, error: 'Muitas tentativas erradas. Tente de novo em 15 min.' };
     }
-    await sbAdmin.from('financeiro_pin_secreto').update(update).eq('clinica_id', clinicaId);
     return { ok: false, status: 403, error: 'PIN incorreto.' };
   }
   if (existing.tentativas_erradas || existing.bloqueado_ate) {
