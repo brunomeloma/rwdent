@@ -12065,7 +12065,11 @@ function relProdutividade(){
   const profStats = {};
   profissionais.forEach(p=>{ profStats[p.id]={nome:p.nome,atendimentos:0,receita:0,procedimentos:{}}; });
   vendas.filter(v=>v.status==='finalizada'&&(v.data||'').startsWith(mesAtual)).forEach(v=>{
-    const profId = v.profId || v.profissionalId;
+    // O campo salvo pela venda é profissional_id (snake_case, ver
+    // vrFinalizar()) — v.profId/v.profissionalId nunca existiram em nenhuma
+    // venda de verdade, então o relatório sempre dava "sem dados" mesmo com
+    // vendas reais no mês (achado testando ao vivo).
+    const profId = v.profissional_id;
     if(profId && profStats[profId]){
       profStats[profId].atendimentos++;
       profStats[profId].receita += v.total||0;
