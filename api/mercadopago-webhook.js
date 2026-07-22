@@ -1,17 +1,44 @@
 const { createClient } = require('@supabase/supabase-js');
+const crypto = require('crypto');
 
 // Recebe os avisos do Mercado Pago (assinatura autorizada, pagamento
 // mensal aprovado, etc.) e aprova a clínica sozinho — sem admin precisar
-// clicar em nada. Segurança: NUNCA confia no conteúdo que vem no corpo do
-// aviso (poderia ser forjado por qualquer um, já que o Mercado Pago não
-// assina o payload nesse formato) — sempre busca o estado real de volta
-// na API do Mercado Pago usando o Access Token antes de decidir algo.
+// clicar em nada. Segurança em duas camadas:
+// 1) Verifica a assinatura HMAC do cabeçalho x-signature (MERCADOPAGO_WEBHOOK_SECRET)
+//    — mas só como alerta/log, nunca bloqueia sozinha (se o formato mudar
+//    e a verificação falhar por bug nosso, não pode travar pagamento real).
+// 2) A decisão de verdade NUNCA confia no conteúdo do aviso em si — sempre
+//    busca o estado real de volta na API do Mercado Pago usando o Access
+//    Token antes de liberar qualquer clínica. Essa é a proteção que
+//    realmente importa.
 //
 // Configurar em Mercado Pago → Developers → sua aplicação → Webhooks:
 // URL de produção = https://SEU-DOMINIO/api/mercadopago-webhook
-// Eventos: "Assinaturas" (preapproval) e "Pagamentos" (payment).
+// Eventos: "Planos e assinaturas" (preapproval) e "Pagamentos" (payment).
 
 const DIAS_ACESSO_POR_CICLO = 31; // um pouco mais que 30 pra dar folga
+
+function verificarAssinatura(req, secret) {
+  try {
+    if (!secret) return null;
+    const xSignature = req.headers['x-signature'];
+    const xRequestId = req.headers['x-request-id'];
+    if (!xSignature || !xRequestId) return null;
+    const partes = {};
+    xSignature.split(',').forEach(p => {
+      const [k, v] = p.split('=');
+      if (k && v) partes[k.trim()] = v.trim();
+    });
+    if (!partes.ts || !partes.v1) return null;
+    const dataId = (req.query && req.query['data.id']) || '';
+    const manifest = `id:${String(dataId).toLowerCase()};request-id:${xRequestId};ts:${partes.ts};`;
+    const hash = crypto.createHmac('sha256', secret).update(manifest).digest('hex');
+    return hash === partes.v1;
+  } catch (e) {
+    console.error('[mp-webhook] erro ao verificar assinatura:', e.message);
+    return null;
+  }
+}
 
 module.exports = async function handler(req, res) {
   // Mercado Pago espera 200 rápido — responde cedo e loga qualquer
@@ -20,10 +47,16 @@ module.exports = async function handler(req, res) {
   const supabaseUrl    = cleanStr(process.env.SUPABASE_URL);
   const serviceRoleKey = cleanStr(process.env.SUPABASE_SERVICE_ROLE_KEY);
   const mpToken         = cleanStr(process.env.MERCADOPAGO_ACCESS_TOKEN);
+  const webhookSecret    = cleanStr(process.env.MERCADOPAGO_WEBHOOK_SECRET);
 
   if (!supabaseUrl || !serviceRoleKey || !mpToken) {
     console.error('[mp-webhook] variáveis de ambiente ausentes.');
     return res.status(200).json({ ok: true }); // sempre 200 pro MP não ficar retentando à toa
+  }
+
+  const assinaturaOk = verificarAssinatura(req, webhookSecret);
+  if (assinaturaOk === false) {
+    console.warn('[mp-webhook] ALERTA: assinatura x-signature não bateu — aviso pode não ser genuíno. Prosseguindo mesmo assim (a decisão real depende da confirmação via API, não deste header), mas vale investigar se isso persistir.');
   }
 
   const body = req.body || {};
@@ -33,7 +66,7 @@ module.exports = async function handler(req, res) {
   const tipo = body.type || body.topic || query.type || query.topic || '';
   const id   = (body.data && body.data.id) || query.id || query['data.id'] || '';
 
-  console.log(`[mp-webhook] recebido: tipo=${tipo} id=${id}`);
+  console.log(`[mp-webhook] recebido: tipo=${tipo} id=${id} assinaturaOk=${assinaturaOk}`);
   if (!id) return res.status(200).json({ ok: true });
 
   const sbAdmin = createClient(supabaseUrl, serviceRoleKey);
