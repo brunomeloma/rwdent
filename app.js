@@ -227,6 +227,9 @@ function renderAdminTable(){
     } else {
       actions = `<button class="admin-btn aprovar" onclick="adminAprovar('${c.id}')"><i class="ti ti-check"></i> Aprovar</button>`;
     }
+    // Assinatura mensal via Mercado Pago — gera o link, a aprovação depois
+    // acontece sozinha quando o pagamento cair (api/mercadopago-webhook.js).
+    actions += ` <button class="admin-btn" style="background:#e8f5e9;color:#2e7d32;border-color:#a5d6a7;" onclick="adminGerarAssinatura('${c.id}')" title="Gera o link de assinatura mensal (R$197) pra mandar no WhatsApp"><i class="ti ti-credit-card"></i> Assinatura</button>`;
 
     // Don't show action buttons for admin's own clinics
     if(_ADMIN_IDS.includes(c.user_id)) actions = '<span style="color:var(--rose-text);font-size:11px;">Admin</span>';
@@ -250,6 +253,29 @@ async function adminAprovar(id){
   if(error){ showToast('Erro: '+error.message,'error'); return; }
   showToast('Conta aprovada! Acesso de 24h ativado.','ok');
   loadAdminPanel();
+}
+
+async function adminGerarAssinatura(clinicaId){
+  showLoading(true);
+  try{
+    const { data:{ session } } = await _sb.auth.getSession();
+    const resp = await fetch('/api/mercadopago-criar-assinatura', {
+      method:'POST',
+      headers:{ 'Content-Type':'application/json', 'Authorization':'Bearer '+(session?.access_token||'') },
+      body: JSON.stringify({ clinicaId })
+    });
+    const json = await resp.json();
+    showLoading(false);
+    if(!resp.ok){ showToast('Erro: '+(json.error||'falha ao gerar assinatura'),'error'); return; }
+    navigator.clipboard?.writeText(json.link).catch(()=>{});
+    // Aprovação real acontece sozinha quando o Mercado Pago confirmar o
+    // pagamento (webhook) — este link só inicia a autorização da assinatura.
+    prompt('Link da assinatura mensal (já copiado — Ctrl+C se precisar de novo). Manda pro cliente no WhatsApp. A clínica é aprovada sozinha assim que ele autorizar o pagamento:', json.link);
+    showToast('Link gerado e copiado!');
+  } catch(e){
+    showLoading(false);
+    showToast('Erro ao gerar assinatura: '+e.message,'error');
+  }
 }
 
 async function adminRejeitar(id){
