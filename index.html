@@ -292,6 +292,14 @@ function showPanel(name) {
 
 function switchMode(mode) { showPanel(mode); }
 
+// A landing manda gente direto pro cadastro (?tab=cadastro) em vez do
+// login — usado nos botões "Teste grátis"/"Assinar", já que é aqui que a
+// senha é criada, antes de qualquer pagamento.
+function showLoginOuCadastro() {
+  const tab = new URLSearchParams(window.location.search).get('tab');
+  showPanel(tab === 'cadastro' ? 'cadastro' : 'login');
+}
+
 (async () => {
   if(!_sb) return;
   try {
@@ -299,11 +307,11 @@ function switchMode(mode) { showPanel(mode); }
     if(session) {
       await checkAndRedirect(session.user);
     } else {
-      showPanel('login');
+      showLoginOuCadastro();
     }
   } catch(e) {
     console.warn('Erro na verificação de sessão:', e.message);
-    showPanel('login');
+    showLoginOuCadastro();
   }
 })();
 
@@ -316,7 +324,7 @@ async function checkAndRedirect(user) {
       .single();
 
     if(error || !perfil) {
-      showPanel('login');
+      showLoginOuCadastro();
       return;
     }
 

@@ -228,7 +228,7 @@ h1, h2, .section-title {font-family: 'Instrument Serif', Georgia, serif;font-wei
       <a href="#como-funciona" onclick="closeMenu()">Como funciona</a>
       <a href="#preco" onclick="closeMenu()">Preço</a>
       <a href="#faq" onclick="closeMenu()">FAQ</a>
-      <a href="javascript:wppMsg('testar')" class="nav-cta" onclick="closeMenu()">Testar agora</a>
+      <a href="index.html?tab=cadastro" class="nav-cta" onclick="closeMenu()">Testar agora</a>
     </div>
     <button class="nav-mobile-btn" id="nav-toggle" onclick="toggleMenu()"><i class="ti ti-menu-2"></i></button>
   </div>
@@ -240,7 +240,7 @@ h1, h2, .section-title {font-family: 'Instrument Serif', Georgia, serif;font-wei
   <h1>Gerencie sua clínica<br/>com <span>inteligência</span></h1>
   <p>Agenda, prontuário digital, financeiro, odontograma e controle de estoque — tudo em um só lugar, feito especialmente para dentistas.</p>
   <div class="hero-btns">
-    <a href="javascript:wppMsg('testar')" class="btn-hero btn-hero-primary"><i class="ti ti-brand-whatsapp"></i> Teste grátis por 3 dias</a>
+    <a href="index.html?tab=cadastro" class="btn-hero btn-hero-primary"><i class="ti ti-rocket"></i> Teste grátis por 3 dias</a>
     <a href="#funcionalidades" class="btn-hero btn-hero-secondary"><i class="ti ti-eye"></i> Ver funcionalidades</a>
   </div>
   <div class="hero-stats">
@@ -597,9 +597,9 @@ h1, h2, .section-title {font-family: 'Instrument Serif', Georgia, serif;font-wei
       <li><i class="ti ti-check"></i> Dark mode</li>
       <li><i class="ti ti-check"></i> Suporte por WhatsApp</li>
     </ul>
-    <button class="pricing-btn" onclick="wppMsg('assinar')" style="margin-bottom:10px;"><i class="ti ti-brand-whatsapp"></i> Assinar por R$69,90/mês</button>
+    <a href="index.html?tab=cadastro" class="pricing-btn" style="margin-bottom:10px;"><i class="ti ti-credit-card"></i> Assinar por R$69,90/mês</a>
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;"><div style="flex:1;height:1px;background:var(--rose-light);"></div><span style="font-size:12px;color:var(--gray);font-weight:700;">ou</span><div style="flex:1;height:1px;background:var(--rose-light);"></div></div>
-    <button class="pricing-btn" onclick="wppMsg('testar')" style="background:var(--rose-lighter);color:var(--rose-dark);box-shadow:none;font-size:14px;padding:12px;"><i class="ti ti-eye"></i> Testar grátis por 3 dias</button>
+    <a href="index.html?tab=cadastro" class="pricing-btn" style="background:var(--rose-lighter);color:var(--rose-dark);box-shadow:none;font-size:14px;padding:12px;"><i class="ti ti-eye"></i> Testar grátis por 3 dias</a>
     <div class="pricing-guarantee"><i class="ti ti-shield-check"></i> Teste grátis de 3 dias com acesso completo — conheça antes de pagar qualquer coisa</div>
   </div>
 </section>
@@ -678,7 +678,7 @@ h1, h2, .section-title {font-family: 'Instrument Serif', Georgia, serif;font-wei
 <section class="final-cta" id="comecar">
   <h2>Pronto para modernizar sua clínica?</h2>
   <p>Assine por R$69,90/mês ou teste grátis por 3 dias com acesso completo. Sem compromisso.</p>
-  <a href="javascript:wppMsg('assinar')" class="btn-cta-white" id="cta-link"><i class="ti ti-brand-whatsapp"></i> Falar no WhatsApp</a>
+  <a href="index.html?tab=cadastro" class="btn-cta-white" id="cta-link"><i class="ti ti-rocket"></i> Criar minha conta</a>
 </section>
 
 <!-- WHATSAPP FLOAT -->
@@ -742,26 +742,6 @@ setTimeout(()=>{
 },2500);
 
 // WhatsApp & Pagamento
-const WPP_NUM = '5599988492438';
-// Os links fixos do Mercado Pago que ficavam aqui (mpago.la/...) foram
-// removidos de propósito: eram links estáticos, sem nenhuma referência de
-// qual clínica estava pagando, então o webhook (api/mercadopago-webhook.js)
-// não tinha como aprovar a conta automaticamente com eles. Agora os dois
-// botões mandam pro WhatsApp — depois da conversa, gera o link certo (já
-// vinculado à clínica) pelo botão "Assinatura"/"Teste grátis" no painel Admin.
-const PAG_LINKS = {};
-function wppMsg(tipo){
-  if(PAG_LINKS[tipo] && !PAG_LINKS[tipo].startsWith('LINK_')){
-    window.open(PAG_LINKS[tipo],'_blank');
-  } else {
-    const msgs = {
-      assinar: 'Olá! Vim pelo site do RWDent e quero *assinar o plano mensal* de R$69,90/mês.',
-      testar: 'Olá! Vim pelo site do RWDent e quero *testar o sistema grátis por 3 dias*.'
-    };
-    window.open('https://wa.me/'+WPP_NUM+'?text='+encodeURIComponent(msgs[tipo]||msgs.assinar),'_blank');
-  }
-}
-
 // Carousel
 (()=>{
   const track=document.getElementById('carousel-track');
