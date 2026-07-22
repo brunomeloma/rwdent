@@ -6770,12 +6770,22 @@ function openInsumos(procId){
   if(hint) hint.style.display = ehRecolagem ? 'block' : 'none';
   const search = document.getElementById('mi-mat-search'); if(search) search.value = '';
   const hid = document.getElementById('mi-mat-sel-id'); if(hid) hid.value = '';
+  const dd = document.getElementById('mi-mat-dropdown'); if(dd) dd.style.display = 'none';
   renderInsumosList();
   openModal('modal-insumos');
 }
 
+// Busca sem acento (query "mascara" acha "Máscara") e ordena por relevância
+// (nome que COMEÇA com o termo digitado aparece antes dos que só contêm).
+// O dropdown é position:fixed, posicionado via getBoundingClientRect do campo
+// de busca (mesmo padrão do menu "⋮" de Procedimentos) — assim ele nunca fica
+// cortado nem exige rolar o modal pra ver os resultados: a própria altura
+// disponível até o fim da tela vira o max-height da lista.
 function miFiltrarMats(){
-  const q = (document.getElementById('mi-mat-search')?.value||'').toLowerCase().trim();
+  const input = document.getElementById('mi-mat-search');
+  const dd = document.getElementById('mi-mat-dropdown');
+  if(!input || !dd) return;
+  const q = _norm(input.value||'').trim();
   const ehRecolagem = PROC_IDS_RECOLAGEM.has(insumosEditProcId);
   let lista = [...mats];
   // Em procedimento de recolagem, esconde os kits completos por padrão (evita o erro
@@ -6783,18 +6793,35 @@ function miFiltrarMats(){
   if(ehRecolagem && !q.includes('kit')){
     lista = lista.filter(m=>!MAT_IDS_KIT_COMPLETO.has(m.id));
   }
-  if(q) lista = lista.filter(m=>m.nome.toLowerCase().includes(q));
+  if(q){
+    lista = lista
+      .filter(m=>_norm(m.nome).includes(q))
+      .sort((a,b)=>{
+        const aStarts = _norm(a.nome).startsWith(q) ? 0 : 1;
+        const bStarts = _norm(b.nome).startsWith(q) ? 0 : 1;
+        if(aStarts !== bStarts) return aStarts - bStarts;
+        return a.nome.localeCompare(b.nome, 'pt-BR');
+      });
+  } else {
+    lista = lista.sort((a,b)=>a.nome.localeCompare(b.nome, 'pt-BR'));
+  }
   lista = lista.slice(0,60); // performance
-  const dd = document.getElementById('mi-mat-dropdown');
-  if(!dd) return;
+
+  const r = input.getBoundingClientRect();
+  dd.style.left = r.left + 'px';
+  dd.style.width = r.width + 'px';
+  dd.style.top = (r.bottom + 4) + 'px';
+  dd.style.maxHeight = Math.max(120, Math.min(340, window.innerHeight - r.bottom - 16)) + 'px';
+  dd.style.display = 'block';
+
   if(!lista.length){
     dd.innerHTML = '<div style="padding:12px;color:var(--rose-text);text-align:center;font-size:12px;">Nenhum material encontrado</div>';
     return;
   }
   dd.innerHTML = lista.map(m=>`
-    <div data-matid="${m.id}" style="padding:8px 12px;cursor:pointer;font-size:12px;border-bottom:1px solid var(--rose-light);display:flex;justify-content:space-between;align-items:center;gap:8px;">
+    <div data-matid="${m.id}" style="padding:10px 12px;cursor:pointer;font-size:13px;border-bottom:1px solid var(--rose-light);display:flex;justify-content:space-between;align-items:center;gap:8px;">
       <span>${escapeHtml(m.nome)} ${matBadge(m)}</span>
-      <span style="color:var(--rose-dark);font-weight:700;white-space:nowrap;">${fmtBRL(m.custo||0)}/${m.unid||'un'}</span>
+      <span style="color:var(--rose-dark);font-weight:700;white-space:nowrap;font-size:11px;">${fmtBRL(m.custo||0)}/${m.unid||'un'}</span>
     </div>`).join('');
   dd.querySelectorAll('[data-matid]').forEach(el=>{
     el.onmouseover=()=>{el.style.background='var(--rose-lighter)';};
@@ -6802,6 +6829,10 @@ function miFiltrarMats(){
     el.onclick=()=>miSelecionarMat(parseInt(el.dataset.matid));
   });
 }
+document.addEventListener('scroll', ()=>{
+  const dd = document.getElementById('mi-mat-dropdown');
+  if(dd && dd.style.display==='block') dd.style.display='none';
+}, true);
 
 function miSelecionarMat(matId){
   const m = mats.find(x=>x.id===matId); if(!m) return;
