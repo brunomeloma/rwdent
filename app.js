@@ -573,14 +573,31 @@ async function definirFinPinFaturamento(){
   atualizarFinPinFaturamentoStatus();
   showToast('PIN financeiro salvo!');
 }
+// Esconder não precisa de senha (é a ação "segura"); só reaparecer o
+// faturamento pede o PIN. "Ativado/desativado" aqui é sobre ESTA sessão do
+// navegador (_finVerificado), não sobre o PIN estar configurado ou não.
+function ativarModoSecretaria(){
+  _finVerificado = false;
+  atualizarFinPinFaturamentoStatus();
+  renderHomeStats();
+  showToast('Modo secretária ativado — faturamento escondido.');
+}
 async function atualizarFinPinFaturamentoStatus(){
   const el = document.getElementById('fin-pin-fat-status');
   if(!el) return;
   const { ok, json } = await _finApi({ action:'status' });
   if(!ok){ el.innerHTML = '<span style="color:var(--rose-text);">Não foi possível checar o status agora.</span>'; return; }
-  el.innerHTML = json.hasPin
-    ? '<span style="color:#2e7d32;font-weight:700;"><i class="ti ti-shield-lock"></i> PIN financeiro ativo — faturamento protegido.</span>'
-    : '<span style="color:#b33;font-weight:700;"><i class="ti ti-shield-off"></i> Nenhum PIN definido — o faturamento fica visível pra qualquer um que usar o sistema!</span>';
+  if(!json.hasPin){
+    el.innerHTML = '<span style="color:#b33;font-weight:700;"><i class="ti ti-shield-off"></i> Nenhum PIN definido — o faturamento fica visível pra qualquer um que usar o sistema. Defina um PIN abaixo.</span>';
+    return;
+  }
+  if(_finVerificado){
+    el.innerHTML = `<span style="color:#856404;font-weight:700;"><i class="ti ti-lock-open"></i> Modo secretária DESATIVADO — o faturamento está visível agora.</span>
+      <div style="margin-top:8px;"><button class="btn-secondary" onclick="ativarModoSecretaria()" style="padding:6px 14px;font-size:12px;"><i class="ti ti-eye-off"></i> Ativar modo secretária (esconder faturamento)</button></div>`;
+  } else {
+    el.innerHTML = `<span style="color:#2e7d32;font-weight:700;"><i class="ti ti-shield-lock"></i> Modo secretária ATIVADO — faturamento escondido.</span>
+      <div style="margin-top:8px;"><button class="btn-secondary" onclick="pedirFinPinFaturamento().then(ok=>{if(ok){atualizarFinPinFaturamentoStatus();renderHomeStats();}})" style="padding:6px 14px;font-size:12px;"><i class="ti ti-eye"></i> Ver faturamento (digitar PIN)</button></div>`;
+  }
 }
 
 function switchTab(tab){
