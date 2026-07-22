@@ -60,6 +60,18 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#fdf6f3;color:#3a2020;mi
 /* ── GOOGLE AGENDA BANNER ── */
 @keyframes gcalSlideUp{from{opacity:0;transform:translateX(-50%) translateY(16px);}to{opacity:1;transform:translateX(-50%) translateY(0);}}
 
+/* ── TELA DE BOOT (evita flash do login-screen antes da sessão resolver) ── */
+#boot-loading{
+  position:fixed;inset:0;z-index:99999;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;
+  background:#fdf0eb;
+}
+.boot-spinner{
+  width:30px;height:30px;border:3px solid var(--rose-light);border-top-color:var(--rose);
+  border-radius:50%;animation:boot-spin .7s linear infinite;
+}
+@keyframes boot-spin{to{transform:rotate(360deg);}}
+
 /* ── LOGIN SCREEN — Modelo 2 ── */
 #login-screen{
   display:flex;align-items:stretch;justify-content:center;
@@ -947,6 +959,31 @@ body.demo-mode .mobile-bottom-nav{z-index:998;}
 }
 .topnav-avatar:hover { border-color: rgba(255,255,255,.6); transform: scale(1.08); }
 
+/* ── TOOLTIP CUSTOMIZADO (substitui o title="" padrão do navegador) ──
+   Uso: class="rw-tooltip" + data-tooltip="Texto" no elemento. */
+.rw-tooltip { position: relative; }
+.rw-tooltip::after {
+  content: attr(data-tooltip);
+  position: absolute; top: calc(100% + 9px); right: 0;
+  background: var(--rose-dark); color: #fff;
+  font-family: inherit; font-size: 12px; font-weight: 600; white-space: nowrap;
+  padding: 6px 12px; border-radius: 8px;
+  box-shadow: 0 6px 18px rgba(122,48,32,.28);
+  opacity: 0; visibility: hidden; transform: translateY(-4px);
+  transition: opacity .16s ease, transform .16s ease, visibility .16s;
+  pointer-events: none; z-index: 1000;
+}
+.rw-tooltip::before {
+  content: ''; position: absolute; top: 100%; right: 10px;
+  border: 5px solid transparent; border-bottom-color: var(--rose-dark);
+  opacity: 0; visibility: hidden; transform: translateY(-4px);
+  transition: opacity .16s ease, transform .16s ease, visibility .16s;
+  pointer-events: none; z-index: 1000;
+}
+.rw-tooltip:hover::after, .rw-tooltip:hover::before,
+.rw-tooltip:focus-visible::after, .rw-tooltip:focus-visible::before {
+  opacity: 1; visibility: visible; transform: translateY(0);
+}
 
 /* ── HOME HERO BANNER (Modelo 2) ── */
 .home-hero-banner {

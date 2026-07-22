@@ -42,6 +42,20 @@
   </div>
 </div>
 
+<!-- ══════ TELA DE BOOT (evita "flash" do login-screen errado antes da
+     sessão ser verificada — cobre tudo até saber se mostra o painel ou
+     redireciona) ══════ -->
+<div id="boot-loading">
+  <svg width="44" height="44" viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg">
+    <line x1="18" y1="14" x2="54" y2="14" stroke="#d4735a" stroke-width="5" stroke-linecap="round"/>
+    <line x1="22" y1="14" x2="22" y2="62" stroke="#d4735a" stroke-width="5" stroke-linecap="round"/>
+    <line x1="33" y1="14" x2="33" y2="62" stroke="#d4735a" stroke-width="5" stroke-linecap="round"/>
+    <path d="M33 14 Q58 14 58 33 Q58 51 33 51" fill="none" stroke="#d4735a" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+    <line x1="33" y1="51" x2="56" y2="62" stroke="#d4735a" stroke-width="5" stroke-linecap="round"/>
+  </svg>
+  <div class="boot-spinner"></div>
+</div>
+
 <!-- ══════════════ LOGIN ══════════════ -->
 <div id="login-screen">
   <!-- Painel esquerdo decorativo -->
@@ -80,14 +94,14 @@
   <!-- Painel direito — formulário -->
   <div class="login-panel-right">
     <a href="index.html" class="lpr-back"><i class="ti ti-arrow-left"></i> Página inicial</a>
-    <div class="lpr-heading">Bem-vinda de volta! 👋</div>
+    <div class="lpr-heading">Bem-vindo de volta!</div>
     <div class="lpr-subheading">Entre com suas credenciais para acessar a clínica</div>
     <!-- login-card mantido como wrapper invisível para compatibilidade JS -->
     <div class="login-card lpr-form">
       <div class="login-logo" style="display:none"><div id="login-title-compat"></div></div>
       <div class="login-sub" style="display:none" id="login-sub-compat"></div>
       <label for="login-email">E-mail</label>
-      <input type="email" id="login-email" placeholder="secretaria@clinica.com" autocomplete="username" />
+      <input type="email" id="login-email" placeholder="clinica@email.com" autocomplete="username" />
       <label for="login-pass">Senha</label>
       <input type="password" id="login-pass" placeholder="••••••••" autocomplete="current-password" />
       <button class="btn-login" id="btn-login" onclick="doLogin()">
@@ -98,7 +112,6 @@
       </div>
       <div class="login-err" id="login-err"></div>
     </div>
-    <div class="lpr-clinica">Consultório Odontológico <strong>Rhaiza Barroso</strong></div>
   </div>
 </div>
 
@@ -169,7 +182,7 @@
     <div class="topnav-right">
       <button class="topnav-item" onclick="abrirBuscaGlobal()" title="Buscar (Ctrl+K)" style="padding:6px 8px;"><i class="ti ti-search" style="font-size:17px;"></i></button>
       <button class="topnav-item" data-tab="configuracoes" onclick="switchTab('configuracoes')" title="Configurações" style="padding:6px 8px;"><i class="ti ti-settings" style="font-size:17px;"></i></button>
-      <div class="topnav-avatar" id="logout-avatar" onclick="doLogout()" title="Sair">RW</div>
+      <div class="topnav-avatar rw-tooltip" id="logout-avatar" onclick="doLogout()" data-tooltip="Sair" tabindex="0">RW</div>
     </div>
   </div>
 

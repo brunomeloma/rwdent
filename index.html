@@ -35,43 +35,25 @@ h1, h2, .login-header h2, .brand-title {font-family: 'Instrument Serif', Georgia
 .login-page{display:flex;width:100%;min-height:100vh;}
 
 .login-brand{
-  flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
-  background:linear-gradient(160deg,#fdf6f3 0%,#f5ddd5 40%,#e8bfaf 100%);
-  padding:48px 36px;position:relative;overflow:hidden;
-}
-.login-brand::before{
-  content:'';position:absolute;top:-80px;right:-80px;width:320px;height:320px;
-  background:radial-gradient(circle,rgba(212,115,90,.12) 0%,transparent 70%);border-radius:50%;
-}
-.login-brand::after{
-  content:'';position:absolute;bottom:-60px;left:-60px;width:260px;height:260px;
-  background:radial-gradient(circle,rgba(122,48,32,.08) 0%,transparent 70%);border-radius:50%;
+  flex:1;display:flex;flex-direction:column;align-items:flex-start;justify-content:flex-end;
+  background:
+    linear-gradient(180deg,rgba(20,10,6,0) 0%,rgba(20,10,6,.55) 55%,rgba(15,8,5,.65) 100%),
+    url('assets/login-hero.png') center/cover no-repeat;
+  padding:44px 40px;position:relative;overflow:hidden;
 }
 
 .brand-logo{
-  position:relative;z-index:1;margin-bottom:16px;
-  width:90px;height:90px;background:rgba(255,255,255,.6);border-radius:22px;
+  position:relative;z-index:1;margin-bottom:14px;
+  width:44px;height:44px;background:rgba(255,255,255,.92);border-radius:12px;
   display:flex;align-items:center;justify-content:center;
-  box-shadow:0 8px 28px rgba(122,48,32,.12);backdrop-filter:blur(8px);
-  border:1px solid rgba(212,115,90,.1);
+  box-shadow:0 6px 18px rgba(0,0,0,.25);
+  font-family:'Instrument Serif',Georgia,serif;font-size:22px;color:var(--rose-dark);
 }
-.brand-title{font-size:2.2rem;font-weight:400;color:var(--rose-dark);letter-spacing:-1px;position:relative;z-index:1;}
-.brand-subtitle{font-size:.95rem;color:var(--rose-text);margin-top:6px;position:relative;z-index:1;opacity:.85;}
-
-.brand-features{
-  display:flex;flex-direction:column;gap:14px;margin-top:40px;position:relative;z-index:1;width:100%;max-width:320px;
+.brand-title{font-size:1.75rem;font-weight:400;color:#fff;letter-spacing:-.5px;position:relative;z-index:1;}
+.brand-subtitle{
+  font-family:'Instrument Serif',Georgia,serif;font-size:.95rem;color:#fff;opacity:.88;
+  margin-top:10px;max-width:340px;line-height:1.5;position:relative;z-index:1;
 }
-.brand-feat{
-  display:flex;align-items:center;gap:14px;background:rgba(255,255,255,.55);
-  backdrop-filter:blur(10px);border-radius:14px;padding:14px 18px;
-  border:1px solid rgba(212,115,90,.12);transition:transform .2s;
-}
-.brand-feat:hover{transform:translateX(4px);}
-.brand-feat-icon{
-  width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;
-  background:linear-gradient(135deg,var(--rose),var(--rose-dark));color:#fff;font-size:18px;
-}
-.brand-feat-text{font-size:13px;font-weight:600;color:var(--rose-dark);}
 
 /* ── PAINEL DIREITO (LOGIN) ── */
 .login-panel{
@@ -80,36 +62,40 @@ h1, h2, .login-header h2, .brand-title {font-family: 'Instrument Serif', Georgia
   box-shadow:-20px 0 60px rgba(122,48,32,.06);
 }
 
-.login-header{text-align:center;margin-bottom:32px;}
-.login-header h2{font-size:1.5rem;font-weight:400;color:var(--rose-dark);}
-.login-header p{font-size:13px;color:var(--rose-text);margin-top:6px;}
+.login-header{text-align:left;margin-bottom:28px;}
+.login-header h2{font-size:20px;font-weight:400;color:var(--rose-dark);}
+.login-header p{font-size:13px;color:#767676;margin-top:6px;}
 
 .login-form{width:100%;max-width:360px;}
 
-.tabs{display:flex;background:var(--rose-lighter);border-radius:14px;padding:4px;gap:4px;margin-bottom:28px;}
-.tab-btn{flex:1;border:none;background:none;padding:11px;border-radius:11px;font-size:13px;font-weight:700;color:var(--rose-text);cursor:pointer;transition:all .2s;font-family:inherit;}
-.tab-btn.active{background:#fff;color:var(--rose-dark);box-shadow:0 2px 8px rgba(212,115,90,.18);}
+.tabs{display:flex;gap:26px;border-bottom:1px solid var(--rose-light);margin-bottom:28px;}
+.tab-btn{
+  flex:none;border:none;background:none;padding:0 0 12px;font-size:14px;font-weight:600;
+  color:#9a9a9a;cursor:pointer;transition:color .2s,border-color .2s;font-family:inherit;
+  border-bottom:2px solid transparent;border-radius:0;margin-bottom:-1px;
+}
+.tab-btn.active{background:none;color:var(--rose-dark);box-shadow:none;border-bottom-color:var(--rose);}
 
 .form-group{margin-bottom:18px;}
-.form-group label{display:block;font-size:11px;font-weight:700;color:var(--rose-text);text-transform:uppercase;letter-spacing:.5px;margin-bottom:7px;}
-.form-group input{width:100%;border:1.5px solid var(--rose-light);border-radius:12px;padding:13px 16px;font-size:14px;color:#3a2020;background:var(--rose-lighter);outline:none;transition:border .2s,box-shadow .2s,background .2s;font-family:inherit;}
-.form-group input:focus{border-color:var(--rose);background:#fff;box-shadow:0 0 0 3px rgba(212,115,90,.14);}
-.form-group input::placeholder{color:#c0a098;}
+.form-group label{display:block;font-size:12px;font-weight:600;color:#8a8a8a;margin-bottom:6px;}
+.form-group input{width:100%;border:1px solid #e4e0dd;border-radius:8px;padding:12px 14px;font-size:14px;color:#3a2020;background:#fff;outline:none;transition:border .2s,box-shadow .2s;font-family:inherit;}
+.form-group input:focus{border-color:var(--rose);box-shadow:0 0 0 3px rgba(212,115,90,.12);}
+.form-group input::placeholder{color:#b8b3ae;}
+.form-group input:-webkit-autofill{-webkit-text-fill-color:#3a2020;-webkit-box-shadow:0 0 0 1000px #fff inset;transition:background-color 9999s;}
 .form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
 
 .btn-primary{
-  width:100%;background:linear-gradient(135deg,var(--rose),var(--rose-dark));color:#fff;border:none;
-  border-radius:12px;padding:14px;font-size:15px;font-weight:700;cursor:pointer;
-  transition:all .3s cubic-bezier(0.16, 1, 0.3, 1);margin-top:6px;
+  width:100%;background:var(--rose);color:#fff;border:none;
+  border-radius:10px;padding:12px;font-size:15px;font-weight:700;cursor:pointer;
+  transition:background .2s;margin-top:6px;
   display:flex;align-items:center;justify-content:center;gap:8px;font-family:inherit;
-  box-shadow:0 8px 24px rgba(212,115,90,.3);
 }
-.btn-primary:hover{opacity:.95;transform:translateY(-2px);box-shadow:0 12px 35px rgba(212,115,90,.45);}
-.btn-primary:active{transform:scale(.98);}
+.btn-primary:hover{background:var(--rose-dark);}
+.btn-primary:active{opacity:.9;}
 .btn-primary:disabled{opacity:.6;cursor:not-allowed;}
 
-.link-btn{background:none;border:none;color:var(--rose-text);font-size:12px;cursor:pointer;text-decoration:underline;font-family:inherit;transition:color .2s;}
-.link-btn:hover{color:var(--rose-dark);}
+.link-btn{background:none;border:none;color:#9a9a9a;font-size:12px;cursor:pointer;text-decoration:none;font-family:inherit;transition:color .2s;}
+.link-btn:hover{color:var(--rose-dark);text-decoration:underline;}
 
 .alert{border-radius:10px;padding:10px 14px;font-size:13px;margin-top:14px;display:none;line-height:1.5;}
 .alert.show{display:block;}
@@ -138,9 +124,8 @@ h1, h2, .login-header h2, .brand-title {font-family: 'Instrument Serif', Georgia
 @media(max-width:860px){
   .login-page{flex-direction:column;}
   .login-brand{
-    flex:none;padding:32px 24px 28px;min-height:auto;
+    flex:none;padding:28px 24px 24px;min-height:240px;
   }
-  .brand-features{display:none;}
   .login-panel{
     width:100%;min-width:0;flex:1;padding:32px 24px;
     box-shadow:0 -10px 40px rgba(122,48,32,.08);border-radius:28px 28px 0 0;
@@ -159,36 +144,9 @@ h1, h2, .login-header h2, .brand-title {font-family: 'Instrument Serif', Georgia
 <div class="login-page">
   <!-- LADO ESQUERDO — BRANDING -->
   <div class="login-brand">
-    <div class="brand-logo">
-      <svg width="52" height="52" viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg">
-        <line x1="18" y1="14" x2="54" y2="14" stroke="var(--rose-dark)" stroke-width="4" stroke-linecap="round"/>
-        <line x1="22" y1="14" x2="22" y2="62" stroke="var(--rose-dark)" stroke-width="4" stroke-linecap="round"/>
-        <line x1="33" y1="14" x2="33" y2="62" stroke="var(--rose-dark)" stroke-width="4" stroke-linecap="round"/>
-        <path d="M33 14 Q58 14 58 33 Q58 51 33 51" fill="none" stroke="var(--rose-dark)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
-        <line x1="33" y1="51" x2="56" y2="62" stroke="var(--rose-dark)" stroke-width="4" stroke-linecap="round"/>
-      </svg>
-    </div>
+    <div class="brand-logo">R</div>
     <div class="brand-title">RWDent</div>
-    <div class="brand-subtitle">Gestão Odontológica Inteligente</div>
-
-    <div class="brand-features">
-      <div class="brand-feat">
-        <div class="brand-feat-icon"><i class="ti ti-calendar-event"></i></div>
-        <div class="brand-feat-text">Agenda e agendamentos inteligentes</div>
-      </div>
-      <div class="brand-feat">
-        <div class="brand-feat-icon"><i class="ti ti-stethoscope"></i></div>
-        <div class="brand-feat-text">Prontuário e plano de tratamento</div>
-      </div>
-      <div class="brand-feat">
-        <div class="brand-feat-icon"><i class="ti ti-chart-bar"></i></div>
-        <div class="brand-feat-text">Controle financeiro completo</div>
-      </div>
-      <div class="brand-feat">
-        <div class="brand-feat-icon"><i class="ti ti-package"></i></div>
-        <div class="brand-feat-text">Estoque e materiais odontológicos</div>
-      </div>
-    </div>
+    <div class="brand-subtitle">Agenda, prontuário e financeiro em um só lugar, pensado para clínicas modernas.</div>
   </div>
 
   <!-- LADO DIREITO — LOGIN -->

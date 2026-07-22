@@ -373,6 +373,7 @@ function _sessionStartTimer(){
           banner.classList.add('active');
         }
         await loadAll();
+        document.getElementById('boot-loading').style.display='none';
         document.getElementById('login-screen').style.display='none';
         document.getElementById('app').style.display='block';
         _sessionStartTimer();
@@ -383,7 +384,11 @@ function _sessionStartTimer(){
   } catch(e){
     console.warn('Erro sessão:', e.message);
   }
-  // Sem sessão — redireciona para login
+  // Sem sessão (ou clínica pendente/inexistente, já tratado dentro de
+  // checkClinicaApproval) — sempre acaba redirecionando pra index.html,
+  // então o login-screen daqui nunca chega a ser o estado final; só
+  // esconde o boot antes de navegar, por segurança.
+  document.getElementById('boot-loading').style.display='none';
   window.location.replace('index.html');
 })();
 
