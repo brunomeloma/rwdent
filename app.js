@@ -4503,11 +4503,14 @@ function pacDenteFiltrarProcs(){
   }
   const lista = (q ? procs.filter(p=>p.nome.toLowerCase().includes(q)) : procs).filter(p=>p.ativo!==false);
   if(!lista.length){ opts.innerHTML="<div style='padding:12px;color:var(--rose-text);text-align:center;font-size:13px;'>Nenhum encontrado</div>"; return; }
-  const grupos = [...new Set(lista.map(p=>p.grupo).filter(Boolean))].sort();
+  // Procedimento sem "Grupo" preenchido (campo opcional no cadastro) cai em
+  // "Procedimentos" — sem esse fallback ele simplesmente sumia da lista
+  // (achado testando o fluxo do odontograma).
+  const grupos = [...new Set(lista.map(p=>p.grupo || 'Procedimentos'))].sort();
   let html = '';
   grupos.forEach(g=>{
     html += `<div style='padding:4px 10px;font-size:10px;font-weight:700;color:var(--rose-text);text-transform:uppercase;background:var(--rose-lighter);'>${escapeHtml(g)}</div>`;
-    lista.filter(p=>p.grupo===g).forEach(p=>{
+    lista.filter(p=>(p.grupo || 'Procedimentos')===g).forEach(p=>{
       const glob = procIsGlobal(p.nome);
       const tag  = glob
         ? '<span style="font-size:10px;background:#e3f2fd;color:#0c5460;border-radius:4px;padding:1px 5px;">Global</span>'
@@ -4718,11 +4721,13 @@ function pacOdontoFiltrarProcs(){
   if(pacOdontoOrcCategoriaAtiva) lista = lista.filter(function(p){return p.grupo===pacOdontoOrcCategoriaAtiva;});
   if(q) lista = lista.filter(function(p){return p.nome.toLowerCase().includes(q);});
   if(!lista.length){ opts.innerHTML="<div style='padding:12px;color:var(--rose-text);text-align:center;'>Nenhum encontrado</div>"; return; }
-  var grupos=[...new Set(lista.map(function(p){return p.grupo;}).filter(Boolean))].sort();
+  // Mesmo fallback do pacDenteFiltrarProcs: sem "Grupo" preenchido cai em
+  // "Procedimentos" em vez de sumir da lista.
+  var grupos=[...new Set(lista.map(function(p){return p.grupo || 'Procedimentos';}))].sort();
   var html2="";
   grupos.forEach(function(g){
     html2+="<div style='padding:4px 10px;font-size:10px;font-weight:700;color:var(--rose-text);text-transform:uppercase;background:var(--rose-lighter);'>"+escapeHtml(g)+"</div>";
-    lista.filter(function(p){return p.grupo===g;}).forEach(function(p){
+    lista.filter(function(p){return (p.grupo || 'Procedimentos')===g;}).forEach(function(p){
       var preco=(p.precoFinal||0).toFixed(2).replace(".",",");
       html2+="<div data-pid='"+p.id+"' style='padding:10px 14px;cursor:pointer;font-size:13px;border-bottom:1px solid var(--rose-light);display:flex;justify-content:space-between;gap:8px;'><span>"+escapeHtml(p.nome)+"</span><span style='color:var(--rose-dark);font-weight:700;'>R$ "+preco+"</span></div>";
     });
