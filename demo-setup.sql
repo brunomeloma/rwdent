@@ -5,9 +5,16 @@
 
 -- ⚠️ ANTES: Crie o usuário no Authentication → Users → Add User:
 --   Email: demo@rwdent.app
---   Password: demo2024rwdent
+--   Password: (qualquer uma na criação — vai ser trocada no passo abaixo,
+--              nunca fica valendo a senha usada aqui)
 --   Auto Confirm: ✅
 -- Depois copie o user_id e cole abaixo:
+--
+-- ⚠️ DEPOIS de rodar este script: entra no Painel Admin → seção "Conta
+-- demo" → botão "Gerar nova senha da demo" (api/admin-reset-demo-password.js)
+-- pra definir a senha de verdade. Isso gera uma senha aleatória forte na
+-- hora — nunca deixe uma senha fixa/adivinhável valendo pra essa conta,
+-- já que ela fica disponível publicamente pra qualquer prospect testar.
 
 -- ══════════════════════════════════════════════════════
 -- 1. TROCAR PELO USER_ID DO DEMO (copie do Authentication)

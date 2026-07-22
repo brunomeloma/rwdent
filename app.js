@@ -24,6 +24,14 @@ let currentUser = null;
 let clinicaId = null;       // ID da clínica do usuário logado (multi-tenant)
 let clinicaData = null;     // Dados completos da clínica
 let _isRhaizaClinic = false; // Recursos exclusivos da clínica Rhaiza
+// Só usado pra mostrar/esconder botão na tela mais rápido (evita esperar
+// uma chamada ao servidor só pra saber se mostra o menu Admin). NÃO é a
+// trava de segurança de verdade — cada ação de admin (loadAdminPanel,
+// api/mercadopago-criar-assinatura, api/admin-reset-demo-password) refaz a
+// checagem real no servidor via rpc('rwdent_is_admin')/RLS, que lê da
+// tabela admin_users. Se esta lista ficar desatualizada, o pior caso é
+// alguém não ver um botão que deveria — nunca conseguir uma ação que não
+// devia.
 const _ADMIN_IDS = ['09f21b22-76c8-4aee-8af4-9fc292ff08d4','b39d8b67-0610-4708-9733-104db7f0307b'];
 
 // Calendário state

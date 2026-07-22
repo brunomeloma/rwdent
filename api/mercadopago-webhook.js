@@ -54,9 +54,16 @@ module.exports = async function handler(req, res) {
     return res.status(200).json({ ok: true }); // sempre 200 pro MP não ficar retentando à toa
   }
 
+  // assinaturaOk: true = bateu | false = presente e NÃO bateu (bloqueia) |
+  // null = inconclusivo (sem secret configurado, ou aviso sem os cabeçalhos
+  // de assinatura — formato IPN antigo às vezes não manda) — nesse caso
+  // deixa passar, já que não dá pra concluir nada. Endpoint já estável há
+  // um tempo, então uma assinatura presente e errada agora é motivo real
+  // pra bloquear, não só logar (achado em pentest interno).
   const assinaturaOk = verificarAssinatura(req, webhookSecret);
   if (assinaturaOk === false) {
-    console.warn('[mp-webhook] ALERTA: assinatura x-signature não bateu — aviso pode não ser genuíno. Prosseguindo mesmo assim (a decisão real depende da confirmação via API, não deste header), mas vale investigar se isso persistir.');
+    console.warn('[mp-webhook] BLOQUEADO: assinatura x-signature presente mas não bateu — aviso não é genuíno, ignorando.');
+    return res.status(200).json({ ok: true }); // 200 pro MP não reenviar, mas não processa nada
   }
 
   const body = req.body || {};
