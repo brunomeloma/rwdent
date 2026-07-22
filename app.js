@@ -381,12 +381,13 @@ function _sessionStartTimer(){
       currentUser=session.user;
       const ok = await checkClinicaApproval();
       if(ok){
-        // Verifica expiração da conta (trial 24h)
+        // Verifica expiração da conta (trial/assinatura)
         if(clinicaData.expira_em){
           const expiraEm = new Date(clinicaData.expira_em);
           if(Date.now() > expiraEm.getTime()){
-            await _sb.auth.signOut();
-            window.location.replace('index.html?msg=demo_expirado');
+            // Mantém a sessão ativa — index.html detecta o vencimento e mostra
+            // a tela de "Assinar agora" (precisa do token pra chamar a API).
+            window.location.replace('index.html');
             return;
           }
           document.body.classList.add('demo-mode');
@@ -403,6 +404,7 @@ function _sessionStartTimer(){
         document.getElementById('app').style.display='block';
         _sessionStartTimer();
         window.aiOnLogin?.();
+        iniciarTourSePrimeiraVez();
         return;
       }
     }
@@ -7342,6 +7344,102 @@ async function carregarPadroes(confirm_ask=true){
 // ── Modais (reutiliza funções existentes do app) ──
 function openModal(id){ const m=document.getElementById(id); if(m) m.classList.add('open'); }
 function closeModal(id){ const m=document.getElementById(id); if(m) m.classList.remove('open'); }
+
+// ── TOUR GUIADO ──
+// Passo a passo pelas telas principais, pra quem tá usando o sistema pela
+// primeira vez (dona da clínica ou secretária) e não tem alguém do lado
+// explicando. Roda sozinho no primeiro login de cada usuário — guardado no
+// localStorage por user id, então cada pessoa que loga na clínica vê o tour
+// uma vez — e pode ser refeito a qualquer momento em Configurações.
+const TOUR_STEPS = [
+  { title:'Bem-vinda ao RWDent!', text:'Um tour rápido pelas telas principais — leva menos de 1 minuto. Pode pular a qualquer momento.', selector:null },
+  { title:'Início', text:'Aqui você vê um resumo do seu dia: consultas de hoje, faturamento, aniversariantes e pacientes pra dar retorno.', selector:'.topnav-item[data-tab="home"]', tab:'home' },
+  { title:'Agenda', text:'Marque novas consultas, veja a agenda do dia ou o calendário do mês inteiro.', selector:'#tng-agenda .tn-group-btn' },
+  { title:'Pacientes', text:'Cadastre pacientes, prontuário, odontograma e fotos — tudo dentro do perfil de cada um.', selector:'.topnav-item[data-tab="pacientes"]', tab:'pacientes' },
+  { title:'Vendas', text:'Registre uma venda rápida de procedimento, tipo um PDV — pra quando o paciente já vai pagar na hora.', selector:'.topnav-item[data-tab="venda_rapida"]', tab:'venda_rapida' },
+  { title:'Financeiro', text:'Acompanhe faturamento, tabela de preços, materiais e estoque — dá pra proteger o faturamento com um PIN em Configurações.', selector:'#tng-fin .tn-group-btn' },
+  { title:'Busca rápida', text:'Aperte Ctrl+K (ou clique na lupa) a qualquer momento pra achar um paciente na hora.', selector:'button[onclick="abrirBuscaGlobal()"]' },
+  { title:'Configurações', text:'Ajuste os dados da clínica, os preços dos procedimentos e o PIN do faturamento por aqui.', selector:'.topnav-item[data-tab="configuracoes"]', tab:'configuracoes' },
+  { title:'Pronto!', text:'Se quiser rever esse tour depois, é só clicar em "Rever o tour guiado" lá em Configurações.', selector:null }
+];
+let _tourStep = 0;
+
+function _tourChaveLocalStorage(){
+  return 'rwdent_tour_visto_' + (currentUser?.id || 'anon');
+}
+function _tourJaVisto(){
+  try { return localStorage.getItem(_tourChaveLocalStorage()) === '1'; } catch(e){ return true; }
+}
+function _tourMarcarVisto(){
+  try { localStorage.setItem(_tourChaveLocalStorage(), '1'); } catch(e){}
+}
+function iniciarTourSePrimeiraVez(){
+  if(_tourJaVisto()) return;
+  setTimeout(()=>iniciarTour(), 700);
+}
+function iniciarTour(){
+  _tourStep = 0;
+  tourMostrarPasso();
+}
+function pularTour(){
+  _tourMarcarVisto();
+  document.getElementById('tour-highlight').style.display = 'none';
+  document.getElementById('tour-box').style.display = 'none';
+}
+function tourProximo(){
+  _tourStep++;
+  if(_tourStep >= TOUR_STEPS.length){ pularTour(); return; }
+  tourMostrarPasso();
+}
+function tourAnterior(){
+  if(_tourStep<=0) return;
+  _tourStep--;
+  tourMostrarPasso();
+}
+function tourMostrarPasso(){
+  const step = TOUR_STEPS[_tourStep];
+  if(step.tab){ try{ switchTab(step.tab); }catch(e){} }
+
+  document.getElementById('tour-title').textContent = step.title;
+  document.getElementById('tour-text').textContent = step.text;
+  document.getElementById('tour-progress').textContent = (_tourStep+1)+' / '+TOUR_STEPS.length;
+  document.getElementById('tour-btn-anterior').style.visibility = _tourStep===0?'hidden':'visible';
+  document.getElementById('tour-btn-proximo').textContent = _tourStep===TOUR_STEPS.length-1 ? 'Concluir' : 'Próximo';
+
+  const highlight = document.getElementById('tour-highlight');
+  const box = document.getElementById('tour-box');
+  const target = step.selector ? document.querySelector(step.selector) : null;
+  highlight.style.display = 'block';
+  box.style.display = 'block';
+
+  if(target){
+    const r = target.getBoundingClientRect();
+    highlight.style.left = (r.left-6)+'px';
+    highlight.style.top = (r.top-6)+'px';
+    highlight.style.width = (r.width+12)+'px';
+    highlight.style.height = (r.height+12)+'px';
+
+    let boxTop = r.bottom + 14;
+    const boxLeft = Math.min(Math.max(8, r.left), window.innerWidth - 336);
+    box.style.left = boxLeft + 'px';
+    const boxHeight = box.offsetHeight || 140;
+    if(boxTop + boxHeight > window.innerHeight) boxTop = Math.max(8, r.top - boxHeight - 14);
+    box.style.top = boxTop + 'px';
+  } else {
+    // Sem alvo (boas-vindas/despedida): "buraco" 1x1 no centro — escurece a
+    // tela toda — e a caixinha do tour fica centralizada por cima.
+    highlight.style.left = '50%';
+    highlight.style.top = '50%';
+    highlight.style.width = '1px';
+    highlight.style.height = '1px';
+    const boxHeight = box.offsetHeight || 140;
+    box.style.left = ((window.innerWidth-320)/2) + 'px';
+    box.style.top = ((window.innerHeight-boxHeight)/2) + 'px';
+  }
+}
+window.addEventListener('resize', ()=>{
+  if(document.getElementById('tour-box')?.style.display==='block') tourMostrarPasso();
+});
 
 
 // Insumos pré-configurados por procedimento (baseado em literatura odontológica)

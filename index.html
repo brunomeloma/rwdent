@@ -246,6 +246,20 @@ h1, h2, .login-header h2, .brand-title {font-family: 'Instrument Serif', Georgia
           <p style="margin-top:10px;">Execute o SQL do <strong>SETUP_SUPABASE.md</strong> no Supabase e recarregue a página.</p>
         </div>
       </div>
+
+      <!-- ACESSO EXPIRADO -->
+      <div id="panel-expirado" style="display:none;">
+        <div class="pending-box">
+          <div class="pending-icon" style="color:#b33;"><i class="ti ti-credit-card-off"></i></div>
+          <h2 style="color:#b33;">Seu acesso expirou</h2>
+          <p>Assine o plano mensal (R$69,90) pra continuar usando o sistema — seus dados continuam salvos, nada é perdido.</p>
+          <button class="btn-primary" id="btn-renovar" onclick="renovarAssinatura()">
+            <i class="ti ti-credit-card"></i> <span id="btn-renovar-text">Assinar agora</span>
+          </button>
+          <button class="btn-secondary" onclick="doLogout()" style="margin-top:10px;"><i class="ti ti-logout"></i> Sair</button>
+          <div class="alert error" id="renovar-err"></div>
+        </div>
+      </div>
     </div>
 
     <div class="login-footer">
@@ -273,7 +287,7 @@ try {
 }
 
 function showPanel(name) {
-  ['loading','login','cadastro','pending','error'].forEach(p => {
+  ['loading','login','cadastro','pending','error','expirado'].forEach(p => {
     const el = document.getElementById('panel-' + p);
     if(el) el.style.display = 'none';
   });
@@ -330,11 +344,9 @@ async function checkAndRedirect(user) {
 
     if(perfil.status === 'aprovado') {
       if(perfil.expira_em && Date.now() > new Date(perfil.expira_em).getTime()){
-        await _sb.auth.signOut();
-        showPanel('login');
-        const errEl = document.getElementById('login-err');
-        errEl.textContent = 'Seu período de acesso expirou. Assine o plano completo para continuar.';
-        errEl.classList.add('show');
+        // Mantém a sessão ativa (não faz signOut) — o botão "Assinar agora"
+        // precisa do token pra chamar /api/mercadopago-renovar.
+        showPanel('expirado');
         return;
       }
       window.location.replace('app.html');
@@ -379,6 +391,33 @@ async function doLogin() {
   } finally {
     btn.disabled = false;
     document.getElementById('btn-login-text').textContent = 'Entrar';
+  }
+}
+
+async function renovarAssinatura(){
+  const btn   = document.getElementById('btn-renovar');
+  const txt   = document.getElementById('btn-renovar-text');
+  const errEl = document.getElementById('renovar-err');
+  errEl.classList.remove('show'); errEl.textContent = '';
+  btn.disabled = true; txt.textContent = 'Gerando link...';
+  try {
+    const { data:{ session } } = await _sb.auth.getSession();
+    const resp = await fetch('/api/mercadopago-renovar', {
+      method: 'POST',
+      headers: { 'Content-Type':'application/json', 'Authorization':'Bearer '+(session?.access_token||'') }
+    });
+    const json = await resp.json();
+    if(!resp.ok){
+      errEl.textContent = json.error || 'Erro ao gerar assinatura.';
+      errEl.classList.add('show');
+      return;
+    }
+    window.location.href = json.link;
+  } catch(e){
+    errEl.textContent = 'Erro de conexão: ' + e.message;
+    errEl.classList.add('show');
+  } finally {
+    btn.disabled = false; txt.textContent = 'Assinar agora';
   }
 }
 
@@ -472,7 +511,6 @@ document.addEventListener('keydown', e => {
   if(msg){
     const errEl = document.getElementById('login-err');
     const msgs = {
-      demo_expirado: 'Seu período de demonstração de 24h expirou. Assine o plano para continuar.',
       sem_clinica: 'Clínica não encontrada. Faça seu cadastro.',
       pendente: 'Seu cadastro ainda está aguardando aprovação.'
     };

@@ -43,6 +43,28 @@
   <button class="tn-dropdown-item" id="prm-dup"><i class="ti ti-copy"></i> Duplicar</button>
 </div>
 
+<!-- ══════ TOUR GUIADO ══════
+     "Buraco de luz": #tour-highlight fica exatamente sobre o elemento
+     destacado e usa um box-shadow gigante pra escurecer o resto da tela em
+     volta — não precisa de uma camada extra de overlay. Nos passos sem alvo
+     (boas-vindas/despedida) ele vira uma caixinha 1x1 no centro, então o
+     "buraco" fica pequeno demais pra aparecer e a tela toda escurece. -->
+<div id="tour-highlight" style="display:none;position:fixed;z-index:5000;border-radius:10px;box-shadow:0 0 0 9999px rgba(30,15,10,.6);transition:all .25s cubic-bezier(.4,0,.2,1);pointer-events:auto;"></div>
+<div id="tour-box" style="display:none;position:fixed;z-index:5001;background:#fff;border-radius:14px;padding:18px;width:320px;max-width:90vw;box-shadow:0 12px 40px rgba(0,0,0,.35);">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;gap:8px;">
+    <strong id="tour-title" style="font-size:15px;color:var(--rose-dark);"></strong>
+    <span id="tour-progress" style="font-size:11px;color:var(--rose-text);white-space:nowrap;"></span>
+  </div>
+  <p id="tour-text" style="font-size:13px;color:#5a4038;line-height:1.5;margin-bottom:16px;"></p>
+  <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
+    <button class="btn-secondary" onclick="pularTour()" style="font-size:12px;padding:8px 12px;">Pular tour</button>
+    <div style="display:flex;gap:8px;">
+      <button class="btn-secondary" id="tour-btn-anterior" onclick="tourAnterior()" style="font-size:12px;padding:8px 12px;">Voltar</button>
+      <button class="btn-primary" id="tour-btn-proximo" onclick="tourProximo()" style="font-size:12px;padding:8px 14px;">Próximo</button>
+    </div>
+  </div>
+</div>
+
 <!-- ══════ BUSCA GLOBAL (Ctrl+K) ══════ -->
 <div class="search-overlay" id="search-overlay" onclick="if(event.target===this)fecharBuscaGlobal()">
   <div class="search-box">
@@ -1849,6 +1871,10 @@
             <button class="btn-primary" onclick="salvarConfiguracoes()"><i class="ti ti-check"></i> Salvar alterações</button>
           </div>
           <hr style="border-color:var(--rose-light);margin:24px 0;"/>
+          <h2 style="font-size:13px;font-weight:700;color:var(--rose-dark);margin-bottom:14px;display:flex;align-items:center;gap:8px;text-transform:uppercase;letter-spacing:.5px;"><i class="ti ti-route"></i> Tour guiado</h2>
+          <p style="font-size:12px;color:var(--rose-text);margin-bottom:14px;">Um passo a passo rápido pelas telas principais — bom pra ensinar alguém novo a usar o sistema sem precisar ficar explicando tudo.</p>
+          <button class="btn-secondary" onclick="iniciarTour()"><i class="ti ti-player-play"></i> Rever o tour guiado</button>
+          <hr style="border-color:var(--rose-light);margin:24px 0;"/>
           <h2 style="font-size:13px;font-weight:700;color:var(--rose-dark);margin-bottom:14px;display:flex;align-items:center;gap:8px;text-transform:uppercase;letter-spacing:.5px;"><i class="ti ti-credit-card"></i> Taxas da Maquininha</h2>
           <p style="font-size:12px;color:var(--rose-text);margin-bottom:14px;">Configure as taxas para mostrar o valor líquido nos orçamentos e vendas.</p>
           <div class="form-grid" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr));">
@@ -2051,7 +2077,7 @@
   <div style="color:var(--rose-text);font-size:14px;">Carregando...</div>
 </div>
 
-<script src="app.js?v=20"></script>
+<script src="app.js?v=21"></script>
 
 <!-- ══ MODAL RELATÓRIO MENSAL ══ -->
 <div class="modal-overlay" id="modal-relatorio" onclick="if(event.target===this)closeModal('modal-relatorio')" style="align-items:flex-start;padding-top:40px;overflow-y:auto;">
