@@ -529,8 +529,10 @@ function toggleMobileMore(){
   if(ov) ov.classList.toggle('show');
 }
 
-// ── PIN do financeiro ──
-const FIN_PIN_TABS = ['financeiro','vendas_fin','procedimentos_fin','materiais_fin','estoque_fin'];
+// ── PIN operacional (recepção/secretária) — dá acesso a vendas/estoque/
+// procedimentos, mas NÃO ao faturamento agregado (isso é o PIN financeiro,
+// mais abaixo). 'financeiro' saiu daqui de propósito.
+const FIN_PIN_TABS = ['vendas_fin','procedimentos_fin','materiais_fin','estoque_fin'];
 async function _hashPin(pin){
   const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('rwdent:'+pin));
   return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
@@ -577,13 +579,70 @@ function atualizarFinPinStatus(){
   const el = document.getElementById('fin-pin-status');
   if(!el) return;
   el.innerHTML = cfg && cfg.finPinHash
-    ? '<span style="color:#2e7d32;font-weight:700;"><i class="ti ti-lock"></i> PIN ativo — abas financeiras protegidas.</span>'
+    ? '<span style="color:#2e7d32;font-weight:700;"><i class="ti ti-lock"></i> PIN ativo — Vendas/Procedimentos/Materiais/Estoque protegidos.</span>'
     : '<span style="color:var(--rose-text);"><i class="ti ti-lock-open"></i> Nenhum PIN definido.</span>';
+}
+
+// ── PIN FINANCEIRO — protege o faturamento agregado (Home, Painel
+// Financeiro, Produtividade, Comissões). Diferente do PIN operacional
+// acima: o hash NUNCA é carregado pro navegador (fica numa tabela própria,
+// só acessível pela service role dentro de api/financeiro-pin.js), então
+// não dá pra atacar por força bruta no console como o outro. Verificado
+// uma vez por sessão de página (_finVerificado fica só em memória, reseta
+// ao recarregar).
+let _finVerificado = false;
+async function _finApi(body){
+  const { data:{ session } } = await _sb.auth.getSession();
+  const resp = await fetch('/api/financeiro-pin', {
+    method:'POST',
+    headers:{ 'Content-Type':'application/json', 'Authorization':'Bearer '+(session?.access_token||'') },
+    body: JSON.stringify(body)
+  });
+  const json = await resp.json().catch(()=>({}));
+  return { ok: resp.ok, json };
+}
+async function pedirFinPinFaturamento(){
+  if(_finVerificado) return true;
+  const pin = prompt('🔒 Faturamento protegido. Digite o PIN financeiro:');
+  if(pin===null) return false;
+  showLoading(true);
+  const { ok, json } = await _finApi({ action:'check', pin:String(pin).trim() });
+  showLoading(false);
+  if(!ok){ showToast(json.error||'PIN incorreto.','error'); return false; }
+  _finVerificado = true;
+  return true;
+}
+async function definirFinPinFaturamento(){
+  const novo = (document.getElementById('fin-pin-fat-input')?.value||'').trim();
+  const atual = (document.getElementById('fin-pin-fat-atual')?.value||'').trim();
+  if(!/^\d{4,6}$/.test(novo)){ showToast('O novo PIN deve ter de 4 a 6 dígitos.','warn'); return; }
+  showLoading(true);
+  const { ok, json } = await _finApi({ action:'set', pin:novo, pinAtual:atual });
+  showLoading(false);
+  if(!ok){ showToast(json.error||'Erro ao definir PIN financeiro.','error'); return; }
+  document.getElementById('fin-pin-fat-input').value='';
+  document.getElementById('fin-pin-fat-atual').value='';
+  _finVerificado = true; // quem acabou de definir/trocar já sabe o PIN novo
+  atualizarFinPinFaturamentoStatus();
+  showToast('PIN financeiro salvo!');
+}
+async function atualizarFinPinFaturamentoStatus(){
+  const el = document.getElementById('fin-pin-fat-status');
+  if(!el) return;
+  const { ok, json } = await _finApi({ action:'status' });
+  if(!ok){ el.innerHTML = '<span style="color:var(--rose-text);">Não foi possível checar o status agora.</span>'; return; }
+  el.innerHTML = json.hasPin
+    ? '<span style="color:#2e7d32;font-weight:700;"><i class="ti ti-shield-lock"></i> PIN financeiro ativo — faturamento protegido.</span>'
+    : '<span style="color:#b33;font-weight:700;"><i class="ti ti-shield-off"></i> Nenhum PIN financeiro definido — o faturamento fica visível pra quem tiver o PIN operacional!</span>';
 }
 
 function switchTab(tab){
   if(tab==='invisalign_apresentacao' && !_isRhaizaClinic) tab='home';
   if(finPinBloqueado(tab)){ pedirFinPin(tab); return; }
+  if(tab==='financeiro' && !_finVerificado){
+    pedirFinPinFaturamento().then(ok=>{ if(ok) switchTab('financeiro'); });
+    return;
+  }
   ['home','agendar','lista','calendario','pacientes','profissionais','configuracoes','financeiro','procedimentos_fin','materiais_fin','estoque_fin','vendas_fin','venda_rapida','resgate','captacao','invisalign_apresentacao','admin'].forEach(t=>{
     const el=document.getElementById('tab-'+t);
     if(el) el.style.display = t===tab?'':'none';
@@ -616,7 +675,7 @@ function switchTab(tab){
   if(tab==='pacientes') renderPatients();
   if(tab==='profissionais') renderProfissionais();
   if(tab==='home') renderHomeStats();
-  if(tab==='configuracoes'){ renderConfiguracoes(); atualizarFinPinStatus(); }
+  if(tab==='configuracoes'){ renderConfiguracoes(); atualizarFinPinStatus(); atualizarFinPinFaturamentoStatus(); }
   if(tab==='resgate') renderResgate();
   if(tab==='admin') loadAdminPanel();
   if(tab==='invisalign_apresentacao'){
@@ -685,8 +744,13 @@ function renderHomeStats(){
   const _mesStat = hoje_str.slice(0,7);
   const _fatMes = vendas.filter(v=>v.status==='finalizada'&&(v.data||v.dataFinal||'').slice(0,7)===_mesStat).reduce((a,v)=>a+(Number(v.total)||0),0);
   const _mesLabel = new Date(_mesStat+'-02').toLocaleDateString('pt-BR',{month:'long',year:'numeric'});
+  // Faturamento agregado só aparece com o PIN financeiro verificado nesta
+  // sessão — sem ele, mostra um cadeado clicável em vez do valor.
+  const _fatMesHtml = _finVerificado
+    ? fmtBRL(_fatMes)
+    : `<span onclick="pedirFinPinFaturamento().then(ok=>{if(ok)renderHomeStats();})" style="cursor:pointer;" title="Digite o PIN financeiro pra ver">🔒</span>`;
   document.getElementById('home-hero-stats').innerHTML = `
-    <div class="home-hero-stat"><div class="home-hero-stat-val">${fmtBRL(_fatMes)}</div><div class="home-hero-stat-lbl">Faturamento do mês</div></div>
+    <div class="home-hero-stat"><div class="home-hero-stat-val">${_fatMesHtml}</div><div class="home-hero-stat-lbl">Faturamento do mês</div></div>
     <div class="home-hero-stat"><div class="home-hero-stat-val">${hoje_count}</div><div class="home-hero-stat-lbl">Consultas hoje</div></div>
     <div class="home-hero-stat"><div class="home-hero-stat-val">${semana_count}</div><div class="home-hero-stat-lbl">Na semana</div></div>
     <div class="home-hero-stat"><div class="home-hero-stat-val">${pacientes.length}</div><div class="home-hero-stat-lbl">Pacientes</div></div>
@@ -698,7 +762,7 @@ function renderHomeStats(){
     </div>
     <div class="home-stat-card">
       <div class="home-stat-icon" style="background:#e8f5e9;color:#2e7d32;"><i class="ti ti-currency-dollar"></i></div>
-      <div><div class="home-stat-num money">${fmtBRL(_fatMes)}</div><div class="home-stat-label">Faturamento ${_mesLabel}</div></div>
+      <div><div class="home-stat-num money">${_fatMesHtml}</div><div class="home-stat-label">Faturamento ${_mesLabel}</div></div>
     </div>
     <div class="home-stat-card">
       <div class="home-stat-icon" style="background:#fff4e5;color:#e08a20;"><i class="ti ti-calendar"></i></div>
@@ -6814,16 +6878,15 @@ function renderVendas(){
     const txt=_norm((v.pacienteNome||'')+' '+(v.itens||[]).map(i=>i.nome||'').join(' '));
     return(!q||txt.includes(_norm(q)))&&(!sf||v.status===sf);
   }).slice().reverse();
-  const _periodo = _labelPeriodo('venda-mes','venda-ano');
   const fin     = _filtrarVendasPorPeriodo(vendas.filter(v=>v.status==='finalizada'), 'venda-mes','venda-ano');
-  const fat     = fin.reduce((a,v)=>a+(Number(v.total||v.total)||0),0);
-  const ticket  = fin.length ? fat/fin.length : 0;
   const orcAbertos = vendas.filter(v=>v.status==='orcamento').length;
+  // Faturamento/Ticket médio (agregado) saíram daqui de propósito — quem só
+  // tem o PIN operacional não deve ver o total, só o valor de cada venda
+  // individual (que continua na tabela abaixo). Esses números ficam no
+  // Painel Financeiro, protegidos pelo PIN financeiro.
   const vm = document.getElementById('vendas-metrics');
   if(vm) vm.innerHTML=[
-    {lbl:'Faturamento ('+_periodo+')',val:fmtBRL(fat),cor:'var(--rose-dark)'},
     {lbl:'Vendas finalizadas',val:fin.length,cor:'#2e7d32'},
-    {lbl:'Ticket médio',val:fmtBRL(ticket),cor:'#1565c0'},
     {lbl:'Orçamentos abertos',val:orcAbertos,cor:'#856404'},
   ].map(s=>`<div style="background:var(--rose-lighter);border:1px solid var(--rose-light);border-radius:12px;padding:12px 16px;">
     <div style="font-size:11px;color:var(--rose-text);">${s.lbl}</div>
@@ -11711,6 +11774,7 @@ ${v.desconto?`<p style="font-size:12px;text-align:right;color:#856404;">Desconto
 
 // ── RELATÓRIO POR PROFISSIONAL ──
 function relProdutividade(){
+  if(!_finVerificado){ pedirFinPinFaturamento().then(ok=>{ if(ok) relProdutividade(); }); return; }
   if(!vendas.length && !agendamentos.length){ showToast('Sem dados para gerar relatório.','warn'); return; }
   const mesAtual = new Date().toISOString().slice(0,7);
   const profStats = {};
@@ -11898,6 +11962,7 @@ function toggleComissoes(){
   const panel = document.getElementById('comissoes-panel');
   if(!panel) return;
   if(panel.style.display!=='none'){ panel.style.display='none'; return; }
+  if(!_finVerificado){ pedirFinPinFaturamento().then(ok=>{ if(ok) toggleComissoes(); }); return; }
   renderComissoes();
   panel.style.display='';
 }
