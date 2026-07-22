@@ -1,0 +1,82 @@
+-- RWDent — Verificação de segurança em UMA TABELA SÓ (SOMENTE LEITURA)
+-- Roda tudo de uma vez, tira print do resultado inteiro e manda de volta.
+-- Não altera nada no banco.
+
+select '1. Tabelas SEM proteção (RLS) ativada — deve ficar vazio' as verificacao,
+       coalesce(string_agg(tablename, ', '), '✅ nenhuma — todas protegidas') as resultado
+from pg_tables
+where schemaname = 'public'
+  and tablename in (
+    'clinicas','pacientes','agendamentos','profissionais','anamneses',
+    'anamnese_links','procedimentos_dentes','atendimentos_odonto',
+    'plano_tratamento','financeiro_config','log_atividades','prontuarios','admin_users'
+  )
+  and not rowsecurity
+
+union all
+
+select '2. Tabelas com proteção ligada mas SEM NENHUMA regra (ficam travadas por completo)',
+       coalesce(string_agg(t.tablename, ', '), '✅ nenhuma')
+from pg_tables t
+where t.schemaname = 'public' and t.rowsecurity
+  and t.tablename in (
+    'clinicas','pacientes','agendamentos','profissionais','anamneses',
+    'anamnese_links','procedimentos_dentes','atendimentos_odonto',
+    'plano_tratamento','financeiro_config','log_atividades','prontuarios','admin_users'
+  )
+  and not exists (select 1 from pg_policies p where p.schemaname='public' and p.tablename=t.tablename)
+
+union all
+
+select '3. Bucket de fotos "galeria" está privado?',
+       case
+         when exists(select 1 from storage.buckets where id='galeria' and public=false) then '✅ sim, privado'
+         when exists(select 1 from storage.buckets where id='galeria' and public=true) then '❌ NÃO — está público!'
+         else '⚠️ bucket "galeria" não existe ainda'
+       end
+
+union all
+
+select '4. Regras antigas inseguras sobraram? (deve ficar vazio)',
+       coalesce(
+         (select string_agg(tablename||'.'||policyname, ', ')
+          from pg_policies
+          where schemaname in ('public','storage')
+            and (qual ilike '%user_metadata%' or with_check ilike '%user_metadata%')),
+         '✅ nenhuma'
+       )
+
+union all
+
+select '5. Quantos admins cadastrados no banco',
+       (select count(*)::text from public.admin_users)
+
+union all
+
+select '6. Conta demo — status atual',
+       coalesce((select status from public.clinicas where email='demo@rwdent.app' limit 1), '⚠️ não encontrada')
+
+union all
+
+select '7. Tabela do PIN financeiro está travada corretamente (RLS ligado + zero regras)?',
+       case
+         when exists (select 1 from pg_tables where schemaname='public' and tablename='financeiro_pin_secreto' and rowsecurity)
+              and not exists (select 1 from pg_policies where schemaname='public' and tablename='financeiro_pin_secreto')
+         then '✅ sim, travada corretamente'
+         when not exists (select 1 from pg_tables where schemaname='public' and tablename='financeiro_pin_secreto')
+         then '⚠️ tabela ainda não existe'
+         else '❌ tem alguma regra a mais — verificar manualmente'
+       end
+
+union all
+
+select '8. Correção do brute-force do PIN (função no banco) já foi aplicada?',
+       case when exists (select 1 from pg_proc where proname='financeiro_pin_registrar_erro')
+            then '✅ sim' else '❌ não — falta rodar financeiro-pin-atomic.sql' end
+
+union all
+
+select '9. Trava anti-auto-aprovação de clínica (gatilho no banco) existe?',
+       case when exists (select 1 from pg_trigger where tgname='trg_protect_clinica')
+            then '✅ sim, protegida' else '❌ não encontrado — rodar supabase-seguranca.sql' end
+;
