@@ -11,6 +11,32 @@ function hashPin(pin) {
   return crypto.createHash('sha256').update('rwdent-fin:' + pin).digest('hex');
 }
 
+// Verifica um PIN contra o hash salvo, respeitando/atualizando o contador
+// de tentativas erradas — usado tanto por 'check' quanto pelo 'pinAtual' de
+// 'set', já que os dois são formas de adivinhar o PIN certo por tentativa e
+// erro. Trava por 15 min depois de 5 erros seguidos.
+async function verificarPin(sbAdmin, clinicaId, existing, pinDigitado) {
+  if (existing.bloqueado_ate && new Date(existing.bloqueado_ate) > new Date()) {
+    const minutos = Math.ceil((new Date(existing.bloqueado_ate) - new Date()) / 60000);
+    return { ok: false, status: 429, error: `Muitas tentativas erradas. Tente de novo em ${minutos} min.` };
+  }
+  if (hashPin(String(pinDigitado || '')) !== existing.pin_hash) {
+    const tentativas = (existing.tentativas_erradas || 0) + 1;
+    const update = { tentativas_erradas: tentativas };
+    if (tentativas >= 5) {
+      update.bloqueado_ate = new Date(Date.now() + 15 * 60 * 1000).toISOString();
+      update.tentativas_erradas = 0;
+    }
+    await sbAdmin.from('financeiro_pin_secreto').update(update).eq('clinica_id', clinicaId);
+    return { ok: false, status: 403, error: 'PIN incorreto.' };
+  }
+  if (existing.tentativas_erradas || existing.bloqueado_ate) {
+    await sbAdmin.from('financeiro_pin_secreto')
+      .update({ tentativas_erradas: 0, bloqueado_ate: null }).eq('clinica_id', clinicaId);
+  }
+  return { ok: true };
+}
+
 module.exports = async function handler(req, res) {
   res.setHeader('Content-Type', 'application/json');
   if (req.method !== 'POST') return res.status(405).json({ error: 'Método não permitido.' });
@@ -53,26 +79,28 @@ module.exports = async function handler(req, res) {
       return res.status(400).json({ error: 'O PIN deve ter de 4 a 6 dígitos.' });
     }
     const { data: existing } = await sbAdmin
-      .from('financeiro_pin_secreto').select('pin_hash').eq('clinica_id', clinicaId).maybeSingle();
+      .from('financeiro_pin_secreto')
+      .select('pin_hash, tentativas_erradas, bloqueado_ate')
+      .eq('clinica_id', clinicaId).maybeSingle();
     if (existing) {
-      if (hashPin(String(pinAtual || '')) !== existing.pin_hash) {
-        return res.status(403).json({ error: 'PIN financeiro atual incorreto.' });
-      }
+      const v = await verificarPin(sbAdmin, clinicaId, existing, pinAtual);
+      if (!v.ok) return res.status(v.status).json({ error: v.error });
     }
     const { error: upErr } = await sbAdmin
       .from('financeiro_pin_secreto')
-      .upsert({ clinica_id: clinicaId, pin_hash: hashPin(String(pin)), updated_at: new Date().toISOString() });
+      .upsert({ clinica_id: clinicaId, pin_hash: hashPin(String(pin)), updated_at: new Date().toISOString(), tentativas_erradas: 0, bloqueado_ate: null });
     if (upErr) return res.status(500).json({ error: 'Erro ao salvar: ' + upErr.message });
     return res.status(200).json({ ok: true });
   }
 
   if (action === 'check') {
     const { data: existing } = await sbAdmin
-      .from('financeiro_pin_secreto').select('pin_hash').eq('clinica_id', clinicaId).maybeSingle();
+      .from('financeiro_pin_secreto')
+      .select('pin_hash, tentativas_erradas, bloqueado_ate')
+      .eq('clinica_id', clinicaId).maybeSingle();
     if (!existing) return res.status(404).json({ error: 'PIN financeiro ainda não configurado. Configure em Configurações → PIN financeiro.' });
-    if (hashPin(String(pin || '')) !== existing.pin_hash) {
-      return res.status(403).json({ error: 'PIN incorreto.' });
-    }
+    const v = await verificarPin(sbAdmin, clinicaId, existing, pin);
+    if (!v.ok) return res.status(v.status).json({ error: v.error });
     return res.status(200).json({ ok: true });
   }
 
