@@ -229,7 +229,7 @@ function renderAdminTable(){
     }
     // Assinatura mensal via Mercado Pago — gera o link, a aprovação depois
     // acontece sozinha quando o pagamento cair (api/mercadopago-webhook.js).
-    actions += ` <button class="admin-btn" style="background:#e8f5e9;color:#2e7d32;border-color:#a5d6a7;" onclick="adminGerarAssinatura('${c.id}')" title="Gera o link de assinatura mensal (R$197) pra mandar no WhatsApp"><i class="ti ti-credit-card"></i> Assinatura</button>`;
+    actions += ` <button class="admin-btn" style="background:#e8f5e9;color:#2e7d32;border-color:#a5d6a7;" onclick="adminGerarAssinatura('${c.id}')" title="Gera o link de assinatura mensal (R$69,90) pra mandar no WhatsApp"><i class="ti ti-credit-card"></i> Assinatura</button>`;
 
     // Don't show action buttons for admin's own clinics
     if(_ADMIN_IDS.includes(c.user_id)) actions = '<span style="color:var(--rose-text);font-size:11px;">Admin</span>';

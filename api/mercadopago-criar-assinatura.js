@@ -1,12 +1,12 @@
 const { createClient } = require('@supabase/supabase-js');
 
-// Gera o link de assinatura mensal recorrente (R$197/mês) de uma clínica
+// Gera o link de assinatura mensal recorrente (R$69,90/mês) de uma clínica
 // no Mercado Pago — só admin pode chamar. O link volta pronto pra você
 // copiar e mandar no WhatsApp; quando o cliente autoriza o pagamento, o
 // Mercado Pago avisa api/mercadopago-webhook.js sozinho, que aprova a
 // clínica automaticamente — sem você precisar entrar e clicar em nada.
 
-const PLANO_MENSAL_VALOR = 197.00;
+const PLANO_MENSAL_VALOR = 69.90;
 
 module.exports = async function handler(req, res) {
   res.setHeader('Content-Type', 'application/json');

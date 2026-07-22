@@ -581,7 +581,7 @@ h1, h2, .section-title {font-family: 'Instrument Serif', Georgia, serif;font-wei
   <div class="pricing-card animate" style="max-width:480px;">
     <div class="pricing-popular">Popular</div>
     <div class="pricing-name">Plano Profissional</div>
-    <div class="pricing-price"><span>R$</span> 197<span>/mês</span></div>
+    <div class="pricing-price"><span>R$</span> 69,90<span>/mês</span></div>
     <div class="pricing-period">Cancele a qualquer momento</div>
     <ul class="pricing-features">
       <li><i class="ti ti-check"></i> Pacientes e prontuários ilimitados</li>
@@ -597,7 +597,7 @@ h1, h2, .section-title {font-family: 'Instrument Serif', Georgia, serif;font-wei
       <li><i class="ti ti-check"></i> Dark mode</li>
       <li><i class="ti ti-check"></i> Suporte por WhatsApp</li>
     </ul>
-    <button class="pricing-btn" onclick="wppMsg('assinar')" style="margin-bottom:10px;"><i class="ti ti-brand-whatsapp"></i> Assinar por R$197/mês</button>
+    <button class="pricing-btn" onclick="wppMsg('assinar')" style="margin-bottom:10px;"><i class="ti ti-brand-whatsapp"></i> Assinar por R$69,90/mês</button>
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;"><div style="flex:1;height:1px;background:var(--rose-light);"></div><span style="font-size:12px;color:var(--gray);font-weight:700;">ou</span><div style="flex:1;height:1px;background:var(--rose-light);"></div></div>
     <button class="pricing-btn" onclick="wppMsg('testar')" style="background:var(--rose-lighter);color:var(--rose-dark);box-shadow:none;font-size:14px;padding:12px;"><i class="ti ti-eye"></i> Testar por R$50 (acesso por 24h)</button>
     <div class="pricing-guarantee"><i class="ti ti-shield-check"></i> Teste de 24h com acesso completo — conheça antes de assinar</div>
@@ -653,7 +653,7 @@ h1, h2, .section-title {font-family: 'Instrument Serif', Georgia, serif;font-wei
     </div>
     <div class="faq-item">
       <button class="faq-q" onclick="toggleFaq(this)">Como funciona o teste por R$50? <i class="ti ti-chevron-down"></i></button>
-      <div class="faq-a">Você paga R$50 e recebe acesso completo ao sistema por 24 horas — todas as funcionalidades liberadas, sem limite de pacientes ou profissionais. É tempo suficiente para conhecer tudo e decidir. Se gostar, assina o plano mensal de R$197/mês. Se não quiser continuar, sem compromisso.</div>
+      <div class="faq-a">Você paga R$50 e recebe acesso completo ao sistema por 24 horas — todas as funcionalidades liberadas, sem limite de pacientes ou profissionais. É tempo suficiente para conhecer tudo e decidir. Se gostar, assina o plano mensal de R$69,90/mês. Se não quiser continuar, sem compromisso.</div>
     </div>
     <div class="faq-item">
       <button class="faq-q" onclick="toggleFaq(this)">Posso cancelar a qualquer momento? <i class="ti ti-chevron-down"></i></button>
@@ -677,7 +677,7 @@ h1, h2, .section-title {font-family: 'Instrument Serif', Georgia, serif;font-wei
 <!-- FINAL CTA -->
 <section class="final-cta" id="comecar">
   <h2>Pronto para modernizar sua clínica?</h2>
-  <p>Assine por R$197/mês ou teste por R$50 com acesso completo por 24h. Sem compromisso.</p>
+  <p>Assine por R$69,90/mês ou teste por R$50 com acesso completo por 24h. Sem compromisso.</p>
   <a href="javascript:wppMsg('assinar')" class="btn-cta-white" id="cta-link"><i class="ti ti-brand-whatsapp"></i> Falar no WhatsApp</a>
 </section>
 
@@ -752,7 +752,7 @@ function wppMsg(tipo){
     window.open(PAG_LINKS[tipo],'_blank');
   } else {
     const msgs = {
-      assinar: 'Olá! Vim pelo site do RWDent e quero *assinar o plano mensal* de R$197/mês.',
+      assinar: 'Olá! Vim pelo site do RWDent e quero *assinar o plano mensal* de R$69,90/mês.',
       testar: 'Olá! Vim pelo site do RWDent e quero *testar o sistema por R$50* (24h de acesso).'
     };
     window.open('https://wa.me/'+WPP_NUM+'?text='+encodeURIComponent(msgs[tipo]||msgs.assinar),'_blank');
