@@ -9759,8 +9759,13 @@ async function pacFinalizarVendaLista(vendaId, pacId){
     if(_ePl) console.error('Erro ao atualizar plano:',_ePl.message);
     pacPlanoList = pacPlanoList.map(i=>i.id===v.planoItemId?{...i,status:'realizado'}:i);
   } else if(v.itens?.length){
+    // Mesmo problema achado em pacAlterarStatusPlano: casar só pelo nome do
+    // procedimento pode acertar o item errado quando há mais de um
+    // "aprovado" com o mesmo nome em dentes diferentes — exige também o
+    // mesmo dente pra desambiguar.
     for(const it of v.itens){
-      const planoItem = pacPlanoList.find(p=>p.procedimento===it.nome&&p.status==='aprovado');
+      const planoItem = pacPlanoList.find(p=>p.procedimento===it.nome&&p.status==='aprovado'&&String(p.dente||'')===String(it.dente||''))
+        || pacPlanoList.find(p=>p.procedimento===it.nome&&p.status==='aprovado');
       if(planoItem){
         const {error:_ePl2}=await _sb.from('plano_tratamento').update({status:'realizado'}).eq('id',planoItem.id);
         if(_ePl2) console.error('Erro ao atualizar plano:',_ePl2.message);
