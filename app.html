@@ -2051,7 +2051,7 @@
   <div style="color:var(--rose-text);font-size:14px;">Carregando...</div>
 </div>
 
-<script src="app.js?v=15"></script>
+<script src="app.js?v=16"></script>
 
 <!-- ══ MODAL RELATÓRIO MENSAL ══ -->
 <div class="modal-overlay" id="modal-relatorio" onclick="if(event.target===this)closeModal('modal-relatorio')" style="align-items:flex-start;padding-top:40px;overflow-y:auto;">
@@ -2195,6 +2195,20 @@
       <div class="form-group"><label>Ponto mínimo</label><input type="number" id="me-min" min="0" step="0.01"/></div>
       <div class="form-group"><label>Ponto de compra</label><input type="number" id="me-compra" min="0" step="0.01"/></div>
       <div class="form-group"><label>Unidade</label><input type="text" id="me-unid" list="unid-list"/></div>
+    </div>
+    <button type="button" onclick="toggleCalcPacotes()" style="background:none;border:none;color:var(--rose);font-size:11px;cursor:pointer;padding:0;margin:-6px 0 10px;text-decoration:underline;">
+      <i class="ti ti-calculator"></i> Prefiro calcular por pacotes fechados + soltos
+    </button>
+    <div id="calc-pacotes-box" style="display:none;background:var(--rose-lighter);border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:12px;">
+      <div id="calc-pacotes-ref" style="color:var(--rose-text);margin-bottom:8px;"></div>
+      <div style="display:flex;gap:8px;align-items:flex-end;">
+        <div style="flex:1;"><label style="display:block;font-size:11px;margin-bottom:3px;color:var(--rose-dark);">Pacotes/caixas fechados</label><input type="number" id="calc-fechados" min="0" step="1" value="0" oninput="calcPacotesAtualizar()" style="width:100%;padding:6px 8px;border:1px solid var(--rose-light);border-radius:6px;box-sizing:border-box;"/></div>
+        <div style="flex:1;"><label style="display:block;font-size:11px;margin-bottom:3px;color:var(--rose-dark);">Soltas (pacote aberto)</label><input type="number" id="calc-soltas" min="0" step="0.01" value="0" oninput="calcPacotesAtualizar()" style="width:100%;padding:6px 8px;border:1px solid var(--rose-light);border-radius:6px;box-sizing:border-box;"/></div>
+      </div>
+      <div style="margin-top:10px;display:flex;justify-content:space-between;align-items:center;">
+        <span>Total: <strong id="calc-pacotes-total">0</strong></span>
+        <button type="button" class="btn-secondary" onclick="calcPacotesAplicar()" style="padding:5px 12px;font-size:11px;">Usar este valor</button>
+      </div>
     </div>
     <div class="modal-footer">
       <button class="btn-secondary" onclick="closeModal('modal-est')">Cancelar</button>

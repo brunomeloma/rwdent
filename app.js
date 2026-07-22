@@ -6547,6 +6547,8 @@ function openEstEdit(id){
   document.getElementById('me-min').value    = e.min??0;
   document.getElementById('me-compra').value = e.compra??0;
   document.getElementById('me-unid').value   = m.unid||'';
+  const calcBox = document.getElementById('calc-pacotes-box');
+  if(calcBox) calcBox.style.display = 'none'; // não carrega aberto/com dados do material anterior
   openModal('modal-est');
   // guarda id para o save
   document.getElementById('modal-est').dataset.matId = id;
@@ -6568,6 +6570,54 @@ async function saveEst(){
   if(!_eSvEst) showToast('Estoque atualizado!');
   else showToast('Erro ao salvar estoque: '+_eSvEst.message,'error');
 }
+
+// Calculadora "pacotes fechados + soltas" dentro do modal de estoque — pra
+// quem compra em caixa/pacote (ex: caixa de máscara com 100, kit de
+// clareador com 6 seringas) poder digitar "2 caixas fechadas + 30 soltas
+// da caixa aberta" em vez de fazer a conta de cabeça. Usa "Qtde por
+// embalagem" já cadastrada no material como referência.
+function toggleCalcPacotes(){
+  const box = document.getElementById('calc-pacotes-box');
+  if(!box) return;
+  const abrir = box.style.display==='none';
+  box.style.display = abrir?'block':'none';
+  if(!abrir) return;
+  const matId = Number(document.getElementById('modal-est').dataset.matId);
+  const m = mats.find(x=>x.id===matId);
+  const qtdePacote = m?.qtde||1;
+  const refEl = document.getElementById('calc-pacotes-ref');
+  const fechadosEl = document.getElementById('calc-fechados');
+  if(qtdePacote<=1){
+    refEl.innerHTML = '<i class="ti ti-alert-triangle"></i> Este material não tem "Qtde por embalagem" cadastrada (ou é 1). Edite o material (lápis em Materiais) e informe, por exemplo, quantas unidades vêm numa caixa — aí essa conta funciona.';
+    fechadosEl.disabled = true;
+  } else {
+    refEl.textContent = `Cada pacote/caixa fechado tem ${qtdePacote} ${m.unid||'unid'}.`;
+    fechadosEl.disabled = false;
+  }
+  const passo = passoQtd(m?.unid);
+  fechadosEl.step = passo;
+  document.getElementById('calc-soltas').step = passo;
+  fechadosEl.value = 0;
+  document.getElementById('calc-soltas').value = 0;
+  calcPacotesAtualizar();
+}
+function calcPacotesAtualizar(){
+  const matId = Number(document.getElementById('modal-est').dataset.matId);
+  const m = mats.find(x=>x.id===matId);
+  const qtdePacote = m?.qtde||1;
+  const fechados = Number(document.getElementById('calc-fechados')?.value)||0;
+  const soltas = Number(document.getElementById('calc-soltas')?.value)||0;
+  const total = arredondarQtd(fechados*qtdePacote + soltas, m?.unid);
+  const el = document.getElementById('calc-pacotes-total');
+  if(el) el.textContent = `${total} ${m?.unid||''}`;
+  return total;
+}
+function calcPacotesAplicar(){
+  const total = calcPacotesAtualizar();
+  document.getElementById('me-atual').value = total;
+  showToast('Quantidade atual preenchida: '+total);
+}
+
 function filterEstoque(){ renderEstoque(); }
 function renderEstoque(){
   const q   = (document.getElementById('est-search')||{value:''}).value.toLowerCase();
