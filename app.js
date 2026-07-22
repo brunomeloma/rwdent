@@ -529,67 +529,14 @@ function toggleMobileMore(){
   if(ov) ov.classList.toggle('show');
 }
 
-// ── PIN operacional (recepção/secretária) — dá acesso a vendas/estoque/
-// procedimentos, mas NÃO ao faturamento agregado (isso é o PIN financeiro,
-// mais abaixo). 'financeiro' saiu daqui de propósito.
-const FIN_PIN_TABS = ['vendas_fin','procedimentos_fin','materiais_fin','estoque_fin'];
-async function _hashPin(pin){
-  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('rwdent:'+pin));
-  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
-}
-function finPinBloqueado(tab){
-  return FIN_PIN_TABS.includes(tab) && cfg && cfg.finPinHash && sessionStorage.getItem('rw-fin-unlocked')!==cfg.finPinHash;
-}
-async function pedirFinPin(tab){
-  const pin = prompt('🔒 Área protegida. Digite o PIN do financeiro:');
-  if(pin===null) return;
-  const h = await _hashPin(String(pin).trim());
-  if(h === cfg.finPinHash){
-    sessionStorage.setItem('rw-fin-unlocked', cfg.finPinHash);
-    switchTab(tab);
-  } else {
-    showToast('PIN incorreto.','error');
-  }
-}
-async function definirFinPin(){
-  const val = (document.getElementById('fin-pin-input')?.value||'').trim();
-  if(!/^\d{4,6}$/.test(val)){ showToast('O PIN deve ter de 4 a 6 dígitos.','warn'); return; }
-  cfg.finPinHash = await _hashPin(val);
-  const _eP = await saveFinanceiro();
-  if(_eP){ showToast('Erro ao salvar PIN: '+_eP.message,'error'); return; }
-  sessionStorage.setItem('rw-fin-unlocked', cfg.finPinHash);
-  document.getElementById('fin-pin-input').value='';
-  atualizarFinPinStatus();
-  showToast('PIN definido! As abas financeiras agora pedem o PIN.');
-}
-async function removerFinPin(){
-  if(!cfg.finPinHash){ showToast('Nenhum PIN definido.','warn'); return; }
-  const pin = prompt('Digite o PIN atual para removê-lo:');
-  if(pin===null) return;
-  const h = await _hashPin(String(pin).trim());
-  if(h !== cfg.finPinHash){ showToast('PIN incorreto.','error'); return; }
-  delete cfg.finPinHash;
-  const _eP = await saveFinanceiro();
-  if(_eP){ showToast('Erro: '+_eP.message,'error'); return; }
-  sessionStorage.removeItem('rw-fin-unlocked');
-  atualizarFinPinStatus();
-  showToast('PIN removido.');
-}
-function atualizarFinPinStatus(){
-  const el = document.getElementById('fin-pin-status');
-  if(!el) return;
-  el.innerHTML = cfg && cfg.finPinHash
-    ? '<span style="color:#2e7d32;font-weight:700;"><i class="ti ti-lock"></i> PIN ativo — Vendas/Procedimentos/Materiais/Estoque protegidos.</span>'
-    : '<span style="color:var(--rose-text);"><i class="ti ti-lock-open"></i> Nenhum PIN definido.</span>';
-}
-
-// ── PIN FINANCEIRO — protege o faturamento agregado (Home, Painel
-// Financeiro, Produtividade, Comissões). Diferente do PIN operacional
-// acima: o hash NUNCA é carregado pro navegador (fica numa tabela própria,
-// só acessível pela service role dentro de api/financeiro-pin.js), então
-// não dá pra atacar por força bruta no console como o outro. Verificado
-// uma vez por sessão de página (_finVerificado fica só em memória, reseta
-// ao recarregar).
+// ── PIN FINANCEIRO — único PIN do app. Vendas, Procedimentos, Materiais e
+// Estoque ficam sempre abertos (modo secretária); só o faturamento agregado
+// (card da Home, Painel Financeiro, Produtividade, Comissões) fica atrás
+// deste PIN. O hash NUNCA é carregado pro navegador (fica numa tabela
+// própria, só acessível pela service role dentro de api/financeiro-pin.js),
+// então não dá pra atacar por força bruta no console. Verificado uma vez
+// por sessão de página (_finVerificado fica só em memória, reseta ao
+// recarregar).
 let _finVerificado = false;
 async function _finApi(body){
   const { data:{ session } } = await _sb.auth.getSession();
@@ -633,12 +580,11 @@ async function atualizarFinPinFaturamentoStatus(){
   if(!ok){ el.innerHTML = '<span style="color:var(--rose-text);">Não foi possível checar o status agora.</span>'; return; }
   el.innerHTML = json.hasPin
     ? '<span style="color:#2e7d32;font-weight:700;"><i class="ti ti-shield-lock"></i> PIN financeiro ativo — faturamento protegido.</span>'
-    : '<span style="color:#b33;font-weight:700;"><i class="ti ti-shield-off"></i> Nenhum PIN financeiro definido — o faturamento fica visível pra quem tiver o PIN operacional!</span>';
+    : '<span style="color:#b33;font-weight:700;"><i class="ti ti-shield-off"></i> Nenhum PIN definido — o faturamento fica visível pra qualquer um que usar o sistema!</span>';
 }
 
 function switchTab(tab){
   if(tab==='invisalign_apresentacao' && !_isRhaizaClinic) tab='home';
-  if(finPinBloqueado(tab)){ pedirFinPin(tab); return; }
   if(tab==='financeiro' && !_finVerificado){
     pedirFinPinFaturamento().then(ok=>{ if(ok) switchTab('financeiro'); });
     return;
@@ -675,7 +621,7 @@ function switchTab(tab){
   if(tab==='pacientes') renderPatients();
   if(tab==='profissionais') renderProfissionais();
   if(tab==='home') renderHomeStats();
-  if(tab==='configuracoes'){ renderConfiguracoes(); atualizarFinPinStatus(); atualizarFinPinFaturamentoStatus(); }
+  if(tab==='configuracoes'){ renderConfiguracoes(); atualizarFinPinFaturamentoStatus(); }
   if(tab==='resgate') renderResgate();
   if(tab==='admin') loadAdminPanel();
   if(tab==='invisalign_apresentacao'){
@@ -6880,10 +6826,10 @@ function renderVendas(){
   }).slice().reverse();
   const fin     = _filtrarVendasPorPeriodo(vendas.filter(v=>v.status==='finalizada'), 'venda-mes','venda-ano');
   const orcAbertos = vendas.filter(v=>v.status==='orcamento').length;
-  // Faturamento/Ticket médio (agregado) saíram daqui de propósito — quem só
-  // tem o PIN operacional não deve ver o total, só o valor de cada venda
-  // individual (que continua na tabela abaixo). Esses números ficam no
-  // Painel Financeiro, protegidos pelo PIN financeiro.
+  // Faturamento/Ticket médio (agregado) saíram daqui de propósito — quem
+  // vende não precisa ver o total, só o valor de cada venda individual (que
+  // continua na tabela abaixo). Esses números ficam no Painel Financeiro,
+  // atrás do PIN financeiro.
   const vm = document.getElementById('vendas-metrics');
   if(vm) vm.innerHTML=[
     {lbl:'Vendas finalizadas',val:fin.length,cor:'#2e7d32'},

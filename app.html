@@ -1931,23 +1931,13 @@
           </div>
 
           <hr style="border-color:var(--rose-light);margin:24px 0;"/>
-          <h2 style="font-size:13px;font-weight:700;color:var(--rose-dark);margin-bottom:14px;display:flex;align-items:center;gap:8px;text-transform:uppercase;letter-spacing:.5px;"><i class="ti ti-lock"></i> PIN operacional (recepção/secretária)</h2>
-          <p style="font-size:12px;color:var(--rose-text);margin-bottom:10px;">Proteja as abas Vendas, Procedimentos, Materiais e Estoque com um PIN de 4 a 6 dígitos, pra quem usa o sistema na recepção conseguir vender e gerenciar estoque. Esse PIN sozinho <strong>não</strong> dá acesso ao faturamento total — isso é protegido pelo PIN financeiro, abaixo.</p>
-          <div id="fin-pin-status" style="font-size:12px;margin-bottom:10px;"></div>
-          <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
-            <input type="password" id="fin-pin-input" inputmode="numeric" maxlength="6" placeholder="PIN (4-6 dígitos)" style="width:150px;padding:8px 12px;border:1px solid var(--rose-light);border-radius:8px;font-size:13px;"/>
-            <button class="btn-secondary" onclick="definirFinPin()" style="padding:8px 16px;font-size:13px;"><i class="ti ti-lock"></i> Definir PIN</button>
-            <button class="btn-secondary" onclick="removerFinPin()" style="padding:8px 16px;font-size:13px;color:#b33;"><i class="ti ti-lock-open"></i> Remover PIN</button>
-          </div>
-
-          <hr style="border-color:var(--rose-light);margin:24px 0;"/>
-          <h2 style="font-size:13px;font-weight:700;color:var(--rose-dark);margin-bottom:14px;display:flex;align-items:center;gap:8px;text-transform:uppercase;letter-spacing:.5px;"><i class="ti ti-shield-lock"></i> PIN financeiro (protege o faturamento total)</h2>
-          <p style="font-size:12px;color:var(--rose-text);margin-bottom:10px;">Um PIN <strong>separado</strong> do operacional, só pra você. Protege o card "Faturamento do mês" na Início, a aba Painel Financeiro (relatórios, gráficos, comissões, produtividade) — quem só tem o PIN operacional consegue vender e mexer no estoque normalmente, mas nunca vê o faturamento agregado da clínica. Guarde esse PIN só com você.</p>
+          <h2 style="font-size:13px;font-weight:700;color:var(--rose-dark);margin-bottom:14px;display:flex;align-items:center;gap:8px;text-transform:uppercase;letter-spacing:.5px;"><i class="ti ti-shield-lock"></i> Modo secretária — esconder faturamento</h2>
+          <p style="font-size:12px;color:var(--rose-text);margin-bottom:10px;">Defina um PIN de 4 a 6 dígitos só seu. Sem esse PIN, o faturamento total fica escondido (card da Início, Painel Financeiro, Produtividade, Comissões) — mas quem estiver usando o sistema continua vendendo e gerenciando estoque/procedimentos normalmente. Digite o PIN sempre que você mesma quiser ver o faturamento.</p>
           <div id="fin-pin-fat-status" style="font-size:12px;margin-bottom:10px;"></div>
           <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
             <input type="password" id="fin-pin-fat-atual" inputmode="numeric" maxlength="6" placeholder="PIN atual (se já tiver um)" style="width:190px;padding:8px 12px;border:1px solid var(--rose-light);border-radius:8px;font-size:13px;"/>
             <input type="password" id="fin-pin-fat-input" inputmode="numeric" maxlength="6" placeholder="Novo PIN (4-6 dígitos)" style="width:170px;padding:8px 12px;border:1px solid var(--rose-light);border-radius:8px;font-size:13px;"/>
-            <button class="btn-secondary" onclick="definirFinPinFaturamento()" style="padding:8px 16px;font-size:13px;"><i class="ti ti-shield-lock"></i> Definir/trocar PIN financeiro</button>
+            <button class="btn-secondary" onclick="definirFinPinFaturamento()" style="padding:8px 16px;font-size:13px;"><i class="ti ti-shield-lock"></i> Definir/trocar PIN</button>
           </div>
 
           <hr style="border-color:var(--rose-light);margin:24px 0;"/>
@@ -2061,7 +2051,7 @@
   <div style="color:var(--rose-text);font-size:14px;">Carregando...</div>
 </div>
 
-<script src="app.js?v=12"></script>
+<script src="app.js?v=13"></script>
 
 <!-- ══ MODAL RELATÓRIO MENSAL ══ -->
 <div class="modal-overlay" id="modal-relatorio" onclick="if(event.target===this)closeModal('modal-relatorio')" style="align-items:flex-start;padding-top:40px;overflow-y:auto;">
