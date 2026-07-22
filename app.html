@@ -26,13 +26,22 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
-<link rel="stylesheet" href="app.css?v=9"/>
+<link rel="stylesheet" href="app.css?v=10"/>
 <link rel="stylesheet" href="premium-design.css"/>
 <link rel="stylesheet" href="sections-premium.css"/>
 <link rel="stylesheet" href="layout-fixes.css"/>
 </head>
 <body>
 <div id="toast" class="toast"></div>
+
+<!-- ══════ MENU FLUTUANTE DE AÇÕES DE LINHA (tabela de Procedimentos) ══════
+     Fica fora do wrapper com scroll horizontal da tabela pra não ser
+     cortado; é posicionado via JS (position:fixed) perto do botão "⋮". -->
+<div id="proc-row-menu" class="tn-dropdown" style="display:none;position:fixed;z-index:2000;">
+  <button class="tn-dropdown-item" id="prm-recalc"><i class="ti ti-refresh"></i> Recalcular preço</button>
+  <button class="tn-dropdown-item" id="prm-toggle"><i class="ti ti-player-pause"></i> <span id="prm-toggle-label">Desativar</span></button>
+  <button class="tn-dropdown-item" id="prm-dup"><i class="ti ti-copy"></i> Duplicar</button>
+</div>
 
 <!-- ══════ BUSCA GLOBAL (Ctrl+K) ══════ -->
 <div class="search-overlay" id="search-overlay" onclick="if(event.target===this)fecharBuscaGlobal()">
@@ -702,15 +711,15 @@
         <div style="overflow-x:auto;">
           <table class="fin-table" style="width:100%;border-collapse:collapse;font-size:13px;">
             <thead><tr style="background:var(--rose-lighter);">
-              <th style="padding:10px;text-align:left;">Procedimento</th>
-              <th style="padding:10px;text-align:left;">Grupo</th>
-              <th style="padding:10px;text-align:right;">Tempo</th>
-              <th style="padding:10px;text-align:right;">Insumos</th>
-              <th style="padding:10px;text-align:right;">Hora Clínica</th>
-              <th style="padding:10px;text-align:right;">Custo Total</th>
-              <th style="padding:10px;text-align:right;">Margem %</th>
-              <th style="padding:10px;text-align:right;">Preço Final</th>
-              <th style="padding:10px;">Ações</th>
+              <th style="padding:10px 8px;text-align:left;">Procedimento</th>
+              <th style="padding:10px 8px;text-align:left;">Grupo</th>
+              <th style="padding:10px 8px;text-align:right;">Tempo</th>
+              <th style="padding:10px 8px;text-align:right;">Insumos</th>
+              <th style="padding:10px 8px;text-align:right;">Hora Clínica</th>
+              <th style="padding:10px 8px;text-align:right;">Custo Total</th>
+              <th style="padding:10px 8px;text-align:right;">Margem %</th>
+              <th style="padding:10px 8px;text-align:right;">Preço Final</th>
+              <th style="padding:10px 6px;">Ações</th>
             </tr></thead>
             <tbody id="proc-tbody"></tbody>
           </table>
@@ -2036,7 +2045,7 @@
   <div style="color:var(--rose-text);font-size:14px;">Carregando...</div>
 </div>
 
-<script src="app.js?v=9"></script>
+<script src="app.js?v=10"></script>
 
 <!-- ══ MODAL RELATÓRIO MENSAL ══ -->
 <div class="modal-overlay" id="modal-relatorio" onclick="if(event.target===this)closeModal('modal-relatorio')" style="align-items:flex-start;padding-top:40px;overflow-y:auto;">

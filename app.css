@@ -658,6 +658,18 @@ button{font-family:inherit;}
 .mobile-more-grid button i{font-size:26px;color:var(--rose);}
 .mobile-more-grid button:active{transform:scale(.93);background:var(--rose-light);}
 
+/* ── TABELAS FINANCEIRAS (Procedimentos/Materiais/Estoque/Vendas) ──
+   layout-fixes.css tem uma regra genérica "table th, table td" com
+   !important que força padding:12px 14px e text-align:left em toda
+   tabela do app — isso deixava a coluna Ações (com vários botões de
+   ícone) largura demais e estourando o scroll horizontal. Sobrescreve
+   aqui com seletor de classe (specificidade maior que a regra por tag),
+   restaurando o alinhamento à direita das colunas numéricas via o
+   próprio text-align inline que cada célula já define. */
+.fin-table th, .fin-table td{padding:10px 8px!important;vertical-align:middle!important;}
+.fin-table th[style*="text-align:right"], .fin-table td[style*="text-align:right"]{text-align:right!important;}
+.fin-table td:last-child{padding-right:6px!important;}
+
 /* ── RESPONSIVE ── */
 @media(max-width:768px){
   :root{--header-h:54px;}

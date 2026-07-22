@@ -6266,27 +6266,60 @@ function renderProcs(){
       : '';
     const _inativo = p.ativo===false;
     return `<tr style="border-bottom:1px solid var(--rose-light);${_inativo?'opacity:.5;':''}">
-      <td data-label="Procedimento" style="padding:10px;"><div style="font-weight:500;">${escapeHtml(p.nome)}${_inativo?' <span style="font-size:9px;background:#eee;color:#999;border-radius:4px;padding:1px 6px;font-weight:600;">INATIVO</span>':''}</div><div style="margin-top:3px;display:flex;gap:4px;flex-wrap:wrap;">${_recolagBadge}${_tipoBadge}${_manutBadge}</div></td>
-      <td data-label="Grupo" style="padding:10px;"><span style="background:var(--rose-lighter);color:var(--rose-dark);border-radius:6px;padding:2px 8px;font-size:11px;">${escapeHtml(p.grupo||'—')}</span></td>
-      <td data-label="Tempo" style="padding:10px;text-align:right;">${p.tempo||0} min</td>
-      <td data-label="Insumos" style="padding:10px;text-align:right;">${fmtBRL(_insValReal)}</td>
-      <td data-label="Hora Clínica" style="padding:10px;text-align:right;">${fmtBRL(_hc)}</td>
-      <td data-label="Custo Total" style="padding:10px;text-align:right;">${fmtBRL(_custo)}</td>
-      <td data-label="Margem %" style="padding:10px;text-align:right;">${p.margem||cfg.margem||100}%</td>
-      <td data-label="Preço Final" style="padding:10px;text-align:right;font-weight:700;color:var(--rose-dark);">${fmtBRL(p.precoFinal||0)}</td>
-      <td data-label="Ações" style="padding:10px;">
-        <div style="display:flex;gap:6px;justify-content:flex-end;align-items:center;">
-          <button class="btn-secondary" style="padding:4px 8px;font-size:11px;position:relative;${_flaskColor}" onclick="openInsumos(${p.id})" title="${_insCount>0?_insCount+' insumo(s) configurado(s)':'Adicionar insumos'}">${_flaskBadge}<i class="ti ti-flask"></i></button>
-          <button class="btn-secondary" style="padding:4px 8px;font-size:11px;color:#1565c0;border-color:#90caf9;" onclick="recalcularProc(${p.id})" title="Recalcular preço deste procedimento"><i class="ti ti-refresh"></i></button>
-          <button class="btn-secondary" style="padding:4px 8px;font-size:11px;" onclick="toggleAtivoProc(${p.id})" title="${_inativo?'Ativar':'Desativar'}"><i class="ti ti-${_inativo?'player-play':'player-pause'}"></i></button>
-          <button class="btn-secondary" style="padding:4px 8px;font-size:11px;" onclick="duplicarProc(${p.id})" title="Duplicar"><i class="ti ti-copy"></i></button>
-          <button class="btn-secondary" style="padding:4px 8px;font-size:11px;" onclick="openEditProc(${p.id})"><i class="ti ti-pencil"></i></button>
-          <button class="btn-danger" style="padding:4px 8px;font-size:11px;" onclick="deleteProc(${p.id})"><i class="ti ti-trash"></i></button>
+      <td data-label="Procedimento" style="padding:10px 8px;"><div style="font-weight:500;">${escapeHtml(p.nome)}${_inativo?' <span style="font-size:9px;background:#eee;color:#999;border-radius:4px;padding:1px 6px;font-weight:600;">INATIVO</span>':''}</div><div style="margin-top:3px;display:flex;gap:4px;flex-wrap:wrap;">${_recolagBadge}${_tipoBadge}${_manutBadge}</div></td>
+      <td data-label="Grupo" style="padding:10px 8px;"><span style="background:var(--rose-lighter);color:var(--rose-dark);border-radius:6px;padding:2px 8px;font-size:11px;">${escapeHtml(p.grupo||'—')}</span></td>
+      <td data-label="Tempo" style="padding:10px 8px;text-align:right;">${p.tempo||0} min</td>
+      <td data-label="Insumos" style="padding:10px 8px;text-align:right;">${fmtBRL(_insValReal)}</td>
+      <td data-label="Hora Clínica" style="padding:10px 8px;text-align:right;">${fmtBRL(_hc)}</td>
+      <td data-label="Custo Total" style="padding:10px 8px;text-align:right;">${fmtBRL(_custo)}</td>
+      <td data-label="Margem %" style="padding:10px 8px;text-align:right;">${p.margem||cfg.margem||100}%</td>
+      <td data-label="Preço Final" style="padding:10px 8px;text-align:right;font-weight:700;color:var(--rose-dark);">${fmtBRL(p.precoFinal||0)}</td>
+      <td data-label="Ações" style="padding:10px 6px 10px 8px;">
+        <div style="display:flex;gap:4px;justify-content:flex-end;align-items:center;">
+          <button class="btn-secondary" style="padding:4px 7px;font-size:11px;position:relative;${_flaskColor}" onclick="openInsumos(${p.id})" title="${_insCount>0?_insCount+' insumo(s) configurado(s)':'Adicionar insumos'}">${_flaskBadge}<i class="ti ti-flask"></i></button>
+          <button class="btn-secondary" style="padding:4px 7px;font-size:11px;" onclick="openEditProc(${p.id})" title="Editar"><i class="ti ti-pencil"></i></button>
+          <button class="btn-danger" style="padding:4px 7px;font-size:11px;" onclick="deleteProc(${p.id})" title="Excluir"><i class="ti ti-trash"></i></button>
+          <button class="btn-secondary" style="padding:4px 7px;font-size:11px;" onclick="toggleProcRowMenu(${p.id},this)" title="Mais ações"><i class="ti ti-dots-vertical"></i></button>
         </div>
       </td>
     </tr>`;
   }).join('');
 }
+
+// Menu "⋮" da linha de Procedimentos (Recalcular/Ativar-Desativar/Duplicar).
+// Fica fora do wrapper com scroll horizontal da tabela (position:fixed,
+// posicionado via getBoundingClientRect do botão) pra nunca ficar cortado.
+function toggleProcRowMenu(id, btnEl){
+  const menu = document.getElementById('proc-row-menu');
+  if(menu.dataset.forId === String(id) && menu.style.display==='block'){
+    closeProcRowMenu();
+    return;
+  }
+  const p = procs.find(x=>x.id===id);
+  if(!p) return;
+  const inativo = p.ativo===false;
+  document.getElementById('prm-recalc').onclick = () => { recalcularProc(id); closeProcRowMenu(); };
+  document.getElementById('prm-toggle').onclick = () => { toggleAtivoProc(id); closeProcRowMenu(); };
+  document.getElementById('prm-toggle').querySelector('i').className = 'ti ti-' + (inativo?'player-play':'player-pause');
+  document.getElementById('prm-toggle-label').textContent = inativo?'Ativar':'Desativar';
+  document.getElementById('prm-dup').onclick = () => { duplicarProc(id); closeProcRowMenu(); };
+
+  const r = btnEl.getBoundingClientRect();
+  menu.style.display = 'block';
+  menu.dataset.forId = String(id);
+  const menuWidth = menu.offsetWidth || 200;
+  menu.style.left = Math.max(8, r.right - menuWidth) + 'px';
+  menu.style.top = (r.bottom + 6) + 'px';
+}
+function closeProcRowMenu(){
+  const menu = document.getElementById('proc-row-menu');
+  menu.style.display = 'none';
+  delete menu.dataset.forId;
+}
+document.addEventListener('click', e=>{
+  if(!e.target.closest('#proc-row-menu') && !e.target.closest('[onclick*="toggleProcRowMenu"]')) closeProcRowMenu();
+});
+document.addEventListener('scroll', ()=>closeProcRowMenu(), true);
 
 // ── MATERIAIS ──
 let editMatId = null;
