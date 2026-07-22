@@ -5,8 +5,14 @@ const { createClient } = require('@supabase/supabase-js');
 // copiar e mandar no WhatsApp; quando o cliente autoriza o pagamento, o
 // Mercado Pago avisa api/mercadopago-webhook.js sozinho, que aprova a
 // clínica automaticamente — sem você precisar entrar e clicar em nada.
+//
+// Modo "trial": o cliente cadastra o cartão e autoriza a assinatura, mas
+// só é cobrado depois de TRIAL_DIAS — se cancelar antes disso, nunca paga
+// nada. O webhook sabe diferenciar (via mp_trial_dias salvo na clínica) e
+// só libera o período de teste na autorização inicial, não o mês inteiro.
 
 const PLANO_MENSAL_VALOR = 69.90;
+const TRIAL_DIAS = 3;
 
 module.exports = async function handler(req, res) {
   res.setHeader('Content-Type', 'application/json');
@@ -39,7 +45,7 @@ module.exports = async function handler(req, res) {
   const { data: isAdmin, error: adminErr } = await sbCaller.rpc('rwdent_is_admin');
   if (adminErr || !isAdmin) return res.status(403).json({ error: 'Acesso negado.' });
 
-  const { clinicaId } = req.body || {};
+  const { clinicaId, trial } = req.body || {};
   if (!clinicaId) return res.status(400).json({ error: 'clinicaId obrigatório.' });
 
   const sbAdmin = createClient(supabaseUrl, serviceRoleKey);
@@ -47,14 +53,21 @@ module.exports = async function handler(req, res) {
     .from('clinicas').select('id, nome_cli, email').eq('id', clinicaId).single();
   if (cliErr || !clinica) return res.status(404).json({ error: 'Clínica não encontrada.' });
 
+  const autoRecurring = {
+    frequency: 1,
+    frequency_type: 'months',
+    transaction_amount: PLANO_MENSAL_VALOR,
+    currency_id: 'BRL'
+  };
+  if (trial) {
+    autoRecurring.free_trial = { frequency: TRIAL_DIAS, frequency_type: 'days' };
+  }
+
   const payload = {
-    reason: `Assinatura RWDent — ${clinica.nome_cli || 'Clínica'}`,
-    auto_recurring: {
-      frequency: 1,
-      frequency_type: 'months',
-      transaction_amount: PLANO_MENSAL_VALOR,
-      currency_id: 'BRL'
-    },
+    reason: trial
+      ? `RWDent — Teste grátis ${TRIAL_DIAS} dias (${clinica.nome_cli || 'Clínica'})`
+      : `Assinatura RWDent — ${clinica.nome_cli || 'Clínica'}`,
+    auto_recurring: autoRecurring,
     back_url: appUrl,
     external_reference: String(clinica.id),
     status: 'pending'
@@ -72,8 +85,10 @@ module.exports = async function handler(req, res) {
     return res.status(502).json({ error: 'Erro ao criar assinatura no Mercado Pago: ' + (mpJson.message || mpResp.status) });
   }
 
-  await sbAdmin.from('clinicas').update({ mp_subscription_id: mpJson.id }).eq('id', clinicaId);
+  await sbAdmin.from('clinicas')
+    .update({ mp_subscription_id: mpJson.id, mp_trial_dias: trial ? TRIAL_DIAS : null })
+    .eq('id', clinicaId);
 
-  console.log(`[mercadopago] assinatura criada: clinica=${clinicaId} preapproval=${mpJson.id} por ${user.email}`);
+  console.log(`[mercadopago] assinatura criada: clinica=${clinicaId} preapproval=${mpJson.id} trial=${!!trial} por ${user.email}`);
   return res.status(200).json({ ok: true, link: mpJson.init_point, preapprovalId: mpJson.id });
 };

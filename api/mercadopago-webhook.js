@@ -86,8 +86,8 @@ module.exports = async function handler(req, res) {
   return res.status(200).json({ ok: true });
 };
 
-async function liberarClinica(sbAdmin, clinicaId, origem) {
-  const expira = new Date(Date.now() + DIAS_ACESSO_POR_CICLO * 24 * 60 * 60 * 1000).toISOString();
+async function liberarClinica(sbAdmin, clinicaId, dias, origem) {
+  const expira = new Date(Date.now() + dias * 24 * 60 * 60 * 1000).toISOString();
   const { error } = await sbAdmin.from('clinicas')
     .update({ status: 'aprovado', expira_em: expira })
     .eq('id', clinicaId);
@@ -95,7 +95,7 @@ async function liberarClinica(sbAdmin, clinicaId, origem) {
     console.error(`[mp-webhook] erro ao liberar clínica ${clinicaId}:`, error.message);
     return;
   }
-  console.log(`[mp-webhook] clínica ${clinicaId} liberada até ${expira} (origem: ${origem})`);
+  console.log(`[mp-webhook] clínica ${clinicaId} liberada por ${dias} dia(s), até ${expira} (origem: ${origem})`);
 }
 
 async function tratarPreapproval(sbAdmin, mpToken, preapprovalId) {
@@ -110,7 +110,16 @@ async function tratarPreapproval(sbAdmin, mpToken, preapprovalId) {
 
   const clinicaId = data.external_reference;
   if (!clinicaId) { console.error('[mp-webhook] preapproval sem external_reference — não sei qual clínica liberar.'); return; }
-  await liberarClinica(sbAdmin, clinicaId, 'preapproval autorizado');
+
+  // Se a clínica está marcada como "em teste" (mp_trial_dias definido), a
+  // autorização inicial (sem cobrança ainda) só dá direito ao período de
+  // teste — não ao ciclo mensal completo. Isso evita que alguém autorize
+  // um teste grátis, cancele antes de ser cobrado, e ganhe um mês de
+  // graça mesmo assim.
+  const { data: clinica } = await sbAdmin.from('clinicas').select('mp_trial_dias').eq('id', clinicaId).maybeSingle();
+  const diasTrial = clinica?.mp_trial_dias;
+  const dias = (diasTrial && diasTrial > 0) ? diasTrial + 1 : DIAS_ACESSO_POR_CICLO; // +1 dia de folga no trial
+  await liberarClinica(sbAdmin, clinicaId, dias, diasTrial ? `preapproval autorizado (trial ${diasTrial}d)` : 'preapproval autorizado');
 }
 
 async function tratarPagamento(sbAdmin, mpToken, paymentId) {
@@ -130,5 +139,8 @@ async function tratarPagamento(sbAdmin, mpToken, paymentId) {
     console.error(`[mp-webhook] pagamento ${paymentId} aprovado mas sem external_reference — não consegui achar a clínica automaticamente. Verifique manualmente no painel do Mercado Pago.`);
     return;
   }
-  await liberarClinica(sbAdmin, clinicaId, 'pagamento aprovado');
+  // Um pagamento de verdade caiu — não é mais trial, a partir de agora
+  // ganha o ciclo mensal completo (inclusive nas próximas renovações).
+  await sbAdmin.from('clinicas').update({ mp_trial_dias: null }).eq('id', clinicaId);
+  await liberarClinica(sbAdmin, clinicaId, DIAS_ACESSO_POR_CICLO, 'pagamento aprovado');
 }
