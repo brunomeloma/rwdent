@@ -3661,7 +3661,9 @@ async function pacAlterarStatusPlano(id, status){
       // dente que foi realmente tratado hoje. Isso baixava estoque e
       // marcava como feito um procedimento que não foi tocado, enquanto o
       // que foi tratado de verdade ficava esquecido como orçamento aberto.
-      let vendaIdx = vendas.findIndex(v=>v.planoItemId===id);
+      // it.planoId é o vínculo mais preciso que existe (id exato do item do
+      // plano dentro da venda) — checa antes de qualquer outro critério.
+      let vendaIdx = vendas.findIndex(v=>v.planoItemId===id || v.itens?.some(it=>it.planoId===id));
       if(vendaIdx<0){
         vendaIdx = vendas.findIndex(v=>
           v.pacienteId===selectedPatientId && v.status==='orcamento' &&
@@ -3670,16 +3672,28 @@ async function pacAlterarStatusPlano(id, status){
       }
       if(vendaIdx>=0){
         const _v = vendas[vendaIdx];
-        // Desconta estoque dos materiais (bug fix: estava faltando aqui)
-        const _itensProc = (_v.itens||[]).filter(i=>i.procId).map(i=>({procId:i.procId,qtd:i.qtd||1}));
-        const _consumo = computeConsumo(_itensProc);
-        const _aplicado = aplicarBaixaEstoque(_consumo);
-        _v.status='finalizada';
-        _v.dataFinal=new Date().toISOString();
-        _v.consumo=_aplicado;
-        const _eVF2=await saveFinanceiro(); // bug fix: estava sem await
-        if(_eVF2) showToast('Erro ao salvar venda finalizada: '+_eVF2.message,'error');
-        renderEstoque();
+        // Achado em produção: quando o orçamento tem VÁRIOS procedimentos
+        // juntos (aprovados em lote), marcar só UM deles como "Realizado"
+        // finalizava o orçamento INTEIRO — baixava estoque e cobrava pelos
+        // outros itens que ainda nem foram feitos. Só finaliza a venda toda
+        // se TODOS os itens do plano vinculados a ela já estiverem
+        // realizados (incluindo o que acabou de ser marcado agora).
+        const idsLigados = _v.planoIds?.length ? _v.planoIds : (_v.planoItemId ? [_v.planoItemId] : []);
+        const todosRealizados = idsLigados.length
+          ? idsLigados.every(pid => pid===id || pacPlanoList.find(p=>p.id===pid)?.status==='realizado')
+          : true; // venda sem vínculo de plano nenhum — mantém o comportamento antigo
+        if(todosRealizados){
+          // Desconta estoque dos materiais (bug fix: estava faltando aqui)
+          const _itensProc = (_v.itens||[]).filter(i=>i.procId).map(i=>({procId:i.procId,qtd:i.qtd||1}));
+          const _consumo = computeConsumo(_itensProc);
+          const _aplicado = aplicarBaixaEstoque(_consumo);
+          _v.status='finalizada';
+          _v.dataFinal=new Date().toISOString();
+          _v.consumo=_aplicado;
+          const _eVF2=await saveFinanceiro(); // bug fix: estava sem await
+          if(_eVF2) showToast('Erro ao salvar venda finalizada: '+_eVF2.message,'error');
+          renderEstoque();
+        }
       }
 
       const dentesArr = (item.dente||'').split(',').filter(Boolean).map(d=>({dente:parseInt(d)||d,procedimento:item.procedimento}));
