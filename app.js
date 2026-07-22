@@ -4533,6 +4533,20 @@ function _norm(s){ return String(s||'').toLowerCase().normalize('NFD').replace(/
 
 const fmtN2  = v => isNaN(v)?'—':Number(v).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
 
+// ── Unidades "inteiras" (não fracionárias) — agulha, seringa, kit etc. se
+// contam em números inteiros; ml/grama/kg/m são medidas contínuas e podem
+// ter casas decimais (62,5 ml faz sentido, 62,5 agulha não). Usado pra
+// ajustar o step dos campos de quantidade (estoque, cadastro de material,
+// insumo do procedimento) e arredondar o valor salvo de acordo.
+const _UNIDADES_INTEIRAS = new Set(['unid','und','unidade','uni','kit','caixa','cx','frasco',
+  'seringa','ampola','capsula','pacote','pote','par','peca','pç','rolo','placa']);
+function unidEhInteira(unid){ return _UNIDADES_INTEIRAS.has(_norm(unid)); }
+function passoQtd(unid){ return unidEhInteira(unid) ? '1' : '0.01'; }
+function arredondarQtd(val, unid){
+  const n = parseFloat(val)||0;
+  return unidEhInteira(unid) ? Math.round(n) : parseFloat(n.toFixed(3));
+}
+
 // ── Estado financeiro (salvo no Supabase por clínica) ──
 let procs       = [];   // procedimentos com precificação
 // Materiais que são "kit completo" (20 peças) — nunca usar em procedimentos de recolagem
@@ -6356,6 +6370,18 @@ document.addEventListener('scroll', ()=>closeProcRowMenu(), true);
 // ── MATERIAIS ──
 let editMatId = null;
 let activeCat = '';
+// Ajusta o step (e arredonda o valor já digitado) dos campos de
+// quantidade do material conforme a unidade escolhida em mm-unid —
+// unidades inteiras (unid, kit, seringa...) não aceitam casa decimal.
+function mmAtualizarPassos(){
+  const unid = document.getElementById('mm-unid')?.value||'';
+  const passo = passoQtd(unid);
+  ['mm-qtde','mm-est-atual','mm-est-min','mm-est-compra'].forEach(id=>{
+    const el = document.getElementById(id); if(!el) return;
+    el.step = passo;
+    if(el.value!=='') el.value = arredondarQtd(el.value, unid);
+  });
+}
 function openAddMat(){
   editMatId = null;
   document.getElementById('modal-mat-title').textContent = 'Novo material';
@@ -6364,6 +6390,7 @@ function openAddMat(){
   });
   document.getElementById('mm-custo-calc').textContent = '—';
   updateCatsList();
+  mmAtualizarPassos();
   openModal('modal-mat');
 }
 function openEditMat(id){
@@ -6381,6 +6408,7 @@ function openEditMat(id){
   document.getElementById('mm-est-compra').value  = e.compra??'';
   updateCatsList();
   calcMatCusto();
+  mmAtualizarPassos();
   openModal('modal-mat');
 }
 function updateCatsList(){
@@ -6396,10 +6424,11 @@ function calcMatCusto(){
 async function saveMat(){
   const nome = document.getElementById('mm-nome')?.value.trim();
   if(!nome){ showToast('Informe o nome do material.','warn'); return; }
-  const qtde  = Number(document.getElementById('mm-qtde')?.value)||1;
+  const unid  = document.getElementById('mm-unid')?.value||'unid';
+  const qtde  = arredondarQtd(document.getElementById('mm-qtde')?.value||1, unid) || 1;
   const preco = Number(document.getElementById('mm-preco')?.value)||0;
   const custo = parseFloat((preco/qtde).toFixed(4));
-  const obj   = { nome, cat:document.getElementById('mm-cat')?.value||'Geral', unid:document.getElementById('mm-unid')?.value||'unid', qtde, preco, custo };
+  const obj   = { nome, cat:document.getElementById('mm-cat')?.value||'Geral', unid, qtde, preco, custo };
   let matId;
   if(editMatId){
     matId = editMatId;
@@ -6414,7 +6443,7 @@ async function saveMat(){
   const em = document.getElementById('mm-est-min')?.value;
   const ec = document.getElementById('mm-est-compra')?.value;
   if(ea!==''||em!==''||ec!==''||estoque[matId]){
-    estoque[matId] = { atual:Number(ea)||0, min:Number(em)||0, compra:Number(ec)||0 };
+    estoque[matId] = { atual:arredondarQtd(ea,unid), min:arredondarQtd(em,unid), compra:arredondarQtd(ec,unid) };
   }
   showLoading(true);
   const _eM=await saveFinanceiro();
@@ -6575,14 +6604,15 @@ function renderEstoque(){
     const barCls = st==='danger'?'prog-danger':st==='warn'?'prog-warn':'prog-ok';
     const stLbl  = st==='danger'?'Crítico':st==='warn'?'Atenção':st==='ok'?'OK':'—';
     const stCls  = st==='danger'?'danger':st==='warn'?'warn':st==='ok'?'ok':'';
+    const passo = passoQtd(m.unid);
     return `<tr style="border-bottom:1px solid var(--rose-light);">
       <td data-label="Selecionar" style="padding:10px;"><input type="checkbox" ${estSelected.has(m.id)?'checked':''} onchange="toggleEstSel(${m.id},this.checked)"/></td>
       <td data-label="Material" style="padding:10px;font-weight:500;">${escapeHtml(m.nome)}</td>
       <td data-label="Categoria" style="padding:10px;"><span style="background:var(--rose-lighter);color:var(--rose-dark);border-radius:6px;padding:2px 8px;font-size:11px;">${escapeHtml(m.cat||'—')}</span></td>
       <td data-label="Unid." style="padding:10px;text-align:right;">${escapeHtml(m.unid||'—')}</td>
-      <td data-label="Atual" style="padding:10px;text-align:right;"><input class="edit-input-fin" type="number" min="0" step="0.01" value="${e.atual||0}" onchange="updateEstField(${m.id},'atual',this.value)" style="width:72px;text-align:right;font-weight:700;"/></td>
-      <td data-label="Mínimo" style="padding:10px;text-align:right;"><input class="edit-input-fin" type="number" min="0" step="0.01" value="${e.min||0}" onchange="updateEstField(${m.id},'min',this.value)" style="width:66px;text-align:right;color:#dc2626;"/></td>
-      <td data-label="Compra" style="padding:10px;text-align:right;"><input class="edit-input-fin" type="number" min="0" step="0.01" value="${e.compra||0}" onchange="updateEstField(${m.id},'compra',this.value)" style="width:66px;text-align:right;color:#856404;"/></td>
+      <td data-label="Atual" style="padding:10px;text-align:right;"><input class="edit-input-fin" type="number" min="0" step="${passo}" value="${e.atual||0}" onchange="updateEstField(${m.id},'atual',this.value,this)" style="width:72px;text-align:right;font-weight:700;"/></td>
+      <td data-label="Mínimo" style="padding:10px;text-align:right;"><input class="edit-input-fin" type="number" min="0" step="${passo}" value="${e.min||0}" onchange="updateEstField(${m.id},'min',this.value,this)" style="width:66px;text-align:right;color:#dc2626;"/></td>
+      <td data-label="Compra" style="padding:10px;text-align:right;"><input class="edit-input-fin" type="number" min="0" step="${passo}" value="${e.compra||0}" onchange="updateEstField(${m.id},'compra',this.value,this)" style="width:66px;text-align:right;color:#856404;"/></td>
       <td data-label="Nível" style="padding:10px;">${pct!==null?`<div class="prog-wrap"><div class="prog-bar ${barCls}" style="width:${pct}%;"></div></div> <span style="font-size:11px;color:var(--rose-text);">${pct}%</span>`:'<span style="font-size:11px;color:var(--rose-text);">—</span>'}</td>
       <td data-label="Status" style="padding:10px;"><span class="fin-badge ${stCls}">${stLbl}</span></td>
       <td data-label="Ações" style="padding:10px;">
@@ -6594,9 +6624,15 @@ function renderEstoque(){
     </tr>`;
   }).join('');
 }
-function updateEstField(id, field, val){
+function updateEstField(id, field, val, el){
   if(!estoque[id]) estoque[id]={atual:0,min:0,compra:0};
-  estoque[id][field] = parseFloat(val)||0;
+  const m = mats.find(x=>x.id===id);
+  const arredondado = arredondarQtd(val, m?.unid);
+  estoque[id][field] = arredondado;
+  // Se a unidade é inteira (agulha, seringa...) e o usuário digitou/rolou
+  // uma casa decimal, corrige o que aparece no campo pro valor arredondado
+  // realmente salvo — evita "62,02 UNID" ficando visível na tela.
+  if(el && String(arredondado) !== String(val)) el.value = arredondado;
   // NÃO chama renderEstoque() aqui — evita recriar os inputs e perder o foco
   // Atualiza só o badge de status inline sem re-renderizar toda a tabela
   _atualizarStatusEstLinha(id);
@@ -6692,13 +6728,22 @@ function miSelecionarMat(matId){
   document.getElementById('mi-mat-sel-id').value = matId;
   document.getElementById('mi-mat-search').value = m.nome;
   document.getElementById('mi-mat-dropdown').style.display = 'none';
+  // Unidade inteira (agulha, seringa...) não aceita fração — ajusta o passo
+  // do campo de quantidade conforme o material escolhido.
+  const qtdEl = document.getElementById('mi-qtd-add');
+  if(qtdEl){
+    const inteira = unidEhInteira(m.unid);
+    qtdEl.step = inteira ? '1' : '0.001';
+    qtdEl.min  = inteira ? '1' : '0.001';
+    if(qtdEl.value!=='') qtdEl.value = arredondarQtd(qtdEl.value, m.unid) || (inteira?1:0.001);
+  }
 }
 
 function addInsumoRow(){
   const matId = Number(document.getElementById('mi-mat-sel-id')?.value);
-  const qtd   = parseFloat(document.getElementById('mi-qtd-add')?.value)||1;
   if(!matId){ showToast('Busque e selecione um material na lista antes de adicionar.','warn'); return; }
   const m = mats.find(x=>x.id===matId);
+  const qtd = arredondarQtd(document.getElementById('mi-qtd-add')?.value||1, m?.unid) || 1;
   // Aviso extra de segurança: tentando usar kit completo num procedimento de recolagem
   if(PROC_IDS_RECOLAGEM.has(insumosEditProcId) && m && MAT_IDS_KIT_COMPLETO.has(m.id)){
     if(!confirm('"'+m.nome+'" é o KIT COMPLETO (20 peças), não a peça avulsa. Isso vai cobrar o paciente pelo aparelho inteiro de novo. Tem certeza que quer usar este material aqui?')) return;
