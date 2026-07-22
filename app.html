@@ -1885,6 +1885,12 @@
             <i class="ti ti-info-circle"></i> Hora clínica resultante: <strong id="cfg-hora-preview">—</strong>
             <div style="font-size:11px;color:var(--rose-text);margin-top:4px;">Fórmula: (salário ÷ horas) × (1 + tributos%). Esse valor é usado para calcular o custo de "hora clínica" de cada procedimento (tempo do procedimento ÷ 60 × hora clínica).</div>
           </div>
+          <div style="background:#fff8e1;border:1px solid #ffe082;border-radius:10px;padding:12px 16px;margin-top:12px;">
+            <label style="display:flex;align-items:flex-start;gap:10px;font-size:13px;color:#8a6d00;cursor:pointer;">
+              <input type="checkbox" id="cfg-recalc-massa" style="margin-top:2px;accent-color:var(--rose);"/>
+              <span>Recalcular preços de <strong>todos</strong> os procedimentos com a nova hora clínica<br/><span style="font-size:11px;color:#a08600;">Inclui os procedimentos que você já ajustou manualmente — use com cuidado, essa ação não pode ser desfeita.</span></span>
+            </label>
+          </div>
           <div style="display:flex;justify-content:flex-end;margin-top:14px;">
             <button class="btn-primary" onclick="salvarPrecificacao()"><i class="ti ti-check"></i> Salvar precificação</button>
           </div>
@@ -2045,7 +2051,7 @@
   <div style="color:var(--rose-text);font-size:14px;">Carregando...</div>
 </div>
 
-<script src="app.js?v=10"></script>
+<script src="app.js?v=11"></script>
 
 <!-- ══ MODAL RELATÓRIO MENSAL ══ -->
 <div class="modal-overlay" id="modal-relatorio" onclick="if(event.target===this)closeModal('modal-relatorio')" style="align-items:flex-start;padding-top:40px;overflow-y:auto;">

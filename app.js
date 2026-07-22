@@ -6273,7 +6273,12 @@ function renderProcs(){
       <td data-label="Hora Clínica" style="padding:10px 8px;text-align:right;">${fmtBRL(_hc)}</td>
       <td data-label="Custo Total" style="padding:10px 8px;text-align:right;">${fmtBRL(_custo)}</td>
       <td data-label="Margem %" style="padding:10px 8px;text-align:right;">${p.margem||cfg.margem||100}%</td>
-      <td data-label="Preço Final" style="padding:10px 8px;text-align:right;font-weight:700;color:var(--rose-dark);">${fmtBRL(p.precoFinal||0)}</td>
+      <td data-label="Preço Final" style="padding:10px 8px;text-align:right;">
+        <div style="font-weight:700;color:var(--rose-dark);">${fmtBRL(p.precoFinal||0)}</div>
+        ${p._precoManual
+          ? '<span style="font-size:9px;background:#fff3cd;color:#8a6d00;border-radius:4px;padding:1px 5px;font-weight:600;white-space:nowrap;" title="Preço ajustado manualmente — não muda com recálculo automático de custos, só se você mesmo editar ou marcar &quot;Recalcular preços de todos os procedimentos&quot; em Configurações → Precificação.">🔒 Manual</span>'
+          : '<span style="font-size:9px;color:#8a9a8a;font-weight:600;" title="Segue a fórmula automática (hora clínica × margem)">⚙️ Fórmula</span>'}
+      </td>
       <td data-label="Ações" style="padding:10px 6px 10px 8px;">
         <div style="display:flex;gap:4px;justify-content:flex-end;align-items:center;">
           <button class="btn-secondary" style="padding:4px 7px;font-size:11px;position:relative;${_flaskColor}" onclick="openInsumos(${p.id})" title="${_insCount>0?_insCount+' insumo(s) configurado(s)':'Adicionar insumos'}">${_flaskBadge}<i class="ti ti-flask"></i></button>
@@ -11340,6 +11345,28 @@ function cfgAtualizarPreviewHora(){
   if(el) el.textContent = fmtBRL(hora) + ' / hora';
 }
 
+// Recálculo forçado de TODOS os procedimentos (ignora _precoManual/_margemManual)
+// — só deve ser chamado a partir do checkbox "Recalcular preços de todos os
+// procedimentos" em salvarPrecificacao(), nunca automaticamente.
+function _recalcularTodosProcsForcado(){
+  procs.forEach(p=>{
+    const ins = procInsumos[p.id]||[];
+    if(ins.length){
+      p.insumos = parseFloat(ins.reduce((acc,item)=>{const m=mats.find(x=>x.id===item.matId);return acc+(m?m.custo*item.qtd:0);},0).toFixed(2));
+    }
+    p.horaClin = parseFloat(((p.tempo/60)*calcHora()).toFixed(2));
+    p.margem = cfg.margem;
+    p.precoFinal = calcPrecoFinal(p);
+    p._precoManual = false;
+    p._margemManual = false;
+  });
+  // 2ª passada: manutenções dependem do preço de instalação já recalculado acima
+  procs.forEach(p=>{
+    const pm = calcPrecoManut(p.id, false);
+    if(pm !== null) p.precoFinal = pm;
+  });
+}
+
 async function salvarPrecificacao(){
   cfg.salario  = Number(document.getElementById('cfg-salario')?.value)||0;
   cfg.horas    = Number(document.getElementById('cfg-horas')?.value)||132;
@@ -11348,16 +11375,34 @@ async function salvarPrecificacao(){
   cfg.margem   = Number(document.getElementById('cfg-margem')?.value)||100;
   cfg.pct_manut = Number(document.getElementById('cfg-pct-manut')?.value)||15;
 
-  // Salva só a configuração (hora clínica/margem padrão) — NÃO mexe no preço
-  // já salvo de nenhum procedimento. O preço só muda quando o usuário pedir
-  // explicitamente ("Recalcular custos" ou o ícone de recalcular de cada
-  // procedimento); mudar o pró-labore aqui não pode alterar em massa o que
-  // já está precificado.
+  // Salva sempre só a configuração (hora clínica/margem padrão) — NÃO mexe no
+  // preço já salvo de nenhum procedimento. O recálculo em massa (que inclusive
+  // sobrescreve preços ajustados manualmente) só roda se o usuário marcar o
+  // checkbox abaixo e confirmar; nunca acontece sozinho.
+  const recalcEl = document.getElementById('cfg-recalc-massa');
+  let recalculouTudo = false;
+  if(recalcEl?.checked){
+    const qtd = procs.length;
+    const manuais = procs.filter(p=>p._precoManual).length;
+    const msg = `Isso vai recalcular o preço de ${qtd} procedimento(s)`
+      + (manuais>0 ? `, incluindo ${manuais} que você ajustou manualmente` : '')
+      + `. Essa ação não pode ser desfeita. Continuar?`;
+    if(confirm(msg)){
+      _recalcularTodosProcsForcado();
+      recalculouTudo = true;
+    }
+    recalcEl.checked = false;
+  }
+
   showLoading(true);
   const _ePrec=await saveFinanceiro();
   showLoading(false);
   renderProcs();
-  if(!_ePrec) showToast('Precificação salva! Margem global: '+cfg.margem+'%. Hora clínica: '+fmtBRL(calcHora())+'.');
+  if(!_ePrec){
+    showToast(recalculouTudo
+      ? `Precificação salva e ${procs.length} procedimento(s) recalculado(s)! Hora clínica: ${fmtBRL(calcHora())}.`
+      : 'Precificação salva! Margem global: '+cfg.margem+'%. Hora clínica: '+fmtBRL(calcHora())+'.');
+  }
 }
 
 async function salvarTaxas(){
