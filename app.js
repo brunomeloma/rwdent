@@ -11558,7 +11558,7 @@ function capRenderTabela(){
 
   tb.innerHTML = filtrados.map(c=>{
     const corStatus = CAP_STATUS_COR[c.status] || CAP_STATUS_COR.novo;
-    const corCat = CAP_CATEGORIA_COR[c.categoria] || '#888';
+    const corCat = CAP_CATEGORIA_COR[c.categoria] || '#888888'; // hex de 6 dígitos — o `${corCat}20` logo abaixo gruda um sufixo de transparência, e com 3 dígitos vira uma cor CSS inválida (contato sem categoria, ex: adicionado manual, ficava com o fundo do badge sumido)
     const labelCat = CAP_CATEGORIA_LABEL[c.categoria] || (c.categoria ? c.categoria : '—');
     const nomeAcaoCampanha = capNomeAcaoCampanha(c.categoria);
     return `<tr style="border-bottom:1px solid var(--rose-light);">
