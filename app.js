@@ -3652,9 +3652,22 @@ async function pacAlterarStatusPlano(id, status){
   if(status === 'realizado'){
     const item = pacPlanoList.find(i=>i.id===id);
     if(item){
-      const vendaIdx = vendas.findIndex(v=>v.planoItemId===id||
-        (v.pacienteId===selectedPatientId && v.status==='orcamento' &&
-         v.itens?.some(it=>it.nome===item.procedimento)));
+      // Prioriza o vínculo exato (planoItemId) — achado em produção: como
+      // era um único findIndex com "ou" combinando o vínculo exato e uma
+      // busca por nome de procedimento, um paciente com dois orçamentos
+      // pendentes do MESMO procedimento em dentes diferentes (comum —
+      // ex: "Restauração" em vários dentes) podia finalizar o orçamento
+      // ERRADO — o primeiro que batesse o nome, não necessariamente o
+      // dente que foi realmente tratado hoje. Isso baixava estoque e
+      // marcava como feito um procedimento que não foi tocado, enquanto o
+      // que foi tratado de verdade ficava esquecido como orçamento aberto.
+      let vendaIdx = vendas.findIndex(v=>v.planoItemId===id);
+      if(vendaIdx<0){
+        vendaIdx = vendas.findIndex(v=>
+          v.pacienteId===selectedPatientId && v.status==='orcamento' &&
+          v.itens?.some(it=>it.nome===item.procedimento && String(it.dente||'')===String(item.dente||''))
+        );
+      }
       if(vendaIdx>=0){
         const _v = vendas[vendaIdx];
         // Desconta estoque dos materiais (bug fix: estava faltando aqui)
