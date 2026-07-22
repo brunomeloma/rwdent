@@ -320,15 +320,10 @@ async function doLogout(){
   } catch(e){ console.error('Erro ao salvar:', e); }
   await _sb.auth.signOut();
   localStorage.removeItem('rwdent-demo');
-  document.body.classList.remove('demo-mode');
-  document.getElementById('demo-banner').classList.remove('active');
-  currentUser=null; agendamentos=[]; profissionais=[]; pacientes=[];
-  procs=[]; mats=[]; estoque={}; procInsumos={}; vendas=[]; combos=[];
-  _financeiroCarregado = false;
-  document.getElementById('app').style.display='none';
-  document.getElementById('login-screen').style.display='flex';
-  document.getElementById('login-pass').value='';
   window.aiOnLogout?.();
+  // Volta pra tela de login nova (index.html) em vez de reexibir o
+  // #login-screen antigo daqui, que ficou desatualizado visualmente.
+  window.location.replace('index.html');
 }
 
 // Timeout de inatividade — desloga após 30 min sem interação
