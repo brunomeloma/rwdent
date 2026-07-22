@@ -1833,6 +1833,14 @@ function renderPatientDetail(abaAtiva){
             </div>
           </div>
 
+          <div class="form-group" style="max-width:320px;margin-top:14px;">
+            <label>Profissional responsável (assinatura)</label>
+            <select id="an-profissional">
+              <option value="">— Selecionar —</option>
+              ${profissionais.map(pr=>`<option value="${pr.id}" ${String(p.anamnese?.profissionalId||'')===String(pr.id)?'selected':''}>${escapeHtml(pr.nome)}</option>`).join('')}
+            </select>
+          </div>
+
           ${renderAnamneseSignArea(p.id, p.nome, (profissionais.find(pr=>pr.id==p.anamnese?.profissionalId)?.nome)||'', (profissionais.find(pr=>pr.id==p.anamnese?.profissionalId)?.cro)||'', p.anamnese?.assinaturas||{})}
 
           <div style="display:flex;justify-content:flex-end;margin-top:4px;">
@@ -2254,6 +2262,14 @@ function renderPatientDetail(abaAtiva){
             </div>
           </div>
 
+          <div class="form-group" style="max-width:320px;margin-top:14px;">
+            <label>Profissional responsável (assinatura)</label>
+            <select id="termo-profissional">
+              <option value="">— Selecionar —</option>
+              ${profissionais.map(pr=>`<option value="${pr.id}" ${String(p.termo_consentimento?.profissionalId||'')===String(pr.id)?'selected':''}>${escapeHtml(pr.nome)}</option>`).join('')}
+            </select>
+          </div>
+
           ${renderTermoSignArea(p.id, p.nome, (profissionais.find(pr=>pr.id==p.termo_consentimento?.profissionalId)?.nome)||'', (profissionais.find(pr=>pr.id==p.termo_consentimento?.profissionalId)?.cro)||'', p.termo_consentimento?.assinaturas||{})}
         </div>
       </div>
@@ -2311,6 +2327,7 @@ async function anamneseSalvar(pacId){
   const chk   = (id)   => document.getElementById(id)?.checked || false;
 
   const anamnese = {
+    profissionalId: parseInt(val('an-profissional'))||null,
     queixa        : val('an-queixa'),
     medicacao     : radio('an-med'),
     medicacaoQual : val('an-med-qual'),
@@ -9402,7 +9419,12 @@ async function salvarAssinaturasTermo(pacId){
   const sigs = assinaturasTermo[pacId] || {};
   const p = pacientes.find(pt=>pt.id===pacId);
   if(!p) return;
-  const termo = { ...(p.termo_consentimento||{}), assinaturas: sigs, data: hoje() };
+  // Pega o profissional selecionado na tela, se o campo existir (fica fora
+  // do ar quando essa função é chamada de um contexto sem o formulário
+  // renderizado) — preserva o que já tava salvo nesse caso.
+  const profSelEl = document.getElementById('termo-profissional');
+  const profissionalId = profSelEl ? (parseInt(profSelEl.value)||null) : (p.termo_consentimento?.profissionalId||null);
+  const termo = { ...(p.termo_consentimento||{}), assinaturas: sigs, data: hoje(), profissionalId };
   showLoading(true);
   const { error } = await _sb.from('pacientes').update({ termo_consentimento: termo }).eq('id', pacId);
   showLoading(false);
@@ -11892,14 +11914,28 @@ async function exportarBackup(){
     const { data: allProcDentes } = await _sb.from('procedimentos_dentes').select('*').eq('clinica_id', clinicaId);
     const procDentesMap = {};
     (allProcDentes||[]).forEach(r => { (procDentesMap[r.paciente_id] = procDentesMap[r.paciente_id] || []).push(r); });
-    const pacientesComOdonto = pacientes.map(p => ({ ...p, procedimentos_dentes: procDentesMap[p.id] || [] }));
+    // Histórico de atendimentos e plano de tratamento também ficam em
+    // tabelas próprias (não vinham no backup antes — achado revisando o
+    // que "Exportar todos os dados" realmente cobria).
+    const { data: allAtend } = await _sb.from('atendimentos_odonto').select('*').eq('clinica_id', clinicaId);
+    const atendMap = {};
+    (allAtend||[]).forEach(r => { (atendMap[r.paciente_id] = atendMap[r.paciente_id] || []).push(r); });
+    const { data: allPlano } = await _sb.from('plano_tratamento').select('*').eq('clinica_id', clinicaId);
+    const planoMap = {};
+    (allPlano||[]).forEach(r => { (planoMap[r.paciente_id] = planoMap[r.paciente_id] || []).push(r); });
+    const pacientesComOdonto = pacientes.map(p => ({
+      ...p,
+      procedimentos_dentes: procDentesMap[p.id] || [],
+      atendimentos_odonto: atendMap[p.id] || [],
+      plano_tratamento: planoMap[p.id] || []
+    }));
     const backup = {
       exportadoEm: new Date().toISOString(),
       clinica: clinicaData,
       pacientes: pacientesComOdonto,
       agendamentos: agendamentos,
       profissionais: profissionais,
-      financeiro: { procs, mats, estoque, procInsumos, vendas, combos, cfg, taxasCfg, descCfg, pagPac }
+      financeiro: { procs, mats, estoque, procInsumos, vendas, despesas, combos, cfg, taxasCfg, descCfg, pagPac }
     };
     const blob = new Blob([JSON.stringify(backup, null, 2)], {type:'application/json'});
     const url = URL.createObjectURL(blob);
@@ -11915,6 +11951,141 @@ async function exportarBackup(){
   } catch(e){ showToast('Erro ao exportar: '+e.message,'error'); }
   showLoading(false);
 }
+
+// ── RESTAURAR BACKUP ──
+// Regra de segurança: só restaura uma área (pacientes, agenda,
+// profissionais, financeiro) se ela estiver VAZIA hoje — nunca sobrescreve
+// ou mexe em dado que já existe. Pensado pra recuperar uma conta nova/vazia
+// a partir de um arquivo exportado antes, não pra "desfazer" nada.
+async function importarBackup(file){
+  if(!file) return;
+  const inputEl = document.getElementById('backup-import-input');
+  if(!confirm('Restaurar backup?\n\nSó restaura o que estiver vazio agora — pacientes, agenda, profissionais e financeiro já cadastrados NÃO são apagados nem alterados.')) {
+    if(inputEl) inputEl.value = '';
+    return;
+  }
+  showLoading(true);
+  const relatorio = [];
+  try {
+    const texto = await file.text();
+    const backup = JSON.parse(texto);
+    if(!backup || typeof backup !== 'object') throw new Error('Arquivo não parece ser um backup do RWDent.');
+
+    // 1) Profissionais primeiro — precisa dos ids novos pra remapear quem
+    // atendeu em agendamentos/vendas.
+    const mapaProf = {};
+    if(Array.isArray(backup.profissionais) && backup.profissionais.length){
+      if(profissionais.length === 0){
+        for(const pr of backup.profissionais){
+          const { id: velhoId, ...dados } = pr;
+          delete dados.clinica_id;
+          const { data: novo, error } = await _sb.from('profissionais').insert([{ ...dados, clinica_id: clinicaId }]).select().single();
+          if(!error && novo){ mapaProf[velhoId] = novo.id; profissionais.push(novo); }
+        }
+        relatorio.push(`✅ ${profissionais.length} profissional(is) restaurado(s)`);
+      } else {
+        relatorio.push('⏭️ Profissionais já tinha cadastro — não mexido');
+      }
+    }
+
+    // 2) Pacientes + dados clínicos aninhados (odontograma, atendimentos, plano)
+    const mapaPac = {};
+    if(Array.isArray(backup.pacientes) && backup.pacientes.length){
+      if(pacientes.length === 0){
+        for(const p of backup.pacientes){
+          const { id: velhoId, procedimentos_dentes, atendimentos_odonto, plano_tratamento, prontuarios, ...dados } = p;
+          delete dados.clinica_id;
+          const { data: novo, error } = await _sb.from('pacientes').insert([{ ...dados, clinica_id: clinicaId }]).select().single();
+          if(error || !novo) continue;
+          mapaPac[velhoId] = novo.id;
+          pacientes.push({ ...novo, prontuarios: [] });
+
+          for(const pd of (procedimentos_dentes||[])){
+            const { id, clinica_id, paciente_id, ...pdDados } = pd;
+            await _sb.from('procedimentos_dentes').insert([{ ...pdDados, paciente_id: novo.id, clinica_id: clinicaId }]);
+          }
+          for(const at of (atendimentos_odonto||[])){
+            const { id, clinica_id, paciente_id, profissional_id, ...atDados } = at;
+            await _sb.from('atendimentos_odonto').insert([{
+              ...atDados, paciente_id: novo.id, clinica_id: clinicaId,
+              profissional_id: profissional_id!=null ? (mapaProf[profissional_id] ?? profissional_id) : profissional_id
+            }]);
+          }
+          for(const pl of (plano_tratamento||[])){
+            const { id, clinica_id, paciente_id, ...plDados } = pl;
+            await _sb.from('plano_tratamento').insert([{ ...plDados, paciente_id: novo.id, clinica_id: clinicaId }]);
+          }
+        }
+        relatorio.push(`✅ ${pacientes.length} paciente(s) restaurado(s), com odontograma/histórico/plano`);
+      } else {
+        relatorio.push('⏭️ Pacientes já tinha cadastro — não mexido');
+      }
+    }
+
+    // 3) Agendamentos — remapeia paciente e profissional pros novos ids
+    if(Array.isArray(backup.agendamentos) && backup.agendamentos.length){
+      if(agendamentos.length === 0){
+        for(const a of backup.agendamentos){
+          const { id, clinica_id, paciente_id, prof_id, ...dados } = a;
+          const { data: novo, error } = await _sb.from('agendamentos').insert([{
+            ...dados, clinica_id: clinicaId,
+            paciente_id: paciente_id!=null ? (mapaPac[paciente_id] ?? paciente_id) : paciente_id,
+            prof_id: prof_id!=null ? (mapaProf[prof_id] ?? prof_id) : prof_id
+          }]).select().single();
+          if(!error && novo) agendamentos.push(novo);
+        }
+        relatorio.push(`✅ ${agendamentos.length} agendamento(s) restaurado(s)`);
+      } else {
+        relatorio.push('⏭️ Agenda já tinha compromisso — não mexido');
+      }
+    }
+
+    // 4) Financeiro (preços, materiais, estoque, vendas etc — um blob só)
+    if(backup.financeiro){
+      const financeiroVazio = !procs.length && !mats.length && !vendas.length && !combos.length && !despesas.length;
+      if(financeiroVazio){
+        const f = backup.financeiro;
+        if(Array.isArray(f.procs)) procs = f.procs;
+        if(Array.isArray(f.mats)) mats = f.mats;
+        if(f.estoque && typeof f.estoque === 'object') estoque = f.estoque;
+        if(f.procInsumos && typeof f.procInsumos === 'object') procInsumos = f.procInsumos;
+        if(Array.isArray(f.vendas)){
+          vendas = f.vendas.map(v => ({
+            ...v,
+            pacienteId: v.pacienteId!=null ? (mapaPac[v.pacienteId] ?? v.pacienteId) : v.pacienteId,
+            profissional_id: v.profissional_id!=null ? (mapaProf[v.profissional_id] ?? v.profissional_id) : v.profissional_id
+          }));
+          nextVendaId = vendas.length ? Math.max(...vendas.map(v=>Number(v.id)||0)) + 1 : 1;
+        }
+        if(Array.isArray(f.despesas)) despesas = f.despesas;
+        if(Array.isArray(f.combos)) combos = f.combos;
+        if(f.cfg && typeof f.cfg === 'object') cfg = { ...cfg, ...f.cfg };
+        if(f.taxasCfg && typeof f.taxasCfg === 'object') taxasCfg = f.taxasCfg;
+        if(f.descCfg && typeof f.descCfg === 'object') descCfg = f.descCfg;
+        if(f.pagPac && typeof f.pagPac === 'object') pagPac = f.pagPac;
+        const _eF = await saveFinanceiro();
+        relatorio.push(_eF ? '❌ Erro ao salvar financeiro: '+_eF.message : '✅ Financeiro restaurado (preços, materiais, estoque, vendas)');
+      } else {
+        relatorio.push('⏭️ Financeiro já tinha dados (preços/materiais/vendas) — não mexido');
+      }
+    }
+
+    showLoading(false);
+    if(typeof renderPatients==='function') renderPatients();
+    if(typeof renderMats==='function') renderMats();
+    if(typeof renderEstoque==='function') renderEstoque();
+    if(typeof renderProcs==='function') renderProcs();
+    if(typeof renderLista==='function') renderLista();
+    if(typeof renderHomeStats==='function') renderHomeStats();
+    logAtividade('Backup importado', relatorio.join(' · '));
+    alert('Restauração concluída:\n\n' + relatorio.join('\n'));
+  } catch(e){
+    showLoading(false);
+    showToast('Erro ao restaurar backup: '+e.message,'error');
+  }
+  if(inputEl) inputEl.value = '';
+}
+
 function atualizarUltimoBackup(){
   const el = document.getElementById('ultimo-backup-info');
   if(!el) return;

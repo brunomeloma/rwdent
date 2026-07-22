@@ -1954,7 +1954,10 @@
           <div id="ultimo-backup-info" style="font-size:12px;color:var(--rose-text);margin-bottom:10px;display:flex;align-items:center;gap:6px;"></div>
           <div style="display:flex;gap:10px;flex-wrap:wrap;">
             <button class="btn-secondary" onclick="exportarBackup()" style="padding:8px 16px;font-size:13px;"><i class="ti ti-download"></i> Exportar todos os dados (JSON)</button>
+            <button class="btn-secondary" onclick="document.getElementById('backup-import-input').click()" style="padding:8px 16px;font-size:13px;"><i class="ti ti-database-import"></i> Restaurar backup</button>
+            <input type="file" id="backup-import-input" accept=".json" style="display:none;" onchange="importarBackup(this.files[0])"/>
           </div>
+          <p style="font-size:11px;color:var(--rose-text);margin-top:8px;">Só restaura o que estiver <strong>vazio</strong> hoje (ex: se você já tem pacientes cadastrados, a restauração não mexe neles) — pensado pra recuperar uma conta nova ou vazia, nunca sobrescreve dado que já existe.</p>
 
           <hr style="border-color:var(--rose-light);margin:24px 0;"/>
           <h2 style="font-size:13px;font-weight:700;color:var(--rose-dark);margin-bottom:14px;display:flex;align-items:center;gap:8px;text-transform:uppercase;letter-spacing:.5px;"><i class="ti ti-shield-lock"></i> Modo secretária — esconder faturamento</h2>
@@ -2077,7 +2080,7 @@
   <div style="color:var(--rose-text);font-size:14px;">Carregando...</div>
 </div>
 
-<script src="app.js?v=28"></script>
+<script src="app.js?v=29"></script>
 
 <!-- ══ MODAL RELATÓRIO MENSAL ══ -->
 <div class="modal-overlay" id="modal-relatorio" onclick="if(event.target===this)closeModal('modal-relatorio')" style="align-items:flex-start;padding-top:40px;overflow-y:auto;">
