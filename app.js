@@ -2059,6 +2059,7 @@ function renderPatientDetail(abaAtiva){
                 <span style="font-size:13px;font-weight:700;">Total</span>
                 <span style="font-size:14px;font-weight:800;color:var(--rose-dark);" id="pac-odonto-orc-total">R$ 0,00</span>
               </div>
+              <button class="btn-secondary" style="width:100%;font-size:11.5px;margin-bottom:8px;" onclick="pacOdontoAutoPopularConfirmar()" title="Sugere procedimentos com base no histórico de todos os dentes — revise antes de salvar, pode incluir tratamento que já foi feito antes"><i class="ti ti-wand"></i> Sugerir do histórico do dente (revise antes de salvar)</button>
               <div style="display:flex;gap:8px;">
                 <button class="btn-primary" style="flex:1;justify-content:center;font-size:12px;" onclick="odontogramaSalvarEIrParaPlano(selectedPatientId)" id="pac-odonto-orc-btn-pac"><i class="ti ti-arrow-right"></i> Ir para o Plano</button>
                 <button class="btn-danger" style="font-size:12px;" onclick="pacOdontoLimparOrc()"><i class="ti ti-eraser"></i></button>
@@ -4153,9 +4154,14 @@ function pacClicarDente(num){
   } else {
     pacDenteProcs = [];
     if(d.procedimento){
+      // _jaRegistrado marca que já veio do histórico do dente (não foi
+      // adicionado agora) — impede que só ABRIR um dente pra conferir o que
+      // já foi feito jogue esse procedimento de novo pro orçamento/plano ao
+      // salvar (achado em produção: dente já tratado reaparecendo cobrável).
+      // Ver pacSalvarDente().
       const found = procs.find(p=>p.nome===d.procedimento);
-      if(found) pacDenteProcs = [{nome:found.nome, preco:found.precoFinal||0, global:procIsGlobal(found.nome)}];
-      else pacDenteProcs = [{nome:d.procedimento, preco:0, global:false}];
+      if(found) pacDenteProcs = [{nome:found.nome, preco:found.precoFinal||0, global:procIsGlobal(found.nome), _jaRegistrado:true}];
+      else pacDenteProcs = [{nome:d.procedimento, preco:0, global:false, _jaRegistrado:true}];
     }
   }
   pacRenderDenteProcs();
@@ -4211,10 +4217,15 @@ async function pacSalvarDente(pacId){
     }
     if(error){ showLoading(false); showToast('Erro ao salvar dente '+num+': '+error.message,'error'); return; }
 
-    // Adiciona ao orçamento rápido e plano
-    if(r.procs.length){
+    // Adiciona ao orçamento rápido e plano — só o que foi adicionado AGORA
+    // (_jaRegistrado marca o que já veio do histórico do dente, só pra
+    // exibição; sem esse filtro, só ABRIR um dente já tratado pra conferir
+    // o histórico e depois salvar jogava o procedimento antigo de volta pro
+    // orçamento/plano como se fosse novo).
+    const procsNovos = r.procs.filter(dp=>!dp._jaRegistrado);
+    if(procsNovos.length){
       const numFaces = r.faces.length || 1;
-      for(const dp of r.procs){
+      for(const dp of procsNovos){
         const procObj = pacOdontoFindProcExato(dp.nome) || procs.find(p=>p.nome===dp.nome);
         if(procObj){
           pacOdontoUpsertItemOrc(procObj, num, faces);
@@ -8747,7 +8758,19 @@ function pacOdontoToggleOrc(){
 
 function pacOdontoInitOrc(){
   pacOdontoPopularSelect();
-  if(!pacOdontoOrcList.length) pacOdontoAutoPopular();
+  // NÃO chama mais pacOdontoAutoPopular() sozinho aqui — achado em produção:
+  // só ABRIR o "Orçamento rápido" varria TODO o histórico de dentes do
+  // paciente e jogava pra dentro da lista qualquer procedimento já
+  // registrado, mesmo tratamento já feito e pago há tempos (o odontograma
+  // não distingue "problema em aberto" de "já foi resolvido, isso é só
+  // histórico"). Agora só roda se o dentista clicar no botão "Sugerir do
+  // histórico" de propósito — ver pacOdontoAutoPopularConfirmar().
+  pacOdontoRenderOrcLista();
+}
+
+function pacOdontoAutoPopularConfirmar(){
+  if(!confirm('Isso vai sugerir procedimentos com base em TUDO que já foi registrado nos dentes deste paciente — inclusive tratamento que já foi feito e cobrado antes, já que o histórico do dente não distingue "ainda precisa fazer" de "já foi feito". Revise a lista com cuidado antes de salvar. Continuar?')) return;
+  pacOdontoAutoPopular();
   pacOdontoRenderOrcLista();
 }
 
