@@ -1,6 +1,10 @@
 -- RWDent — Verificação de segurança em UMA TABELA SÓ (SOMENTE LEITURA)
 -- Roda tudo de uma vez, tira print do resultado inteiro e manda de volta.
 -- Não altera nada no banco.
+--
+-- Cobre TODO SQL já pedido nesta conta até agora — se um dia eu (Claude)
+-- perguntar de novo se algo já foi rodado, é só rodar este arquivo e
+-- colar o resultado, em vez de confiar na memória da conversa.
 
 select '1. Tabelas SEM proteção (RLS) ativada — deve ficar vazio' as verificacao,
        coalesce(string_agg(tablename, ', '), '✅ nenhuma — todas protegidas') as resultado
@@ -9,7 +13,8 @@ where schemaname = 'public'
   and tablename in (
     'clinicas','pacientes','agendamentos','profissionais','anamneses',
     'anamnese_links','procedimentos_dentes','atendimentos_odonto',
-    'plano_tratamento','financeiro_config','log_atividades','prontuarios','admin_users'
+    'plano_tratamento','financeiro_config','log_atividades','prontuarios','admin_users',
+    'lista_espera'
   )
   and not rowsecurity
 
@@ -22,7 +27,8 @@ where t.schemaname = 'public' and t.rowsecurity
   and t.tablename in (
     'clinicas','pacientes','agendamentos','profissionais','anamneses',
     'anamnese_links','procedimentos_dentes','atendimentos_odonto',
-    'plano_tratamento','financeiro_config','log_atividades','prontuarios','admin_users'
+    'plano_tratamento','financeiro_config','log_atividades','prontuarios','admin_users',
+    'lista_espera'
   )
   and not exists (select 1 from pg_policies p where p.schemaname='public' and p.tablename=t.tablename)
 
@@ -79,4 +85,66 @@ union all
 select '9. Trava anti-auto-aprovação de clínica (gatilho no banco) existe?',
        case when exists (select 1 from pg_trigger where tgname='trg_protect_clinica')
             then '✅ sim, protegida' else '❌ não encontrado — rodar supabase-seguranca.sql' end
+
+union all
+
+select '10. financeiro_pin_secreto tem colunas de rate-limit (tentativas_erradas/bloqueado_ate)?',
+       case
+         when not exists (select 1 from pg_tables where schemaname='public' and tablename='financeiro_pin_secreto')
+         then '⚠️ tabela ainda não existe'
+         when exists (select 1 from information_schema.columns where table_schema='public' and table_name='financeiro_pin_secreto' and column_name='tentativas_erradas')
+              and exists (select 1 from information_schema.columns where table_schema='public' and table_name='financeiro_pin_secreto' and column_name='bloqueado_ate')
+         then '✅ sim — financeiro-pin-rate-limit.sql aplicado'
+         else '❌ não — rodar financeiro-pin-rate-limit.sql'
+       end
+
+union all
+
+select '11. is_admin() já consulta a tabela admin_users (unificado com rwdent_is_admin)?',
+       case when exists (select 1 from pg_proc where proname='is_admin' and prosrc ilike '%admin_users%')
+            then '✅ sim — unificar-admin.sql aplicado' else '❌ não — rodar unificar-admin.sql' end
+
+union all
+
+select '12. clinicas tem as colunas de marca (logo_url/cor_marca)?',
+       case
+         when exists (select 1 from information_schema.columns where table_schema='public' and table_name='clinicas' and column_name='logo_url')
+              and exists (select 1 from information_schema.columns where table_schema='public' and table_name='clinicas' and column_name='cor_marca')
+         then '✅ sim — branding-clinica.sql aplicado'
+         else '❌ não — rodar branding-clinica.sql'
+       end
+
+union all
+
+select '13. Bucket "branding" (logo) existe, é público e SEM svg liberado?',
+       case
+         when not exists (select 1 from storage.buckets where id='branding')
+         then '⚠️ bucket ainda não existe — rodar branding-clinica.sql'
+         when exists (select 1 from storage.buckets where id='branding' and 'image/svg+xml' = any(allowed_mime_types))
+         then '❌ ainda aceita SVG (risco de XSS) — rodar branding-clinica.sql de novo'
+         when exists (select 1 from storage.buckets where id='branding' and public=true)
+         then '✅ sim, correto (público, sem SVG)'
+         else '⚠️ bucket existe mas não está público — verificar manualmente'
+       end
+
+union all
+
+select '14. Tabela lista_espera existe com RLS ligado?',
+       case
+         when not exists (select 1 from pg_tables where schemaname='public' and tablename='lista_espera')
+         then '⚠️ ainda não existe — rodar lista-espera.sql'
+         when exists (select 1 from pg_tables where schemaname='public' and tablename='lista_espera' and rowsecurity)
+         then '✅ sim — lista-espera.sql aplicado'
+         else '❌ existe mas SEM RLS — verificar manualmente'
+       end
+
+union all
+
+select '15. clinicas tem as colunas do Mercado Pago (assinatura/trial)?',
+       case
+         when exists (select 1 from information_schema.columns where table_schema='public' and table_name='clinicas' and column_name='mp_subscription_id')
+              and exists (select 1 from information_schema.columns where table_schema='public' and table_name='clinicas' and column_name='mp_trial_dias')
+         then '✅ sim'
+         else '❌ não — rodar mercadopago-assinatura.sql e mercadopago-trial.sql'
+       end
 ;
