@@ -151,7 +151,7 @@
   <!-- Header -->
   <div class="header">
     <div class="topnav-brand">
-      <div class="topnav-brand-icon">
+      <div class="topnav-brand-icon" id="header-logo-default">
         <svg width="18" height="18" viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg">
           <line x1="18" y1="14" x2="54" y2="14" stroke="#fff" stroke-width="5" stroke-linecap="round"/>
           <line x1="22" y1="14" x2="22" y2="62" stroke="#fff" stroke-width="5" stroke-linecap="round"/>
@@ -160,6 +160,7 @@
           <line x1="33" y1="51" x2="56" y2="62" stroke="#fff" stroke-width="5" stroke-linecap="round"/>
         </svg>
       </div>
+      <img id="header-logo" style="display:none;width:34px;height:34px;border-radius:9px;object-fit:cover;" alt="Logo da clínica"/>
       <div>
         <div class="topnav-brand-name" id="header-clinica">RWDent</div>
         <div class="topnav-brand-sub" id="header-subtitulo">Agendamentos e Prontuários Odontológicos</div>
@@ -264,6 +265,19 @@
         </div>
         <div id="home-today-list" style="display:flex;flex-direction:column;gap:10px;">
           <div class="home-empty" style="padding:24px;color:var(--rose-text);font-size:14px;line-height:1.6;">Nenhuma consulta agendada.</div>
+        </div>
+      </div>
+
+      <!-- ── SECTION 1.5: FUNIL DE VENDAS ── -->
+      <div class="card" style="border-radius:20px;border:1.5px solid rgba(212,115,90,.08);box-shadow:0 2px 4px rgba(122,48,32,.05),0 12px 24px rgba(122,48,32,.09);padding:28px;margin-bottom:24px;transition:all .3s cubic-bezier(.4,0,.2,1);cursor:default;" onmouseover="this.style.boxShadow='0 4px 8px rgba(122,48,32,.07),0 20px 40px rgba(122,48,32,.13)'" onmouseout="this.style.boxShadow='0 2px 4px rgba(122,48,32,.05),0 12px 24px rgba(122,48,32,.09)'">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;">
+          <div style="width:12px;height:12px;border-radius:50%;background:linear-gradient(135deg,var(--rose),var(--rose-dark));box-shadow:0 2px 6px rgba(122,48,32,.2);"></div>
+          <h3 class="home-table-title" style="margin:0;font-size:14px;font-weight:700;letter-spacing:.4px;color:var(--rose-dark);">
+            <i class="ti ti-filter" style="color:var(--rose);font-size:18px;margin-right:6px;"></i> Funil de Vendas — Este Mês
+          </h3>
+        </div>
+        <div id="home-funil">
+          <div class="home-empty" style="padding:24px;color:var(--rose-text);font-size:14px;line-height:1.6;">Nenhum orçamento criado este mês ainda.</div>
         </div>
       </div>
 
@@ -1871,6 +1885,25 @@
             <button class="btn-primary" onclick="salvarConfiguracoes()"><i class="ti ti-check"></i> Salvar alterações</button>
           </div>
           <hr style="border-color:var(--rose-light);margin:24px 0;"/>
+          <h2 style="font-size:13px;font-weight:700;color:var(--rose-dark);margin-bottom:14px;display:flex;align-items:center;gap:8px;text-transform:uppercase;letter-spacing:.5px;"><i class="ti ti-palette"></i> Marca da clínica</h2>
+          <p style="font-size:12px;color:var(--rose-text);margin-bottom:14px;">Coloque a logo e a cor da sua clínica pra deixar o sistema com a sua cara.</p>
+          <div style="display:flex;gap:24px;flex-wrap:wrap;align-items:flex-start;">
+            <div>
+              <label style="font-size:12px;font-weight:700;color:var(--rose-dark);display:block;margin-bottom:6px;">Logo</label>
+              <img id="cfg-logo-preview" style="display:none;width:72px;height:72px;border-radius:14px;object-fit:cover;border:1.5px solid var(--rose-light);margin-bottom:8px;" alt="Logo atual"/>
+              <div style="display:flex;gap:8px;">
+                <button class="btn-secondary" style="padding:8px 14px;font-size:12px;" onclick="document.getElementById('cfg-logo-input').click()"><i class="ti ti-upload"></i> Enviar logo</button>
+                <button class="btn-secondary" style="padding:8px 14px;font-size:12px;color:#c0392b;" onclick="removerLogoClinica()"><i class="ti ti-trash"></i> Remover</button>
+              </div>
+              <input type="file" id="cfg-logo-input" accept="image/*" style="display:none;" onchange="uploadLogoClinica(this.files[0])"/>
+            </div>
+            <div class="form-group">
+              <label>Cor principal</label>
+              <input type="color" id="cfg-cor-marca" value="#d4735a" oninput="aplicarCorMarca(this.value)" style="width:64px;height:40px;padding:2px;cursor:pointer;"/>
+              <div style="font-size:10px;color:var(--rose-text);margin-top:3px;max-width:220px;">Muda a cor de botões, ícones e destaques em todo o sistema. Salve pra aplicar pra todo mundo da clínica.</div>
+            </div>
+          </div>
+          <hr style="border-color:var(--rose-light);margin:24px 0;"/>
           <h2 style="font-size:13px;font-weight:700;color:var(--rose-dark);margin-bottom:14px;display:flex;align-items:center;gap:8px;text-transform:uppercase;letter-spacing:.5px;"><i class="ti ti-route"></i> Tour guiado</h2>
           <p style="font-size:12px;color:var(--rose-text);margin-bottom:14px;">Um passo a passo rápido pelas telas principais — bom pra ensinar alguém novo a usar o sistema sem precisar ficar explicando tudo.</p>
           <button class="btn-secondary" onclick="iniciarTour()"><i class="ti ti-player-play"></i> Rever o tour guiado</button>
@@ -2080,7 +2113,7 @@
   <div style="color:var(--rose-text);font-size:14px;">Carregando...</div>
 </div>
 
-<script src="app.js?v=31"></script>
+<script src="app.js?v=32"></script>
 
 <!-- ══ MODAL RELATÓRIO MENSAL ══ -->
 <div class="modal-overlay" id="modal-relatorio" onclick="if(event.target===this)closeModal('modal-relatorio')" style="align-items:flex-start;padding-top:40px;overflow-y:auto;">

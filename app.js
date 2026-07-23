@@ -141,6 +141,7 @@ async function checkClinicaApproval(){
   // Atualiza nome da clínica na interface
   const el = document.getElementById('header-clinica');
   if(el) el.textContent = cli.nome_cli || 'Minha Clínica';
+  aplicarBranding();
   // Recursos exclusivos da Rhaiza: alinhadores e aparelhos
   const _isMainClinic = cli.user_id === 'b39d8b67-0610-4708-9733-104db7f0307b';
   _isRhaizaClinic = _isMainClinic;
@@ -153,6 +154,122 @@ async function checkClinicaApproval(){
     b.style.display = _isAdmin ? '' : 'none';
   });
   return true;
+}
+
+// ══════════════════════════════════════════════════════
+// PERSONALIZAÇÃO DE MARCA (logo + cor da clínica)
+// ══════════════════════════════════════════════════════
+const BRANDING_BUCKET = 'branding';
+
+function _hexToHsl(hex){
+  const r = parseInt(hex.slice(1,3),16)/255, g = parseInt(hex.slice(3,5),16)/255, b = parseInt(hex.slice(5,7),16)/255;
+  const max = Math.max(r,g,b), min = Math.min(r,g,b);
+  let h, s, l = (max+min)/2;
+  if(max === min){ h = s = 0; }
+  else{
+    const d = max-min;
+    s = l > 0.5 ? d/(2-max-min) : d/(max+min);
+    switch(max){
+      case r: h = (g-b)/d + (g<b?6:0); break;
+      case g: h = (b-r)/d + 2; break;
+      default: h = (r-g)/d + 4;
+    }
+    h /= 6;
+  }
+  return [h*360, s*100, l*100];
+}
+function _hslToHex(h, s, l){
+  h/=360; s/=100; l/=100;
+  let r, g, b;
+  if(s === 0){ r = g = b = l; }
+  else{
+    const hue2rgb = (p,q,t)=>{
+      if(t<0) t+=1; if(t>1) t-=1;
+      if(t<1/6) return p+(q-p)*6*t;
+      if(t<1/2) return q;
+      if(t<2/3) return p+(q-p)*(2/3-t)*6;
+      return p;
+    };
+    const q = l < 0.5 ? l*(1+s) : l+s-l*s;
+    const p = 2*l-q;
+    r = hue2rgb(p,q,h+1/3); g = hue2rgb(p,q,h); b = hue2rgb(p,q,h-1/3);
+  }
+  const toHex = x => Math.round(x*255).toString(16).padStart(2,'0');
+  return '#'+toHex(r)+toHex(g)+toHex(b);
+}
+
+// Deriva toda a paleta --rose-* a partir de UMA cor escolhida pela clínica,
+// mantendo a mesma relação de tons (claro/escuro/texto) que a paleta rosa
+// original tem entre si — assim a cor nova "reskina" o sistema inteiro
+// sem precisar recriar cada tela manualmente.
+function aplicarCorMarca(hex){
+  if(!hex || !/^#[0-9a-fA-F]{6}$/.test(hex)) return;
+  const [h,s,l] = _hexToHsl(hex);
+  const root = document.documentElement.style;
+  root.setProperty('--rose', hex);
+  root.setProperty('--rose-dark',    _hslToHex(h, Math.min(s+5,90), Math.max(l-28,14)));
+  root.setProperty('--rose-text',    _hslToHex(h, Math.max(s-5,20), Math.max(l-14,30)));
+  root.setProperty('--rose-mid',     _hslToHex(h, Math.max(s-20,15), Math.min(l+18,80)));
+  root.setProperty('--rose-light',   _hslToHex(h, Math.max(s-25,10), Math.min(l+32,88)));
+  root.setProperty('--rose-lighter', _hslToHex(h, Math.max(s-35,8),  Math.min(l+42,96)));
+}
+function limparCorMarca(){
+  const root = document.documentElement.style;
+  ['--rose','--rose-dark','--rose-text','--rose-mid','--rose-light','--rose-lighter'].forEach(v=>root.removeProperty(v));
+}
+
+function aplicarBranding(){
+  if(!clinicaData) return;
+  if(clinicaData.cor_marca) aplicarCorMarca(clinicaData.cor_marca);
+  else limparCorMarca();
+  const logoEl = document.getElementById('header-logo');
+  const iconEl = document.getElementById('header-logo-default');
+  if(clinicaData.logo_url){
+    if(logoEl){ logoEl.src = clinicaData.logo_url; logoEl.style.display = ''; }
+    if(iconEl) iconEl.style.display = 'none';
+  } else {
+    if(logoEl) logoEl.style.display = 'none';
+    if(iconEl) iconEl.style.display = '';
+  }
+}
+
+async function uploadLogoClinica(file){
+  if(!file) return;
+  if(!file.type.startsWith('image/')){ showToast('Envie um arquivo de imagem.','error'); return; }
+  if(file.size > 3*1024*1024){ showToast('A logo deve ter até 3 MB.','error'); return; }
+  showLoading(true);
+  try{
+    const compressed = await _galeriaCompress(file, 480);
+    const ext = (file.name.split('.').pop()||'png').toLowerCase().replace(/[^a-z0-9]/g,'') || 'png';
+    const path = `${clinicaId}/logo_${Date.now()}.${ext}`;
+    const { error: upErr } = await _sb.storage.from(BRANDING_BUCKET).upload(path, compressed, {
+      contentType: compressed.type || file.type, upsert: true
+    });
+    if(upErr){ showLoading(false); showToast('Erro no upload: '+upErr.message,'error'); return; }
+    const { data: pub } = _sb.storage.from(BRANDING_BUCKET).getPublicUrl(path);
+    const logo_url = pub?.publicUrl;
+    const { error } = await _sb.from('clinicas').update({ logo_url }).eq('id', clinicaId);
+    showLoading(false);
+    if(error){ showToast('Erro ao salvar logo: '+error.message,'error'); return; }
+    clinicaData.logo_url = logo_url;
+    aplicarBranding();
+    const preview = document.getElementById('cfg-logo-preview');
+    if(preview){ preview.src = logo_url; preview.style.display = ''; }
+    showToast('Logo atualizada!');
+  } catch(e){ showLoading(false); showToast('Erro: '+e.message,'error'); }
+}
+
+async function removerLogoClinica(){
+  if(!confirm('Remover a logo da clínica?')) return;
+  showLoading(true);
+  const { error } = await _sb.from('clinicas').update({ logo_url: null }).eq('id', clinicaId);
+  showLoading(false);
+  if(error){ showToast('Erro: '+error.message,'error'); return; }
+  clinicaData.logo_url = null;
+  aplicarBranding();
+  const preview = document.getElementById('cfg-logo-preview');
+  if(preview){ preview.style.display = 'none'; preview.src=''; }
+  showToast('Logo removida.');
 }
 
 // ══════════════════════════════════════════════════════
@@ -725,6 +842,44 @@ function switchTab(tab){
 // ══════════════════════════════════════════════════════
 // HOME STATS
 // ══════════════════════════════════════════════════════
+function renderHomeFunil(){
+  const el = document.getElementById('home-funil');
+  if(!el) return;
+  const mesAtual = hoje().slice(0,7);
+  const doMes = (vendas||[]).filter(v=>(v.data||'').slice(0,7)===mesAtual);
+  const total = doMes.length;
+  if(!total){
+    el.innerHTML = '<div class="home-empty">Nenhum orçamento criado este mês ainda.</div>';
+    return;
+  }
+  const fechadas   = doMes.filter(v=>v.status==='finalizada').length;
+  const canceladas = doMes.filter(v=>v.status==='cancelada').length;
+  const abertas    = doMes.filter(v=>v.status==='orcamento').length;
+  const taxaConv   = Math.round(fechadas/total*100);
+  const stages = [
+    { lbl:'Orçamentos criados',      val: total,     pct: 100, cor:'var(--rose)' },
+    { lbl:'Fechados (virou venda)',  val: fechadas,  pct: taxaConv, cor:'#2e7d32' },
+  ];
+  el.innerHTML = `
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      ${stages.map(s=>`
+        <div>
+          <div style="display:flex;justify-content:space-between;font-size:12px;font-weight:700;color:var(--rose-dark);margin-bottom:5px;">
+            <span>${s.lbl}</span><span>${s.val} (${s.pct}%)</span>
+          </div>
+          <div style="background:var(--rose-lighter);border-radius:8px;height:14px;overflow:hidden;">
+            <div style="width:${s.pct}%;height:100%;background:${s.cor};border-radius:8px;transition:width .5s;"></div>
+          </div>
+        </div>
+      `).join('')}
+      <div style="display:flex;gap:16px;flex-wrap:wrap;margin-top:2px;font-size:11px;color:var(--rose-text);align-items:center;">
+        <span><i class="ti ti-hourglass"></i> ${abertas} em aberto</span>
+        ${canceladas ? `<span><i class="ti ti-x"></i> ${canceladas} cancelado${canceladas>1?'s':''}</span>` : ''}
+        <span style="margin-left:auto;font-weight:700;color:${taxaConv>=50?'#2e7d32':'#e08a20'};">Taxa de conversão: ${taxaConv}%</span>
+      </div>
+    </div>`;
+}
+
 function renderHomeStats(){
   const hoje_str = hoje();
   // Popula hero banner
@@ -814,6 +969,8 @@ function renderHomeStats(){
       }).join('');
     }
   }
+
+  renderHomeFunil();
 
   // Últimos pacientes registrados
   const recentPacs = [...pacientes]
@@ -11508,6 +11665,13 @@ async function renderConfiguracoes(){
   document.getElementById('cfg-telefone').value  = clinicaData.telefone  || '';
   document.getElementById('cfg-endereco').value  = clinicaData.endereco  || cfg.endereco  || '';
   document.getElementById('cfg-maps-link').value = clinicaData.maps_link || cfg.maps_link || '';
+  const corEl = document.getElementById('cfg-cor-marca');
+  if(corEl) corEl.value = clinicaData.cor_marca || '#d4735a';
+  const logoPrev = document.getElementById('cfg-logo-preview');
+  if(logoPrev){
+    if(clinicaData.logo_url){ logoPrev.src = clinicaData.logo_url; logoPrev.style.display=''; }
+    else { logoPrev.style.display='none'; logoPrev.src=''; }
+  }
   // Taxas
   document.getElementById('cfg-taxa-debito').value = taxasCfg.debito ?? 1.5;
   const cr = taxasCfg.credito || [];
@@ -11626,11 +11790,12 @@ async function salvarConfiguracoes(){
   const telefone  = document.getElementById('cfg-telefone').value.trim();
   const endereco  = document.getElementById('cfg-endereco').value.trim();
   const maps_link = document.getElementById('cfg-maps-link').value.trim();
+  const cor_marca = document.getElementById('cfg-cor-marca')?.value || null;
   if(!nome_cli){ showToast('Preencha o nome da clínica.','warn'); return; }
   showLoading(true);
   const updateData = { nome_cli, nome_resp, telefone };
-  let { error } = await _sb.from('clinicas').update({ ...updateData, endereco, maps_link }).eq('id', clinicaId);
-  if(error && error.message && (error.message.includes('endereco') || error.message.includes('maps_link'))){
+  let { error } = await _sb.from('clinicas').update({ ...updateData, endereco, maps_link, cor_marca }).eq('id', clinicaId);
+  if(error && error.message && (error.message.includes('endereco') || error.message.includes('maps_link') || error.message.includes('cor_marca'))){
     ({ error } = await _sb.from('clinicas').update(updateData).eq('id', clinicaId));
   }
   if(error){ showLoading(false); showToast('Erro: '+error.message,'error'); return; }
@@ -11639,8 +11804,10 @@ async function salvarConfiguracoes(){
   clinicaData.telefone  = telefone;
   clinicaData.endereco  = endereco;
   clinicaData.maps_link = maps_link;
+  clinicaData.cor_marca = cor_marca;
   const el = document.getElementById('header-clinica');
   if(el) el.textContent = nome_cli;
+  aplicarBranding();
   // Persiste endereco/maps_link + taxas via financeiro_config (fallback confiável)
   cfg.endereco  = endereco;
   cfg.maps_link = maps_link;
