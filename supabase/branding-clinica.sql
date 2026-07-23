@@ -13,8 +13,15 @@ alter table public.clinicas add column if not exists cor_marca text;
 -- sensível de saúde), a logo da clínica não é dado sensível — fica
 -- pública pra carregar rápido no header/login sem precisar de URL
 -- assinada. Upload/troca continua restrito à própria clínica dona.
+--
+-- SEM image/svg+xml de propósito: SVG pode conter <script> embutido — se
+-- alguém abrir a URL do arquivo direto no navegador (fora do <img> do
+-- app, que não executa script de imagem), o script roda no domínio do
+-- Supabase. Um upload malicioso disfarçado de logo vira um link de
+-- phishing/XSS hospedado por nós. Formatos raster (jpeg/png/webp) não
+-- têm esse risco.
 insert into storage.buckets (id, name, public, allowed_mime_types)
-values ('branding', 'branding', true, array['image/jpeg','image/png','image/webp','image/svg+xml'])
+values ('branding', 'branding', true, array['image/jpeg','image/png','image/webp'])
 on conflict (id) do update set public = true, allowed_mime_types = excluded.allowed_mime_types;
 
 drop policy if exists "branding_select" on storage.objects;
