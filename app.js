@@ -1406,6 +1406,7 @@ function renderLista(){
 }
 
 async function removerAgendamento(id){
+  const a = agendamentos.find(x=>x.id===id);
   if(!confirm('Remover este agendamento?')) return;
   showLoading(true);
   const { error } = await _sb.from('agendamentos').delete().eq('id',id);
@@ -1414,6 +1415,7 @@ async function removerAgendamento(id){
   agendamentos=agendamentos.filter(a=>a.id!==id);
   renderLista(); renderHomeStats(); renderCalendario();
   showToast('Agendamento removido.');
+  if(a) leOfertarVaga(a);
 }
 
 // ══════════════════════════════════════════════════════
@@ -3017,6 +3019,7 @@ function abrirResgateModalFalta(nome, tel, proc){
 function calCloseEvent(e){ if(e.target.id==='cal-modal-bg') document.getElementById('cal-modal-bg').classList.remove('show'); }
 
 async function calRemoveFromModal(id){
+  const a = agendamentos.find(x=>x.id===id);
   if(!confirm('Remover este agendamento?')) return;
   showLoading(true);
   const { error } = await _sb.from('agendamentos').delete().eq('id',id);
@@ -3026,6 +3029,7 @@ async function calRemoveFromModal(id){
   document.getElementById('cal-modal-bg').classList.remove('show');
   renderCalendario(); renderLista(); renderHomeStats();
   showToast('Agendamento removido.');
+  if(a) leOfertarVaga(a);
 }
 
 function calNewQuick(){
