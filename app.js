@@ -273,6 +273,19 @@ async function removerLogoClinica(){
   showToast('Logo removida.');
 }
 
+// Salva só a cor da marca, sem precisar rolar até "Salvar alterações"
+// lá em cima e submeter o formulário inteiro de novo.
+async function salvarCorMarca(){
+  const cor_marca = document.getElementById('cfg-cor-marca')?.value || null;
+  showLoading(true);
+  let { error } = await _sb.from('clinicas').update({ cor_marca }).eq('id', clinicaId);
+  showLoading(false);
+  if(error){ showToast('Erro ao salvar cor: '+error.message,'error'); return; }
+  clinicaData.cor_marca = cor_marca;
+  aplicarBranding();
+  showToast('Cor da clínica salva!');
+}
+
 // ══════════════════════════════════════════════════════
 // ADMIN PANEL
 // ══════════════════════════════════════════════════════
