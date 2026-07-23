@@ -200,8 +200,8 @@ textarea {
 }
 
 .tn-dropdown-item:hover {
-  background: #fdf0eb !important;
-  color: #a05040 !important;
+  background: var(--rose-lighter) !important;
+  color: var(--rose-text) !important;
   transform: translateX(2px) !important;
 }
 

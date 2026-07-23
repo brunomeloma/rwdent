@@ -898,7 +898,7 @@ body.demo-mode .mobile-bottom-nav{z-index:998;}
   top: 0 !important;
   left: 0 !important;
   right: 0 !important;
-  background: linear-gradient(135deg, #8b3a2a 0%, #a0452e 40%, #c25838 100%) !important;
+  background: linear-gradient(135deg, var(--rose-dark) 0%, var(--rose-text) 40%, var(--rose) 100%) !important;
   border-bottom: none !important;
   padding: 0 20px !important;
   gap: 0 !important;
@@ -947,8 +947,8 @@ body.demo-mode .mobile-bottom-nav{z-index:998;}
 .topnav-right { display: flex; align-items: center; gap: 6px; flex-shrink: 0; margin-left: 12px; }
 .topnav-avatar {
   width: 32px; height: 32px; border-radius: 50%;
-  background: linear-gradient(135deg, #f5d5c8, #eab9a8); display: flex; align-items: center; justify-content: center;
-  font-size: 11px; font-weight: 700; color: #7a3020;
+  background: linear-gradient(135deg, var(--rose-light), var(--rose-mid)); display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 700; color: var(--rose-dark);
   border: 2px solid rgba(255,255,255,.35); flex-shrink: 0; cursor: pointer;
   transition: all .2s ease; box-shadow: 0 2px 8px rgba(0,0,0,.12);
 }
@@ -982,7 +982,7 @@ body.demo-mode .mobile-bottom-nav{z-index:998;}
 
 /* ── HOME HERO BANNER (Modelo 2) ── */
 .home-hero-banner {
-  background: linear-gradient(135deg, #d4735a 0%, #a05040 100%);
+  background: linear-gradient(135deg, var(--rose) 0%, var(--rose-text) 100%);
   border-radius: 16px;
   padding: 20px 24px 22px;
   margin-bottom: 16px;
@@ -1046,7 +1046,7 @@ select, textarea {
 
 /* Tabelas mais limpas */
 .table-wrapper table thead tr th {
-  background: #fdf0eb !important;
+  background: var(--rose-lighter) !important;
   color: var(--rose-dark) !important;
 }
 
@@ -1101,9 +1101,9 @@ select, textarea {
   border: none; font-family: inherit; width: 100%; text-align: left;
   transition: all .15s ease;
 }
-.tn-dropdown-item:hover { background: #fdf0eb; color: #a05040; transform: translateX(2px); }
-.tn-dropdown-item.active { background: #fdf0eb; color: #c25838; font-weight: 600; }
-.tn-dropdown-item i { font-size: 16px; color: #c25838; width: 20px; text-align: center; }
+.tn-dropdown-item:hover { background: var(--rose-lighter); color: var(--rose-text); transform: translateX(2px); }
+.tn-dropdown-item.active { background: var(--rose-lighter); color: var(--rose-dark); font-weight: 600; }
+.tn-dropdown-item i { font-size: 16px; color: var(--rose-dark); width: 20px; text-align: center; }
 .tn-dropdown-sep { height: 1px; background: #f0e0da; margin: 4px 8px; }
 
 
@@ -1635,7 +1635,7 @@ textarea:focus {
 
 /* ── Home hero banner: gradiente mais rico, mais profundidade ── */
 .home-hero-banner{
-  background:linear-gradient(150deg,#d4735a 0%,#a05040 60%,#8a3a2a 120%)!important;
+  background:linear-gradient(150deg,var(--rose) 0%,var(--rose-text) 60%,var(--rose-dark) 120%)!important;
   border-radius:20px!important;
   box-shadow:0 10px 32px rgba(122,48,32,.22)!important;
   padding:24px 26px 26px!important;
