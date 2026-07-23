@@ -423,23 +423,6 @@ button{font-family:inherit;}
 .oral-mouth{height:150px;border:2px solid var(--rose-light);border-radius:50% / 42%;position:relative;background:#fff7f5;}
 .oral-mouth::before{content:"";position:absolute;left:18px;right:18px;top:64px;height:18px;border-top:2px solid #d9aaa0;border-bottom:2px solid #d9aaa0;border-radius:50%;}
 .oral-mouth::after{content:"";position:absolute;left:52px;right:52px;top:46px;bottom:46px;border-radius:50%;background:#e98b82;opacity:.35;}
-.perio-zone{transition:fill .15s;cursor:pointer;}
-.perio-zone:hover{filter:brightness(0.9);}
-.perio-mouth{width:min(360px,100%);height:auto;margin:auto;display:inline-block;}
-.perio-mouth .gum{fill:#f6aaa8;stroke:#d56b70;stroke-width:2;}
-.perio-mouth .gum-soft{fill:#fac4c1;opacity:.72;}
-.perio-mouth .perio-zone{fill:#f4b0ae;stroke:#c07070;stroke-width:1.4;opacity:.82;}
-.perio-mouth .perio-zone:hover{filter:brightness(.95) drop-shadow(0 2px 3px rgba(120,30,30,.2));}
-.perio-mouth .perio-zone.selected,.perio-zone.selected{fill:#e53935;opacity:.92;}
-.perio-mouth .tooth{fill:#fffdf8;stroke:#d8c8bc;stroke-width:1.1;filter:drop-shadow(0 2px 2px rgba(80,30,30,.13));}
-.perio-mouth .groove{fill:none;stroke:#eadbd0;stroke-width:.8;opacity:.75;}
-.perio-mouth .line{stroke:#fff;stroke-width:3;stroke-linecap:round;fill:none;}
-.perio-mouth .label{font:800 13px Arial,sans-serif;fill:#7a1a1a;pointer-events:none;}
-.perio-mouth .num{font:700 8px Arial,sans-serif;fill:#3a2020;pointer-events:none;}
-.perio-chip{display:inline-flex;align-items:center;justify-content:center;padding:3px 11px;border-radius:20px;font-size:11px;font-weight:700;background:var(--rose-lighter);color:var(--rose-text);border:1.5px solid var(--rose-light);cursor:pointer;transition:all .15s;user-select:none;}
-.perio-chip.active{background:var(--rose);color:#fff;border-color:var(--rose);}
-.perio-proc-list-item{display:flex;align-items:center;padding:8px 10px;border-bottom:1px solid var(--rose-lighter);gap:8px;}
-.perio-proc-list-item:last-child{border-bottom:none;}
 #pac-dente-panel{
   position:fixed!important;top:72px!important;left:50%!important;transform:translateX(-50%)!important;
   width:min(680px,calc(100vw - 32px))!important;max-height:calc(100vh - 96px)!important;

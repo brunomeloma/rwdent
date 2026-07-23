@@ -1512,50 +1512,6 @@ function voltarListaPacientes(){
 
 function selectPatient(id){ abrirPacienteDetalhe(id); }
 
-function pacPeriodontiaSvg(){
-  const sup = [
-    [18,28,118,12,18],[17,39,91,13,18],[16,55,68,15,17],[15,75,50,13,16],
-    [14,98,38,12,15],[13,122,28,11,18],[12,148,22,10,18],[11,176,18,11,19],
-    [21,204,18,11,19],[22,232,22,10,18],[23,258,28,11,18],[24,282,38,12,15],
-    [25,305,50,13,16],[26,325,68,15,17],[27,341,91,13,18],[28,352,118,12,18]
-  ];
-  const inf = [
-    [48,32,242,14,18],[47,48,266,14,18],[46,67,286,15,18],[45,90,304,13,16],
-    [44,114,316,12,15],[43,139,327,11,18],[42,164,336,10,18],[41,190,340,10,19],
-    [31,214,340,10,19],[32,240,336,10,18],[33,265,327,11,18],[34,290,316,12,15],
-    [35,314,304,13,16],[36,337,286,15,18],[37,356,266,14,18],[38,372,242,14,18]
-  ];
-  const tooth = ([n,x,y,rx,ry]) => `<g>
-    <ellipse class="tooth" cx="${x}" cy="${y}" rx="${rx}" ry="${ry}"/>
-    <path class="groove" d="M${x-rx*.55} ${y} C${x-rx*.2} ${y-ry*.2} ${x+rx*.2} ${y-ry*.2} ${x+rx*.55} ${y}"/>
-    <text class="num" x="${x}" y="${y + (y < 180 ? -22 : 28)}" text-anchor="middle">${n}</text>
-  </g>`;
-  return `<svg class="perio-mouth" viewBox="0 0 400 380" role="img" aria-label="Registro periodontal por sextantes">
-    <path class="gum" d="M35 138 C46 48 142 14 200 14 C258 14 354 48 365 138 C370 172 350 198 316 202 C260 198 232 180 200 180 C168 180 140 198 84 202 C50 198 30 172 35 138 Z"/>
-    <path class="gum" d="M35 238 C46 332 142 366 200 366 C258 366 354 332 365 238 C370 204 350 182 316 178 C260 182 232 200 200 200 C168 200 140 182 84 178 C50 182 30 204 35 238 Z"/>
-    <path class="gum-soft" d="M67 137 C83 65 150 39 200 39 C250 39 317 65 333 137 C302 128 258 120 200 120 C142 120 98 128 67 137 Z"/>
-    <path class="gum-soft" d="M67 243 C83 315 150 341 200 341 C250 341 317 315 333 243 C302 252 258 260 200 260 C142 260 98 252 67 243 Z"/>
-    <path id="pac-perio-z-S1" class="perio-zone" onclick="pacPerioToggleSextant('S1')" title="Sextante S1" d="M49 137 C56 82 92 48 125 33 L147 96 C123 102 101 116 84 144 Z"/>
-    <path id="pac-perio-z-S2" class="perio-zone" onclick="pacPerioToggleSextant('S2')" title="Sextante S2" d="M125 33 C169 14 231 14 275 33 L253 96 C221 86 179 86 147 96 Z"/>
-    <path id="pac-perio-z-S3" class="perio-zone" onclick="pacPerioToggleSextant('S3')" title="Sextante S3" d="M275 33 C308 48 344 82 351 137 L316 144 C299 116 277 102 253 96 Z"/>
-    <path id="pac-perio-z-S6" class="perio-zone" onclick="pacPerioToggleSextant('S6')" title="Sextante S6" d="M49 243 C56 298 92 332 125 347 L147 284 C123 278 101 264 84 236 Z"/>
-    <path id="pac-perio-z-S5" class="perio-zone" onclick="pacPerioToggleSextant('S5')" title="Sextante S5" d="M125 347 C169 366 231 366 275 347 L253 284 C221 294 179 294 147 284 Z"/>
-    <path id="pac-perio-z-S4" class="perio-zone" onclick="pacPerioToggleSextant('S4')" title="Sextante S4" d="M275 347 C308 332 344 298 351 243 L316 236 C299 264 277 278 253 284 Z"/>
-    <path class="line" d="M200 180 L125 33 M200 180 L275 33 M200 200 L125 347 M200 200 L275 347"/>
-    ${sup.map(tooth).join('')}
-    ${inf.map(tooth).join('')}
-    <text class="label" x="105" y="122" text-anchor="middle">S1</text>
-    <text class="label" x="200" y="82" text-anchor="middle">S2</text>
-    <text class="label" x="295" y="144" text-anchor="middle">S3</text>
-    <text class="label" x="295" y="244" text-anchor="middle">S4</text>
-    <text class="label" x="200" y="292" text-anchor="middle">S5</text>
-    <text class="label" x="105" y="244" text-anchor="middle">S6</text>
-    <text class="num" x="200" y="10" text-anchor="middle">FRENTE</text>
-    <text class="num" x="18" y="193" text-anchor="middle">DIREITA</text>
-    <text class="num" x="382" y="193" text-anchor="middle">ESQUERDA</text>
-  </svg>`;
-}
-
 function renderPatientDetail(abaAtiva){
   abaAtiva = abaAtiva || 'info';
   const panel=document.getElementById('painel-paciente');
@@ -1942,7 +1898,6 @@ function renderPatientDetail(abaAtiva){
         <div class="odonto-subtabs">
           <button type="button" class="odonto-subtab active" data-pac-odonto-subtab="odontograma" onclick="pacOdontoSubtab('odontograma')">Odontograma</button>
           <button type="button" class="odonto-subtab" data-pac-odonto-subtab="tecidos" onclick="pacOdontoSubtab('tecidos')">Tecidos moles e duros</button>
-          <button type="button" class="odonto-subtab" data-pac-odonto-subtab="periodontia" onclick="pacOdontoSubtab('periodontia')">Periodontia</button>
         </div>
         <div id="pac-odonto-sub-odontograma" data-pac-odonto-sub style="margin-top:14px;">
           <div style="overflow-x:auto;padding:8px 0;">
@@ -2089,38 +2044,6 @@ function renderPatientDetail(abaAtiva){
               </div>
               <div style="display:flex;justify-content:flex-end;margin-top:10px;"><button class="btn-primary" onclick="pacSalvarTecidos(${p.id})"><i class="ti ti-check"></i> Guardar anotação</button></div>
             </div>
-          </div>
-        </div>
-        <div id="pac-odonto-sub-periodontia" data-pac-odonto-sub style="display:none;margin-top:14px;">
-          <!-- DIAGRAMA DE SEXTANTES -->
-          <div style="text-align:center;margin-bottom:16px;">
-            <div style="font-size:11px;color:var(--rose-text);margin-bottom:6px;">Toque no sextante para marcar</div>
-            ${pacPeriodontiaSvg()}
-            <div style="display:flex;gap:5px;margin-top:8px;justify-content:center;flex-wrap:wrap;">
-              ${['S1','S2','S3','S4','S5','S6'].map(s=>`<span id="pac-perio-chip-${s}" class="perio-chip" onclick="pacPerioToggleSextant('${s}')">${s}</span>`).join('')}
-            </div>
-          </div>
-          <!-- PROCEDIMENTOS REALIZADOS -->
-          <div style="margin-bottom:10px;">
-            <div style="font-size:12px;font-weight:700;color:var(--rose-dark);margin-bottom:8px;"><i class="ti ti-list-check"></i> Procedimentos realizados</div>
-            <div style="position:relative;margin-bottom:8px;">
-              <i class="ti ti-search" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--rose-text);font-size:14px;pointer-events:none;"></i>
-              <input type="text" id="pac-perio-search" placeholder="Buscar procedimento..." oninput="pacPerioRenderProcs()"
-                style="width:100%;padding:8px 10px 8px 36px;border:1.5px solid var(--rose-light);border-radius:8px;font-size:13px;box-sizing:border-box;"/>
-            </div>
-            <div id="pac-perio-proc-list" style="max-height:220px;overflow-y:auto;border:1px solid var(--rose-light);border-radius:10px;background:#fff;"></div>
-          </div>
-          <!-- RESUMO DA SELEÇÃO -->
-          <div id="pac-perio-sel-resumo" style="display:none;background:var(--rose-lighter);border-radius:8px;padding:8px 10px;margin-bottom:10px;font-size:12px;color:var(--rose-dark);line-height:1.6;"></div>
-          <!-- OBSERVAÇÕES -->
-          <div class="form-group full" style="margin-bottom:10px;">
-            <label>Observações</label>
-            <textarea id="pac-perio-obs" rows="2" placeholder="Sangramento, mobilidade, bolsa periodontal, recessão, cálculo..."></textarea>
-          </div>
-          <!-- AÇÕES -->
-          <div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;">
-            <button class="btn-secondary" onclick="pacPerioAdicionarOrcamento(${p.id})"><i class="ti ti-receipt"></i> Adicionar ao orçamento</button>
-            <button class="btn-primary" onclick="pacSalvarPeriodontia(${p.id})"><i class="ti ti-check"></i> Registrar no histórico</button>
           </div>
         </div>
       </div>
@@ -3868,8 +3791,6 @@ let pacProcsList  = [];
 let pacDentesRascunho = {};
 let pacFaceStatus = {};
 let pacFaceColors = {};  // { dentNum: { FaceName: ''|'treated'|'untreated' } } — cicla: azul→vermelho→limpar
-let pacPerioSextants = {};  // { S1: bool, ... } — sextantes selecionados na periodontia
-let pacPerioProcSel  = {};  // { procId: qty } — procedimentos periodontal selecionados
 
 async function pacCarregarOdonto(pacId){
   const { data } = await _sb.from('procedimentos_dentes')
@@ -3882,8 +3803,6 @@ async function pacCarregarOdonto(pacId){
   pacFaceStatus = {};
   pacDentesRascunho = {};
   pacFaceColors = {};
-  pacPerioSextants = {};
-  pacPerioProcSel  = {};
   pacOdontoOrcList = [];
   pacRenderArcadas();
   pacRenderLegenda();
@@ -3893,7 +3812,6 @@ async function pacCarregarOdonto(pacId){
 function pacOdontoSubtab(tab){
   document.querySelectorAll('[data-pac-odonto-sub]').forEach(el=>{ el.style.display = el.id === 'pac-odonto-sub-'+tab ? '' : 'none'; });
   document.querySelectorAll('[data-pac-odonto-subtab]').forEach(btn=>btn.classList.toggle('active', btn.dataset.pacOdontoSubtab===tab));
-  if(tab === 'periodontia') pacPerioRenderProcs();
 }
 
 async function pacSalvarTecidos(pacId){
@@ -3910,105 +3828,6 @@ async function pacSalvarTecidos(pacId){
   showLoading(false);
   if(error){ showToast('Erro: '+error.message,'error'); return; }
   showToast('Tecidos moles e duros salvos no histórico.');
-}
-
-async function pacSalvarPeriodontia(pacId){
-  const sextStr = Object.keys(pacPerioSextants).filter(s=>pacPerioSextants[s]).join(', ') || 'sem sextante';
-  const procStr = Object.keys(pacPerioProcSel)
-    .filter(id=>(pacPerioProcSel[id]||0)>0)
-    .map(id=>{ const p=procs.find(x=>x.id===Number(id)); return p?`${p.nome} (${pacPerioProcSel[id]}×)`:null; })
-    .filter(Boolean).join(', ');
-  const obs = document.getElementById('pac-perio-obs')?.value.trim() || '';
-  const desc = `Periodontia — Sextantes: ${sextStr}${procStr ? '. Procedimentos: '+procStr : ''}`;
-  showLoading(true);
-  const { error } = await _sb.from('atendimentos_odonto').insert([{clinica_id:clinicaId,paciente_id:pacId,data:hoje(),procedimentos:desc,obs,dentes_tratados:'[]'}]);
-  showLoading(false);
-  if(error){ showToast('Erro: '+error.message,'error'); return; }
-  showToast('Periodontia registrada no histórico.');
-}
-
-function pacPerioToggleSextant(s){
-  pacPerioSextants[s] = !pacPerioSextants[s];
-  const el = document.getElementById('pac-perio-z-'+s);
-  if(el) el.classList.toggle('selected', !!pacPerioSextants[s]);
-  const chip = document.getElementById('pac-perio-chip-'+s);
-  if(chip) chip.classList.toggle('active', !!pacPerioSextants[s]);
-  pacPerioRenderResumo();
-}
-
-function pacPerioRenderResumo(){
-  const resumo = document.getElementById('pac-perio-sel-resumo');
-  if(!resumo) return;
-  const sel = Object.keys(pacPerioSextants).filter(s=>pacPerioSextants[s]);
-  const procSel = Object.keys(pacPerioProcSel).filter(id=>(pacPerioProcSel[id]||0)>0);
-  if(!sel.length && !procSel.length){ resumo.style.display='none'; return; }
-  resumo.style.display='';
-  let html = '';
-  if(sel.length) html += `<strong>Sextantes:</strong> ${sel.join(', ')}`;
-  if(procSel.length){
-    if(sel.length) html += '<br>';
-    html += '<strong>Procedimentos:</strong> ' + procSel.map(id=>{
-      const p = procs.find(x=>x.id===Number(id));
-      return p ? `${escapeHtml(p.nome)} × ${pacPerioProcSel[id]}` : '';
-    }).filter(Boolean).join(' · ');
-  }
-  resumo.innerHTML = html;
-}
-
-function pacPerioRenderProcs(){
-  const search = (document.getElementById('pac-perio-search')?.value||'').toLowerCase().trim();
-  const list = document.getElementById('pac-perio-proc-list');
-  if(!list) return;
-  const filtered = (procs||[]).filter(p => !p.inativo && (!search || p.nome.toLowerCase().includes(search)));
-  if(!filtered.length){
-    list.innerHTML = '<div style="padding:14px;text-align:center;color:var(--rose-text);font-size:12px;">Nenhum procedimento encontrado</div>';
-    return;
-  }
-  list.innerHTML = filtered.slice(0,60).map(p => {
-    const qty = pacPerioProcSel[p.id] || 0;
-    const sel = qty > 0;
-    return `<div class="perio-proc-list-item" style="background:${sel?'#fff9f9':'#fff'};">
-      <span style="flex:1;font-size:13px;${sel?'font-weight:700;color:var(--rose-dark);':''}">${escapeHtml(p.nome)}</span>
-      <span style="font-size:11px;color:var(--rose-text);min-width:52px;text-align:right;">${fmtBRL(p.precoFinal)}</span>
-      <div style="display:flex;align-items:center;gap:2px;">
-        <button onclick="pacPerioProcChange(${p.id},-1)" style="width:22px;height:22px;border:1px solid var(--rose-light);border-radius:4px;background:var(--rose-lighter);cursor:pointer;font-size:15px;line-height:1;color:var(--rose-dark);display:flex;align-items:center;justify-content:center;">−</button>
-        <span style="width:24px;text-align:center;font-size:12px;font-weight:700;color:var(--rose-dark);">${qty||'&nbsp;'}</span>
-        <button onclick="pacPerioProcChange(${p.id},1)" style="width:22px;height:22px;border:1.5px solid ${sel?'var(--rose)':'var(--rose-light)'};border-radius:4px;background:${sel?'var(--rose)':'var(--rose-lighter)'};cursor:pointer;font-size:15px;line-height:1;color:${sel?'#fff':'var(--rose-dark)'};display:flex;align-items:center;justify-content:center;">+</button>
-      </div>
-    </div>`;
-  }).join('');
-}
-
-function pacPerioProcChange(procId, delta){
-  const cur = pacPerioProcSel[procId] || 0;
-  const next = Math.max(0, cur + delta);
-  if(next === 0) delete pacPerioProcSel[procId];
-  else pacPerioProcSel[procId] = next;
-  pacPerioRenderProcs();
-  pacPerioRenderResumo();
-}
-
-function pacPerioAdicionarOrcamento(pacId){
-  const procIds = Object.keys(pacPerioProcSel).map(Number).filter(id=>(pacPerioProcSel[id]||0)>0);
-  if(!procIds.length){ showToast('Selecione ao menos um procedimento.','warn'); return; }
-  const sextStr = Object.keys(pacPerioSextants).filter(s=>pacPerioSextants[s]).join(', ') || 'Periodontia';
-  if(!pacOdontoOrcList) pacOdontoOrcList = [];
-  procIds.forEach(procId=>{
-    const proc = procs.find(p=>p.id===procId);
-    if(!proc) return;
-    const qty = pacPerioProcSel[procId];
-    pacOdontoOrcList.push({
-      procId: proc.id,
-      nome: `Periodontia (${sextStr}) — ${proc.nome}`,
-      precoUnit: proc.precoFinal,
-      qtd: qty,
-      total: proc.precoFinal * qty,
-      dentes: '',
-      tipo: 'global'
-    });
-  });
-  pacOdontoRenderOrcLista();
-  showToast('Adicionado ao orçamento!');
 }
 
 function pacRenderArcadas(){
