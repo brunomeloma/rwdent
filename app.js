@@ -1236,7 +1236,8 @@ function lembrarTodosAmanha(){
           _loc += '\n';
         }
         const msg = `Olá, ${a.nome.split(' ')[0]}! 😊\n\nPassando para lembrar que amanhã é o seu dia ${_prepClinica(clinicaNome)}!\n\n📅 *Horário:* ${a.horario}\n🦷 *Procedimento:* ${a.procedimento||'Consulta'}${_loc}\n\nPor favor, confirme sua presença respondendo *SIM* — ou nos avise caso precise reagendar. Estaremos esperando por você! 🙏`;
-        const url = `https://wa.me/55${tel}?text=${encodeURIComponent(msg)}`;
+        const telBR = tel.startsWith('55') ? tel : '55'+tel;
+        const url = `https://wa.me/${telBR}?text=${encodeURIComponent(msg)}`;
         return `<div style="display:flex;align-items:center;gap:10px;padding:10px;border:1.5px solid #e8f5e9;border-radius:10px;">
           <div style="flex:1;min-width:0;">
             <div style="font-weight:700;font-size:13px;">${escapeHtml(a.nome)}</div>
@@ -10514,7 +10515,8 @@ function pacOrcWhatsApp(vendaId, pacId){
   if(v.obs) msg += `\n📝 ${v.obs}`;
   msg += '\n\nQualquer dúvida estamos à disposição! 😊';
 
-  const base = telefone ? `https://wa.me/55${telefone}` : 'https://wa.me/';
+  const telefoneBR = telefone ? (telefone.startsWith('55') ? telefone : '55'+telefone) : '';
+  const base = telefoneBR ? `https://wa.me/${telefoneBR}` : 'https://wa.me/';
   const url = base + '?text=' + encodeURIComponent(msg);
   if(!v.statusResposta){ v.statusResposta='pensando'; v.enviadoEm=new Date().toISOString(); saveFinanceiro(); }
   logAtividade('Orçamento enviado', `${pac?.nome||'—'} — ${fmtBRL(totalFinal)}`);
