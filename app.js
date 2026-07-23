@@ -2104,9 +2104,9 @@ function renderPatientDetail(abaAtiva){
           <div style="margin-bottom:10px;">
             <div style="font-size:12px;font-weight:700;color:var(--rose-dark);margin-bottom:8px;"><i class="ti ti-list-check"></i> Procedimentos realizados</div>
             <div style="position:relative;margin-bottom:8px;">
-              <i class="ti ti-search" style="position:absolute;left:9px;top:50%;transform:translateY(-50%);color:var(--rose-text);font-size:13px;pointer-events:none;"></i>
+              <i class="ti ti-search" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--rose-text);font-size:14px;pointer-events:none;"></i>
               <input type="text" id="pac-perio-search" placeholder="Buscar procedimento..." oninput="pacPerioRenderProcs()"
-                style="width:100%;padding:8px 10px 8px 30px;border:1.5px solid var(--rose-light);border-radius:8px;font-size:13px;box-sizing:border-box;"/>
+                style="width:100%;padding:8px 10px 8px 36px;border:1.5px solid var(--rose-light);border-radius:8px;font-size:13px;box-sizing:border-box;"/>
             </div>
             <div id="pac-perio-proc-list" style="max-height:220px;overflow-y:auto;border:1px solid var(--rose-light);border-radius:10px;background:#fff;"></div>
           </div>
