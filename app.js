@@ -949,7 +949,7 @@ function renderHomeStats(){
     } else {
       todayEl.innerHTML = todayAgs.map(a=>{
         const pac = pacientes.find(p=>p.id===a.paciente_id);
-        const nome = pac ? pac.nome : (a.nome_paciente||'—');
+        const nome = pac ? pac.nome : (a.nome||'—');
         const st = (agGetStatus(a)||'pendente').toLowerCase();
         const badgeCls = st.includes('confirm') ? 'confirmada' : st.includes('complet') ? 'completada' : 'pendente';
         const badgeTxt = st.includes('confirm') ? 'Confirmada' : st.includes('complet') ? 'Completada' : 'Pendente';
@@ -2878,6 +2878,7 @@ async function calMarcarPresenca(id, status){
   renderCalendario(); renderLista(); renderHomeStats();
   if(status==='compareceu'){
     showToast(a.nome+' marcado como compareceu. ✅');
+    homeAvaliacaoAutoPrompt(a);
     return;
   }
   // Faltou — evita perder o paciente: abre direto a mensagem de reagendamento pronta,
@@ -9230,7 +9231,7 @@ function homeAvaliacoesRender(){
   }
   el.innerHTML = candidatos.slice(0,6).map(a=>{
     const pac = pacientes.find(p=>p.id===a.paciente_id);
-    const nome = pac ? pac.nome : (a.nome_paciente||'—');
+    const nome = pac ? pac.nome : (a.nome||'—');
     const tel = a.telefone || pac?.telefone || '';
     const btnW = tel ? `<button class="home-btn-ver" style="min-height:32px;padding:5px 9px;border-radius:8px;background:#25d366;color:#fff;" title="Pedir avaliação" onclick="homeAvaliacaoWpp(${a.id})"><i class="ti ti-brand-whatsapp"></i></button>` : '';
     return `<div class="home-table-row">
@@ -9247,26 +9248,40 @@ function homeAvaliacoesRender(){
 }
 function homeAvaliacaoWpp(agId){
   const a = agendamentos.find(x=>x.id===agId); if(!a) return;
-  const pac = pacientes.find(p=>p.id===a.paciente_id);
-  const nome = pac ? pac.nome : (a.nome_paciente||'paciente');
-  const num = (a.telefone || pac?.telefone || '').replace(/\D/g,'');
-  if(!num){ showToast('Paciente sem telefone cadastrado.','warn'); return; }
-  const numBR = num.startsWith('55') ? num : '55'+num;
-  window.open(`https://wa.me/${numBR}?text=${encodeURIComponent(_avaliacaoMsg(nome))}`, '_blank');
-  _avaliacaoMarcarPedida(agId);
+  const info = _avaliacaoInfo(a);
+  if(!info.telefone){ showToast('Paciente sem telefone cadastrado.','warn'); return; }
+  window.open(`https://wa.me/${info.telefone}?text=${encodeURIComponent(info.msg)}`, '_blank');
+  info.onEnviado();
   homeAvaliacoesRender();
+}
+function _avaliacaoInfo(a){
+  const pac = pacientes.find(p=>p.id===a.paciente_id);
+  const nome = pac ? pac.nome : (a.nome||'paciente');
+  const num = (a.telefone || pac?.telefone || '').replace(/\D/g,'');
+  if(!num) return { nome, telefone:'' };
+  const numBR = num.startsWith('55') ? num : '55'+num;
+  return { nome, telefone:numBR, msg:_avaliacaoMsg(nome), onEnviado: ()=>{ _avaliacaoMarcarPedida(a.id); } };
 }
 function homeAvaliacoesChamarTodos(){
   const candidatos = _homeAvaliacoesCandidatos();
-  wppFilaAbrir(candidatos, (a)=>{
-    const pac = pacientes.find(p=>p.id===a.paciente_id);
-    const nome = pac ? pac.nome : (a.nome_paciente||'paciente');
-    const num = (a.telefone || pac?.telefone || '').replace(/\D/g,'');
-    if(!num) return { nome, telefone:'' };
-    const numBR = num.startsWith('55') ? num : '55'+num;
-    return { nome, telefone:numBR, msg:_avaliacaoMsg(nome), onEnviado: ()=>{ _avaliacaoMarcarPedida(a.id); } };
-  }, 'Pedir avaliação');
+  wppFilaAbrir(candidatos, _avaliacaoInfo, 'Pedir avaliação');
   // Ao fechar a fila, re-renderiza a Home pra sumir quem já foi marcado.
+  const modal = document.getElementById('wpp-fila-modal');
+  const obs = new MutationObserver(()=>{
+    if(modal.style.display==='none'){ homeAvaliacoesRender(); obs.disconnect(); }
+  });
+  obs.observe(modal, { attributes:true, attributeFilter:['style'] });
+}
+
+// Disparado automaticamente ao marcar "compareceu" num agendamento — pede
+// a avaliação no Google na hora, enquanto a experiência ainda está fresca
+// (é quando a taxa de resposta é mais alta). Não manda sozinho: o wa.me
+// exige um clique de verdade da pessoa pra abrir o WhatsApp (navegador
+// bloqueia abrir aba sem gesto direto), então aparece a mensagem pronta e
+// quem está usando o sistema só confirma o envio.
+function homeAvaliacaoAutoPrompt(a){
+  if(!a || _avaliacoesJaPedidas().includes(a.id)) return;
+  wppFilaAbrir([a], _avaliacaoInfo, 'Pedir avaliação no Google');
   const modal = document.getElementById('wpp-fila-modal');
   const obs = new MutationObserver(()=>{
     if(modal.style.display==='none'){ homeAvaliacoesRender(); obs.disconnect(); }
