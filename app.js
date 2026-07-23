@@ -18,6 +18,7 @@ const _sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 let agendamentos = [];
 let profissionais = [];
 let pacientes = [];
+let listaEspera = [];
 let selectedPatientId = null;
 let editingPatientId = null;
 let currentUser = null;
@@ -587,6 +588,10 @@ async function loadAll(){
         pacientes = pacientes.map(p=>({ ...p, _anamneseLink: linkMap[p.id]||null }));
       }
     } catch(e){ /* tabela pode não existir */ }
+    try {
+      const { data: le } = await _sb.from('lista_espera').select('*').eq('clinica_id', clinicaId).order('created_at');
+      listaEspera = le || [];
+    } catch(e){ listaEspera = []; /* tabela pode não existir ainda — roda supabase/lista-espera.sql */ }
     await loadFinanceiro();
     initApp();
   } catch(e){
@@ -764,7 +769,7 @@ function switchTab(tab){
     pedirFinPinFaturamento().then(ok=>{ if(ok) switchTab('financeiro'); });
     return;
   }
-  ['home','agendar','lista','calendario','pacientes','profissionais','configuracoes','financeiro','procedimentos_fin','materiais_fin','estoque_fin','vendas_fin','venda_rapida','resgate','captacao','invisalign_apresentacao','admin'].forEach(t=>{
+  ['home','agendar','lista','calendario','pacientes','profissionais','configuracoes','financeiro','procedimentos_fin','materiais_fin','estoque_fin','vendas_fin','venda_rapida','resgate','captacao','lista_espera','invisalign_apresentacao','admin'].forEach(t=>{
     const el=document.getElementById('tab-'+t);
     if(el) el.style.display = t===tab?'':'none';
   });
@@ -782,7 +787,7 @@ function switchTab(tab){
     calendario:'Calendário de atendimentos', pacientes:'Cadastro de pacientes',
     profissionais:'Equipe e profissionais', financeiro:'Painel financeiro', procedimentos_fin:'Procedimentos e precificação',
     materiais_fin:'Materiais e insumos', estoque_fin:'Controle de estoque', vendas_fin:'Vendas e orçamentos',
-    venda_rapida:'Vendas', resgate:'Resgate de pacientes', captacao:'Captação de contatos', invisalign_apresentacao:'Alinhador Transparente', configuracoes:'Configurações da clínica', admin:'Painel Administrativo'
+    venda_rapida:'Vendas', resgate:'Resgate de pacientes', captacao:'Captação de contatos', lista_espera:'Lista de espera', invisalign_apresentacao:'Alinhador Transparente', configuracoes:'Configurações da clínica', admin:'Painel Administrativo'
   };
   const _subEl = document.getElementById('header-subtitulo');
   if(_subEl) _subEl.textContent = _tituloAba[tab] || 'Agendamentos e Prontuários Odontológicos';
@@ -798,6 +803,7 @@ function switchTab(tab){
   if(tab==='home') renderHomeStats();
   if(tab==='configuracoes'){ renderConfiguracoes(); atualizarFinPinFaturamentoStatus(); }
   if(tab==='resgate') renderResgate();
+  if(tab==='lista_espera') leRender();
   if(tab==='admin') loadAdminPanel();
   if(tab==='invisalign_apresentacao'){
     if(!_financeiroCarregado){ loadFinanceiro().then(()=>atualizarPrecosAlinhador()); }
@@ -2881,14 +2887,111 @@ async function calMarcarPresenca(id, status){
     homeAvaliacaoAutoPrompt(a);
     return;
   }
-  // Faltou — evita perder o paciente: abre direto a mensagem de reagendamento pronta,
-  // e marca para aparecer destacado na aba Resgate até ser remarcado.
-  showToast(a.nome+' marcado como não veio.','warn');
-  if(a.telefone){
-    abrirResgateModalFalta(a.nome, a.telefone, a.procedimento||'Consulta');
-  } else {
-    showToast('Sem telefone cadastrado para reagendar — adicione o contato no cadastro do paciente.','warn');
+  if(status==='faltou'){
+    // Evita perder o paciente: abre direto a mensagem de reagendamento pronta,
+    // e marca para aparecer destacado na aba Resgate até ser remarcado.
+    showToast(a.nome+' marcado como não veio.','warn');
+    if(a.telefone){
+      abrirResgateModalFalta(a.nome, a.telefone, a.procedimento||'Consulta');
+    } else {
+      showToast('Sem telefone cadastrado para reagendar — adicione o contato no cadastro do paciente.','warn');
+    }
+    return;
   }
+  if(status==='cancelado'){
+    showToast(a.nome+' marcado como cancelado.','warn');
+    leOfertarVaga(a);
+    return;
+  }
+  const rotulos = { confirmado:'confirmado', remarcado:'remarcado' };
+  showToast(a.nome+' marcado como '+(rotulos[status]||status)+'.');
+}
+
+// ══════════════════════════════════════════════════════
+// LISTA DE ESPERA
+// ══════════════════════════════════════════════════════
+async function leAdicionar(){
+  const nome = document.getElementById('le-nome')?.value.trim();
+  const telefone = document.getElementById('le-telefone')?.value.trim();
+  const procedimento = document.getElementById('le-procedimento')?.value.trim();
+  const profissionalId = document.getElementById('le-profissional')?.value || null;
+  const obs = document.getElementById('le-obs')?.value.trim();
+  if(!nome){ showToast('Preencha o nome.','warn'); return; }
+  const pacExistente = pacientes.find(p=>p.nome.toLowerCase()===nome.toLowerCase());
+  showLoading(true);
+  const { data, error } = await _sb.from('lista_espera').insert([{
+    clinica_id: clinicaId,
+    paciente_id: pacExistente?.id || null,
+    nome, telefone, procedimento,
+    profissional_id: profissionalId ? parseInt(profissionalId) : null,
+    obs
+  }]).select();
+  showLoading(false);
+  if(error){ showToast('Erro: '+error.message+(error.message.includes('lista_espera')?' — rode supabase/lista-espera.sql no Supabase.':''),'error'); return; }
+  if(!data || !data[0]){ showToast('Erro ao adicionar — tente novamente.','error'); return; }
+  listaEspera.push(data[0]);
+  ['le-nome','le-telefone','le-procedimento','le-obs'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+  leRender();
+  showToast('Adicionado à lista de espera!');
+}
+
+async function leRemover(id){
+  if(!confirm('Remover da lista de espera?')) return;
+  showLoading(true);
+  const { error } = await _sb.from('lista_espera').delete().eq('id', id);
+  showLoading(false);
+  if(error){ showToast('Erro: '+error.message,'error'); return; }
+  listaEspera = listaEspera.filter(x=>x.id!==id);
+  leRender();
+  showToast('Removido da lista de espera.');
+}
+
+function leRender(){
+  const el = document.getElementById('le-lista');
+  if(!el) return;
+  const selProf = document.getElementById('le-profissional');
+  if(selProf && !selProf.dataset.filled){
+    selProf.innerHTML = '<option value="">Qualquer profissional</option>'+profissionais.map(p=>`<option value="${p.id}">${escapeHtml(p.nome)}</option>`).join('');
+    selProf.dataset.filled = '1';
+  }
+  if(!listaEspera.length){
+    el.innerHTML = '<div class="home-empty" style="padding:24px;color:var(--rose-text);">Ninguém na lista de espera.</div>';
+    return;
+  }
+  el.innerHTML = listaEspera.map(le=>{
+    const prof = profissionais.find(p=>p.id===le.profissional_id);
+    return `<div class="home-table-row">
+      <div class="home-row-main">
+        ${homeAvatar(le.nome)}
+        <div>
+          <div class="home-table-name">${escapeHtml(le.nome)}</div>
+          <div class="home-table-sub">${escapeHtml(le.procedimento||'Qualquer procedimento')}${prof?' · '+escapeHtml(prof.nome):''}</div>
+        </div>
+      </div>
+      <button class="home-btn-ver" style="min-height:32px;padding:5px 12px;border-radius:8px;color:#c0392b;" onclick="leRemover(${le.id})"><i class="ti ti-trash"></i></button>
+    </div>`;
+  }).join('');
+}
+
+// Disparado ao marcar um agendamento como cancelado: mostra quem está na
+// lista de espera (priorizando quem pediu o mesmo profissional) e deixa
+// oferecer a vaga vacante pelo WhatsApp, um por vez.
+function leOfertarVaga(agendamentoCancelado){
+  if(!listaEspera.length) return;
+  const candidatos = [...listaEspera].sort((a,b)=>{
+    const aMatch = a.profissional_id===agendamentoCancelado.prof_id ? 0 : 1;
+    const bMatch = b.profissional_id===agendamentoCancelado.prof_id ? 0 : 1;
+    return aMatch-bMatch;
+  });
+  if(!confirm(`O horário de ${agendamentoCancelado.nome} (${formatDate(agendamentoCancelado.data)} às ${agendamentoCancelado.horario}) vagou.\n\nTem ${candidatos.length} pessoa(s) na lista de espera — quer oferecer essa vaga agora?`)) return;
+  wppFilaAbrir(candidatos, (le)=>{
+    const num = (le.telefone||'').replace(/\D/g,'');
+    if(!num) return { nome: le.nome, telefone:'' };
+    const numBR = num.startsWith('55') ? num : '55'+num;
+    const clinica = clinicaData?.nome_cli || 'nossa clínica';
+    const msg = `Oi, ${_primeiroNome(le.nome)}! 😊\n\nAqui é ${_prepClinica(clinica)}. Vagou um horário${agendamentoCancelado.procedimento?' pra '+agendamentoCancelado.procedimento:''}: *${formatDate(agendamentoCancelado.data)} às ${agendamentoCancelado.horario}*.\n\nVocê tinha ficado na nossa lista de espera — tem interesse nesse horário? Me confirma que eu já reservo pra você! 🙏`;
+    return { nome: le.nome, telefone:numBR, msg };
+  }, 'Oferecer vaga');
 }
 
 function _primeiroNome(nome){ return (nome||'').split(' ')[0]; }
