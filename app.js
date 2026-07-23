@@ -695,6 +695,7 @@ function toggleMobileMore(){
 // por sessão de página (_finVerificado fica só em memória, reseta ao
 // recarregar).
 let _finVerificado = false;
+let _homeRecallList = [];
 async function _finApi(body){
   const { data:{ session } } = await _sb.auth.getSession();
   const resp = await fetch('/api/financeiro-pin', {
@@ -971,6 +972,7 @@ function renderHomeStats(){
   }
 
   renderHomeFunil();
+  homeAvaliacoesRender();
 
   // Últimos pacientes registrados
   const recentPacs = [...pacientes]
@@ -1047,20 +1049,23 @@ function renderHomeStats(){
     }
   }
 
-  // Retornos atrasados (recall 6+ meses)
+  // Retornos atrasados (recall configurável, padrão 6 meses)
   const recallEl = document.getElementById('home-recall');
   if(recallEl){
-    const hoje6m = new Date(); hoje6m.setMonth(hoje6m.getMonth()-6);
+    const recallMeses = cfg.recall_meses || 6;
+    const hojeRecallLimite = new Date(); hojeRecallLimite.setMonth(hojeRecallLimite.getMonth()-recallMeses);
     const hojeStr = new Date().toISOString().slice(0,10);
-    const recall = pacientes.map(p=>{
+    const recallFull = pacientes.map(p=>{
       const agsPac = agendamentos.filter(a=>a.paciente_id===p.id);
       if(!agsPac.length) return null;
       const temFuturo = agsPac.some(a=>(a.data||'')>=hojeStr && (agGetStatus(a)||'').toLowerCase()!=='cancelado');
       if(temFuturo) return null;
       const ultima = agsPac.map(a=>a.data||'').sort().pop();
-      if(!ultima || new Date(ultima) > hoje6m) return null;
+      if(!ultima || new Date(ultima) > hojeRecallLimite) return null;
       return { p, ultima };
-    }).filter(Boolean).sort((a,b)=>a.ultima.localeCompare(b.ultima)).slice(0,6);
+    }).filter(Boolean).sort((a,b)=>a.ultima.localeCompare(b.ultima));
+    _homeRecallList = recallFull;
+    const recall = recallFull.slice(0,6);
     if(!recall.length){
       recallEl.innerHTML='<div class="home-empty">Nenhum retorno atrasado.</div>';
     } else {
@@ -9118,6 +9123,158 @@ function homeAniverWpp(pacId){
 }
 
 // ══════════════════════════════════════════════════════
+// FILA DE ENVIO WHATSAPP EM LOTE (recall / avaliação)
+// ══════════════════════════════════════════════════════
+// wa.me não permite abrir várias abas de uma vez só (pop-up blocker do
+// navegador barra), então em vez de tentar automatizar o envio de verdade
+// (que precisaria da API paga do WhatsApp Business), a fila mostra um
+// paciente por vez — a pessoa confere a mensagem, clica "Enviar e
+// próximo", e o navegador abre o wa.me numa aba nova (isso SIM o
+// navegador permite, porque é uma ação direta do clique).
+let _wppFila = [];
+let _wppFilaIdx = 0;
+let _wppFilaGerarInfo = null;
+
+function wppFilaAbrir(lista, gerarInfo, titulo){
+  if(!lista || !lista.length){ showToast('Nada pra enviar agora.','warn'); return; }
+  _wppFila = lista;
+  _wppFilaIdx = 0;
+  _wppFilaGerarInfo = gerarInfo;
+  document.getElementById('wpp-fila-titulo').textContent = titulo || 'Enviar mensagens';
+  document.getElementById('wpp-fila-modal').style.display = 'flex';
+  wppFilaRenderAtual();
+}
+function wppFilaRenderAtual(){
+  const box = document.getElementById('wpp-fila-body');
+  const btnEnviar = document.getElementById('wpp-fila-btn-enviar');
+  document.getElementById('wpp-fila-progress').textContent = `${Math.min(_wppFilaIdx+1,_wppFila.length)} / ${_wppFila.length}`;
+  if(_wppFilaIdx >= _wppFila.length){
+    box.innerHTML = `<div style="text-align:center;padding:20px 8px;"><i class="ti ti-circle-check" style="font-size:38px;color:#2e7d32;"></i><div style="margin-top:8px;font-weight:700;color:var(--rose-dark);">Fila concluída!</div></div>`;
+    if(btnEnviar) btnEnviar.style.display = 'none';
+    return;
+  }
+  if(btnEnviar) btnEnviar.style.display = '';
+  const item = _wppFila[_wppFilaIdx];
+  const info = _wppFilaGerarInfo(item);
+  window._wppFilaInfoAtual = info;
+  if(!info || !info.telefone){
+    box.innerHTML = `<div style="padding:12px 0;color:var(--rose-text);font-size:13px;">${info?escapeHtml(info.nome):'Paciente'} sem telefone cadastrado — pulando automaticamente.</div>`;
+    setTimeout(()=>{ _wppFilaIdx++; wppFilaRenderAtual(); }, 900);
+    return;
+  }
+  box.innerHTML = `<div style="padding:4px 0;">
+    <div style="font-weight:700;color:var(--rose-dark);margin-bottom:8px;">${escapeHtml(info.nome)}</div>
+    <div style="font-size:12px;color:var(--rose-text);white-space:pre-line;background:var(--rose-lighter);padding:10px;border-radius:8px;max-height:160px;overflow-y:auto;">${escapeHtml(info.msg)}</div>
+  </div>`;
+}
+function wppFilaEnviarEProximo(){
+  const info = window._wppFilaInfoAtual;
+  if(info && info.telefone){
+    window.open(`https://wa.me/${info.telefone}?text=${encodeURIComponent(info.msg)}`, '_blank');
+    if(info.onEnviado) info.onEnviado();
+  }
+  _wppFilaIdx++;
+  wppFilaRenderAtual();
+}
+function wppFilaPular(){ _wppFilaIdx++; wppFilaRenderAtual(); }
+function wppFilaFechar(){ document.getElementById('wpp-fila-modal').style.display = 'none'; }
+
+function homeRecallChamarTodos(){
+  const clinica = clinicaData?.nome_cli || 'nossa clínica';
+  wppFilaAbrir(_homeRecallList, ({p})=>{
+    const num = (p.telefone||'').replace(/\D/g,'');
+    if(!num) return { nome:p.nome, telefone:'' };
+    const numBR = num.startsWith('55') ? num : '55'+num;
+    const msg = `Olá, ${_primeiroNome(p.nome)}! 😊\n\nAqui é ${_prepClinica(clinica)}. Sentimos sua falta por aqui! Já faz um tempinho desde a sua última visita, e a manutenção regular é essencial para a saúde do seu sorriso. 🦷✨\n\nQue tal agendarmos uma avaliação ou limpeza? Me diga qual o melhor dia e horário pra você que encontramos um encaixe! 🙏`;
+    return { nome:p.nome, telefone:numBR, msg };
+  }, 'Chamar pacientes pro retorno');
+}
+
+// ══════════════════════════════════════════════════════
+// PEDIR AVALIAÇÃO PÓS-CONSULTA (NPS leve, via link do Google)
+// ══════════════════════════════════════════════════════
+// Não sincroniza entre aparelhos (fica só no navegador de quem usa) —
+// suficiente pro objetivo aqui, que é só não pedir avaliação duas vezes
+// pro mesmo atendimento sem precisar de tabela nova no banco.
+function _avaliacoesJaPedidas(){
+  try{ return JSON.parse(localStorage.getItem('rwdent-avaliacoes-pedidas')||'[]'); }catch(e){ return []; }
+}
+function _avaliacaoMarcarPedida(agId){
+  const lista = _avaliacoesJaPedidas();
+  if(!lista.includes(agId)) lista.push(agId);
+  localStorage.setItem('rwdent-avaliacoes-pedidas', JSON.stringify(lista));
+}
+function _homeAvaliacoesCandidatos(){
+  const jaPedidas = _avaliacoesJaPedidas();
+  const hojeStr = new Date().toISOString().slice(0,10);
+  const limite = new Date(); limite.setDate(limite.getDate()-3);
+  const limiteStr = toLocalISO(limite);
+  return agendamentos.filter(a=>{
+    if(jaPedidas.includes(a.id)) return false;
+    if((agGetStatus(a)||'').toLowerCase()!=='compareceu') return false;
+    return (a.data||'') >= limiteStr && (a.data||'') <= hojeStr;
+  }).sort((a,b)=>(b.data||'').localeCompare(a.data||''));
+}
+function _avaliacaoMsg(nome){
+  const clinica = clinicaData?.nome_cli || 'nossa clínica';
+  const link = (cfg.google_review_link||'').trim();
+  return `Oi, ${_primeiroNome(nome)}! 😊\n\nAqui é ${_prepClinica(clinica)}. Foi um prazer te atender! Sua opinião é muito importante pra gente.${link ? '\n\nVocê poderia deixar uma avaliação rapidinha aqui? '+link : '\n\nComo foi sua experiência com a gente?'} 🙏✨`;
+}
+function homeAvaliacoesRender(){
+  const el = document.getElementById('home-avaliacoes');
+  if(!el) return;
+  const candidatos = _homeAvaliacoesCandidatos();
+  if(!candidatos.length){
+    el.innerHTML = '<div class="home-empty">Ninguém pra pedir avaliação agora.</div>';
+    return;
+  }
+  el.innerHTML = candidatos.slice(0,6).map(a=>{
+    const pac = pacientes.find(p=>p.id===a.paciente_id);
+    const nome = pac ? pac.nome : (a.nome_paciente||'—');
+    const tel = a.telefone || pac?.telefone || '';
+    const btnW = tel ? `<button class="home-btn-ver" style="min-height:32px;padding:5px 9px;border-radius:8px;background:#25d366;color:#fff;" title="Pedir avaliação" onclick="homeAvaliacaoWpp(${a.id})"><i class="ti ti-brand-whatsapp"></i></button>` : '';
+    return `<div class="home-table-row">
+      <div class="home-row-main">
+        ${homeAvatar(nome)}
+        <div>
+          <div class="home-table-name">${escapeHtml(nome)}</div>
+          <div class="home-table-sub">Atendido em ${new Date(a.data+'T12:00:00').toLocaleDateString('pt-BR')}</div>
+        </div>
+      </div>
+      ${btnW}
+    </div>`;
+  }).join('');
+}
+function homeAvaliacaoWpp(agId){
+  const a = agendamentos.find(x=>x.id===agId); if(!a) return;
+  const pac = pacientes.find(p=>p.id===a.paciente_id);
+  const nome = pac ? pac.nome : (a.nome_paciente||'paciente');
+  const num = (a.telefone || pac?.telefone || '').replace(/\D/g,'');
+  if(!num){ showToast('Paciente sem telefone cadastrado.','warn'); return; }
+  const numBR = num.startsWith('55') ? num : '55'+num;
+  window.open(`https://wa.me/${numBR}?text=${encodeURIComponent(_avaliacaoMsg(nome))}`, '_blank');
+  _avaliacaoMarcarPedida(agId);
+  homeAvaliacoesRender();
+}
+function homeAvaliacoesChamarTodos(){
+  const candidatos = _homeAvaliacoesCandidatos();
+  wppFilaAbrir(candidatos, (a)=>{
+    const pac = pacientes.find(p=>p.id===a.paciente_id);
+    const nome = pac ? pac.nome : (a.nome_paciente||'paciente');
+    const num = (a.telefone || pac?.telefone || '').replace(/\D/g,'');
+    if(!num) return { nome, telefone:'' };
+    const numBR = num.startsWith('55') ? num : '55'+num;
+    return { nome, telefone:numBR, msg:_avaliacaoMsg(nome), onEnviado: ()=>{ _avaliacaoMarcarPedida(a.id); } };
+  }, 'Pedir avaliação');
+  // Ao fechar a fila, re-renderiza a Home pra sumir quem já foi marcado.
+  const modal = document.getElementById('wpp-fila-modal');
+  const obs = new MutationObserver(()=>{
+    if(modal.style.display==='none'){ homeAvaliacoesRender(); obs.disconnect(); }
+  });
+  obs.observe(modal, { attributes:true, attributeFilter:['style'] });
+}
+
+// ══════════════════════════════════════════════════════
 // ASSINATURA DIGITAL
 // ══════════════════════════════════════════════════════
 let signCanvas = null, signCtx = null, signDrawing = false;
@@ -11672,6 +11829,10 @@ async function renderConfiguracoes(){
     if(clinicaData.logo_url){ logoPrev.src = clinicaData.logo_url; logoPrev.style.display=''; }
     else { logoPrev.style.display='none'; logoPrev.src=''; }
   }
+  const recallEl = document.getElementById('cfg-recall-meses');
+  if(recallEl) recallEl.value = cfg.recall_meses ?? 6;
+  const reviewEl = document.getElementById('cfg-google-review-link');
+  if(reviewEl) reviewEl.value = cfg.google_review_link || '';
   // Taxas
   document.getElementById('cfg-taxa-debito').value = taxasCfg.debito ?? 1.5;
   const cr = taxasCfg.credito || [];
@@ -11811,6 +11972,10 @@ async function salvarConfiguracoes(){
   // Persiste endereco/maps_link + taxas via financeiro_config (fallback confiável)
   cfg.endereco  = endereco;
   cfg.maps_link = maps_link;
+  const recallEl = document.getElementById('cfg-recall-meses');
+  if(recallEl) cfg.recall_meses = parseInt(recallEl.value)||6;
+  const reviewEl = document.getElementById('cfg-google-review-link');
+  if(reviewEl) cfg.google_review_link = reviewEl.value.trim();
   const taxaDebEl = document.getElementById('cfg-taxa-debito');
   if(taxaDebEl){
     taxasCfg.debito = parseFloat(taxaDebEl.value)||0;
