@@ -921,7 +921,6 @@ function renderHomeStats(){
 
   const _mesStat = hoje_str.slice(0,7);
   const _fatMes = vendas.filter(v=>v.status==='finalizada'&&(v.data||v.dataFinal||'').slice(0,7)===_mesStat).reduce((a,v)=>a+(Number(v.total)||0),0);
-  const _mesLabel = new Date(_mesStat+'-02').toLocaleDateString('pt-BR',{month:'long',year:'numeric'});
   // Faturamento agregado só aparece com o PIN financeiro verificado nesta
   // sessão — sem ele, mostra um cadeado clicável em vez do valor.
   const _fatMesHtml = _finVerificado
@@ -930,30 +929,9 @@ function renderHomeStats(){
   document.getElementById('home-hero-stats').innerHTML = `
     <div class="home-hero-stat"><div class="home-hero-stat-val">${_fatMesHtml}</div><div class="home-hero-stat-lbl">Faturamento do mês</div></div>
     <div class="home-hero-stat"><div class="home-hero-stat-val">${hoje_count}</div><div class="home-hero-stat-lbl">Consultas hoje</div></div>
+    <div class="home-hero-stat"><div class="home-hero-stat-val">${confirmadas}</div><div class="home-hero-stat-lbl">Confirmadas hoje</div></div>
     <div class="home-hero-stat"><div class="home-hero-stat-val">${semana_count}</div><div class="home-hero-stat-lbl">Na semana</div></div>
     <div class="home-hero-stat"><div class="home-hero-stat-val">${pacientes.length}</div><div class="home-hero-stat-lbl">Pacientes</div></div>
-  `;
-  document.getElementById('home-stats').innerHTML = `
-    <div class="home-stat-card">
-      <div class="home-stat-icon" style="background:#fdf0eb;color:#d4735a;"><i class="ti ti-users"></i></div>
-      <div><div class="home-stat-num">${pacientes.length}</div><div class="home-stat-label">Total de Pacientes</div></div>
-    </div>
-    <div class="home-stat-card">
-      <div class="home-stat-icon" style="background:#e8f5e9;color:#2e7d32;"><i class="ti ti-currency-dollar"></i></div>
-      <div><div class="home-stat-num money">${_fatMesHtml}</div><div class="home-stat-label">Faturamento ${_mesLabel}</div></div>
-    </div>
-    <div class="home-stat-card">
-      <div class="home-stat-icon" style="background:#fff4e5;color:#e08a20;"><i class="ti ti-calendar"></i></div>
-      <div><div class="home-stat-num">${semana_count}</div><div class="home-stat-label">Consultas na semana</div></div>
-    </div>
-    <div class="home-stat-card">
-      <div class="home-stat-icon" style="background:#e3f2fd;color:#1565c0;"><i class="ti ti-clock"></i></div>
-      <div><div class="home-stat-num">${hoje_count}</div><div class="home-stat-label">Consultas hoje</div></div>
-    </div>
-    <div class="home-stat-card">
-      <div class="home-stat-icon" style="background:#fce4e4;color:#c0392b;"><i class="ti ti-check"></i></div>
-      <div><div class="home-stat-num">${confirmadas}</div><div class="home-stat-label">Confirmadas hoje</div></div>
-    </div>
   `;
 
   // Próximas consultas de hoje
