@@ -886,7 +886,7 @@
       <!-- SUB-ABAS VENDAS -->
       <div style="display:flex;gap:0;border-bottom:2px solid var(--rose-light);background:#fff;padding:0 16px;flex-shrink:0;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;" id="vendas-subtabs">
         <button class="vendas-subtab" onclick="vendasSubTab('aparelhos')"><i class="ti ti-dental"></i> Aparelhos</button>
-        <button class="vendas-subtab" onclick="vendasSubTab('alinhador')"><i class="ti ti-sparkles"></i> Alinhador Invisível</button>
+        <button class="vendas-subtab rhaiza-only" onclick="vendasSubTab('alinhador')"><i class="ti ti-sparkles"></i> Alinhador Invisível</button>
         <button class="vendas-subtab" onclick="vendasSubTab('clareamento')"><i class="ti ti-sun"></i> Clareamento</button>
         <button class="vendas-subtab" onclick="vendasSubTab('vr')"><i class="ti ti-shopping-cart"></i> Venda Rápida</button>
       </div>
@@ -1029,8 +1029,8 @@
             </div>
           </div>
 
-          <!-- Card 6: Invisalign -->
-          <div class="ap-card">
+          <!-- Card 6: Invisalign (exclusivo Rhaiza) -->
+          <div class="ap-card rhaiza-only">
             <img src="img/aparelhos/invisalign.jpg" alt="Alinhador Invisível" class="ap-img"/>
             <div class="ap-body">
               <div class="ap-title">ALINHADOR INVISÍVEL</div>
@@ -1061,16 +1061,16 @@
           <h3 style="font-size:18px;font-weight:900;color:var(--rose-dark);margin-bottom:16px;text-align:center;">Comparativo Completo — Todos os Aparelhos</h3>
           <table class="ap-table">
             <thead><tr>
-              <th>CRITÉRIO</th><th>Metálico</th><th>Met. Autoligado</th><th>Cerâmico</th><th>Safira</th><th>Est. Autoligado</th><th>Alinhador invisível</th>
+              <th>CRITÉRIO</th><th>Metálico</th><th>Met. Autoligado</th><th>Cerâmico</th><th>Safira</th><th>Est. Autoligado</th><th class="rhaiza-only">Alinhador invisível</th>
             </tr></thead>
             <tbody>
-              <tr><td>💰 Instalação</td><td id="ap-tab-inst-metalico">—</td><td id="ap-tab-inst-autoligado">—</td><td id="ap-tab-inst-ceramico">—</td><td id="ap-tab-inst-safira">—</td><td id="ap-tab-inst-est-autoligado">—</td><td id="ap-tab-inst-alinhador">—</td></tr>
-              <tr><td>🔧 Manutenção/mês</td><td id="ap-tab-manut-metalico">—</td><td id="ap-tab-manut-autoligado">—</td><td id="ap-tab-manut-ceramico">—</td><td id="ap-tab-manut-safira">—</td><td id="ap-tab-manut-est-autoligado">—</td><td>Refinamento<br><span id="ap-tab-manut-alinhador">—</span></td></tr>
-              <tr><td>🔩 Bracket (peça)</td><td>R$ 35</td><td>R$ 60</td><td>R$ 80</td><td>R$ 120</td><td>R$ 140</td><td>—</td></tr>
-              <tr><td>👁️ Estética</td><td>⭐⭐</td><td>⭐⭐</td><td>⭐⭐⭐</td><td>⭐⭐⭐⭐</td><td>⭐⭐⭐⭐</td><td>⭐⭐⭐⭐⭐</td></tr>
-              <tr><td>😊 Conforto</td><td>⭐⭐⭐</td><td>⭐⭐⭐⭐</td><td>⭐⭐⭐</td><td>⭐⭐⭐</td><td>⭐⭐⭐⭐</td><td>⭐⭐⭐⭐⭐</td></tr>
-              <tr><td>🔗 Removível</td><td>Não</td><td>Não</td><td>Não</td><td>Não</td><td>Não</td><td>Sim ✅</td></tr>
-              <tr><td>⏱️ Velocidade</td><td>Normal</td><td>Mais Rápido</td><td>Normal</td><td>Normal</td><td>Mais Rápido</td><td>12–18m</td></tr>
+              <tr><td>💰 Instalação</td><td id="ap-tab-inst-metalico">—</td><td id="ap-tab-inst-autoligado">—</td><td id="ap-tab-inst-ceramico">—</td><td id="ap-tab-inst-safira">—</td><td id="ap-tab-inst-est-autoligado">—</td><td id="ap-tab-inst-alinhador" class="rhaiza-only">—</td></tr>
+              <tr><td>🔧 Manutenção/mês</td><td id="ap-tab-manut-metalico">—</td><td id="ap-tab-manut-autoligado">—</td><td id="ap-tab-manut-ceramico">—</td><td id="ap-tab-manut-safira">—</td><td id="ap-tab-manut-est-autoligado">—</td><td class="rhaiza-only">Refinamento<br><span id="ap-tab-manut-alinhador">—</span></td></tr>
+              <tr><td>🔩 Bracket (peça)</td><td>R$ 35</td><td>R$ 60</td><td>R$ 80</td><td>R$ 120</td><td>R$ 140</td><td class="rhaiza-only">—</td></tr>
+              <tr><td>👁️ Estética</td><td>⭐⭐</td><td>⭐⭐</td><td>⭐⭐⭐</td><td>⭐⭐⭐⭐</td><td>⭐⭐⭐⭐</td><td class="rhaiza-only">⭐⭐⭐⭐⭐</td></tr>
+              <tr><td>😊 Conforto</td><td>⭐⭐⭐</td><td>⭐⭐⭐⭐</td><td>⭐⭐⭐</td><td>⭐⭐⭐</td><td>⭐⭐⭐⭐</td><td class="rhaiza-only">⭐⭐⭐⭐⭐</td></tr>
+              <tr><td>🔗 Removível</td><td>Não</td><td>Não</td><td>Não</td><td>Não</td><td>Não</td><td class="rhaiza-only">Sim ✅</td></tr>
+              <tr><td>⏱️ Velocidade</td><td>Normal</td><td>Mais Rápido</td><td>Normal</td><td>Normal</td><td>Mais Rápido</td><td class="rhaiza-only">12–18m</td></tr>
             </tbody>
           </table>
           <p style="text-align:center;font-size:11px;color:var(--rose-text);margin-top:10px;">★ Valores baseados na tabela de precificação do consultório • Preços sujeitos a avaliação clínica individual</p>
@@ -2172,7 +2172,7 @@
   <div style="color:var(--rose-text);font-size:14px;">Carregando...</div>
 </div>
 
-<script src="app.js?v=39"></script>
+<script src="app.js?v=40"></script>
 
 <!-- ══ MODAL RELATÓRIO MENSAL ══ -->
 <div class="modal-overlay" id="modal-relatorio" onclick="if(event.target===this)closeModal('modal-relatorio')" style="align-items:flex-start;padding-top:40px;overflow-y:auto;">

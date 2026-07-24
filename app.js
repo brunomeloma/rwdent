@@ -5170,8 +5170,16 @@ async function injetarNovosMatsOrto(){
     migrou = true;
   }
 
+  // Alinhador Transparente é exclusivo da clínica Rhaiza (mesma regra do
+  // pacote padrão em loadFinanceiro) — essa função re-injeta itens
+  // faltantes em TODA clínica a cada carregamento, então precisa do mesmo
+  // filtro aqui, senão o alinhador reaparece pras outras de qualquer jeito.
+  const ALINHADOR_MAT_IDS  = [170, 171];
+  const ALINHADOR_PROC_IDS = [207, 214];
+
   let alterou = migrou;
   NOVOS_MATS.forEach(nm=>{
+    if(!_isRhaizaClinic && ALINHADOR_MAT_IDS.includes(nm.id)) return;
     if(!mats.find(m=>m.id===nm.id)){
       mats.push(nm);
       if(!estoque[nm.id]) estoque[nm.id]={atual:0,min:2,compra:5};
@@ -5179,6 +5187,7 @@ async function injetarNovosMatsOrto(){
     }
   });
   NOVOS_PROCS.forEach(np=>{
+    if(!_isRhaizaClinic && ALINHADOR_PROC_IDS.includes(np.id)) return;
     if(!procs.find(p=>p.id===np.id)){
       const proc = {...np};
       if(LABORATORIO_POR_PROC[np.id]) proc.laboratorio = LABORATORIO_POR_PROC[np.id];
@@ -5188,6 +5197,7 @@ async function injetarNovosMatsOrto(){
   });
   // Vincula a receita de insumos a cada procedimento novo (só se ainda não tiver insumos salvos)
   Object.entries(NOVOS_PROC_INSUMOS).forEach(([pid,receita])=>{
+    if(!_isRhaizaClinic && ALINHADOR_PROC_IDS.includes(Number(pid))) return;
     const pidNum = Number(pid);
     if(!procInsumos[pidNum] || !procInsumos[pidNum].length){
       procInsumos[pidNum] = JSON.parse(JSON.stringify(receita));
@@ -5898,12 +5908,14 @@ async function loadFinanceiro(){
   }
 
   // Só preenche com padrão se realmente não tem nada salvo
+  // Alinhador Transparente (proc 207/214, material 170/171) é exclusivo da
+  // clínica Rhaiza — clínica nova não recebe esses itens no pacote padrão.
   if(!procs.length){
-    procs = DEFAULT_PROCS_FIN.map((p,i)=>({...p,id:p.id||i+1}));
+    procs = DEFAULT_PROCS_FIN.filter(p=>_isRhaizaClinic || ![207,214].includes(p.id)).map((p,i)=>({...p,id:p.id||i+1}));
     precisaSalvar = true;
   }
   if(!mats.length){
-    mats = DEFAULT_MATS_FIN.map((m,i)=>({...m,id:m.id||i+1}));
+    mats = DEFAULT_MATS_FIN.filter(m=>_isRhaizaClinic || ![170,171].includes(m.id)).map((m,i)=>({...m,id:m.id||i+1}));
     precisaSalvar = true;
   }
   if(!combos.length){
