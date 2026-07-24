@@ -13149,35 +13149,110 @@ function galeriaFiltrar(cat, btn){
   _galeriaRenderGrid();
 }
 
+async function _fileToBase64(blob){
+  return new Promise((resolve, reject)=>{
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result).split(',')[1] || '');
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+}
+
+async function _classificarImagemGaleria(base64){
+  try{
+    const { data: { session } } = await _sb.auth.getSession();
+    const token = session?.access_token;
+    if(!token) return 'foto';
+    const resp = await fetch('/api/classificar-imagem-galeria', {
+      method: 'POST',
+      headers: { 'Content-Type':'application/json', 'Authorization': 'Bearer '+token },
+      body: JSON.stringify({ imageBase64: base64 })
+    });
+    if(!resp.ok) return 'foto';
+    const data = await resp.json();
+    return data.categoria === 'radiografia' ? 'radiografia' : 'foto';
+  } catch(e){ return 'foto'; }
+}
+
 async function galeriaUpload(fileList, pacId){
   if(!fileList || !fileList.length) return;
 
   const ok = await _galeriaEnsureBucket();
   if(!ok) return;
 
-  const cats = ['foto','radiografia','antes_depois'];
-  const catLabels = ['Foto clínica','Radiografia','Antes/Depois'];
-  const cat = await new Promise(resolve=>{
-    const modal = document.createElement('div');
-    modal.className = 'modal-overlay';
-    modal.style.cssText = 'display:flex;align-items:center;justify-content:center;padding:20px;';
-    modal.innerHTML = `<div class="modal-box" style="max-width:340px;padding:24px;">
-      <h3 style="font-size:15px;font-weight:800;color:var(--rose-dark);margin-bottom:16px;"><i class="ti ti-tag"></i> Categoria das imagens</h3>
-      ${cats.map((c,i)=>`<button class="btn-secondary" style="width:100%;margin-bottom:8px;text-align:left;padding:12px 16px;" onclick="this.closest('.modal-overlay')._resolve('${c}');this.closest('.modal-overlay').remove()"><i class="ti ti-${c==='foto'?'camera':c==='radiografia'?'bone':'arrows-exchange'}"></i> ${catLabels[i]}</button>`).join('')}
-      <button class="btn-secondary" style="width:100%;margin-top:4px;color:#999;" onclick="this.closest('.modal-overlay')._resolve(null);this.closest('.modal-overlay').remove()">Cancelar</button>
-    </div>`;
-    modal._resolve = resolve;
-    document.body.appendChild(modal);
+  const arquivos = [...fileList].filter(f=>f.type.startsWith('image/'));
+  if(!arquivos.length){ showToast('Selecione arquivos de imagem.','warn'); document.getElementById('galeria-input').value=''; return; }
+  for(const f of arquivos){
+    if(f.size > 10*1024*1024){ showToast(`${f.name} excede 10 MB.`,'error'); }
+  }
+  const validos = arquivos.filter(f=>f.size <= 10*1024*1024);
+  if(!validos.length){ document.getElementById('galeria-input').value=''; return; }
+
+  // Modal de revisão com miniatura + categoria (sugerida pela IA) por imagem
+  const modal = document.createElement('div');
+  modal.className = 'modal-overlay';
+  modal.style.cssText = 'display:flex;align-items:center;justify-content:center;padding:20px;';
+  modal.innerHTML = `<div class="modal-box" style="max-width:520px;max-height:85vh;overflow-y:auto;padding:24px;">
+    <h3 style="font-size:15px;font-weight:800;color:var(--rose-dark);margin-bottom:6px;"><i class="ti ti-wand"></i> Revisar categorias</h3>
+    <p style="font-size:12px;color:var(--rose-text);margin-bottom:16px;">A IA já sugeriu a categoria de cada imagem — confira e corrija se precisar antes de enviar. "Antes/Depois" é sempre escolha manual (a IA não consegue saber essa intenção só pela foto).</p>
+    <div id="galeria-review-lista" style="display:flex;flex-direction:column;gap:10px;margin-bottom:16px;">
+      ${validos.map((f,i)=>`
+        <div style="display:flex;align-items:center;gap:10px;border:1.5px solid var(--rose-light);border-radius:10px;padding:8px;">
+          <img id="gr-thumb-${i}" style="width:56px;height:56px;border-radius:8px;object-fit:cover;background:var(--rose-lighter);flex-shrink:0;" src="${URL.createObjectURL(f)}"/>
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:11px;color:var(--rose-text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:5px;">${escapeHtml(f.name)}</div>
+            <select id="gr-cat-${i}" style="width:100%;padding:6px 8px;border:1.5px solid var(--rose-light);border-radius:8px;font-size:12px;">
+              <option value="foto">📷 Foto clínica</option>
+              <option value="radiografia">🦴 Radiografia</option>
+              <option value="antes_depois">🔄 Antes/Depois</option>
+            </select>
+            <div id="gr-status-${i}" style="font-size:10px;color:var(--rose-text);margin-top:3px;">Analisando...</div>
+          </div>
+        </div>
+      `).join('')}
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;">
+      <button class="btn-secondary" id="galeria-review-cancelar">Cancelar</button>
+      <button class="btn-primary" id="galeria-review-confirmar" disabled><i class="ti ti-upload"></i> Enviar</button>
+    </div>
+  </div>`;
+  document.body.appendChild(modal);
+
+  const btnConfirmar = modal.querySelector('#galeria-review-confirmar');
+  const btnCancelar = modal.querySelector('#galeria-review-cancelar');
+  let cancelado = false;
+  const confirmarPromise = new Promise(resolve=>{
+    btnConfirmar.onclick = ()=>{ resolve(true); };
+    btnCancelar.onclick = ()=>{ cancelado = true; resolve(false); modal.remove(); };
   });
 
-  if(!cat) return;
+  // Classifica cada imagem em paralelo (miniatura pequena, só pra IA)
+  Promise.all(validos.map(async (f, i)=>{
+    try{
+      const thumb = await _galeriaCompress(f, 500);
+      const base64 = await _fileToBase64(thumb);
+      const categoria = await _classificarImagemGaleria(base64);
+      const sel = document.getElementById(`gr-cat-${i}`);
+      const status = document.getElementById(`gr-status-${i}`);
+      if(sel) sel.value = categoria;
+      if(status) status.textContent = categoria==='radiografia' ? '🦴 IA sugeriu: Radiografia' : '📷 IA sugeriu: Foto clínica';
+    } catch(e){
+      const status = document.getElementById(`gr-status-${i}`);
+      if(status) status.textContent = 'Não deu pra analisar — escolha manualmente';
+    }
+  })).then(()=>{ btnConfirmar.disabled = false; });
+
+  const prosseguir = await confirmarPromise;
+  if(!prosseguir || cancelado){ document.getElementById('galeria-input').value=''; return; }
+
+  const categorias = validos.map((f,i)=> document.getElementById(`gr-cat-${i}`)?.value || 'foto');
+  modal.remove();
 
   showLoading(true);
   let uploaded = 0;
-  for(const file of fileList){
-    if(!file.type.startsWith('image/')){ continue; }
-    if(file.size > 10*1024*1024){ showToast(`${file.name} excede 10 MB.`,'error'); continue; }
-
+  for(let i=0;i<validos.length;i++){
+    const file = validos[i];
+    const cat = categorias[i];
     try {
       const compressed = await _galeriaCompress(file, 1600);
       const ts = Date.now();
