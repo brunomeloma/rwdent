@@ -25,6 +25,31 @@ let currentUser = null;
 let clinicaId = null;       // ID da clínica do usuário logado (multi-tenant)
 let clinicaData = null;     // Dados completos da clínica
 let _isRhaizaClinic = false; // Recursos exclusivos da clínica Rhaiza
+// Papel do login nesta clínica: 'dono' (padrão) ou 'secretaria'. A secretária
+// tem login próprio e NÃO enxerga as telas financeiras (as mesmas que já ficam
+// atrás do PIN). A trava real é a RLS do banco (clinica_membros); isto aqui só
+// controla o que aparece na tela dela.
+let _papelUsuario = 'dono';
+function _ehSecretaria(){ return _papelUsuario === 'secretaria'; }
+
+// Esconde da secretária as MESMAS telas que já ficam atrás do PIN financeiro:
+// Painel Financeiro (que contém Produtividade e Comissões) e o faturamento
+// acumulado da Home. Para o dono, não faz nada. A trava de verdade é a RLS do
+// banco; isto é a camada visual.
+function aplicarGatingSecretaria(){
+  const sec = _ehSecretaria();
+  // Entradas de menu que levam ao Painel Financeiro
+  document.querySelectorAll('[data-tab="financeiro"], [onclick*="switchTab(\'financeiro\')"]').forEach(el=>{
+    el.style.display = sec ? 'none' : '';
+  });
+  // Bloco de configurar PIN financeiro em Configurações (não faz sentido pra ela)
+  document.querySelectorAll('.dono-only').forEach(el=>{ el.style.display = sec ? 'none' : ''; });
+  // Se por algum motivo ela estiver na aba financeiro, tira dela
+  if(sec && document.getElementById('tab-financeiro')?.style.display !== 'none'){
+    switchTab('home');
+  }
+  if(typeof renderHomeStats === 'function' && document.getElementById('tab-home')) renderHomeStats();
+}
 // Só usado pra mostrar/esconder botão na tela mais rápido (evita esperar
 // uma chamada ao servidor só pra saber se mostra o menu Admin). NÃO é a
 // trava de segurança de verdade — cada ação de admin (loadAdminPanel,
@@ -122,11 +147,32 @@ async function doLogin(){
 
 async function checkClinicaApproval(){
   const errEl = document.getElementById('login-err');
-  const { data: cli } = await _sb
+  // 1) Tenta como DONO: existe uma clínica com este user_id?
+  let { data: cli } = await _sb
     .from('clinicas')
     .select('*')
     .eq('user_id', currentUser.id)
-    .single();
+    .maybeSingle();
+  _papelUsuario = 'dono';
+
+  // 2) Se não é dono de nenhuma, tenta como SECRETÁRIA: está vinculada a alguma
+  //    clínica em clinica_membros? A RLS só deixa ela ler o vínculo dela e a
+  //    própria clínica (policies clinica_membros_self_select / clinicas_membro_select).
+  if(!cli){
+    try{
+      const { data: vinc } = await _sb
+        .from('clinica_membros')
+        .select('clinica_id, papel')
+        .eq('user_id', currentUser.id)
+        .maybeSingle();
+      if(vinc){
+        const { data: cliMembro } = await _sb
+          .from('clinicas').select('*').eq('id', vinc.clinica_id).maybeSingle();
+        if(cliMembro){ cli = cliMembro; _papelUsuario = vinc.papel === 'secretaria' ? 'secretaria' : 'dono'; }
+      }
+    }catch(e){ /* tabela pode não existir ainda; segue como sem clínica */ }
+  }
+
   if(!cli){
     await _sb.auth.signOut(); currentUser=null;
     window.location.replace('index.html?msg=sem_clinica');
@@ -139,6 +185,8 @@ async function checkClinicaApproval(){
   }
   clinicaId   = cli.id;
   clinicaData = cli;
+  // Aplica o gating de secretária (esconde financeiro) assim que sabemos o papel.
+  aplicarGatingSecretaria();
   // Atualiza nome da clínica na interface
   const el = document.getElementById('header-clinica');
   if(el) el.textContent = cli.nome_cli || 'Minha Clínica';
@@ -765,6 +813,53 @@ function ativarModoSecretaria(){
   renderHomeStats();
   showToast('Modo secretária ativado — faturamento escondido.');
 }
+
+// ── Login da secretária (chama api/criar-secretaria.js) ────────────────────
+async function _secApi(body){
+  const { data:{ session } } = await _sb.auth.getSession();
+  const resp = await fetch('/api/criar-secretaria', {
+    method:'POST',
+    headers:{ 'Content-Type':'application/json', 'Authorization':'Bearer '+(session?.access_token||'') },
+    body: JSON.stringify(body)
+  });
+  const json = await resp.json().catch(()=>({}));
+  return { ok: resp.ok, json };
+}
+async function secCriar(){
+  const email = (document.getElementById('sec-email')?.value||'').trim();
+  const senha = (document.getElementById('sec-senha')?.value||'');
+  if(!email || !senha){ showToast('Preencha e-mail e senha da secretária.','warn'); return; }
+  showLoading(true);
+  const { ok, json } = await _secApi({ action:'criar', email, senha });
+  showLoading(false);
+  if(!ok){ showToast(json.error||'Erro ao criar login.','error'); return; }
+  document.getElementById('sec-email').value='';
+  document.getElementById('sec-senha').value='';
+  showToast('Login da secretária criado!');
+  secCarregar();
+}
+async function secRemover(userId, email){
+  if(!confirm(`Remover o acesso de ${email||'esta secretária'}? O login dela deixa de funcionar.`)) return;
+  showLoading(true);
+  const { ok, json } = await _secApi({ action:'remover', userId });
+  showLoading(false);
+  if(!ok){ showToast(json.error||'Erro ao remover.','error'); return; }
+  showToast('Acesso removido.');
+  secCarregar();
+}
+async function secCarregar(){
+  const el = document.getElementById('sec-lista');
+  if(!el) return;
+  const { ok, json } = await _secApi({ action:'listar' });
+  if(!ok){ el.innerHTML = '<span style="color:#b33;">Não consegui listar agora.</span>'; return; }
+  const lista = json.secretarias || [];
+  if(!lista.length){ el.innerHTML = '<span style="opacity:.7;">Nenhuma secretária cadastrada ainda.</span>'; return; }
+  el.innerHTML = '<div style="font-weight:700;margin-bottom:6px;">Secretárias com acesso:</div>' + lista.map(s=>`
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;border:1px solid var(--rose-light);border-radius:8px;padding:8px 10px;margin-bottom:6px;">
+      <span>${escapeHtml(s.email||'(sem e-mail)')}</span>
+      <button class="btn-danger" style="font-size:11px;padding:4px 8px;" onclick="secRemover('${escapeHtml(s.userId)}','${escapeHtml(s.email||'')}')"><i class="ti ti-user-x"></i> Remover</button>
+    </div>`).join('');
+}
 async function atualizarFinPinFaturamentoStatus(){
   const el = document.getElementById('fin-pin-fat-status');
   if(!el) return;
@@ -785,6 +880,11 @@ async function atualizarFinPinFaturamentoStatus(){
 
 function switchTab(tab){
   if(tab==='invisalign_apresentacao' && !_isRhaizaClinic) tab='home';
+  // Secretária nunca entra no Painel Financeiro (nem via PIN — ela não tem).
+  if(tab==='financeiro' && _ehSecretaria()){
+    showToast('Área financeira restrita ao responsável da clínica.','warn');
+    return;
+  }
   if(tab==='financeiro' && !_finVerificado){
     pedirFinPinFaturamento().then(ok=>{ if(ok) switchTab('financeiro'); });
     return;
@@ -821,7 +921,7 @@ function switchTab(tab){
   if(tab==='pacientes') renderPatients();
   if(tab==='profissionais') renderProfissionais();
   if(tab==='home') renderHomeStats();
-  if(tab==='configuracoes'){ renderConfiguracoes(); atualizarFinPinFaturamentoStatus(); }
+  if(tab==='configuracoes'){ renderConfiguracoes(); if(!_ehSecretaria()){ atualizarFinPinFaturamentoStatus(); secCarregar(); } }
   if(tab==='resgate') renderResgate();
   if(tab==='lista_espera') leRender();
   if(tab==='admin') loadAdminPanel();
@@ -928,13 +1028,23 @@ function renderHomeStats(){
 
   const _mesStat = hoje_str.slice(0,7);
   const _fatMes = vendas.filter(v=>v.status==='finalizada'&&(v.data||v.dataFinal||'').slice(0,7)===_mesStat).reduce((a,v)=>a+(Number(v.total)||0),0);
-  // Faturamento agregado só aparece com o PIN financeiro verificado nesta
-  // sessão — sem ele, mostra um cadeado clicável em vez do valor.
-  const _fatMesHtml = _finVerificado
-    ? fmtBRL(_fatMes)
-    : `<span onclick="pedirFinPinFaturamento().then(ok=>{if(ok)renderHomeStats();})" style="cursor:pointer;" title="Digite o PIN financeiro pra ver">🔒</span>`;
+  // Card de faturamento:
+  //  - Dono: faturamento do MÊS, atrás do PIN (cadeado se não verificado).
+  //  - Secretária: "Vendas de hoje" — só o dia, zera todo dia. Ela nunca vê o
+  //    acumulado do mês nem tem cadeado/PIN (não é área dela).
+  let _fatCard;
+  if(_ehSecretaria()){
+    const _vendasHoje = vendas.filter(v=>v.status==='finalizada'&&(v.dataFinal||v.data||'').slice(0,10)===hoje_str)
+                              .reduce((a,v)=>a+(Number(v.total)||0),0);
+    _fatCard = `<div class="home-hero-stat"><div class="home-hero-stat-val">${fmtBRL(_vendasHoje)}</div><div class="home-hero-stat-lbl">Vendas de hoje</div></div>`;
+  } else {
+    const _fatMesHtml = _finVerificado
+      ? fmtBRL(_fatMes)
+      : `<span onclick="pedirFinPinFaturamento().then(ok=>{if(ok)renderHomeStats();})" style="cursor:pointer;" title="Digite o PIN financeiro pra ver">🔒</span>`;
+    _fatCard = `<div class="home-hero-stat"><div class="home-hero-stat-val">${_fatMesHtml}</div><div class="home-hero-stat-lbl">Faturamento do mês</div></div>`;
+  }
   document.getElementById('home-hero-stats').innerHTML = `
-    <div class="home-hero-stat"><div class="home-hero-stat-val">${_fatMesHtml}</div><div class="home-hero-stat-lbl">Faturamento do mês</div></div>
+    ${_fatCard}
     <div class="home-hero-stat"><div class="home-hero-stat-val">${hoje_count}</div><div class="home-hero-stat-lbl">Consultas hoje</div></div>
     <div class="home-hero-stat"><div class="home-hero-stat-val">${confirmadas}</div><div class="home-hero-stat-lbl">Confirmadas hoje</div></div>
     <div class="home-hero-stat"><div class="home-hero-stat-val">${semana_count}</div><div class="home-hero-stat-lbl">Na semana</div></div>

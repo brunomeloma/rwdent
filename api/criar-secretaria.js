@@ -1,0 +1,133 @@
+const { createClient } = require('@supabase/supabase-js');
+
+// Gestão do login da secretária. Só o DONO de uma clínica aprovada pode usar.
+// Criar/remover usuário no Supabase Auth exige a service role, então isso vive
+// aqui no servidor — mesmo padrão de api/admin-reset-demo-password.js.
+//
+// A clínica é SEMPRE a do dono autenticado (achada pelo user_id do token),
+// nunca um id vindo do corpo da requisição — então não dá pra cadastrar
+// secretária em clínica alheia.
+//
+// Ações:
+//   { action:'listar' }                       -> lista as secretárias da clínica
+//   { action:'criar', email, senha }          -> cria login e vincula como secretária
+//   { action:'remover', userId }              -> desvincula (e desativa o login)
+
+module.exports = async function handler(req, res) {
+  res.setHeader('Content-Type', 'application/json');
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Método não permitido.' });
+
+  const cleanStr = s => String(s || '').replace(/[^\x20-\x7E]/g, '').trim();
+  const supabaseUrl    = cleanStr(process.env.SUPABASE_URL);
+  const supabaseAnon   = cleanStr(process.env.SUPABASE_ANON_KEY);
+  const serviceRoleKey = cleanStr(process.env.SUPABASE_SERVICE_ROLE_KEY);
+
+  if (!supabaseUrl || !supabaseAnon || !serviceRoleKey) {
+    return res.status(500).json({ error: 'Servidor sem SUPABASE_SERVICE_ROLE_KEY configurada.' });
+  }
+
+  const authHeader  = req.headers['authorization'] || '';
+  const accessToken = cleanStr(authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '');
+  if (!accessToken) return res.status(401).json({ error: 'Faça login.' });
+
+  // 1) Valida o token do chamador (respeita RLS).
+  const sbCaller = createClient(supabaseUrl, supabaseAnon, {
+    global: { headers: { Authorization: `Bearer ${accessToken}` } }
+  });
+  const { data: { user }, error: authErr } = await sbCaller.auth.getUser(accessToken);
+  if (authErr || !user) return res.status(401).json({ error: 'Sessão inválida.' });
+
+  // 2) Confirma que o chamador é DONO de uma clínica aprovada. clinicaId sai
+  //    daqui — nunca do corpo — então a ação só afeta a clínica dele.
+  const sbAdmin = createClient(supabaseUrl, serviceRoleKey);
+  const { data: clinica, error: cliErr } = await sbAdmin
+    .from('clinicas').select('id, status').eq('user_id', user.id).maybeSingle();
+  if (cliErr) return res.status(500).json({ error: 'Erro ao buscar clínica: ' + cliErr.message });
+  if (!clinica) return res.status(403).json({ error: 'Só o dono da clínica pode gerenciar secretárias.' });
+  if (clinica.status !== 'aprovado') return res.status(403).json({ error: 'Clínica não está aprovada.' });
+  const clinicaId = clinica.id;
+
+  const { action, email, senha, userId } = req.body || {};
+
+  // ── LISTAR ────────────────────────────────────────────────────────────────
+  if (action === 'listar') {
+    const { data: membros, error } = await sbAdmin
+      .from('clinica_membros')
+      .select('user_id, papel, created_at')
+      .eq('clinica_id', clinicaId)
+      .order('created_at', { ascending: true });
+    if (error) return res.status(500).json({ error: 'Erro ao listar: ' + error.message });
+    // Junta o e-mail de cada uma (via Auth admin).
+    const lista = [];
+    for (const m of (membros || [])) {
+      let email = '';
+      try {
+        const { data: u } = await sbAdmin.auth.admin.getUserById(m.user_id);
+        email = u?.user?.email || '';
+      } catch (e) { /* mantém vazio */ }
+      lista.push({ userId: m.user_id, email, papel: m.papel, criadoEm: m.created_at });
+    }
+    return res.status(200).json({ ok: true, secretarias: lista });
+  }
+
+  // ── CRIAR ───────────────────────────────────────────────────────────────
+  if (action === 'criar') {
+    const emailLimpo = cleanStr(email).toLowerCase();
+    const senhaLimpa = String(senha || '');
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(emailLimpo)) {
+      return res.status(400).json({ error: 'E-mail inválido.' });
+    }
+    if (senhaLimpa.length < 6) {
+      return res.status(400).json({ error: 'A senha deve ter no mínimo 6 caracteres.' });
+    }
+
+    // Cria o usuário no Auth com e-mail já confirmado (é a dona quem cadastra).
+    const { data: novo, error: cErr } = await sbAdmin.auth.admin.createUser({
+      email: emailLimpo,
+      password: senhaLimpa,
+      email_confirm: true
+    });
+    if (cErr) {
+      const msg = /already been registered|already exists/i.test(cErr.message || '')
+        ? 'Já existe um login com esse e-mail.'
+        : ('Erro ao criar login: ' + cErr.message);
+      return res.status(400).json({ error: msg });
+    }
+    const novoId = novo?.user?.id;
+    if (!novoId) return res.status(500).json({ error: 'Login criado, mas não retornou id.' });
+
+    // Vincula como secretária desta clínica.
+    const { error: mErr } = await sbAdmin.from('clinica_membros')
+      .insert({ user_id: novoId, clinica_id: clinicaId, papel: 'secretaria' });
+    if (mErr) {
+      // Desfaz o usuário órfão pra não deixar login sem vínculo.
+      try { await sbAdmin.auth.admin.deleteUser(novoId); } catch (e) { /* ignora */ }
+      return res.status(500).json({ error: 'Erro ao vincular secretária: ' + mErr.message });
+    }
+
+    console.log(`[criar-secretaria] clinica=${clinicaId} nova secretaria=${emailLimpo} por ${user.email}`);
+    return res.status(200).json({ ok: true, userId: novoId, email: emailLimpo });
+  }
+
+  // ── REMOVER ─────────────────────────────────────────────────────────────
+  if (action === 'remover') {
+    const alvo = cleanStr(userId);
+    if (!alvo) return res.status(400).json({ error: 'userId obrigatório.' });
+    // Só remove se a pessoa for MESMO membro DESTA clínica (trava anti-abuso).
+    const { data: vinc } = await sbAdmin
+      .from('clinica_membros').select('user_id')
+      .eq('clinica_id', clinicaId).eq('user_id', alvo).maybeSingle();
+    if (!vinc) return res.status(404).json({ error: 'Essa secretária não é desta clínica.' });
+
+    const { error: delErr } = await sbAdmin.from('clinica_membros')
+      .delete().eq('clinica_id', clinicaId).eq('user_id', alvo);
+    if (delErr) return res.status(500).json({ error: 'Erro ao remover vínculo: ' + delErr.message });
+    // Desativa o login (não apaga, pra preservar histórico/auditoria do Auth).
+    try { await sbAdmin.auth.admin.updateUserById(alvo, { ban_duration: '876000h' }); } catch (e) { /* ok */ }
+
+    console.log(`[criar-secretaria] clinica=${clinicaId} removeu secretaria=${alvo} por ${user.email}`);
+    return res.status(200).json({ ok: true });
+  }
+
+  return res.status(400).json({ error: 'Ação inválida.' });
+};
