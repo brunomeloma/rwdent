@@ -3827,6 +3827,108 @@ async function pacCarregarPlano(pacId){
   pacRenderPlanoLista();
 }
 
+// ── Dentes "adiados" dentro de um item do plano ────────────────────────────
+// Quando um procedimento vale pra vários dentes (ex: restauração em 16 dentes),
+// o paciente muitas vezes só quer/pode pagar por alguns agora. Clicar no chip do
+// dente apaga ele desta aprovação — mas ele NÃO some do plano: na hora de
+// aprovar/realizar, o item é dividido em dois, e os dentes adiados continuam
+// numa linha pendente, ainda precisando de tratamento.
+// Estado só de tela (não vai pro banco): é uma decisão do momento da venda.
+const _planoDentesFora = new Map(); // idDoItem -> Set('16','17',...)
+
+function _planoParseVal(s){
+  // valor vem ora com vírgula ("4800,00"), ora com ponto ("300.00"), dependendo
+  // de qual tela criou o item — normaliza os dois casos.
+  return parseFloat(String(s ?? '0').replace(',', '.')) || 0;
+}
+
+function _planoValorUnit(item){
+  const u = _planoParseVal(item.valor_unit);
+  if(u > 0) return u;
+  const dentes = (item.dente||'').split(',').filter(Boolean);
+  const total = _planoParseVal(item.valor);
+  return dentes.length ? total/dentes.length : total;
+}
+
+function _planoDentesDe(item){ return (item.dente||'').split(',').filter(Boolean); }
+
+// Item pode ter dentes adiados? Só faz sentido em item pendente com +1 dente —
+// item já aprovado/realizado tem venda vinculada, dividir ali quebraria o
+// financeiro.
+function _planoPodeAdiarDentes(item){
+  return item.status==='pendente' && _planoDentesDe(item).length > 1;
+}
+
+function pacPlanoToggleDente(itemId, dente){
+  const item = pacPlanoList.find(i=>i.id===itemId);
+  if(!item || !_planoPodeAdiarDentes(item)) return;
+  const set = _planoDentesFora.get(itemId) || new Set();
+  const d = String(dente);
+  if(set.has(d)) set.delete(d); else set.add(d);
+  if(set.size) _planoDentesFora.set(itemId, set); else _planoDentesFora.delete(itemId);
+  pacRenderPlanoLista();
+}
+
+// Divide o item: a linha original fica só com os dentes que vão ser
+// aprovados/realizados agora, e os adiados viram uma nova linha pendente.
+// Retorna false se algo deu errado (aí o chamador aborta sem mudar status).
+async function _planoSepararDentesAdiados(id){
+  const item = pacPlanoList.find(i=>i.id===id);
+  if(!item) return true;
+  const fora = _planoDentesFora.get(id);
+  if(!fora || !fora.size) return true;
+
+  const todos    = _planoDentesDe(item);
+  const dentro   = todos.filter(d=>!fora.has(d));
+  const adiados  = todos.filter(d=>fora.has(d));
+  if(!dentro.length || !adiados.length) return true; // nada a dividir
+
+  const unit = _planoValorUnit(item);
+  const fmt  = n => n.toFixed(2).replace('.', ',');
+
+  // 1) Cria PRIMEIRO a linha dos dentes adiados. Se este insert falhar, nada
+  //    foi alterado ainda e nenhum dente se perde do plano.
+  const novaLinha = {
+    clinica_id: clinicaId,
+    paciente_id: item.paciente_id ?? selectedPatientId,
+    dente: adiados.join(','),
+    face: item.face || '–',
+    procedimento: item.procedimento,
+    valor: fmt(unit*adiados.length),
+    valor_unit: fmt(unit),
+    quantidade_dentes: adiados.length,
+    descricao: item.descricao || '',
+    status: 'pendente'
+  };
+  let { data: novo, error: eIns } = await _sb.from('plano_tratamento').insert([novaLinha]).select().single();
+  if(eIns && /valor_unit|quantidade_dentes/.test(eIns.message||'')){
+    // Colunas extras não existem nesta base ainda — salva sem elas
+    const { valor_unit, quantidade_dentes, ...semExtras } = novaLinha;
+    ({ data: novo, error: eIns } = await _sb.from('plano_tratamento').insert([semExtras]).select().single());
+  }
+  if(eIns){ showToast('Erro ao separar os dentes adiados: '+eIns.message,'error'); return false; }
+
+  // 2) Reduz a linha original só aos dentes desta aprovação
+  const upd = { dente: dentro.join(','), valor: fmt(unit*dentro.length), quantidade_dentes: dentro.length };
+  let { error: eUpd } = await _sb.from('plano_tratamento').update(upd).eq('id',id);
+  if(eUpd && /quantidade_dentes/.test(eUpd.message||'')){
+    ({ error: eUpd } = await _sb.from('plano_tratamento')
+      .update({ dente: upd.dente, valor: upd.valor }).eq('id',id));
+  }
+  if(eUpd){
+    // Desfaz a linha recém-criada, senão os mesmos dentes ficariam em duas
+    // linhas e o paciente poderia ser cobrado duas vezes pelo mesmo dente.
+    if(novo?.id) await _sb.from('plano_tratamento').delete().eq('id',novo.id);
+    showToast('Erro ao atualizar o item: '+eUpd.message,'error');
+    return false;
+  }
+
+  Object.assign(item, upd);
+  if(novo) pacPlanoList.unshift(novo);
+  _planoDentesFora.delete(id);
+  return true;
+}
+
 async function pacAlterarStatusPlano(id, status){
   let profId = null, profNome = '';
   if(status === 'realizado'){
@@ -3834,6 +3936,23 @@ async function pacAlterarStatusPlano(id, status){
     profId = sel?.value || '';
     if(!profId){ showToast('Selecione quem atendeu o paciente antes de marcar como realizado.','warn'); return; }
     profNome = profissionais.find(p=>p.id==profId)?.nome || '';
+  }
+
+  // Se o usuário adiou alguns dentes deste item, divide antes de mudar o status:
+  // só os dentes que sobraram entram nesta aprovação/realização, os adiados
+  // continuam pendentes numa linha própria.
+  const _foraAntes = _planoDentesFora.get(id);
+  if(_foraAntes && _foraAntes.size){
+    const _it = pacPlanoList.find(i=>i.id===id);
+    const _todos = _planoDentesDe(_it||{});
+    if(_todos.length && _todos.every(d=>_foraAntes.has(d))){
+      showToast('Todos os dentes estão adiados — reative pelo menos um para continuar.','warn');
+      return;
+    }
+    showLoading(true);
+    const ok = await _planoSepararDentesAdiados(id);
+    showLoading(false);
+    if(!ok) return;
   }
 
   showLoading(true);
@@ -8761,14 +8880,28 @@ function pacRenderPlanoLista(){
     const sc = STATUS_CORES[item.status] || STATUS_CORES.pendente;
     const statusLabel = {pendente:'Pendente',aprovado:'Aprovado',realizado:'Realizado',cancelado:'Cancelado'}[item.status]||item.status;
     const dentes = (item.dente||'').split(',').filter(Boolean);
-    const dentesHtml = dentes.map(d=>`<span style="background:var(--rose-lighter);color:var(--rose-dark);border-radius:6px;padding:2px 7px;font-size:11px;font-weight:700;">🦷${d}</span>`).join(' ');
-    const btnAprovar  = item.status==='pendente' ? `<button class="btn-secondary" style="font-size:11px;padding:4px 10px;" onclick="pacAlterarStatusPlano(${item.id},'aprovado')">✔ Aprovar</button>` : '';
+    const _podeAdiar = _planoPodeAdiarDentes(item);
+    const _fora   = _planoDentesFora.get(item.id) || new Set();
+    const _dentro = dentes.filter(d=>!_fora.has(d));
+    const dentesHtml = dentes.map(d=>{
+      if(!_podeAdiar) return `<span style="background:var(--rose-lighter);color:var(--rose-dark);border-radius:6px;padding:2px 7px;font-size:11px;font-weight:700;">🦷${d}</span>`;
+      const off = _fora.has(d);
+      const tit = off ? 'Adiado — clique para incluir de volta nesta aprovação'
+                      : 'Clique para adiar este dente: ele continua no plano precisando de tratamento, só não entra nesta aprovação';
+      return `<button type="button" title="${tit}" onclick="pacPlanoToggleDente(${item.id},'${escapeHtml(d)}')" style="background:${off?'#f4f4f4':'var(--rose-lighter)'};color:${off?'#a0a0a0':'var(--rose-dark)'};border:1.5px solid ${off?'#e2e2e2':'transparent'};border-radius:6px;padding:2px 7px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;${off?'text-decoration:line-through;opacity:.7;':''}">🦷${d}</button>`;
+    }).join(' ');
+    const _semDente = _podeAdiar && !_dentro.length;
+    const _aprovAttr = _semDente ? 'disabled style="font-size:11px;padding:4px 10px;opacity:.45;cursor:not-allowed;"' : 'style="font-size:11px;padding:4px 10px;"';
+    const btnAprovar  = item.status==='pendente' ? `<button class="btn-secondary" ${_aprovAttr} onclick="pacAlterarStatusPlano(${item.id},'aprovado')">✔ Aprovar${_podeAdiar&&_fora.size?` (${_dentro.length})`:''}</button>` : '';
     const btnDesaprovar = item.status==='aprovado' ? `<button class="btn-secondary" style="font-size:11px;padding:4px 10px;color:#7a5c00;border-color:#ffe082;background:#fff8e1;" onclick="pacDesaprovarPlano(${item.id})">↩ Pendente</button>` : '';
     const profSelect  = (item.status==='aprovado'||item.status==='pendente') ? `<select id="plano-prof-${item.id}" style="font-size:11px;padding:4px 6px;border:1px solid var(--rose-light);border-radius:8px;max-width:130px;color:#3a2020;">
       <option value="">Quem atendeu?</option>
       ${profissionais.map(pr=>`<option value="${pr.id}">${escapeHtml(pr.nome)}</option>`).join('')}
     </select>` : '';
-    const btnRealizar = (item.status==='aprovado'||item.status==='pendente') ? `<button class="btn-secondary" style="font-size:11px;padding:4px 10px;color:#2e7d32;border-color:#a5d6a7;" onclick="pacAlterarStatusPlano(${item.id},'realizado')">✅ Realizado</button>` : '';
+    const _realAttr = _semDente
+      ? 'disabled style="font-size:11px;padding:4px 10px;color:#2e7d32;border-color:#a5d6a7;opacity:.45;cursor:not-allowed;"'
+      : 'style="font-size:11px;padding:4px 10px;color:#2e7d32;border-color:#a5d6a7;"';
+    const btnRealizar = (item.status==='aprovado'||item.status==='pendente') ? `<button class="btn-secondary" ${_realAttr} onclick="pacAlterarStatusPlano(${item.id},'realizado')">✅ Realizado${_podeAdiar&&_fora.size?` (${_dentro.length})`:''}</button>` : '';
     const btnDesfazerReal = item.status==='realizado' ? `<button class="btn-secondary" style="font-size:11px;padding:4px 10px;color:#7a5c00;border-color:#ffe082;background:#fff8e1;" onclick="pacDesfazerRealizadoPlano(${item.id})">↩ Desfazer</button>` : '';
     return `<div style="border:1px solid var(--rose-light);border-radius:12px;padding:13px;margin-bottom:8px;background:#fff;">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;">
@@ -8777,18 +8910,30 @@ function pacRenderPlanoLista(){
           <strong style="font-size:13px;">${escapeHtml(item.procedimento)}</strong>${(()=>{const _u=pacPlanoGetUrgencia(item.id);const _ul={urgente:'🔴 Urgente',recomendado:'🟡 Recomendado',eletivo:'🟢 Eletivo'};return _u?`<span class="urg-badge urg-${_u}" style="margin-left:6px;">${_ul[_u]}</span>`:''})()}
           ${item.face&&item.face!=='–'?`<span style="font-size:11px;color:var(--rose-text);margin-left:6px;">(${escapeHtml(item.face)})</span>`:''}
           ${dentes.length>1?`<span style="font-size:11px;color:var(--rose-text);margin-left:6px;">${dentes.length} dentes</span>`:''}
+          ${_podeAdiar&&!_fora.size?`<span style="font-size:10.5px;color:var(--rose-text);margin-left:6px;opacity:.8;font-style:italic;">— clique num dente para adiar</span>`:''}
         </div>
         <span style="background:${sc.bg};color:${sc.txt};padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;display:inline-flex;align-items:center;gap:4px;">
           <span style="width:6px;height:6px;border-radius:50%;background:${sc.dot};display:inline-block;"></span>${statusLabel}
         </span>
       </div>
       ${item.descricao?`<div style="font-size:12px;color:var(--rose-text);margin-top:5px;">${escapeHtml(item.descricao)}</div>`:''}
+      ${(()=>{
+        if(!_podeAdiar || !_fora.size) return '';
+        if(_semDente) return `<div style="background:#fdecea;border:1px solid #f5c6cb;border-radius:8px;padding:7px 10px;margin-top:7px;font-size:11.5px;color:#721c24;line-height:1.45;">
+          Todos os dentes estão adiados. Reative pelo menos um dente para aprovar, ou use o 🗑️ se este procedimento não for mais necessário.
+        </div>`;
+        const _parcial = _planoValorUnit(item)*_dentro.length;
+        return `<div style="background:#fff8e1;border:1px solid #ffe082;border-radius:8px;padding:7px 10px;margin-top:7px;font-size:11.5px;color:#7a5c00;line-height:1.45;">
+          <strong>${_fora.size} dente${_fora.size>1?'s':''} adiado${_fora.size>1?'s':''}</strong> — vai aprovar ${_dentro.length} de ${dentes.length} por <strong>${fmtBRL(_parcial)}</strong>.<br>
+          Os adiados continuam no plano como pendentes, ainda precisando de tratamento.
+        </div>`;
+      })()}
       <div style="font-size:11px;color:var(--rose-text);margin-top:4px;opacity:.75;">${item.created_at?`📅 Adicionado: ${new Date(item.created_at).toLocaleDateString('pt-BR')}`:''} ${item.data_aprovado&&!item.data_realizado?`· ✔️ Aprovado: ${new Date(item.data_aprovado).toLocaleDateString('pt-BR')}`:''} ${item.data_realizado?`· ✅ Realizado: ${new Date(item.data_realizado).toLocaleDateString('pt-BR')}`:''}</div>
       <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;flex-wrap:wrap;gap:6px;">
         <div style="display:flex;align-items:center;gap:6px;">
           <span style="font-size:13px;color:var(--rose-text);">R$</span>
           <input type="text" value="${escapeHtml(item.valor||'0,00')}" onchange="pacAtualizarValorPlano(${item.id},this.value)" style="width:100px;padding:4px 8px;border:1px solid var(--rose-light);border-radius:8px;text-align:right;font-size:14px;font-weight:700;color:#2e7d32;"/>
-          ${dentes.length>1&&item.valor_unit?`<span style="font-size:11px;color:var(--rose-text);">(R$ ${escapeHtml(item.valor_unit)}/dente)</span>`:''}
+          ${dentes.length>1&&item.valor_unit?`<span style="font-size:11px;color:var(--rose-text);">(R$ ${escapeHtml(item.valor_unit)}/dente${_podeAdiar&&_fora.size?` · total dos ${dentes.length}`:''})</span>`:''}
         </div>
         <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
           <select onchange="pacPlanoSetUrgencia(${item.id},this.value)" style="font-size:11px;padding:4px 6px;border:1px solid var(--rose-light);border-radius:8px;color:#3a2020;" title="Classificar urgência"><option value="" ${!pacPlanoGetUrgencia(item.id)?'selected':''}>— Urgência</option><option value="urgente" ${pacPlanoGetUrgencia(item.id)==='urgente'?'selected':''}>🔴 Urgente</option><option value="recomendado" ${pacPlanoGetUrgencia(item.id)==='recomendado'?'selected':''}>🟡 Recom.</option><option value="eletivo" ${pacPlanoGetUrgencia(item.id)==='eletivo'?'selected':''}>🟢 Eletivo</option></select>
@@ -8824,6 +8969,21 @@ async function pacAprovarOrcamentoPlano(pacId){
   showLoading(true);
 
   try{
+    // Divide antes os itens que têm dentes adiados, pra esta aprovação em lote
+    // cobrar só pelos dentes que o paciente escolheu fazer agora. Os adiados
+    // viram linhas pendentes próprias e ficam de fora do orçamento.
+    for(const item of [...pendentes]){
+      const fora = _planoDentesFora.get(item.id);
+      if(!fora || !fora.size) continue;
+      const todos = _planoDentesDe(item);
+      if(todos.every(d=>fora.has(d))){
+        showToast(`"${item.procedimento}" está com todos os dentes adiados — reative pelo menos um ou remova o item.`,'warn');
+        return;
+      }
+      const ok = await _planoSepararDentesAdiados(item.id);
+      if(!ok) return;
+    }
+
     // Marca itens pendentes como aprovados
     for(const item of pendentes){
       const { error } = await _sb.from('plano_tratamento').update({ status:'aprovado' }).eq('id',item.id);
