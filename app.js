@@ -4172,6 +4172,7 @@ let pacProcsList  = [];
 let pacDentesRascunho = {};
 let pacFaceStatus = {};
 let pacFaceColors = {};  // { dentNum: { FaceName: ''|'treated'|'untreated' } } — cicla: azul→vermelho→limpar
+let _pacOdontoOrcPacId = null; // de qual paciente é o orçamento rápido em memória
 
 async function pacCarregarOdonto(pacId){
   const { data } = await _sb.from('procedimentos_dentes')
@@ -4184,7 +4185,16 @@ async function pacCarregarOdonto(pacId){
   pacFaceStatus = {};
   pacDentesRascunho = {};
   pacFaceColors = {};
-  pacOdontoOrcList = [];
+  // Achado em produção: o orçamento rápido era zerado a CADA visita à aba
+  // Odontograma (renderPatientDetail chama esta função toda vez). Quem montava
+  // o orçamento e trocava de aba antes de clicar em "Ir para o Plano" perdia
+  // tudo sem aviso nenhum — parecia que o sistema tinha "esquecido" o
+  // procedimento. Agora só descarta quando é de OUTRO paciente, pra nunca
+  // misturar o orçamento de um paciente com o de outro.
+  if(_pacOdontoOrcPacId !== pacId){
+    pacOdontoOrcList = [];
+    _pacOdontoOrcPacId = pacId;
+  }
   pacRenderArcadas();
   pacRenderLegenda();
   pacRenderDentesHistorico();
@@ -9250,6 +9260,7 @@ function pacOdontoAddOrc(){
   const qtd = tipo==='global' ? 1 : Math.max(1, dentesAuto.length);
 
   pacOdontoOrcList.push({procId:proc.id, nome:proc.nome, precoUnit:preco, qtd, dentes:dentesStr, tipo, total:preco*qtd});
+  _pacOdontoOrcPacId = selectedPatientId;
 
   // Limpa
   const srch=document.getElementById('pac-odonto-orc-search'); if(srch) srch.value='';
@@ -9897,6 +9908,14 @@ async function odontogramaSalvarEIrParaPlano(pacId){
   // Transfere itens do orçamento rápido para o Plano de tratamento (banco de dados)
   if(pacOdontoOrcList.length > 0){
     showLoading(true);
+    // Achado em produção: quando o insert falhava (RLS, coluna faltando, queda
+    // de conexão...), o erro era engolido, a lista do orçamento rápido era
+    // apagada do mesmo jeito e ainda aparecia "Procedimentos transferidos para
+    // o Plano!". O usuário via o plano vazio, sem nenhuma pista do motivo, e
+    // com o orçamento que tinha acabado de montar perdido. Agora: erro sempre
+    // aparece, e só sai da lista o que REALMENTE salvou — o resto continua ali
+    // pra poder tentar de novo.
+    const salvos = [], falhas = [], jaNoPlano = [];
     for(const it of pacOdontoOrcList){
       const dentesArr = (it.dentes||'').split(',').filter(Boolean);
       const dentesStr = dentesArr.join(',') || '–';
@@ -9912,31 +9931,38 @@ async function odontogramaSalvarEIrParaPlano(pacId){
         i.procedimento === it.nome &&
         i.status !== 'cancelado'
       );
-      if(jaExiste) continue;
+      if(jaExiste){ jaNoPlano.push(it); continue; }
 
-      const { data: novo, error } = await _sb.from('plano_tratamento').insert([{
+      const base = {
         clinica_id: clinicaId, paciente_id: pid,
         dente: dentesStr, face: it.faces || '–',
-        procedimento: it.nome, valor: valorStr, valor_unit: valorUnitStr,
+        procedimento: it.nome, valor: valorStr,
         descricao: '', status: 'pendente'
-      }]).select().single();
+      };
+      let { data: novo, error } = await _sb.from('plano_tratamento')
+        .insert([{ ...base, valor_unit: valorUnitStr }]).select().single();
 
-      if(!error && novo){
-        pacPlanoList.unshift(novo);
-      } else if(error){
-        // Fallback local se a coluna valor_unit não existir na tabela
-        const { data: novo2, error: e2 } = await _sb.from('plano_tratamento').insert([{
-          clinica_id: clinicaId, paciente_id: pid,
-          dente: dentesStr, face: it.faces || '–',
-          procedimento: it.nome, valor: valorStr,
-          descricao: '', status: 'pendente'
-        }]).select().single();
-        if(!e2 && novo2) pacPlanoList.unshift(novo2);
+      if(error){
+        // Fallback: base sem valor_unit, caso a coluna não exista nesta tabela
+        ({ data: novo, error } = await _sb.from('plano_tratamento')
+          .insert([base]).select().single());
       }
+
+      if(!error && novo){ pacPlanoList.unshift(novo); salvos.push(it); }
+      else { falhas.push({ it, msg: error?.message || 'erro desconhecido' }); }
     }
     showLoading(false);
-    pacOdontoOrcList = [];
-    showToast('Procedimentos transferidos para o Plano!');
+
+    // Mantém na lista só o que não conseguiu salvar, pro usuário poder repetir
+    pacOdontoOrcList = falhas.map(f=>f.it);
+
+    if(falhas.length){
+      showToast(`Não consegui salvar ${falhas.length} procedimento(s) no plano: ${falhas[0].msg}. Eles continuam no orçamento rápido — tente de novo.`,'error');
+    } else if(salvos.length){
+      showToast('Procedimentos transferidos para o Plano!');
+    } else if(jaNoPlano.length){
+      showToast('Esses procedimentos já estavam no plano.','warn');
+    }
   } else {
     showToast('Indo para o Plano de Tratamento...','warn');
   }
