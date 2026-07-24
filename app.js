@@ -374,10 +374,17 @@ function renderAdminTable(){
     // Don't show action buttons for admin's own clinics
     if(_ADMIN_IDS.includes(c.user_id)) actions = '<span style="color:var(--rose-text);font-size:11px;">Admin</span>';
 
+    // escapeHtml OBRIGATÓRIO: nome_cli/nome_resp/email vêm do auto-cadastro
+    // público (index.html), então são texto controlado por um atacante. Sem
+    // escape, um cadastro com nome tipo `<img src=x onerror=...>` executava
+    // script no navegador do ADMIN assim que ele abria o painel — e o admin
+    // tem poder sobre TODAS as clínicas (XSS armazenado cross-tenant, achado
+    // em pentest). O admin.html já escapava; este render (dentro do app.html)
+    // não escapava.
     html += `<tr>
-      <td style="font-weight:600;">${c.nome_cli||'-'}</td>
-      <td>${c.nome_resp||'-'}</td>
-      <td>${c.email||'-'}</td>
+      <td style="font-weight:600;">${escapeHtml(c.nome_cli)||'-'}</td>
+      <td>${escapeHtml(c.nome_resp)||'-'}</td>
+      <td>${escapeHtml(c.email)||'-'}</td>
       <td>${badge}</td>
       <td>${expiraStr}</td>
       <td>${actions}</td>
