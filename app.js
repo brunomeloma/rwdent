@@ -163,15 +163,23 @@ async function doLogin(){
   btn.disabled=false; document.getElementById('btn-login-text').textContent='Entrar';
   if(error){ errEl.textContent=error.message==='Invalid login credentials'?'E-mail ou senha inválidos.':error.message; errEl.className='login-err show'; return; }
   currentUser = data.user;
-  // Multi-tenant: verifica aprovação e carrega clinicaId
-  const ok = await checkClinicaApproval();
-  if(!ok) return;
-  await loadAll();
-  document.getElementById('login-screen').style.display='none';
-  document.getElementById('app').style.display='block';
-  aplicarModoAdminGeral();
-  _sessionStartTimer();
-  window.aiOnLogin?.();
+  // Multi-tenant: verifica aprovação e carrega clinicaId. Tudo dentro de
+  // try/catch: se algo estourar aqui, MOSTRA o erro em vez de deixar a tela
+  // muda (antes, um erro aqui travava o login sem dar sinal nenhum).
+  try {
+    const ok = await checkClinicaApproval();
+    if(!ok) return;
+    await loadAll();
+    document.getElementById('login-screen').style.display='none';
+    document.getElementById('app').style.display='block';
+    aplicarModoAdminGeral();
+    _sessionStartTimer();
+    window.aiOnLogin?.();
+  } catch(e){
+    console.error('[login] erro ao entrar:', e);
+    errEl.textContent = 'Erro ao entrar: ' + (e?.message || 'tente de novo em instantes.');
+    errEl.className = 'login-err show';
+  }
 }
 
 async function checkClinicaApproval(){
@@ -184,28 +192,38 @@ async function checkClinicaApproval(){
   //    que cria uma "clínica fantasma" vazia no nome da pessoa. Se checássemos
   //    posse primeiro, a secretária cairia nessa clínica vazia (com teste grátis,
   //    preços de clínica nova, etc.) em vez da clínica real onde ela trabalha.
+  let _vinc = null;
   try{
-    const { data: vinc } = await _sb
-      .from('clinica_membros')
-      .select('clinica_id, papel')
-      .eq('user_id', currentUser.id)
-      .maybeSingle();
-    if(vinc){
-      // Carrega a clínica por uma função que devolve SÓ colunas seguras (nome,
-      // logo, cor, status) — nunca email/telefone/assinatura/user_id do dono. Se
-      // a função ainda não existir no banco, cai no select direto (compat).
-      let cliMembro = null;
-      try{
-        const { data: rpcRows } = await _sb.rpc('rwdent_minha_clinica');
-        cliMembro = Array.isArray(rpcRows) ? rpcRows[0] : rpcRows;
-      }catch(e){ /* função pode não existir ainda */ }
-      if(!cliMembro){
-        const { data: fallback } = await _sb.from('clinicas').select('*').eq('id', vinc.clinica_id).maybeSingle();
-        cliMembro = fallback;
-      }
-      if(cliMembro){ cli = cliMembro; _papelUsuario = vinc.papel === 'secretaria' ? 'secretaria' : 'dono'; }
+    const r = await _sb.from('clinica_membros').select('clinica_id, papel')
+      .eq('user_id', currentUser.id).maybeSingle();
+    _vinc = r.data;
+    if(r.error) console.warn('[login] leitura de vínculo:', r.error.message);
+  }catch(e){ console.warn('[login] vínculo exception:', e?.message); }
+
+  if(_vinc){
+    // Carrega a clínica por uma função que devolve SÓ colunas seguras (nome,
+    // logo, cor, status) — nunca email/telefone/assinatura/user_id do dono.
+    let cliMembro = null, _msg = '';
+    try{
+      const r = await _sb.rpc('rwdent_minha_clinica');
+      if(r.error) _msg = r.error.message;
+      cliMembro = Array.isArray(r.data) ? r.data[0] : r.data;
+    }catch(e){ _msg = e?.message || 'função indisponível'; }
+    if(!cliMembro){
+      const r2 = await _sb.from('clinicas').select('*').eq('id', _vinc.clinica_id).maybeSingle();
+      cliMembro = r2.data;
+      if(!cliMembro && r2.error) _msg = _msg || r2.error.message;
     }
-  }catch(e){ /* tabela pode não existir ainda; segue pra checagem de dono */ }
+    if(cliMembro){
+      cli = cliMembro;
+      _papelUsuario = _vinc.papel === 'secretaria' ? 'secretaria' : 'dono';
+    } else {
+      // Tem vínculo mas a clínica não carregou — erro CLARO (antes virava
+      // "sem clínica" e a tela ficava muda). Normalmente é falta de rodar o
+      // SQL da secretária (função rwdent_minha_clinica) no Supabase.
+      throw new Error('Você está vinculada a uma clínica, mas não consegui carregá-la'+(_msg?(' — '+_msg):'')+'. Peça pro administrador rodar o SQL da secretária.');
+    }
+  }
 
   // 2) Se não é membro de ninguém, então é DONO da própria clínica.
   if(!cli){
