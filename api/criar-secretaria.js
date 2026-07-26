@@ -29,6 +29,22 @@ async function limparClinicaFantasma(sbAdmin, userId) {
   } catch (e) { console.error('[criar-secretaria] limparClinicaFantasma:', e.message); }
 }
 
+// Acha um usuário do Auth pelo e-mail (o Auth guarda o e-mail, não a senha).
+// Percorre as páginas do listUsers — suficiente pra base pequena/média.
+async function acharUsuarioPorEmail(sbAdmin, email) {
+  const alvo = String(email || '').toLowerCase();
+  for (let page = 1; page <= 30; page++) {
+    let data;
+    try { ({ data } = await sbAdmin.auth.admin.listUsers({ page, perPage: 200 })); }
+    catch (e) { break; }
+    const users = (data && data.users) || [];
+    const achado = users.find(u => (u.email || '').toLowerCase() === alvo);
+    if (achado) return achado;
+    if (users.length < 200) break; // última página
+  }
+  return null;
+}
+
 module.exports = async function handler(req, res) {
   res.setHeader('Content-Type', 'application/json');
   if (req.method !== 'POST') return res.status(405).json({ error: 'Método não permitido.' });
@@ -61,6 +77,13 @@ module.exports = async function handler(req, res) {
   if (cliErr) return res.status(500).json({ error: 'Erro ao buscar clínica: ' + cliErr.message });
   if (!clinica) return res.status(403).json({ error: 'Só o dono da clínica pode gerenciar secretárias.' });
   if (clinica.status !== 'aprovado') return res.status(403).json({ error: 'Clínica não está aprovada.' });
+
+  // Defesa extra: quem é secretária (membro de alguma clínica) NUNCA gerencia
+  // logins — nem que por algum motivo possua uma clínica-fantasma própria.
+  const { data: souMembro } = await sbAdmin
+    .from('clinica_membros').select('clinica_id').eq('user_id', user.id).maybeSingle();
+  if (souMembro) return res.status(403).json({ error: 'Secretárias não podem gerenciar logins.' });
+
   const clinicaId = clinica.id;
 
   const { action, email, senha, userId } = req.body || {};
@@ -103,13 +126,50 @@ module.exports = async function handler(req, res) {
       password: senhaLimpa,
       email_confirm: true
     });
+
+    let novoId;
     if (cErr) {
-      const msg = /already been registered|already exists/i.test(cErr.message || '')
-        ? 'Já existe um login com esse e-mail.'
-        : ('Erro ao criar login: ' + cErr.message);
-      return res.status(400).json({ error: msg });
+      // E-mail já existe. Isso acontece porque remover uma secretária deixava o
+      // login só desativado. Aqui a gente REAPROVEITA esse login — mas só se for
+      // seguro (não pode "roubar" a conta de um dono ou de secretária de outra
+      // clínica).
+      if (/already|registered|exists|duplicate/i.test(cErr.message || '')) {
+        const existente = await acharUsuarioPorEmail(sbAdmin, emailLimpo);
+        if (!existente) {
+          return res.status(400).json({ error: 'Já existe um login com esse e-mail e não consegui reaproveitar. Use outro e-mail.' });
+        }
+        const { data: dono } = await sbAdmin.from('clinicas').select('id').eq('user_id', existente.id).maybeSingle();
+        const { data: vinculos } = await sbAdmin.from('clinica_membros').select('clinica_id').eq('user_id', existente.id);
+        const jaMembroDaMinha = (vinculos || []).some(v => v.clinica_id === clinicaId);
+        const membroDeOutra   = (vinculos || []).some(v => v.clinica_id !== clinicaId);
+        // Se é dono de uma clínica REAL (não a fantasma vazia) ou secretária de
+        // OUTRA clínica, não pode virar secretária aqui.
+        if (membroDeOutra) {
+          return res.status(400).json({ error: 'Esse e-mail já é secretária de outra clínica. Use um e-mail diferente.' });
+        }
+        if (dono) {
+          // Pode ser só a clínica-fantasma vazia dela — se tiver dado, é conta real.
+          const { count } = await sbAdmin.from('pacientes').select('id', { count: 'exact', head: true }).eq('clinica_id', dono.id);
+          if (count && count > 0) {
+            return res.status(400).json({ error: 'Esse e-mail já é dono de uma clínica com dados. Use um e-mail diferente.' });
+          }
+        }
+        // Seguro reaproveitar: reativa o login, troca a senha, vincula e limpa a fantasma.
+        novoId = existente.id;
+        try { await sbAdmin.auth.admin.updateUserById(novoId, { password: senhaLimpa, ban_duration: 'none' }); } catch (e) {}
+        if (!jaMembroDaMinha) {
+          const { error: mErr2 } = await sbAdmin.from('clinica_membros')
+            .insert({ user_id: novoId, clinica_id: clinicaId, papel: 'secretaria' });
+          if (mErr2) return res.status(500).json({ error: 'Erro ao vincular secretária: ' + mErr2.message });
+        }
+        await limparClinicaFantasma(sbAdmin, novoId);
+        console.log(`[criar-secretaria] clinica=${clinicaId} REAPROVEITOU login=${emailLimpo} por ${user.email}`);
+        return res.status(200).json({ ok: true, userId: novoId, email: emailLimpo, reaproveitado: true });
+      }
+      return res.status(400).json({ error: 'Erro ao criar login: ' + cErr.message });
     }
-    const novoId = novo?.user?.id;
+
+    novoId = novo?.user?.id;
     if (!novoId) return res.status(500).json({ error: 'Login criado, mas não retornou id.' });
 
     // Vincula como secretária desta clínica.
@@ -162,10 +222,20 @@ module.exports = async function handler(req, res) {
     const { error: delErr } = await sbAdmin.from('clinica_membros')
       .delete().eq('clinica_id', clinicaId).eq('user_id', alvo);
     if (delErr) return res.status(500).json({ error: 'Erro ao remover vínculo: ' + delErr.message });
-    // Desativa o login (não apaga, pra preservar histórico/auditoria do Auth).
-    try { await sbAdmin.auth.admin.updateUserById(alvo, { ban_duration: '876000h' }); } catch (e) { /* ok */ }
     // Limpa a clínica-fantasma dela (some do "Gerenciar contas").
     await limparClinicaFantasma(sbAdmin, alvo);
+    // Se ela não for secretária de NENHUMA outra clínica nem dona de clínica,
+    // APAGA o login de vez — assim o e-mail fica livre pra ser reusado depois.
+    // Se ainda tiver vínculo em outra clínica, só desativa aqui (não derruba lá).
+    let apagou = false;
+    const { data: aindaVinculada } = await sbAdmin.from('clinica_membros').select('clinica_id').eq('user_id', alvo);
+    const { data: aindaDona } = await sbAdmin.from('clinicas').select('id').eq('user_id', alvo).maybeSingle();
+    if ((!aindaVinculada || !aindaVinculada.length) && !aindaDona) {
+      try { await sbAdmin.auth.admin.deleteUser(alvo); apagou = true; } catch (e) { /* cai no ban abaixo */ }
+    }
+    if (!apagou) {
+      try { await sbAdmin.auth.admin.updateUserById(alvo, { ban_duration: '876000h' }); } catch (e) { /* ok */ }
+    }
 
     console.log(`[criar-secretaria] clinica=${clinicaId} removeu secretaria=${alvo} por ${user.email}`);
     return res.status(200).json({ ok: true });

@@ -917,7 +917,7 @@ async function secCriar(){
   if(!ok){ showToast(json.error||'Erro ao criar login.','error'); return; }
   document.getElementById('sec-email').value='';
   document.getElementById('sec-senha').value='';
-  showToast('Login da secretária criado!');
+  showToast(json.reaproveitado ? 'Login reativado com a nova senha!' : 'Login da secretária criado!');
   secCarregar();
 }
 async function secRemover(userId, email){
