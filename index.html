@@ -357,10 +357,10 @@ async function checkAndRedirect(user) {
     //    no app, que carrega a clínica onde ela trabalha. Sem isto, a secretária
     //    ficava presa na tela de login (checava só posse, não vínculo).
     try {
-      const { data: vinc } = await _sb
+      const { data: vincs } = await _sb
         .from('clinica_membros').select('clinica_id')
-        .eq('user_id', user.id).maybeSingle();
-      if(vinc) { window.location.replace('app.html'); return; }
+        .eq('user_id', user.id).limit(1);
+      if(vincs && vincs.length) { window.location.replace('app.html'); return; }
     } catch(e) { /* tabela pode não existir ainda */ }
 
     // 3) Nem dona nem secretária — sem clínica.

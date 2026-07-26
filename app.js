@@ -194,9 +194,11 @@ async function checkClinicaApproval(){
   //    preços de clínica nova, etc.) em vez da clínica real onde ela trabalha.
   let _vinc = null;
   try{
+    // limit(1) em vez de maybeSingle: se por acaso houver vínculo duplicado de
+    // tentativas antigas, não estoura erro — pega o primeiro.
     const r = await _sb.from('clinica_membros').select('clinica_id, papel')
-      .eq('user_id', currentUser.id).maybeSingle();
-    _vinc = r.data;
+      .eq('user_id', currentUser.id).limit(1);
+    _vinc = Array.isArray(r.data) ? r.data[0] : r.data;
     if(r.error) console.warn('[login] leitura de vínculo:', r.error.message);
   }catch(e){ console.warn('[login] vínculo exception:', e?.message); }
 
