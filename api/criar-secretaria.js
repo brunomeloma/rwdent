@@ -13,6 +13,22 @@ const { createClient } = require('@supabase/supabase-js');
 //   { action:'criar', email, senha }          -> cria login e vincula como secretária
 //   { action:'remover', userId }              -> desvincula (e desativa o login)
 
+// Remove a "clínica fantasma" que o gatilho handle_new_user cria pra todo
+// usuário novo. A secretária não deve ter clínica própria — ela usa a clínica
+// do dono. Deleta SÓ clínicas do PRÓPRIO userId (a clínica real é do dono, com
+// outro user_id, então nunca é tocada), junto do financeiro_config delas.
+// Best-effort: falha aqui não quebra o fluxo (o login já funciona pelo vínculo).
+async function limparClinicaFantasma(sbAdmin, userId) {
+  try {
+    const { data: fantasmas } = await sbAdmin
+      .from('clinicas').select('id').eq('user_id', userId);
+    for (const c of (fantasmas || [])) {
+      try { await sbAdmin.from('financeiro_config').delete().eq('clinica_id', c.id); } catch (e) {}
+      try { await sbAdmin.from('clinicas').delete().eq('id', c.id); } catch (e) {}
+    }
+  } catch (e) { console.error('[criar-secretaria] limparClinicaFantasma:', e.message); }
+}
+
 module.exports = async function handler(req, res) {
   res.setHeader('Content-Type', 'application/json');
   if (req.method !== 'POST') return res.status(405).json({ error: 'Método não permitido.' });
@@ -105,6 +121,9 @@ module.exports = async function handler(req, res) {
       return res.status(500).json({ error: 'Erro ao vincular secretária: ' + mErr.message });
     }
 
+    // Remove a clínica-fantasma criada pelo gatilho pra ela (ela usa a do dono).
+    await limparClinicaFantasma(sbAdmin, novoId);
+
     console.log(`[criar-secretaria] clinica=${clinicaId} nova secretaria=${emailLimpo} por ${user.email}`);
     return res.status(200).json({ ok: true, userId: novoId, email: emailLimpo });
   }
@@ -145,6 +164,8 @@ module.exports = async function handler(req, res) {
     if (delErr) return res.status(500).json({ error: 'Erro ao remover vínculo: ' + delErr.message });
     // Desativa o login (não apaga, pra preservar histórico/auditoria do Auth).
     try { await sbAdmin.auth.admin.updateUserById(alvo, { ban_duration: '876000h' }); } catch (e) { /* ok */ }
+    // Limpa a clínica-fantasma dela (some do "Gerenciar contas").
+    await limparClinicaFantasma(sbAdmin, alvo);
 
     console.log(`[criar-secretaria] clinica=${clinicaId} removeu secretaria=${alvo} por ${user.email}`);
     return res.status(200).json({ ok: true });

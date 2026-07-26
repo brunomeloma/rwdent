@@ -147,41 +147,42 @@ async function doLogin(){
 
 async function checkClinicaApproval(){
   const errEl = document.getElementById('login-err');
-  // 1) Tenta como DONO: existe uma clínica com este user_id?
-  let { data: cli } = await _sb
-    .from('clinicas')
-    .select('*')
-    .eq('user_id', currentUser.id)
-    .maybeSingle();
+  let cli = null;
   _papelUsuario = 'dono';
 
-  // 2) Se não é dono de nenhuma, tenta como SECRETÁRIA: está vinculada a alguma
-  //    clínica em clinica_membros? A RLS só deixa ela ler o vínculo dela e a
-  //    própria clínica (policies clinica_membros_self_select / clinicas_membro_select).
-  if(!cli){
-    try{
-      const { data: vinc } = await _sb
-        .from('clinica_membros')
-        .select('clinica_id, papel')
-        .eq('user_id', currentUser.id)
-        .maybeSingle();
-      if(vinc){
-        // Carrega a clínica por uma função que devolve SÓ colunas seguras
-        // (nome, logo, cor, status) — nunca email/telefone/assinatura/user_id
-        // do dono. Se a função ainda não existir no banco (SQL de correção não
-        // rodado), cai no select direto pra não travar o login.
-        let cliMembro = null;
-        try{
-          const { data: rpcRows } = await _sb.rpc('rwdent_minha_clinica');
-          cliMembro = Array.isArray(rpcRows) ? rpcRows[0] : rpcRows;
-        }catch(e){ /* função pode não existir ainda */ }
-        if(!cliMembro){
-          const { data: fallback } = await _sb.from('clinicas').select('*').eq('id', vinc.clinica_id).maybeSingle();
-          cliMembro = fallback;
-        }
-        if(cliMembro){ cli = cliMembro; _papelUsuario = vinc.papel === 'secretaria' ? 'secretaria' : 'dono'; }
+  // 1) MEMBRO primeiro: sou secretária de alguma clínica? Isto tem PRIORIDADE
+  //    sobre "ser dono" de propósito: criar um login dispara um gatilho no banco
+  //    que cria uma "clínica fantasma" vazia no nome da pessoa. Se checássemos
+  //    posse primeiro, a secretária cairia nessa clínica vazia (com teste grátis,
+  //    preços de clínica nova, etc.) em vez da clínica real onde ela trabalha.
+  try{
+    const { data: vinc } = await _sb
+      .from('clinica_membros')
+      .select('clinica_id, papel')
+      .eq('user_id', currentUser.id)
+      .maybeSingle();
+    if(vinc){
+      // Carrega a clínica por uma função que devolve SÓ colunas seguras (nome,
+      // logo, cor, status) — nunca email/telefone/assinatura/user_id do dono. Se
+      // a função ainda não existir no banco, cai no select direto (compat).
+      let cliMembro = null;
+      try{
+        const { data: rpcRows } = await _sb.rpc('rwdent_minha_clinica');
+        cliMembro = Array.isArray(rpcRows) ? rpcRows[0] : rpcRows;
+      }catch(e){ /* função pode não existir ainda */ }
+      if(!cliMembro){
+        const { data: fallback } = await _sb.from('clinicas').select('*').eq('id', vinc.clinica_id).maybeSingle();
+        cliMembro = fallback;
       }
-    }catch(e){ /* tabela pode não existir ainda; segue como sem clínica */ }
+      if(cliMembro){ cli = cliMembro; _papelUsuario = vinc.papel === 'secretaria' ? 'secretaria' : 'dono'; }
+    }
+  }catch(e){ /* tabela pode não existir ainda; segue pra checagem de dono */ }
+
+  // 2) Se não é membro de ninguém, então é DONO da própria clínica.
+  if(!cli){
+    const { data: own } = await _sb
+      .from('clinicas').select('*').eq('user_id', currentUser.id).maybeSingle();
+    if(own){ cli = own; _papelUsuario = 'dono'; }
   }
 
   if(!cli){
@@ -1078,8 +1079,13 @@ function renderHomeStats(){
   if(_heroGreeting){
     const _hr = new Date().getHours();
     const _saudacao = _hr < 12 ? 'Bom dia' : _hr < 18 ? 'Boa tarde' : 'Boa noite';
-    const _nomeResp = (clinicaData?.nome_resp || '').trim() || (clinicaData?.nome_cli || '').trim() || 'Dra. Rhaiza';
-    _heroGreeting.textContent = _saudacao + ', ' + _nomeResp + '! 👋';
+    if(_ehSecretaria()){
+      // Secretária: saudação neutra (não usa o nome da dentista).
+      _heroGreeting.textContent = _saudacao + '! 👋';
+    } else {
+      const _nomeResp = (clinicaData?.nome_resp || '').trim() || (clinicaData?.nome_cli || '').trim() || 'Dra. Rhaiza';
+      _heroGreeting.textContent = _saudacao + ', ' + _nomeResp + '! 👋';
+    }
   }
   const hoje_count = agendamentos.filter(a=>a.data===hoje_str).length;
   const semana_end = new Date(); semana_end.setDate(semana_end.getDate()+7);
@@ -5295,6 +5301,12 @@ async function injetarNovosMatsOrto(){
           melhorInsumosId = p.id;
         }
       });
+      // Preserva a marca "Manual" (preço/margem ajustados à mão). ANTES esta
+      // reorganização recriava o aparelho SEM esses flags — o preço ficava certo,
+      // mas o rótulo voltava pra "Fórmula" e, pior, um recálculo futuro podia
+      // sobrescrever o preço manual. Se QUALQUER cópia estava manual, mantém.
+      const _preManual  = lista.some(p=>p._precoManual);
+      const _margManual = lista.some(p=>p._margemManual);
       const melhorReceita = procInsumos[melhorInsumosId];
 
       // Remove TODAS as entradas dessa categoria+tipo do array de procs
@@ -5306,7 +5318,7 @@ async function injetarNovosMatsOrto(){
       // Recria UMA única entrada limpa, no ID canônico, com nome/grupo padronizados e os
       // melhores dados encontrados entre as duplicatas. Se mesmo assim o preço ficar
       // zerado, usa o valor de mercado calibrado (PRECO_MERCADO_FALLBACK).
-      procs.push({
+      const _novoOrto = {
         id: idCanon,
         nome: NOMES_CANONICOS[idCanon] || melhor.nome,
         grupo: GRUPOS_CANONICOS[chave.split('|')[0]],
@@ -5316,9 +5328,18 @@ async function injetarNovosMatsOrto(){
         laboratorio: dadosFinais.laboratorio || 0,
         margem: dadosFinais.margem || 100,
         precoFinal: dadosFinais.precoFinal>0 ? dadosFinais.precoFinal : (PRECO_MERCADO_FALLBACK[idCanon] || 0),
-        tipo_cobranca: 'global'
-      });
+        tipo_cobranca: 'global',
+        _precoManual: _preManual,
+        _margemManual: _margManual
+      };
+      procs.push(_novoOrto);
       if(melhorReceita && melhorReceita.length) procInsumos[idCanon] = melhorReceita;
+      // Auto-recuperação (NÃO altera preço): se o preço salvo não bate com o que a
+      // fórmula calcularia, é um preço definido à mão — marca como Manual pra que
+      // um recálculo NUNCA o sobrescreva. Restaura o rótulo dos aparelhos cujo
+      // "Manual" já tinha se perdido em cargas anteriores, mantendo o valor exato.
+      const _precoFormula = calcPrecoFinal(_novoOrto);
+      if(Math.abs((_novoOrto.precoFinal||0) - _precoFormula) > 0.01) _novoOrto._precoManual = true;
       migrou = true;
     });
   })();
