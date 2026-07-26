@@ -531,9 +531,9 @@
       <div class="card">
         <div class="section-header">
           <h2><i class="ti ti-briefcase"></i> Profissionais</h2>
-          <button class="btn-secondary" onclick="toggleFormProf()"><i class="ti ti-plus"></i> Adicionar</button>
+          <button class="btn-secondary prof-add-only" onclick="toggleFormProf()"><i class="ti ti-plus"></i> Adicionar</button>
         </div>
-        <div id="form-prof" style="display:none;margin-bottom:16px;">
+        <div id="form-prof" class="prof-add-only" style="display:none;margin-bottom:16px;">
           <hr style="border-color:var(--rose-light);margin-bottom:16px;"/>
           <div class="form-grid">
             <div class="form-group"><label>Nome</label><input type="text" id="p-nome" placeholder="Nome do profissional" /></div>
@@ -1919,7 +1919,7 @@
 
     <!-- CONFIGURAÇÕES -->
     <div id="tab-configuracoes" class="content" style="display:none;">
-      <div class="card">
+      <div class="card dono-only">
         <div class="section-header">
           <h2><i class="ti ti-settings"></i> Configurações da Clínica</h2>
         </div>
@@ -2181,7 +2181,7 @@
   <div style="color:var(--rose-text);font-size:14px;">Carregando...</div>
 </div>
 
-<script src="app.js?v=55"></script>
+<script src="app.js?v=56"></script>
 
 <!-- ══ MODAL RELATÓRIO MENSAL ══ -->
 <div class="modal-overlay" id="modal-relatorio" onclick="if(event.target===this)closeModal('modal-relatorio')" style="align-items:flex-start;padding-top:40px;overflow-y:auto;">

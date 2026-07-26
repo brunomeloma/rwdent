@@ -244,6 +244,14 @@ async function checkClinicaApproval(){
     window.location.replace('index.html?msg=pendente');
     return false;
   }
+  // Secretária + clínica vencida: ela não paga, então é bloqueada com aviso (não
+  // vê a tela de "assinar", que é do dono). O signOut tira a sessão, então o
+  // index.html mostra o login com a mensagem — sem ficar em loop de redirect.
+  if(_papelUsuario === 'secretaria' && cli.expira_em && Date.now() > new Date(cli.expira_em).getTime()){
+    await _sb.auth.signOut(); currentUser=null;
+    window.location.replace('index.html?msg=clinica_vencida');
+    return false;
+  }
   clinicaId   = cli.id;
   clinicaData = cli;
   // Diagnóstico: deixa claro no console QUAL conta e QUAL clínica carregaram —
@@ -1698,6 +1706,11 @@ function toggleFormProf(){ const el=document.getElementById('form-prof'); el.sty
 function renderProfissionais(){
   const c=document.getElementById('lista-profissionais');
   if(!c) return;
+  // Secretária vê a lista (pra saber quem atende) mas NÃO edita/exclui/cria —
+  // não pode mexer no dentista principal. A trava real é a RLS; aqui é a tela.
+  const _sec = _ehSecretaria();
+  // Esconde o botão/for de "adicionar profissional" pra ela
+  document.querySelectorAll('.prof-add-only').forEach(el=>{ el.style.display = _sec ? 'none' : ''; });
   c.innerHTML=profissionais.map(p=>`
     <div class="prof-card">
       <div class="patient-avatar" style="background:${p.cor}">${initials(p.nome)}</div>
@@ -1705,8 +1718,8 @@ function renderProfissionais(){
         <div class="name">${escapeHtml(p.nome)}${p.principal?' <span class="badge-principal">Principal</span>':''}</div>
         <div class="meta">${escapeHtml(p.especialidade)}${p.cro?' · '+escapeHtml(p.cro):''}</div>
       </div>
-      <button class="btn-secondary" style="padding:6px 10px;" onclick="editarProfissional(${p.id})" title="Editar"><i class="ti ti-pencil"></i></button>
-      ${p.principal?'':`<button class="btn-danger" style="padding:6px 10px;" onclick="removerProfissional(${p.id})"><i class="ti ti-trash"></i></button>`}
+      ${_sec?'':`<button class="btn-secondary" style="padding:6px 10px;" onclick="editarProfissional(${p.id})" title="Editar"><i class="ti ti-pencil"></i></button>`}
+      ${(_sec||p.principal)?'':`<button class="btn-danger" style="padding:6px 10px;" onclick="removerProfissional(${p.id})"><i class="ti ti-trash"></i></button>`}
     </div>
   `).join('');
   renderSelectProf();

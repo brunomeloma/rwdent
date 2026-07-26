@@ -524,7 +524,8 @@ document.addEventListener('keydown', e => {
     const errEl = document.getElementById('login-err');
     const msgs = {
       sem_clinica: 'Clínica não encontrada. Faça seu cadastro.',
-      pendente: 'Seu cadastro ainda está aguardando aprovação.'
+      pendente: 'Seu cadastro ainda está aguardando aprovação.',
+      clinica_vencida: 'O acesso da clínica venceu. Fale com o responsável para renovar.'
     };
     if(msgs[msg] && errEl){ errEl.textContent = msgs[msg]; errEl.classList.add('show'); }
     history.replaceState(null, '', 'index.html');
