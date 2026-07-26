@@ -845,6 +845,16 @@ async function secRemover(userId, email){
   showToast('Acesso removido.');
   secCarregar();
 }
+// Mostra/esconde uma senha e troca o ícone do olho.
+function _toggleSenha(inputId, btn){
+  const inp = document.getElementById(inputId);
+  if(!inp) return;
+  const mostrar = inp.type === 'password';
+  inp.type = mostrar ? 'text' : 'password';
+  const ic = btn.querySelector('i');
+  if(ic) ic.className = mostrar ? 'ti ti-eye-off' : 'ti ti-eye';
+}
+
 async function secCarregar(){
   const el = document.getElementById('sec-lista');
   if(!el) return;
@@ -852,11 +862,52 @@ async function secCarregar(){
   if(!ok){ el.innerHTML = '<span style="color:#b33;">Não consegui listar agora.</span>'; return; }
   const lista = json.secretarias || [];
   if(!lista.length){ el.innerHTML = '<span style="opacity:.7;">Nenhuma secretária cadastrada ainda.</span>'; return; }
-  el.innerHTML = '<div style="font-weight:700;margin-bottom:6px;">Secretárias com acesso:</div>' + lista.map(s=>`
-    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;border:1px solid var(--rose-light);border-radius:8px;padding:8px 10px;margin-bottom:6px;">
-      <span>${escapeHtml(s.email||'(sem e-mail)')}</span>
-      <button class="btn-danger" style="font-size:11px;padding:4px 8px;" onclick="secRemover('${escapeHtml(s.userId)}','${escapeHtml(s.email||'')}')"><i class="ti ti-user-x"></i> Remover</button>
-    </div>`).join('');
+  el.innerHTML = '<div style="font-weight:700;margin-bottom:6px;">Secretárias com acesso:</div>' + lista.map(s=>{
+    const uid = escapeHtml(s.userId);
+    const mail = escapeHtml(s.email||'');
+    const inpId = 'sec-nova-'+s.userId;
+    return `
+    <div style="border:1px solid var(--rose-light);border-radius:8px;padding:8px 10px;margin-bottom:6px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">
+        <span>${mail||'(sem e-mail)'}</span>
+        <div style="display:flex;gap:6px;">
+          <button class="btn-secondary" style="font-size:11px;padding:4px 8px;" onclick="secToggleTrocar('${uid}')"><i class="ti ti-key"></i> Trocar senha</button>
+          <button class="btn-danger" style="font-size:11px;padding:4px 8px;" onclick="secRemover('${uid}','${mail}')"><i class="ti ti-user-x"></i> Remover</button>
+        </div>
+      </div>
+      <div id="sec-trocar-${uid}" style="display:none;margin-top:8px;padding-top:8px;border-top:1px dashed var(--rose-light);">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+          <div style="position:relative;display:inline-block;">
+            <input type="password" id="${inpId}" placeholder="Nova senha (mín. 6)" style="width:190px;padding:8px 34px 8px 12px;border:1px solid var(--rose-light);border-radius:8px;font-size:13px;box-sizing:border-box;"/>
+            <button type="button" title="Mostrar/esconder senha" onclick="_toggleSenha('${inpId}', this)" style="position:absolute;right:6px;top:50%;transform:translateY(-50%);border:none;background:none;cursor:pointer;color:var(--rose);padding:2px;line-height:1;"><i class="ti ti-eye"></i></button>
+          </div>
+          <button class="btn-primary" style="font-size:12px;padding:8px 14px;" onclick="secTrocarSenha('${uid}','${mail}')"><i class="ti ti-check"></i> Salvar nova senha</button>
+          <button class="btn-secondary" style="font-size:12px;padding:8px 14px;" onclick="secToggleTrocar('${uid}')">Cancelar</button>
+        </div>
+        <div style="font-size:11px;color:var(--rose-text);margin-top:6px;opacity:.85;">Clique no olho pra ver a senha e anotar antes de passar pra ela.</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function secToggleTrocar(userId){
+  const area = document.getElementById('sec-trocar-'+userId);
+  if(!area) return;
+  const abrindo = area.style.display === 'none';
+  area.style.display = abrindo ? '' : 'none';
+  if(abrindo){ const inp = document.getElementById('sec-nova-'+userId); if(inp){ inp.value=''; inp.focus(); } }
+}
+
+async function secTrocarSenha(userId, email){
+  const inp = document.getElementById('sec-nova-'+userId);
+  const nova = (inp?.value||'');
+  if(nova.length < 6){ showToast('A nova senha deve ter no mínimo 6 caracteres.','warn'); return; }
+  showLoading(true);
+  const { ok, json } = await _secApi({ action:'resetar-senha', userId, senha:nova });
+  showLoading(false);
+  if(!ok){ showToast(json.error||'Erro ao trocar a senha.','error'); return; }
+  showToast('Senha de '+(email||'secretária')+' trocada!');
+  secToggleTrocar(userId);
 }
 async function atualizarFinPinFaturamentoStatus(){
   const el = document.getElementById('fin-pin-fat-status');

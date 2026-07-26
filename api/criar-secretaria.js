@@ -109,6 +109,27 @@ module.exports = async function handler(req, res) {
     return res.status(200).json({ ok: true, userId: novoId, email: emailLimpo });
   }
 
+  // ── TROCAR SENHA ────────────────────────────────────────────────────────
+  // A senha antiga NÃO pode ser lida (fica só como hash no Auth) — então "caso
+  // esqueça" a gente define uma NOVA. Só o dono, e só pra secretária DESTA
+  // clínica.
+  if (action === 'resetar-senha') {
+    const alvo = cleanStr(userId);
+    const senhaLimpa = String(senha || '');
+    if (!alvo) return res.status(400).json({ error: 'userId obrigatório.' });
+    if (senhaLimpa.length < 6) return res.status(400).json({ error: 'A senha deve ter no mínimo 6 caracteres.' });
+    // Confirma que a pessoa é MESMO secretária desta clínica (anti-abuso).
+    const { data: vinc } = await sbAdmin
+      .from('clinica_membros').select('user_id')
+      .eq('clinica_id', clinicaId).eq('user_id', alvo).maybeSingle();
+    if (!vinc) return res.status(404).json({ error: 'Essa secretária não é desta clínica.' });
+
+    const { error: upErr } = await sbAdmin.auth.admin.updateUserById(alvo, { password: senhaLimpa });
+    if (upErr) return res.status(500).json({ error: 'Erro ao trocar a senha: ' + upErr.message });
+    console.log(`[criar-secretaria] clinica=${clinicaId} trocou senha de=${alvo} por ${user.email}`);
+    return res.status(200).json({ ok: true });
+  }
+
   // ── REMOVER ─────────────────────────────────────────────────────────────
   if (action === 'remover') {
     const alvo = cleanStr(userId);

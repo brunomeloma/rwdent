@@ -2056,7 +2056,10 @@
           <p style="font-size:12px;color:var(--rose-text);margin-bottom:12px;">Crie um login próprio pra sua secretária. Com ele, ela usa o sistema normal (agenda, pacientes, vendas do dia), mas <strong>não vê o financeiro</strong> — nem faturamento do mês, nem relatórios, nem comissões. No lugar do faturamento, ela vê só as <strong>vendas do dia</strong> (zera todo dia). Melhor que o PIN: cada uma entra com a conta dela, sem senha compartilhada.</p>
           <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:12px;">
             <input type="email" id="sec-email" placeholder="E-mail da secretária" style="width:230px;padding:8px 12px;border:1px solid var(--rose-light);border-radius:8px;font-size:13px;"/>
-            <input type="password" id="sec-senha" placeholder="Senha (mín. 6)" style="width:160px;padding:8px 12px;border:1px solid var(--rose-light);border-radius:8px;font-size:13px;"/>
+            <div style="position:relative;display:inline-block;">
+              <input type="password" id="sec-senha" placeholder="Senha (mín. 6)" style="width:180px;padding:8px 34px 8px 12px;border:1px solid var(--rose-light);border-radius:8px;font-size:13px;box-sizing:border-box;"/>
+              <button type="button" title="Mostrar/esconder senha" onclick="_toggleSenha('sec-senha', this)" style="position:absolute;right:6px;top:50%;transform:translateY(-50%);border:none;background:none;cursor:pointer;color:var(--rose);padding:2px;line-height:1;"><i class="ti ti-eye"></i></button>
+            </div>
             <button class="btn-primary" onclick="secCriar()" style="padding:8px 16px;font-size:13px;"><i class="ti ti-user-plus"></i> Criar login</button>
           </div>
           <div id="sec-lista" style="font-size:12px;color:var(--rose-text);"></div>
@@ -2174,7 +2177,7 @@
   <div style="color:var(--rose-text);font-size:14px;">Carregando...</div>
 </div>
 
-<script src="app.js?v=46"></script>
+<script src="app.js?v=47"></script>
 
 <!-- ══ MODAL RELATÓRIO MENSAL ══ -->
 <div class="modal-overlay" id="modal-relatorio" onclick="if(event.target===this)closeModal('modal-relatorio')" style="align-items:flex-start;padding-top:40px;overflow-y:auto;">
