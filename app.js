@@ -166,8 +166,19 @@ async function checkClinicaApproval(){
         .eq('user_id', currentUser.id)
         .maybeSingle();
       if(vinc){
-        const { data: cliMembro } = await _sb
-          .from('clinicas').select('*').eq('id', vinc.clinica_id).maybeSingle();
+        // Carrega a clínica por uma função que devolve SÓ colunas seguras
+        // (nome, logo, cor, status) — nunca email/telefone/assinatura/user_id
+        // do dono. Se a função ainda não existir no banco (SQL de correção não
+        // rodado), cai no select direto pra não travar o login.
+        let cliMembro = null;
+        try{
+          const { data: rpcRows } = await _sb.rpc('rwdent_minha_clinica');
+          cliMembro = Array.isArray(rpcRows) ? rpcRows[0] : rpcRows;
+        }catch(e){ /* função pode não existir ainda */ }
+        if(!cliMembro){
+          const { data: fallback } = await _sb.from('clinicas').select('*').eq('id', vinc.clinica_id).maybeSingle();
+          cliMembro = fallback;
+        }
         if(cliMembro){ cli = cliMembro; _papelUsuario = vinc.papel === 'secretaria' ? 'secretaria' : 'dono'; }
       }
     }catch(e){ /* tabela pode não existir ainda; segue como sem clínica */ }
