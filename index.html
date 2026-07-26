@@ -331,31 +331,43 @@ function showLoginOuCadastro() {
 
 async function checkAndRedirect(user) {
   try {
-    const { data: perfil, error } = await _sb
+    // 1) É DONA de uma clínica? (maybeSingle: não dá erro quando não é dona)
+    const { data: perfil } = await _sb
       .from('clinicas')
       .select('status, expira_em')
       .eq('user_id', user.id)
-      .single();
+      .maybeSingle();
 
-    if(error || !perfil) {
-      showLoginOuCadastro();
+    if(perfil) {
+      if(perfil.status === 'aprovado') {
+        if(perfil.expira_em && Date.now() > new Date(perfil.expira_em).getTime()){
+          // Mantém a sessão ativa (não faz signOut) — o botão "Assinar agora"
+          // precisa do token pra chamar /api/mercadopago-renovar.
+          showPanel('expirado');
+          return;
+        }
+        window.location.replace('app.html');
+        return;
+      }
+      showPanel('pending');
       return;
     }
 
-    if(perfil.status === 'aprovado') {
-      if(perfil.expira_em && Date.now() > new Date(perfil.expira_em).getTime()){
-        // Mantém a sessão ativa (não faz signOut) — o botão "Assinar agora"
-        // precisa do token pra chamar /api/mercadopago-renovar.
-        showPanel('expirado');
-        return;
-      }
-      window.location.replace('app.html');
-    } else {
-      showPanel('pending');
-    }
+    // 2) NÃO é dona — é SECRETÁRIA (tem vínculo em clinica_membros)? Então entra
+    //    no app, que carrega a clínica onde ela trabalha. Sem isto, a secretária
+    //    ficava presa na tela de login (checava só posse, não vínculo).
+    try {
+      const { data: vinc } = await _sb
+        .from('clinica_membros').select('clinica_id')
+        .eq('user_id', user.id).maybeSingle();
+      if(vinc) { window.location.replace('app.html'); return; }
+    } catch(e) { /* tabela pode não existir ainda */ }
+
+    // 3) Nem dona nem secretária — sem clínica.
+    showLoginOuCadastro();
   } catch(e) {
     console.warn('Erro ao verificar perfil:', e.message);
-    showPanel('login');
+    showLoginOuCadastro();
   }
 }
 

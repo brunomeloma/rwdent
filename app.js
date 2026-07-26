@@ -244,6 +244,9 @@ async function checkClinicaApproval(){
   }
   clinicaId   = cli.id;
   clinicaData = cli;
+  // Diagnóstico: deixa claro no console QUAL conta e QUAL clínica carregaram —
+  // ajuda a flagrar confusão de sessão entre contas (abrir F12 → Console).
+  try{ console.log('[RWDent] login:', currentUser.email, '| papel:', _papelUsuario, '| clínica:', cli.nome_cli, '('+cli.id+')'); }catch(e){}
   // Aplica o gating de secretária (esconde financeiro) assim que sabemos o papel.
   aplicarGatingSecretaria();
   // Atualiza nome da clínica na interface
