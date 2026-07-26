@@ -430,6 +430,9 @@ function renderAdminTable(){
     // acontece sozinha quando o pagamento cair (api/mercadopago-webhook.js).
     actions += ` <button class="admin-btn" style="background:#e8f5e9;color:#2e7d32;border-color:#a5d6a7;" onclick="adminGerarAssinatura('${c.id}',false)" title="Gera o link de assinatura mensal (R$69,90) pra mandar no WhatsApp"><i class="ti ti-credit-card"></i> Assinatura</button>`;
     actions += ` <button class="admin-btn" style="background:#e3f2fd;color:#1565c0;border-color:#90caf9;" onclick="adminGerarAssinatura('${c.id}',true)" title="Gera link de teste grátis (3 dias) — cliente cadastra o cartão mas só é cobrado se não cancelar"><i class="ti ti-gift"></i> Teste grátis</button>`;
+    // Deletar clínica (irreversível): só admin, pede senha, e o servidor recusa
+    // deletar clínica de admin. Não aparece nas clínicas admin (viram "Admin" abaixo).
+    actions += ` <button class="admin-btn" style="background:#fdecea;color:#c0392b;border-color:#f5c6cb;" onclick="adminDeletarClinica('${c.id}','${escapeHtml(c.nome_cli||c.email||'').replace(/'/g,'&#39;')}')" title="Deletar a clínica e TODOS os dados dela (irreversível)"><i class="ti ti-trash"></i> Deletar</button>`;
 
     // Don't show action buttons for admin's own clinics
     if(_ADMIN_IDS.includes(c.user_id)) actions = '<span style="color:var(--rose-text);font-size:11px;">Admin</span>';
@@ -460,6 +463,30 @@ async function adminAprovar(id){
   if(error){ showToast('Erro: '+error.message,'error'); return; }
   showToast('Conta aprovada! Acesso de 24h ativado.','ok');
   loadAdminPanel();
+}
+
+// Deleta clínica + todos os dados. Irreversível. Só admin, e exige a senha do
+// admin (o servidor reautentica e recusa deletar clínica de admin).
+async function adminDeletarClinica(id, nome){
+  const nomeC = (nome||'esta clínica').replace(/&#39;/g,"'");
+  if(!confirm(`⚠️ ATENÇÃO — AÇÃO IRREVERSÍVEL\n\nIsto vai APAGAR PARA SEMPRE a clínica "${nomeC}" e TODOS os dados dela: pacientes, agendamentos, prontuários, financeiro. Não dá pra desfazer nem recuperar.\n\nTem certeza absoluta?`)) return;
+  const senha = prompt('Para confirmar, digite a SUA senha de administrador:');
+  if(senha===null) return;
+  if(!String(senha).trim()){ showToast('Senha obrigatória pra deletar.','warn'); return; }
+  showLoading(true);
+  try{
+    const { data:{ session } } = await _sb.auth.getSession();
+    const resp = await fetch('/api/admin-deletar-clinica', {
+      method:'POST',
+      headers:{ 'Content-Type':'application/json', 'Authorization':'Bearer '+(session?.access_token||'') },
+      body: JSON.stringify({ clinicaId:id, senha:String(senha) })
+    });
+    const json = await resp.json().catch(()=>({}));
+    showLoading(false);
+    if(!resp.ok){ showToast(json.error||'Erro ao deletar a clínica.','error'); return; }
+    showToast('Clínica deletada.');
+    loadAdminPanel();
+  }catch(e){ showLoading(false); showToast('Erro: '+(e?.message||'tente de novo'),'error'); }
 }
 
 async function adminGerarAssinatura(clinicaId, trial){
