@@ -759,15 +759,13 @@ function toggleMobileMore(){
   if(ov) ov.classList.toggle('show');
 }
 
-// ── PIN FINANCEIRO — único PIN do app. Vendas, Procedimentos, Materiais e
-// Estoque ficam sempre abertos (modo secretária); só o faturamento agregado
-// (card da Home, Painel Financeiro, Produtividade, Comissões) fica atrás
-// deste PIN. O hash NUNCA é carregado pro navegador (fica numa tabela
-// própria, só acessível pela service role dentro de api/financeiro-pin.js),
-// então não dá pra atacar por força bruta no console. Verificado uma vez
-// por sessão de página (_finVerificado fica só em memória, reseta ao
-// recarregar).
-let _finVerificado = false;
+// O antigo PIN financeiro foi aposentado: agora a secretária tem LOGIN PRÓPRIO
+// (perfil 'secretaria', ver aplicarGatingSecretaria), que esconde o financeiro
+// pela identidade dela — sem PIN compartilhado. No login do DONO o faturamento
+// aparece sempre, então _finVerificado nasce true. As funções de PIN abaixo
+// ficam sem uso, mas foram mantidas inertes pra não quebrar chamadas antigas;
+// se um PIN já tiver sido definido no banco um dia, ele simplesmente é ignorado.
+let _finVerificado = true;
 let _homeRecallList = [];
 async function _finApi(body){
   const { data:{ session } } = await _sb.auth.getSession();
@@ -921,7 +919,7 @@ function switchTab(tab){
   if(tab==='pacientes') renderPatients();
   if(tab==='profissionais') renderProfissionais();
   if(tab==='home') renderHomeStats();
-  if(tab==='configuracoes'){ renderConfiguracoes(); if(!_ehSecretaria()){ atualizarFinPinFaturamentoStatus(); secCarregar(); } }
+  if(tab==='configuracoes'){ renderConfiguracoes(); if(!_ehSecretaria()){ secCarregar(); } }
   if(tab==='resgate') renderResgate();
   if(tab==='lista_espera') leRender();
   if(tab==='admin') loadAdminPanel();
