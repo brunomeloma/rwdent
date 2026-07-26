@@ -183,14 +183,16 @@
       </div>
     </div>
     <div class="topnav-links">
+      <!-- Painel do administrador do site (só aparece pra conta admin-geral) -->
+      <button class="topnav-item admin-geral-only" data-tab="admin" onclick="switchTab('admin')" style="display:none;"><i class="ti ti-layout-dashboard"></i> Painel</button>
       <!-- Início -->
-      <button class="topnav-item" data-tab="home" onclick="switchTab('home')"><i class="ti ti-home"></i> Início</button>
+      <button class="topnav-item clinica-nav" data-tab="home" onclick="switchTab('home')"><i class="ti ti-home"></i> Início</button>
       <!-- Vendas -->
-      <button class="topnav-item" data-tab="venda_rapida" onclick="switchTab('venda_rapida')"><i class="ti ti-shopping-cart"></i> Vendas</button>
+      <button class="topnav-item clinica-nav" data-tab="venda_rapida" onclick="switchTab('venda_rapida')"><i class="ti ti-shopping-cart"></i> Vendas</button>
       <!-- Pacientes -->
-      <button class="topnav-item" data-tab="pacientes" onclick="switchTab('pacientes')"><i class="ti ti-users"></i> Pacientes</button>
+      <button class="topnav-item clinica-nav" data-tab="pacientes" onclick="switchTab('pacientes')"><i class="ti ti-users"></i> Pacientes</button>
       <!-- Agenda (dropdown) -->
-      <div class="tn-group" id="tng-agenda">
+      <div class="tn-group clinica-nav" id="tng-agenda">
         <button class="tn-group-btn" onclick="tnToggle('tng-agenda')">
           <i class="ti ti-calendar-event"></i> Agenda <i class="ti ti-chevron-down tn-caret"></i>
         </button>
@@ -201,7 +203,7 @@
         </div>
       </div>
       <!-- Financeiro (dropdown) -->
-      <div class="tn-group" id="tng-fin">
+      <div class="tn-group clinica-nav" id="tng-fin">
         <button class="tn-group-btn" onclick="tnToggle('tng-fin')">
           <i class="ti ti-chart-bar"></i> Financeiro <i class="ti ti-chevron-down tn-caret"></i>
         </button>
@@ -215,7 +217,7 @@
         </div>
       </div>
       <!-- Mais (dropdown) -->
-      <div class="tn-group" id="tng-mais">
+      <div class="tn-group clinica-nav" id="tng-mais">
         <button class="tn-group-btn" onclick="tnToggle('tng-mais')">
           <i class="ti ti-dots"></i> Mais <i class="ti ti-chevron-down tn-caret"></i>
         </button>
@@ -229,8 +231,8 @@
       </div>
     </div>
     <div class="topnav-right">
-      <button class="topnav-item" onclick="abrirBuscaGlobal()" title="Buscar (Ctrl+K)" style="padding:6px 8px;"><i class="ti ti-search" style="font-size:17px;"></i></button>
-      <button class="topnav-item" data-tab="configuracoes" onclick="switchTab('configuracoes')" title="Configurações" style="padding:6px 8px;"><i class="ti ti-settings" style="font-size:17px;"></i></button>
+      <button class="topnav-item clinica-nav" onclick="abrirBuscaGlobal()" title="Buscar (Ctrl+K)" style="padding:6px 8px;"><i class="ti ti-search" style="font-size:17px;"></i></button>
+      <button class="topnav-item clinica-nav" data-tab="configuracoes" onclick="switchTab('configuracoes')" title="Configurações" style="padding:6px 8px;"><i class="ti ti-settings" style="font-size:17px;"></i></button>
       <div class="topnav-avatar rw-tooltip" id="logout-avatar" onclick="doLogout()" data-tooltip="Sair" tabindex="0">RW</div>
     </div>
   </div>
@@ -2108,7 +2110,8 @@
         <div class="admin-filter-bar" id="admin-filters">
           <button class="admin-filter-btn active" onclick="adminFilter('todos')">Todos</button>
           <button class="admin-filter-btn" onclick="adminFilter('pendente')">Pendentes</button>
-          <button class="admin-filter-btn" onclick="adminFilter('aprovado')">Aprovados</button>
+          <button class="admin-filter-btn" onclick="adminFilter('aprovado')">Ativos</button>
+          <button class="admin-filter-btn" onclick="adminFilter('inadimplente')">Inadimplentes</button>
           <button class="admin-filter-btn" onclick="adminFilter('rejeitado')">Rejeitados</button>
         </div>
         <div style="overflow-x:auto;" id="admin-table-wrap"></div>
@@ -2127,11 +2130,12 @@
   <!-- Mobile bottom nav -->
   <nav class="mobile-bottom-nav">
     <div class="mobile-nav-items">
-      <button class="mobile-nav-item active" data-tab="home" onclick="switchTab('home')" aria-label="Início"><i class="ti ti-home"></i><span>Início</span></button>
-      <button class="mobile-nav-item" data-tab="lista" onclick="switchTab('lista')" aria-label="Agenda"><i class="ti ti-calendar-event"></i><span>Agenda</span></button>
-      <button class="mobile-nav-item" data-tab="pacientes" onclick="switchTab('pacientes')" aria-label="Pacientes"><i class="ti ti-users"></i><span>Pacientes</span></button>
-      <button class="mobile-nav-item" data-tab="venda_rapida" onclick="switchTab('venda_rapida')" aria-label="Venda"><i class="ti ti-shopping-cart"></i><span>Venda</span></button>
-      <button class="mobile-nav-item" id="mobile-mais-btn" onclick="toggleMobileMore()" aria-label="Mais"><i class="ti ti-grid-dots"></i><span>Mais</span></button>
+      <button class="mobile-nav-item admin-geral-only" data-tab="admin" onclick="switchTab('admin')" aria-label="Painel" style="display:none;"><i class="ti ti-layout-dashboard"></i><span>Painel</span></button>
+      <button class="mobile-nav-item active clinica-nav" data-tab="home" onclick="switchTab('home')" aria-label="Início"><i class="ti ti-home"></i><span>Início</span></button>
+      <button class="mobile-nav-item clinica-nav" data-tab="lista" onclick="switchTab('lista')" aria-label="Agenda"><i class="ti ti-calendar-event"></i><span>Agenda</span></button>
+      <button class="mobile-nav-item clinica-nav" data-tab="pacientes" onclick="switchTab('pacientes')" aria-label="Pacientes"><i class="ti ti-users"></i><span>Pacientes</span></button>
+      <button class="mobile-nav-item clinica-nav" data-tab="venda_rapida" onclick="switchTab('venda_rapida')" aria-label="Venda"><i class="ti ti-shopping-cart"></i><span>Venda</span></button>
+      <button class="mobile-nav-item clinica-nav" id="mobile-mais-btn" onclick="toggleMobileMore()" aria-label="Mais"><i class="ti ti-grid-dots"></i><span>Mais</span></button>
     </div>
   </nav>
 
@@ -2177,7 +2181,7 @@
   <div style="color:var(--rose-text);font-size:14px;">Carregando...</div>
 </div>
 
-<script src="app.js?v=50"></script>
+<script src="app.js?v=51"></script>
 
 <!-- ══ MODAL RELATÓRIO MENSAL ══ -->
 <div class="modal-overlay" id="modal-relatorio" onclick="if(event.target===this)closeModal('modal-relatorio')" style="align-items:flex-start;padding-top:40px;overflow-y:auto;">

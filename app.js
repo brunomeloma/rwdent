@@ -60,6 +60,34 @@ function aplicarGatingSecretaria(){
 // devia.
 const _ADMIN_IDS = ['09f21b22-76c8-4aee-8af4-9fc292ff08d4','b39d8b67-0610-4708-9733-104db7f0307b'];
 
+// Conta(s) "administrador do site" (dono do RWDent): NÃO é uma clínica — é o
+// painel geral que gerencia TODAS as clínicas (contas, assinatura, inadimplência).
+// Identificado pelo e-mail do login (vem da sessão autenticada, não é falsificável;
+// e isto controla só o que a tela mostra — o poder real é gateado no servidor).
+const _ADMIN_GERAL_EMAILS = ['brunomeloma54@gmail.com'];
+function _ehAdminGeral(){
+  return !!currentUser && _ADMIN_GERAL_EMAILS.includes((currentUser.email||'').toLowerCase());
+}
+
+// Transforma a tela na conta administrativa do site: esconde TUDO de clínica
+// (Início, Vendas, Pacientes, Agenda, Financeiro, Configurações, busca) e deixa
+// só o Painel de administração. Troca a marca pra "RWDent — Gestão Odontológica".
+function aplicarModoAdminGeral(){
+  if(!_ehAdminGeral()) return;
+  document.querySelectorAll('.clinica-nav').forEach(el=>{ el.style.display='none'; });
+  document.querySelectorAll('.admin-geral-only').forEach(el=>{ el.style.display=''; });
+  // Marca do site (não de um consultório)
+  const nome = document.getElementById('header-clinica');
+  const sub  = document.getElementById('header-subtitulo');
+  if(nome) nome.textContent = 'RWDent';
+  if(sub)  sub.textContent  = 'Gestão Odontológica — Administrador do site';
+  // Some o banner de demonstração/expiração, se houver
+  const demo = document.getElementById('demo-banner'); if(demo) demo.style.display='none';
+  const exp  = document.getElementById('trial-banner'); if(exp) exp.style.display='none';
+  // Entra direto no painel
+  switchTab('admin');
+}
+
 // Calendário state
 const CAL_START_HOUR = 7, CAL_END_HOUR = 19;
 const CAL_START_MIN = CAL_START_HOUR * 60, CAL_END_MIN = CAL_END_HOUR * 60;
@@ -141,6 +169,7 @@ async function doLogin(){
   await loadAll();
   document.getElementById('login-screen').style.display='none';
   document.getElementById('app').style.display='block';
+  aplicarModoAdminGeral();
   _sessionStartTimer();
   window.aiOnLogin?.();
 }
@@ -365,17 +394,25 @@ async function loadAdminPanel(){
   renderAdminTable();
 }
 
+// Valor da mensalidade do RWDent (usado só pra estimar a receita no painel).
+const _MENSALIDADE_RWDENT = 69.90;
+
 function renderAdminStats(){
   const el = document.getElementById('admin-stats');
-  const pending = _adminClinics.filter(c=>c.status==='pendente').length;
-  const approved = _adminClinics.filter(c=>c.status==='aprovado' && (!c.expira_em || new Date(c.expira_em)>new Date())).length;
-  const expired = _adminClinics.filter(c=>c.status==='aprovado' && c.expira_em && new Date(c.expira_em)<=new Date()).length;
-  const rejected = _adminClinics.filter(c=>c.status==='rejeitado').length;
+  const now = new Date();
+  // Ignora as clínicas dos próprios admins — não são clientes pagantes.
+  const reais = _adminClinics.filter(c=>!_ADMIN_IDS.includes(c.user_id));
+  const pending  = reais.filter(c=>c.status==='pendente').length;
+  const ativas   = reais.filter(c=>c.status==='aprovado' && (!c.expira_em || new Date(c.expira_em)>now)).length;
+  const inad     = reais.filter(c=>c.status==='aprovado' && c.expira_em && new Date(c.expira_em)<=now).length;
+  const rejected = reais.filter(c=>c.status==='rejeitado').length;
+  const receita  = ativas * _MENSALIDADE_RWDENT;
   el.innerHTML = `
+    <div class="admin-stat-card active"><div class="stat-num">${ativas}</div><div class="stat-label">Clínicas ativas</div></div>
     <div class="admin-stat-card pending"><div class="stat-num">${pending}</div><div class="stat-label">Pendentes</div></div>
-    <div class="admin-stat-card active"><div class="stat-num">${approved}</div><div class="stat-label">Ativos</div></div>
-    <div class="admin-stat-card expired"><div class="stat-num">${expired}</div><div class="stat-label">Expirados</div></div>
-    <div class="admin-stat-card"><div class="stat-num">${rejected}</div><div class="stat-label">Rejeitados</div></div>
+    <div class="admin-stat-card expired"><div class="stat-num">${inad}</div><div class="stat-label">Inadimplentes</div></div>
+    <div class="admin-stat-card"><div class="stat-num">${rejected}</div><div class="stat-label">Rejeitadas</div></div>
+    <div class="admin-stat-card" style="border-left:4px solid #2e7d32;"><div class="stat-num" style="color:#2e7d32;">${fmtBRL(receita)}</div><div class="stat-label">Receita/mês estimada</div></div>
   `;
 }
 
@@ -389,9 +426,12 @@ function adminFilter(status){
 
 function renderAdminTable(){
   const wrap = document.getElementById('admin-table-wrap');
+  const _agora = new Date();
+  const _venceu = c => c.expira_em && new Date(c.expira_em) <= _agora;
   let list = _adminClinics;
   if(_adminFilterStatus==='pendente') list = list.filter(c=>c.status==='pendente');
-  else if(_adminFilterStatus==='aprovado') list = list.filter(c=>c.status==='aprovado');
+  else if(_adminFilterStatus==='aprovado') list = list.filter(c=>c.status==='aprovado' && !_venceu(c)); // Ativos = aprovado e no prazo
+  else if(_adminFilterStatus==='inadimplente') list = list.filter(c=>c.status==='aprovado' && _venceu(c));
   else if(_adminFilterStatus==='rejeitado') list = list.filter(c=>c.status==='rejeitado');
 
   if(list.length===0){
@@ -412,7 +452,11 @@ function renderAdminTable(){
     if(c.expira_em){
       const d = new Date(c.expira_em);
       expiraStr = d.toLocaleDateString('pt-BR')+' '+d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
-      if(isExpired) expiraStr = '<span style="color:#c0392b;">'+expiraStr+'</span>';
+      if(isExpired){
+        const _dias = Math.floor((_agora - d)/86400000);
+        const _lbl = _dias<=0 ? 'vence hoje' : ('venceu há '+_dias+' dia'+(_dias>1?'s':''));
+        expiraStr = '<span style="color:#c0392b;">'+expiraStr+'<br><small style="font-weight:700;">'+_lbl+'</small></span>';
+      }
     }
 
     let actions = '';
@@ -635,6 +679,7 @@ function _sessionStartTimer(){
         document.getElementById('boot-loading').style.display='none';
         document.getElementById('login-screen').style.display='none';
         document.getElementById('app').style.display='block';
+        aplicarModoAdminGeral();
         _sessionStartTimer();
         window.aiOnLogin?.();
         iniciarTourSePrimeiraVez();
@@ -998,7 +1043,9 @@ function switchTab(tab){
     venda_rapida:'Vendas', resgate:'Resgate de pacientes', captacao:'Captação de contatos', lista_espera:'Lista de espera', invisalign_apresentacao:'Alinhador Transparente', configuracoes:'Configurações da clínica', admin:'Painel Administrativo'
   };
   const _subEl = document.getElementById('header-subtitulo');
-  if(_subEl) _subEl.textContent = _tituloAba[tab] || 'Agendamentos e Prontuários Odontológicos';
+  // Na conta administradora do site, o subtítulo é fixo (marca do RWDent), não
+  // muda por tela — ela só usa o painel de administração.
+  if(_subEl) _subEl.textContent = _ehAdminGeral() ? 'Gestão Odontológica — Administrador do site' : (_tituloAba[tab] || 'Agendamentos e Prontuários Odontológicos');
   if(tab==='agendar') renderScheduleOptions();
   if(tab==='lista'){
     const _fdEl = document.getElementById('filtro-data');
@@ -7889,6 +7936,7 @@ function _tourMarcarVisto(){
   try { localStorage.setItem(_tourChaveLocalStorage(), '1'); } catch(e){}
 }
 function iniciarTourSePrimeiraVez(){
+  if(_ehAdminGeral()) return; // conta administradora do site não usa o tour de clínica
   if(_tourJaVisto()) return;
   setTimeout(()=>iniciarTour(), 700);
 }
