@@ -140,7 +140,6 @@ module.exports = async function handler(req, res) {
         }
         const { data: dono } = await sbAdmin.from('clinicas').select('id').eq('user_id', existente.id).maybeSingle();
         const { data: vinculos } = await sbAdmin.from('clinica_membros').select('clinica_id').eq('user_id', existente.id);
-        const jaMembroDaMinha = (vinculos || []).some(v => v.clinica_id === clinicaId);
         const membroDeOutra   = (vinculos || []).some(v => v.clinica_id !== clinicaId);
         // Se é dono de uma clínica REAL (não a fantasma vazia) ou secretária de
         // OUTRA clínica, não pode virar secretária aqui.
@@ -154,16 +153,30 @@ module.exports = async function handler(req, res) {
             return res.status(400).json({ error: 'Esse e-mail já é dono de uma clínica com dados. Use um e-mail diferente.' });
           }
         }
-        // Seguro reaproveitar: reativa o login, troca a senha, vincula e limpa a fantasma.
-        novoId = existente.id;
-        try { await sbAdmin.auth.admin.updateUserById(novoId, { password: senhaLimpa, ban_duration: 'none' }); } catch (e) {}
-        if (!jaMembroDaMinha) {
-          const { error: mErr2 } = await sbAdmin.from('clinica_membros')
-            .insert({ user_id: novoId, clinica_id: clinicaId, papel: 'secretaria' });
-          if (mErr2) return res.status(500).json({ error: 'Erro ao vincular secretária: ' + mErr2.message });
+        // Seguro reaproveitar. Em vez de tentar "desbanir" o login velho (que às
+        // vezes continua bloqueado ou com e-mail não confirmado, e a pessoa não
+        // consegue entrar), a gente APAGA o login travado e CRIA um novo limpo —
+        // sem ban e com e-mail confirmado. Isso garante que o login funcione.
+        // Limpa a clínica-fantasma ANTES, pra o delete do usuário não esbarrar
+        // em chave estrangeira da tabela clinicas.
+        await limparClinicaFantasma(sbAdmin, existente.id);
+        try { await sbAdmin.auth.admin.deleteUser(existente.id); } catch (e) { /* segue */ }
+
+        const { data: recriado, error: rErr } = await sbAdmin.auth.admin.createUser({
+          email: emailLimpo, password: senhaLimpa, email_confirm: true
+        });
+        if (rErr || !recriado?.user?.id) {
+          return res.status(500).json({ error: 'Não consegui recriar o login: ' + (rErr?.message || 'tente outro e-mail') });
+        }
+        novoId = recriado.user.id;
+        const { error: mErr2 } = await sbAdmin.from('clinica_membros')
+          .insert({ user_id: novoId, clinica_id: clinicaId, papel: 'secretaria' });
+        if (mErr2) {
+          try { await sbAdmin.auth.admin.deleteUser(novoId); } catch (e) {}
+          return res.status(500).json({ error: 'Erro ao vincular secretária: ' + mErr2.message });
         }
         await limparClinicaFantasma(sbAdmin, novoId);
-        console.log(`[criar-secretaria] clinica=${clinicaId} REAPROVEITOU login=${emailLimpo} por ${user.email}`);
+        console.log(`[criar-secretaria] clinica=${clinicaId} RECRIOU login=${emailLimpo} por ${user.email}`);
         return res.status(200).json({ ok: true, userId: novoId, email: emailLimpo, reaproveitado: true });
       }
       return res.status(400).json({ error: 'Erro ao criar login: ' + cErr.message });
