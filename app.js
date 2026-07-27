@@ -12880,7 +12880,19 @@ function atualizarUltimoBackup(){
 // ── NOTIFICAÇÕES DE CONSULTA ──
 let _notifInterval = null;
 function ativarNotificacoes(){
-  if(!('Notification' in window)){ showToast('Seu navegador não suporta notificações.','warn'); return; }
+  if(!('Notification' in window)){
+    // No iPhone/iPad o Safari só libera notificações quando o site é aberto
+    // como APP (adicionado à Tela de Início), a partir do iOS 16.4. Numa aba
+    // normal do Safari a API nem existe — daí o aviso claro do que fazer.
+    const _iOS = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform==='MacIntel' && navigator.maxTouchPoints>1);
+    const _standalone = window.navigator.standalone === true || (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
+    if(_iOS && !_standalone){
+      showToast('No iPhone: toque em Compartilhar → "Adicionar à Tela de Início" e abra o app pelo ícone. Aí as notificações funcionam.','warn');
+    } else {
+      showToast('Seu navegador não suporta notificações.','warn');
+    }
+    return;
+  }
   Notification.requestPermission().then(perm=>{
     if(perm==='granted'){
       showToast('Notificações ativadas! Você será avisado 15min antes de cada consulta.');
