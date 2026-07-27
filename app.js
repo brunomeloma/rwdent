@@ -44,6 +44,11 @@ function aplicarGatingSecretaria(){
   });
   // Bloco de configurar PIN financeiro em Configurações (não faz sentido pra ela)
   document.querySelectorAll('.dono-only').forEach(el=>{ el.style.display = sec ? 'none' : ''; });
+  // Na tela de Configurações, a secretária só enxerga "Alterar senha" e
+  // "Aparência" (o resto é dono-only). O título "Configurações da Clínica"
+  // ficaria enganoso, então vira "Minha conta" pra ela.
+  const _cfgTit = document.getElementById('cfg-titulo');
+  if(_cfgTit) _cfgTit.textContent = sec ? 'Minha conta' : 'Configurações da Clínica';
   // Se por algum motivo ela estiver na aba financeiro, tira dela
   if(sec && document.getElementById('tab-financeiro')?.style.display !== 'none'){
     switchTab('home');
