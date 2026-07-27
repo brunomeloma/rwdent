@@ -180,6 +180,7 @@ async function doLogin(){
     aplicarModoAdminGeral();
     _sessionStartTimer();
     window.aiOnLogin?.();
+    _sincronizarPush(); atualizarBotaoNotif();
   } catch(e){
     console.error('[login] erro ao entrar:', e);
     errEl.textContent = 'Erro ao entrar: ' + (e?.message || 'tente de novo em instantes.');
@@ -718,6 +719,7 @@ function _sessionStartTimer(){
         aplicarModoAdminGeral();
         _sessionStartTimer();
         window.aiOnLogin?.();
+        _sincronizarPush(); atualizarBotaoNotif();
         iniciarTourSePrimeiraVez();
         return;
       }
@@ -12879,30 +12881,107 @@ function atualizarUltimoBackup(){
 
 // ── NOTIFICAÇÕES DE CONSULTA ──
 let _notifInterval = null;
-function ativarNotificacoes(){
-  if(!('Notification' in window)){
-    // No iPhone/iPad o Safari só libera notificações quando o site é aberto
-    // como APP (adicionado à Tela de Início), a partir do iOS 16.4. Numa aba
-    // normal do Safari a API nem existe — daí o aviso claro do que fazer.
+// Chave PÚBLICA do servidor de push (VAPID). Pode ficar exposta — só a PRIVADA
+// (que fica no servidor, na env VAPID_PRIVATE_KEY) consegue assinar os envios.
+const _VAPID_PUBLIC = 'BPwd0TPd-4iNaKw2FM2_pb7kkk6fRt0zK8KyS52e5Vmy9ZzSYOvnsOCAinsg8ZqqA0NopGvN1FQqURIZx7-P2XY';
+
+function _urlBase64ToUint8Array(base64String){
+  const padding = '='.repeat((4 - base64String.length % 4) % 4);
+  const base64 = (base64String + padding).replace(/-/g,'+').replace(/_/g,'/');
+  const raw = atob(base64);
+  const arr = new Uint8Array(raw.length);
+  for(let i=0;i<raw.length;i++) arr[i]=raw.charCodeAt(i);
+  return arr;
+}
+async function _registrarServiceWorker(){
+  if(!('serviceWorker' in navigator)) return null;
+  try{ return await navigator.serviceWorker.register('/sw.js'); }
+  catch(e){ console.warn('[push] registro do SW falhou:', e); return null; }
+}
+async function _pushApi(body){
+  const { data:{ session } } = await _sb.auth.getSession();
+  const resp = await fetch('/api/push-subscribe', {
+    method:'POST',
+    headers:{ 'Content-Type':'application/json', 'Authorization':'Bearer '+(session?.access_token||'') },
+    body: JSON.stringify(body)
+  });
+  const json = await resp.json().catch(()=>({}));
+  return { ok: resp.ok, json };
+}
+function _pushSuportado(){
+  return ('Notification' in window) && ('serviceWorker' in navigator) && ('PushManager' in window);
+}
+function atualizarBotaoNotif(){
+  const btn = document.getElementById('btn-notif');
+  if(!btn) return;
+  const on = _pushSuportado() && Notification.permission==='granted' && localStorage.getItem('rwdent-push-on')==='1';
+  btn.innerHTML = on
+    ? '<i class="ti ti-bell-check"></i> Ativado neste aparelho'
+    : '<i class="ti ti-bell-ringing"></i> Ativar';
+}
+
+// Ativa as notificações NESTE aparelho: pede permissão, registra o service
+// worker e assina o push, mandando a assinatura pro servidor. A partir daí o
+// aparelho recebe o lembrete 15min antes da consulta mesmo com o app FECHADO
+// (no iPhone, precisa estar adicionado à Tela de Início — iOS 16.4+).
+async function ativarNotificacoes(){
+  if(!_pushSuportado()){
     const _iOS = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform==='MacIntel' && navigator.maxTouchPoints>1);
     const _standalone = window.navigator.standalone === true || (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
     if(_iOS && !_standalone){
       showToast('No iPhone: toque em Compartilhar → "Adicionar à Tela de Início" e abra o app pelo ícone. Aí as notificações funcionam.','warn');
     } else {
-      showToast('Seu navegador não suporta notificações.','warn');
+      showToast('Este navegador não suporta notificações push.','warn');
     }
     return;
   }
-  Notification.requestPermission().then(perm=>{
-    if(perm==='granted'){
-      showToast('Notificações ativadas! Você será avisado 15min antes de cada consulta.');
-      const btn = document.getElementById('btn-notif');
-      if(btn) btn.innerHTML='<i class="ti ti-bell-check"></i> Ativado';
-      if(_notifInterval) clearInterval(_notifInterval);
-      _notifInterval = setInterval(checarLembretesConsulta, 60000);
-      checarLembretesConsulta();
-    } else { showToast('Permissão de notificação negada.','warn'); }
-  });
+  showLoading(true);
+  try{
+    const perm = await Notification.requestPermission();
+    if(perm!=='granted'){ showLoading(false); showToast('Permissão de notificação negada.','warn'); return; }
+    const reg = await _registrarServiceWorker();
+    if(!reg){ showLoading(false); showToast('Não consegui preparar as notificações neste navegador.','error'); return; }
+    await navigator.serviceWorker.ready;
+    let sub = await reg.pushManager.getSubscription();
+    if(!sub){
+      sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: _urlBase64ToUint8Array(_VAPID_PUBLIC)
+      });
+    }
+    const { ok, json } = await _pushApi({ action:'salvar', subscription: sub.toJSON() });
+    showLoading(false);
+    if(!ok){ showToast(json.error||'Erro ao registrar o aparelho.','error'); return; }
+    localStorage.setItem('rwdent-push-on','1');
+    atualizarBotaoNotif();
+    showToast('Notificações ativadas neste aparelho! Você será avisado 15min antes de cada consulta.');
+  }catch(e){
+    showLoading(false);
+    console.error('[push] erro ao ativar:', e);
+    showToast('Não consegui ativar as notificações: '+(e?.message||e),'error');
+  }
+}
+
+// Chamado no login: se o aparelho já tinha ativado e a permissão continua
+// concedida, garante que a assinatura atual está salva no servidor (o navegador
+// pode trocar o endpoint de tempos em tempos). Silencioso — nunca incomoda.
+async function _sincronizarPush(){
+  try{
+    if(!_pushSuportado()) return;
+    if(Notification.permission!=='granted') return;
+    if(localStorage.getItem('rwdent-push-on')!=='1') return;
+    const reg = await _registrarServiceWorker();
+    if(!reg) return;
+    await navigator.serviceWorker.ready;
+    let sub = await reg.pushManager.getSubscription();
+    if(!sub){
+      sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: _urlBase64ToUint8Array(_VAPID_PUBLIC)
+      });
+    }
+    await _pushApi({ action:'salvar', subscription: sub.toJSON() });
+  }catch(e){ console.warn('[push] sync falhou:', e?.message||e); }
 }
 function checarLembretesConsulta(){
   if(Notification.permission!=='granted') return;
