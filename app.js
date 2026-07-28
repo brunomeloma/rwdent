@@ -12654,6 +12654,7 @@ async function salvarConfiguracoes(){
   const _eCfg=await saveFinanceiro();
   showLoading(false);
   if(_eCfg){ showToast('Erro ao salvar configurações: '+_eCfg.message,'error'); return; }
+  atualizarBotaoNotif();
   showToast('Configurações salvas!');
 }
 
@@ -12972,17 +12973,25 @@ function _pushDiagnostico(){
 }
 function atualizarBotaoNotif(){
   const btn = document.getElementById('btn-notif');
-  if(!btn) return;
-  const on = _pushSuportado() && Notification.permission==='granted' && localStorage.getItem('rwdent-push-on')==='1';
-  btn.innerHTML = on
-    ? '<i class="ti ti-bell-check"></i> Ativado neste aparelho'
-    : '<i class="ti ti-bell-ringing"></i> Ativar';
+  if(btn){
+    const on = _pushSuportado() && Notification.permission==='granted' && localStorage.getItem('rwdent-push-on')==='1';
+    btn.innerHTML = on
+      ? '<i class="ti ti-bell-check"></i> Ativado neste aparelho'
+      : '<i class="ti ti-bell-ringing"></i> Ativar';
+  }
+  const desc = document.getElementById('notif-desc-antecedencia');
+  if(desc){
+    const min = (clinicaData && clinicaData.lembrete_minutos) || cfg.lembrete_minutos || 15;
+    const antecedencia = min===60 ? '1 hora' : min+' minutos';
+    desc.innerHTML = `Recebe um alerta ${antecedencia} antes de cada consulta — <strong>mesmo com o app fechado</strong>. Ative em cada aparelho que você quiser ser avisado (celular e/ou computador).`;
+  }
 }
 
 // Ativa as notificações NESTE aparelho: pede permissão, registra o service
 // worker e assina o push, mandando a assinatura pro servidor. A partir daí o
-// aparelho recebe o lembrete 15min antes da consulta mesmo com o app FECHADO
-// (no iPhone, precisa estar adicionado à Tela de Início — iOS 16.4+).
+// aparelho recebe o lembrete (antecedência escolhida em Configurações — 15,
+// 30 ou 60min) mesmo com o app FECHADO (no iPhone, precisa estar adicionado
+// à Tela de Início — iOS 16.4+).
 async function ativarNotificacoes(){
   if(!_pushSuportado()){
     const _iOS = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform==='MacIntel' && navigator.maxTouchPoints>1);
@@ -13020,7 +13029,9 @@ async function ativarNotificacoes(){
     if(!ok){ showToast(json.error||'Erro ao registrar o aparelho.','error'); return; }
     localStorage.setItem('rwdent-push-on','1');
     atualizarBotaoNotif();
-    showToast('Notificações ativadas neste aparelho! Você será avisado 15min antes de cada consulta.');
+    const _min = (clinicaData && clinicaData.lembrete_minutos) || cfg.lembrete_minutos || 15;
+    const _antecedencia = _min===60 ? '1 hora' : _min+'min';
+    showToast(`Notificações ativadas neste aparelho! Você será avisado ${_antecedencia} antes de cada consulta.`);
   }catch(e){
     showLoading(false);
     console.error('[push] erro ao ativar:', e);
@@ -13048,26 +13059,6 @@ async function _sincronizarPush(){
     }
     await _pushApi({ action:'salvar', subscription: sub.toJSON() });
   }catch(e){ console.warn('[push] sync falhou:', e?.message||e); }
-}
-function checarLembretesConsulta(){
-  if(Notification.permission!=='granted') return;
-  const agora = new Date();
-  const hoje = agora.toISOString().slice(0,10);
-  const notificados = JSON.parse(localStorage.getItem('rwdent-notif-sent')||'[]');
-  agendamentos.filter(a=>a.data===hoje && a.horario).forEach(a=>{
-    const [h,m] = a.horario.split(':').map(Number);
-    const horaConsulta = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate(), h, m);
-    const diff = (horaConsulta - agora) / 60000;
-    const key = a.id+'-'+hoje;
-    if(diff > 0 && diff <= 15 && !notificados.includes(key)){
-      new Notification('Consulta em 15 minutos', {
-        body: `${a.nome||'Paciente'} — ${a.procedimento||'Consulta'} às ${a.horario.slice(0,5)}`,
-        icon: '/favicon.svg'
-      });
-      notificados.push(key);
-      localStorage.setItem('rwdent-notif-sent', JSON.stringify(notificados.slice(-100)));
-    }
-  });
 }
 
 // ── BUSCA GLOBAL (Ctrl+K) ──
