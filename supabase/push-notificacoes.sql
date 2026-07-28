@@ -26,8 +26,12 @@ create table if not exists public.push_subscriptions (
 create index if not exists idx_push_sub_clinica on public.push_subscriptions(clinica_id);
 create index if not exists idx_push_sub_user    on public.push_subscriptions(user_id);
 
+-- agendamento_id é bigint (mesmo tipo de agendamentos.id) — NÃO uuid. Uma
+-- versão anterior deste arquivo criou como uuid por engano, o que fazia
+-- TODA reserva falhar silenciosamente e nenhum lembrete jamais ser enviado
+-- (corrigido em produção via migration corrige_tipo_push_enviados).
 create table if not exists public.push_enviados (
-  agendamento_id uuid not null,
+  agendamento_id bigint not null,
   tipo           text not null default '15min',
   enviado_em     timestamptz not null default now(),
   primary key (agendamento_id, tipo)
