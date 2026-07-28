@@ -3003,7 +3003,7 @@ function renderCalendario(){
         ${cols.map(c=>`<div class="cal-pro-head"><div class="cal-pro-av" style="background:${c.cor||'var(--rose)'}">${escapeHtml(_calIni(c.nome))||'•'}</div>
           <div><div class="cal-pro-nm">${escapeHtml(c.nome)}</div>${c.esp?`<div class="cal-pro-sub">${escapeHtml(c.esp)}</div>`:''}</div></div>`).join('')}
       </div>
-      <div class="cal-timecol">${Array.from({length:totalH},(_,i)=>{const h=CAL_START_HOUR+Math.floor(i/2);return`<div class="cal-time-label">${i%2===0?`<span>${String(h).padStart(2,'0')}:00</span>`:''}</div>`;}).join('')}</div>
+      <div class="cal-timecol">${Array.from({length:totalH},(_,i)=>{const h=CAL_START_HOUR+Math.floor(i/2);return`<div class="cal-time-label">${i%2===0?`<span${i===0?' class="first"':''}>${String(h).padStart(2,'0')}:00</span>`:''}</div>`;}).join('')}</div>
       ${cols.map(c=>{
         const colAppts=dayAppts.filter(a=> c.id===null ? !known.has(a.prof_id) : a.prof_id===c.id);
         const events=colAppts.map(a=>{
@@ -3034,7 +3034,7 @@ function renderCalendario(){
       <div class="cal-grid-head"><div class="cal-corner"></div>
         ${days.map(d=>`<div class="cal-day-head${calISO(d)===today?' is-today':''}"><div class="dow">${DAYS_PT[d.getDay()]}</div><div class="dnum">${d.getDate()}</div></div>`).join('')}
       </div>
-      <div class="cal-timecol">${Array.from({length:totalH},(_,i)=>{const h=CAL_START_HOUR+Math.floor(i/2);return`<div class="cal-time-label">${i%2===0?`<span>${String(h).padStart(2,'0')}:00</span>`:''}</div>`;}).join('')}</div>
+      <div class="cal-timecol">${Array.from({length:totalH},(_,i)=>{const h=CAL_START_HOUR+Math.floor(i/2);return`<div class="cal-time-label">${i%2===0?`<span${i===0?' class="first"':''}>${String(h).padStart(2,'0')}:00</span>`:''}</div>`;}).join('')}</div>
       ${days.map(d=>{const iso=calISO(d);const dayAppts=filtered.filter(a=>a.data===iso);
         const events=dayAppts.map(a=>{const [hh,mm]=((a.horario||'00:00')+':00').split(':').map(Number);
           const top=(hh*60+mm-CAL_START_MIN)/(CAL_END_MIN-CAL_START_MIN)*height;const info=agStatusInfo(a);

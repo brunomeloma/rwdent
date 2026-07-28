@@ -273,6 +273,7 @@ button{font-family:inherit;}
 .cal-timecol{border-right:1px solid var(--rose-light);}
 .cal-time-label{height:48px;position:relative;}
 .cal-time-label span{position:absolute;top:-7px;right:7px;font-size:11px;color:var(--rose-text);font-weight:700;background:var(--rose-lighter);padding:0 3px;font-variant-numeric:tabular-nums;}
+.cal-time-label span.first{top:1px;}
 .dark-mode .cal-time-label span{background:#1e1612;}
 .cal-daycol{position:relative;border-right:1px solid var(--rose-light);cursor:pointer;background:repeating-linear-gradient(#fff,#fff 47px,#f6e7e1 47px,#f6e7e1 48px);}
 .cal-daycol:last-child{border-right:none;}
@@ -727,7 +728,7 @@ button{font-family:inherit;}
   .cal-month .cal-cell{min-height:54px;padding:4px;}
   .cal-month .cal-pill{font-size:9px;padding:2px 4px;border-radius:4px;}
   .cal-month .cell-num{font-size:12px;font-weight:600;}
-  .cal-select{min-width:0;flex:1;}
+  .cal-select{min-width:112px;flex:1 1 auto;}
   .cal-tools{width:100%;}
   .cal-toolbar{flex-direction:column;align-items:stretch;}
   .cal-nav{justify-content:space-between;}
