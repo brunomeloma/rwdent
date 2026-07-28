@@ -67,6 +67,7 @@ module.exports = async function handler(req, res) {
   });
 
   let enviados = 0, semAssinatura = 0, jaEnviados = 0, mortas = 0;
+  const erros = []; // diagnóstico: detalhe de qualquer envio que não deu certo
 
   // Cache de assinaturas por clínica (evita reconsultar a mesma clínica).
   const subsPorClinica = {};
@@ -79,14 +80,20 @@ module.exports = async function handler(req, res) {
   }
 
   for (const a of candidatas) {
-    // "Carimba" antes de enviar pra não duplicar entre execuções. Se já existe,
-    // o insert falha por chave única (23505) e a gente pula.
-    const { error: carimboErr } = await sb.from('push_enviados')
-      .insert({ agendamento_id: a.id, tipo: '15min' });
-    if (carimboErr) { jaEnviados++; continue; }
+    // Só pula se JÁ ESTÁ CONFIRMADO como entregue (carimbo gravado depois de um
+    // envio bem-sucedido, mais abaixo). Antes, o carimbo era gravado ANTES de
+    // tentar enviar — se a 1ª tentativa falhasse por qualquer erro que não
+    // fosse 404/410, o carimbo ficava lá do mesmo jeito e a falha real nunca
+    // mais aparecia em lugar nenhum, nem tentava de novo. Corrigido: só marca
+    // como "feito" quando de fato deu certo (ou quando não tem mais o que
+    // tentar), então uma falha passageira tenta de novo no próximo minuto,
+    // dentro da mesma janela de 15min.
+    const { data: jaFeito } = await sb.from('push_enviados')
+      .select('agendamento_id').eq('agendamento_id', a.id).eq('tipo', '15min').maybeSingle();
+    if (jaFeito) { jaEnviados++; continue; }
 
     const subs = await assinaturasDaClinica(a.clinica_id);
-    if (!subs.length) { semAssinatura++; continue; }
+    if (!subs.length) { semAssinatura++; continue; } // sem assinatura ainda: tenta de novo no próximo minuto
 
     const hhmm = String(a.horario || '').slice(0, 5);
     const payload = JSON.stringify({
@@ -96,6 +103,8 @@ module.exports = async function handler(req, res) {
       tag: 'ag-' + a.id
     });
 
+    let algumSucesso = false, algumPendente = false;
+
     for (const s of subs) {
       try {
         await webpush.sendNotification(
@@ -103,19 +112,34 @@ module.exports = async function handler(req, res) {
           payload
         );
         enviados++;
+        algumSucesso = true;
       } catch (e) {
-        // 404/410 = aparelho não aceita mais (desinstalou/limpou) -> remove.
-        if (e && (e.statusCode === 404 || e.statusCode === 410)) {
-          try { await sb.from('push_subscriptions').delete().eq('endpoint', s.endpoint); mortas++; } catch (_) {}
+        const status = e && e.statusCode;
+        const corpo = e && e.body ? String(e.body).slice(0, 200) : '';
+        if (status === 404 || status === 410) {
+          // Aparelho não aceita mais (desinstalou/limpou) -> remove de vez.
+          try { await sb.from('push_subscriptions').delete().eq('endpoint', s.endpoint); } catch (_) {}
+          mortas++;
         } else {
-          console.error('[enviar-lembretes] falha no envio:', e && e.statusCode, e && e.message);
+          // Qualquer outro erro (ex: chave VAPID errada = 401/403, rede, etc.)
+          // fica registrado no retorno E tenta de novo no próximo minuto.
+          algumPendente = true;
+          erros.push({ agendamento_id: a.id, status: status || null, mensagem: (e && e.message) || String(e), corpo });
+          console.error('[enviar-lembretes] falha no envio:', status, e && e.message, corpo);
         }
       }
+    }
+
+    // Carimba como "feito" só se rolou pelo menos 1 sucesso, ou se não sobrou
+    // nenhuma assinatura pendente de tentar (todas mortas/removidas).
+    if (algumSucesso || !algumPendente) {
+      await sb.from('push_enviados').insert({ agendamento_id: a.id, tipo: '15min' });
     }
   }
 
   return res.status(200).json({
     ok: true, hora: `${hojeStr} ${String(Math.floor(agoraMin/60)).padStart(2,'0')}:${String(agoraMin%60).padStart(2,'0')}`,
-    candidatas: candidatas.length, enviados, jaEnviados, semAssinatura, mortas
+    candidatas: candidatas.length, enviados, jaEnviados, semAssinatura, mortas,
+    erros: erros.length ? erros : undefined
   });
 };
