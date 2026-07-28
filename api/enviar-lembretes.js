@@ -2,10 +2,11 @@ const { createClient } = require('@supabase/supabase-js');
 const webpush = require('web-push');
 
 // CRON — roda de minuto em minuto (chamado por um agendador externo, ver o
-// comentário no fim). Acha as consultas que começam nos próximos ~15 min e
-// manda um push pra TODOS os aparelhos daquela clínica que ativaram
-// notificações. Usa a service role (ignora RLS) e é protegido por um segredo,
-// já que quem chama é uma máquina, não um usuário logado.
+// comentário no fim). Acha as consultas que começam dentro da antecedência
+// que cada clínica escolheu (15/30/60min, em Configurações) e manda um push
+// pra TODOS os aparelhos daquela clínica que ativaram notificações. Usa a
+// service role (ignora RLS) e é protegido por um segredo, já que quem chama
+// é uma máquina, não um usuário logado.
 //
 // Não manda o mesmo lembrete duas vezes: antes de enviar, "carimba" na tabela
 // push_enviados; se já estiver carimbado, pula.
@@ -25,6 +26,11 @@ function horarioParaMinutos(h) {
   const m = String(h || '').match(/^(\d{1,2}):(\d{2})/);
   if (!m) return null;
   return (+m[1]) * 60 + (+m[2]);
+}
+
+const JANELAS_VALIDAS = [15, 30, 60];
+function antecedenciaTexto(min) {
+  return min === 60 ? '1 hora' : `${min} minutos`;
 }
 
 module.exports = async function handler(req, res) {
@@ -50,7 +56,7 @@ module.exports = async function handler(req, res) {
   const sb = createClient(supabaseUrl, serviceRoleKey);
 
   const { data: hojeStr, minutos: agoraMin } = agoraSaoPaulo();
-  const JANELA = 15; // avisa quando faltam de 0 a 15 minutos
+  const JANELA_MAX = Math.max(...JANELAS_VALIDAS); // maior antecedência possível (60min) — pré-filtro solto
 
   // Consultas de hoje (a filtragem fina por horário é feita aqui no JS).
   const { data: ags, error: agErr } = await sb
@@ -59,11 +65,34 @@ module.exports = async function handler(req, res) {
     .eq('data', hojeStr);
   if (agErr) return res.status(500).json({ error: 'Erro ao ler agendamentos: ' + agErr.message });
 
-  const candidatas = (ags || []).filter(a => {
+  const proximas = (ags || []).filter(a => {
     const m = horarioParaMinutos(a.horario);
     if (m === null) return false;
     const falta = m - agoraMin;
-    return falta >= 0 && falta <= JANELA;
+    return falta >= 0 && falta <= JANELA_MAX;
+  });
+
+  // Cada clínica escolhe sua própria antecedência (15/30/60min, em
+  // Configurações → Lembrete por notificação). Busca só as clínicas que têm
+  // consulta próxima. Se a coluna ainda não existir no banco (migração não
+  // rodada), cai no padrão de 15min pra todo mundo, sem quebrar o robô.
+  const clinicaIds = [...new Set(proximas.map(a => a.clinica_id).filter(Boolean))];
+  const janelaPorClinica = {};
+  if (clinicaIds.length) {
+    const { data: clinicasData, error: cliErr } = await sb
+      .from('clinicas').select('id, lembrete_minutos').in('id', clinicaIds);
+    if (!cliErr && clinicasData) {
+      for (const c of clinicasData) {
+        janelaPorClinica[c.id] = JANELAS_VALIDAS.includes(c.lembrete_minutos) ? c.lembrete_minutos : 15;
+      }
+    }
+  }
+  const janelaDaClinica = (clinicaId) => janelaPorClinica[clinicaId] ?? 15;
+
+  const candidatas = proximas.filter(a => {
+    const m = horarioParaMinutos(a.horario);
+    const falta = m - agoraMin;
+    return falta <= janelaDaClinica(a.clinica_id);
   });
 
   let enviados = 0, semAssinatura = 0, jaEnviados = 0, mortas = 0;
@@ -80,27 +109,30 @@ module.exports = async function handler(req, res) {
   }
 
   for (const a of candidatas) {
+    const janela = janelaDaClinica(a.clinica_id);
+    const tipo = janela + 'min';
+
     // RESERVA atômica (INSERT com chave única): se duas execuções caírem no
     // mesmo instante — o robô automático de 1 em 1 minuto E uma checagem
     // manual, por exemplo — só UMA consegue inserir; a outra recebe erro de
     // duplicidade (23505) e desiste na hora, sem mandar push nenhum. Isso é o
     // que evita a consulta receber a notificação 2x.
     const { error: reservaErr } = await sb.from('push_enviados')
-      .insert({ agendamento_id: a.id, tipo: '15min' });
+      .insert({ agendamento_id: a.id, tipo });
     if (reservaErr) { jaEnviados++; continue; }
 
     const subs = await assinaturasDaClinica(a.clinica_id);
     if (!subs.length) {
       // Sem assinatura ainda: desfaz a reserva pra poder tentar de novo no
       // próximo minuto (a pessoa pode ativar as notificações a qualquer
-      // momento dentro da janela de 15min).
-      await sb.from('push_enviados').delete().eq('agendamento_id', a.id).eq('tipo', '15min');
+      // momento dentro da janela escolhida).
+      await sb.from('push_enviados').delete().eq('agendamento_id', a.id).eq('tipo', tipo);
       semAssinatura++; continue;
     }
 
     const hhmm = String(a.horario || '').slice(0, 5);
     const payload = JSON.stringify({
-      title: 'Consulta em 15 minutos',
+      title: `Consulta em ${antecedenciaTexto(janela)}`,
       body: `${a.nome || 'Paciente'} — ${a.procedimento || 'Consulta'} às ${hhmm}${a.prof_nome ? ' (' + a.prof_nome + ')' : ''}`,
       url: '/app.html',
       tag: 'ag-' + a.id
@@ -139,7 +171,7 @@ module.exports = async function handler(req, res) {
     // Se teve sucesso, ou só sobrou aparelho morto (sem mais o que tentar), a
     // reserva fica valendo como "concluído".
     if (!algumSucesso && algumPendente) {
-      await sb.from('push_enviados').delete().eq('agendamento_id', a.id).eq('tipo', '15min');
+      await sb.from('push_enviados').delete().eq('agendamento_id', a.id).eq('tipo', tipo);
     }
   }
 

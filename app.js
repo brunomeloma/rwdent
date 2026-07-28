@@ -12492,6 +12492,8 @@ async function renderConfiguracoes(){
     if(clinicaData.logo_url){ logoPrev.src = clinicaData.logo_url; logoPrev.style.display=''; }
     else { logoPrev.style.display='none'; logoPrev.src=''; }
   }
+  const lembreteEl = document.getElementById('cfg-lembrete-min');
+  if(lembreteEl) lembreteEl.value = String(clinicaData.lembrete_minutos || cfg.lembrete_minutos || 15);
   const recallEl = document.getElementById('cfg-recall-meses');
   if(recallEl) recallEl.value = cfg.recall_meses ?? 6;
   const reviewEl = document.getElementById('cfg-google-review-link');
@@ -12615,11 +12617,13 @@ async function salvarConfiguracoes(){
   const endereco  = document.getElementById('cfg-endereco').value.trim();
   const maps_link = document.getElementById('cfg-maps-link').value.trim();
   const cor_marca = document.getElementById('cfg-cor-marca')?.value || null;
+  const lembreteEl = document.getElementById('cfg-lembrete-min');
+  const lembrete_minutos = lembreteEl ? parseInt(lembreteEl.value)||15 : 15;
   if(!nome_cli){ showToast('Preencha o nome da clínica.','warn'); return; }
   showLoading(true);
   const updateData = { nome_cli, nome_resp, telefone };
-  let { error } = await _sb.from('clinicas').update({ ...updateData, endereco, maps_link, cor_marca }).eq('id', clinicaId);
-  if(error && error.message && (error.message.includes('endereco') || error.message.includes('maps_link') || error.message.includes('cor_marca'))){
+  let { error } = await _sb.from('clinicas').update({ ...updateData, endereco, maps_link, cor_marca, lembrete_minutos }).eq('id', clinicaId);
+  if(error && error.message && (error.message.includes('endereco') || error.message.includes('maps_link') || error.message.includes('cor_marca') || error.message.includes('lembrete_minutos'))){
     ({ error } = await _sb.from('clinicas').update(updateData).eq('id', clinicaId));
   }
   if(error){ showLoading(false); showToast('Erro: '+error.message,'error'); return; }
@@ -12629,12 +12633,14 @@ async function salvarConfiguracoes(){
   clinicaData.endereco  = endereco;
   clinicaData.maps_link = maps_link;
   clinicaData.cor_marca = cor_marca;
+  clinicaData.lembrete_minutos = lembrete_minutos;
   const el = document.getElementById('header-clinica');
   if(el) el.textContent = nome_cli;
   aplicarBranding();
   // Persiste endereco/maps_link + taxas via financeiro_config (fallback confiável)
   cfg.endereco  = endereco;
   cfg.maps_link = maps_link;
+  cfg.lembrete_minutos = lembrete_minutos;
   const recallEl = document.getElementById('cfg-recall-meses');
   if(recallEl) cfg.recall_meses = parseInt(recallEl.value)||6;
   const reviewEl = document.getElementById('cfg-google-review-link');

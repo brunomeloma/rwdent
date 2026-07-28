@@ -1961,6 +1961,17 @@
             </div>
           </div>
           <hr style="border-color:var(--rose-light);margin:24px 0;"/>
+          <h2 style="font-size:13px;font-weight:700;color:var(--rose-dark);margin-bottom:14px;display:flex;align-items:center;gap:8px;text-transform:uppercase;letter-spacing:.5px;"><i class="ti ti-bell"></i> Lembrete por notificação</h2>
+          <div class="form-grid">
+            <div class="form-group"><label>Avisar com quanto tempo de antecedência?</label>
+              <select id="cfg-lembrete-min">
+                <option value="15">15 minutos antes</option>
+                <option value="30">30 minutos antes</option>
+                <option value="60">1 hora antes</option>
+              </select>
+            </div>
+          </div>
+          <hr style="border-color:var(--rose-light);margin:24px 0;"/>
           <h2 style="font-size:13px;font-weight:700;color:var(--rose-dark);margin-bottom:14px;display:flex;align-items:center;gap:8px;text-transform:uppercase;letter-spacing:.5px;"><i class="ti ti-phone-outgoing"></i> Recall e avaliações</h2>
           <div class="form-grid">
             <div class="form-group"><label>Chamar retorno após (meses sem visita)</label><input type="number" id="cfg-recall-meses" min="1" max="24" placeholder="6"/></div>
@@ -2189,7 +2200,7 @@
   <div style="color:var(--rose-text);font-size:14px;">Carregando...</div>
 </div>
 
-<script src="app.js?v=65"></script>
+<script src="app.js?v=66"></script>
 
 <!-- ══ MODAL RELATÓRIO MENSAL ══ -->
 <div class="modal-overlay" id="modal-relatorio" onclick="if(event.target===this)closeModal('modal-relatorio')" style="align-items:flex-start;padding-top:40px;overflow-y:auto;">
