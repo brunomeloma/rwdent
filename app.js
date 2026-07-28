@@ -1452,20 +1452,37 @@ function verPacienteHome(id){
 // ══════════════════════════════════════════════════════
 // AGENDAMENTOS
 // ══════════════════════════════════════════════════════
-function renderScheduleOptions(){
-  const sel = document.getElementById('schedule-patient');
-  if(!sel) return;
-  const cur = sel.value;
-  sel.innerHTML='<option value="">Selecione o paciente</option>'+pacientes.map(p=>`<option value="${p.id}">${escapeHtml(p.nome)}</option>`).join('');
-  sel.value=cur; onSchedulePatientChange();
+// A busca de paciente (campo "Vincular paciente cadastrado") lê direto do
+// array global `pacientes`, então não precisa mais pré-popular nada aqui.
+function renderScheduleOptions(){}
+
+function schedFiltrarPacientes(){
+  const inp=document.getElementById('sched-pat-search');
+  const drop=document.getElementById('sched-pat-dropdown');
+  if(!inp||!drop) return;
+  // Editar o texto de busca desvincula o paciente anterior — só religa ao clicar num resultado.
+  document.getElementById('schedule-patient-id').value='';
+  const q=_norm(inp.value.trim());
+  const lista = q ? pacientes.filter(p=>_norm(p.nome).includes(q)).slice(0,8) : pacientes.slice(0,8);
+  if(!lista.length){
+    drop.innerHTML='<div style="padding:12px 14px;text-align:center;color:var(--rose-text);font-size:13px;">Nenhum paciente encontrado</div>';
+  } else {
+    drop.innerHTML=lista.map(p=>`<div onmousedown="schedSelecionarPaciente(${p.id})" style="padding:10px 14px;cursor:pointer;font-size:14px;color:#3a2020;border-bottom:1px solid var(--rose-lighter);">${escapeHtml(p.nome)}${p.telefone?`<div style="font-size:11px;color:var(--rose-text);">${escapeHtml(p.telefone)}</div>`:''}</div>`).join('');
+  }
+  drop.style.display='block';
 }
 
-function onSchedulePatientChange(){
-  const sel=document.getElementById('schedule-patient');
+function schedSelecionarPaciente(id){
+  const p=pacientes.find(x=>x.id===id);
+  if(!p) return;
+  document.getElementById('schedule-patient-id').value=p.id;
+  document.getElementById('sched-pat-search').value=p.nome;
+  const nome=document.getElementById('schedule-nome');
   const ph=document.getElementById('schedule-phone');
-  if(!sel||!ph) return;
-  const p=pacientes.find(p=>p.id==sel.value);
-  ph.value=p&&p.telefone?p.telefone:'';
+  if(nome) nome.value=p.nome;
+  if(ph) ph.value=p.telefone||'';
+  const drop=document.getElementById('sched-pat-dropdown');
+  if(drop) drop.style.display='none';
 }
 
 function renderSelectProf(){
@@ -1484,8 +1501,7 @@ function renderSelectProf(){
 function agendarDoProntuario(pacId){
   switchTab('agendar');
   setTimeout(()=>{
-    const sel = document.getElementById('schedule-patient');
-    if(sel){ sel.value = pacId; onSchedulePatientChange(); }
+    schedSelecionarPaciente(parseInt(pacId));
     const dataEl = document.getElementById('data');
     if(dataEl && !dataEl.value) dataEl.value = hoje();
   }, 250);
@@ -1602,15 +1618,16 @@ function mostrarBotaoGoogleAgenda(nome, data, horario, procedimento, profNome, o
 }
 
 async function agendarConsulta(){
-  const patientId = document.getElementById('schedule-patient').value;
-  const paciente = pacientes.find(p=>p.id==patientId);
+  const nome = document.getElementById('schedule-nome').value.trim();
+  const patientId = document.getElementById('schedule-patient-id').value;
+  const paciente = patientId ? pacientes.find(p=>p.id==patientId) : null;
   const telefone = document.getElementById('schedule-phone').value.trim();
   const profId = parseInt(document.getElementById('profissional').value);
   const data = document.getElementById('data').value;
   const horario = document.getElementById('horario').value;
   const procedimento = document.getElementById('procedimento').value.trim();
   const obs = document.getElementById('obs').value.trim();
-  if(!paciente){ showToast('Selecione um paciente.','warn'); return; }
+  if(!nome){ showToast('Digite o nome.','warn'); document.getElementById('schedule-nome').focus(); return; }
   if(!profId){ showToast('Selecione um profissional.','warn'); return; }
   if(!data){ showToast('Escolha a data.','warn'); return; }
   if(!horario){ showToast('Escolha o horário.','warn'); return; }
@@ -1630,8 +1647,8 @@ async function agendarConsulta(){
     return;
   }
   const { data: novo, error } = await _sb.from('agendamentos').insert([{
-    paciente_id: paciente.id, nome: paciente.nome,
-    telefone: telefone||paciente.telefone||'',
+    paciente_id: paciente?paciente.id:null, nome,
+    telefone: telefone||(paciente&&paciente.telefone)||'',
     prof_id: profId, prof_nome: prof.nome, prof_cor: prof.cor,
     data, horario, procedimento, obs,
     clinica_id: clinicaId
@@ -1640,9 +1657,9 @@ async function agendarConsulta(){
   if(error){ showToast('Erro ao salvar: '+error.message,'error'); return; }
   agendamentos.push(novo);
   agendamentos.sort((a,b)=>(a.data+a.horario).localeCompare(b.data+b.horario));
-  ['schedule-phone','horario','procedimento','obs'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+  ['schedule-nome','sched-pat-search','schedule-patient-id','schedule-phone','horario','procedimento','obs'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
   document.getElementById('data').value=hoje();
-  logAtividade('Agendamento criado', `${paciente.nome} — ${data} ${horario}`);
+  logAtividade('Agendamento criado', `${nome} — ${data} ${horario}`);
   showToast('Agendamento salvo!');
   renderLista(); renderHomeStats();
   switchTab('lista');

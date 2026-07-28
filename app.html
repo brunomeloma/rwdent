@@ -401,7 +401,13 @@
       <div class="card">
         <h2><i class="ti ti-calendar-plus"></i> Novo Agendamento</h2>
         <div class="form-grid">
-          <div class="form-group full"><label>Paciente</label><select id="schedule-patient" onchange="onSchedulePatientChange()"></select></div>
+          <div class="form-group full"><label>Nome</label><input type="text" id="schedule-nome" placeholder="Nome do paciente ou do compromisso" /></div>
+          <div class="form-group full" style="position:relative;">
+            <label>Vincular paciente cadastrado (opcional)</label>
+            <input type="text" id="sched-pat-search" placeholder="Buscar pelo nome..." autocomplete="off" oninput="schedFiltrarPacientes()" onfocus="schedFiltrarPacientes()" onblur="setTimeout(()=>{const d=document.getElementById('sched-pat-dropdown');if(d)d.style.display='none';},150)" />
+            <input type="hidden" id="schedule-patient-id" value="" />
+            <div id="sched-pat-dropdown" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:20;background:#fff;border:1.5px solid var(--rose-light);border-radius:10px;margin-top:4px;max-height:220px;overflow:auto;box-shadow:0 8px 24px rgba(0,0,0,.15);"></div>
+          </div>
           <div class="form-group"><label>Telefone</label><input type="tel" id="schedule-phone" placeholder="(00) 00000-0000" /></div>
           <div class="form-group"><label>Profissional</label><select id="profissional"></select></div>
           <div class="form-group"><label>Data</label><input type="date" id="data" /></div>
@@ -2203,7 +2209,7 @@
   <div style="color:var(--rose-text);font-size:14px;">Carregando...</div>
 </div>
 
-<script src="app.js?v=67"></script>
+<script src="app.js?v=68"></script>
 
 <!-- ══ MODAL RELATÓRIO MENSAL ══ -->
 <div class="modal-overlay" id="modal-relatorio" onclick="if(event.target===this)closeModal('modal-relatorio')" style="align-items:flex-start;padding-top:40px;overflow-y:auto;">
