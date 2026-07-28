@@ -12895,8 +12895,16 @@ function _urlBase64ToUint8Array(base64String){
 }
 async function _registrarServiceWorker(){
   if(!('serviceWorker' in navigator)) return null;
-  try{ return await navigator.serviceWorker.register('/sw.js'); }
-  catch(e){ console.warn('[push] registro do SW falhou:', e); return null; }
+  try{
+    const reg = await navigator.serviceWorker.register('/sw.js');
+    // Força checar AGORA se tem sw.js mais novo no servidor, em vez de esperar
+    // o navegador decidir sozinho quando checar (no app instalado no iPhone
+    // isso pode demorar bem mais que o esperado). Corrige o caso de o aparelho
+    // continuar rodando uma versão velha do "motor" de notificação mesmo
+    // depois de fechar e abrir o app de novo.
+    try{ await reg.update(); }catch(e){ /* rede indisponível agora, tenta na próxima */ }
+    return reg;
+  }catch(e){ console.warn('[push] registro do SW falhou:', e); return null; }
 }
 async function _pushApi(body){
   const { data:{ session } } = await _sb.auth.getSession();
