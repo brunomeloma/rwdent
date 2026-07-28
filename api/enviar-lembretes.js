@@ -80,20 +80,23 @@ module.exports = async function handler(req, res) {
   }
 
   for (const a of candidatas) {
-    // Só pula se JÁ ESTÁ CONFIRMADO como entregue (carimbo gravado depois de um
-    // envio bem-sucedido, mais abaixo). Antes, o carimbo era gravado ANTES de
-    // tentar enviar — se a 1ª tentativa falhasse por qualquer erro que não
-    // fosse 404/410, o carimbo ficava lá do mesmo jeito e a falha real nunca
-    // mais aparecia em lugar nenhum, nem tentava de novo. Corrigido: só marca
-    // como "feito" quando de fato deu certo (ou quando não tem mais o que
-    // tentar), então uma falha passageira tenta de novo no próximo minuto,
-    // dentro da mesma janela de 15min.
-    const { data: jaFeito } = await sb.from('push_enviados')
-      .select('agendamento_id').eq('agendamento_id', a.id).eq('tipo', '15min').maybeSingle();
-    if (jaFeito) { jaEnviados++; continue; }
+    // RESERVA atômica (INSERT com chave única): se duas execuções caírem no
+    // mesmo instante — o robô automático de 1 em 1 minuto E uma checagem
+    // manual, por exemplo — só UMA consegue inserir; a outra recebe erro de
+    // duplicidade (23505) e desiste na hora, sem mandar push nenhum. Isso é o
+    // que evita a consulta receber a notificação 2x.
+    const { error: reservaErr } = await sb.from('push_enviados')
+      .insert({ agendamento_id: a.id, tipo: '15min' });
+    if (reservaErr) { jaEnviados++; continue; }
 
     const subs = await assinaturasDaClinica(a.clinica_id);
-    if (!subs.length) { semAssinatura++; continue; } // sem assinatura ainda: tenta de novo no próximo minuto
+    if (!subs.length) {
+      // Sem assinatura ainda: desfaz a reserva pra poder tentar de novo no
+      // próximo minuto (a pessoa pode ativar as notificações a qualquer
+      // momento dentro da janela de 15min).
+      await sb.from('push_enviados').delete().eq('agendamento_id', a.id).eq('tipo', '15min');
+      semAssinatura++; continue;
+    }
 
     const hhmm = String(a.horario || '').slice(0, 5);
     const payload = JSON.stringify({
@@ -130,10 +133,13 @@ module.exports = async function handler(req, res) {
       }
     }
 
-    // Carimba como "feito" só se rolou pelo menos 1 sucesso, ou se não sobrou
-    // nenhuma assinatura pendente de tentar (todas mortas/removidas).
-    if (algumSucesso || !algumPendente) {
-      await sb.from('push_enviados').insert({ agendamento_id: a.id, tipo: '15min' });
+    // A reserva já foi feita no início (é o que trava duplicidade). Só
+    // precisa desfazer se NADA deu certo e ainda sobrou pendência real (erro
+    // que não é 404/410) — aí libera pra tentar de novo no próximo minuto.
+    // Se teve sucesso, ou só sobrou aparelho morto (sem mais o que tentar), a
+    // reserva fica valendo como "concluído".
+    if (!algumSucesso && algumPendente) {
+      await sb.from('push_enviados').delete().eq('agendamento_id', a.id).eq('tipo', '15min');
     }
   }
 
