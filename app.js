@@ -3331,7 +3331,6 @@ function calNewQuick(){
 
 function calOpenNewAppt(iso, horario, profId){
   const bg=document.getElementById('cal-new-bg');
-  const patOpts='<option value="">— não vincular cadastro —</option>'+pacientes.map(p=>`<option value="${p.id}">${escapeHtml(p.nome)}</option>`).join('');
   const profOpts='<option value="">Sem profissional</option>'+profissionais.map(p=>`<option value="${p.id}"${profId&&p.id===profId?' selected':''}>${escapeHtml(p.nome)} — ${escapeHtml(p.especialidade||'')}</option>`).join('');
   bg.innerHTML=`<div class="cal-modal cal-modal-form" onclick="event.stopPropagation()">
     <div class="cal-modal-head" style="background:var(--rose);">
@@ -3344,7 +3343,12 @@ function calOpenNewAppt(iso, horario, profId){
         <div class="form-group"><label>Data</label><input type="date" id="cn-data" value="${iso}" /></div>
         <div class="form-group"><label>Horário</label><input type="time" id="cn-horario" step="1800" value="${horario}" /></div>
       </div>
-      ${pacientes.length?`<div class="form-group"><label>Vincular paciente cadastrado (opcional)</label><select id="cn-patient" onchange="cnPatientChange()">${patOpts}</select></div>`:''}
+      ${pacientes.length?`<div class="form-group" style="position:relative;">
+        <label>Vincular paciente cadastrado (opcional)</label>
+        <input type="text" id="cn-pat-search" placeholder="Buscar pelo nome..." autocomplete="off" oninput="cnFiltrarPacientes()" onfocus="cnFiltrarPacientes()" onblur="setTimeout(()=>{const d=document.getElementById('cn-pat-dropdown');if(d)d.style.display='none';},150)" />
+        <input type="hidden" id="cn-patient-id" value="" />
+        <div id="cn-pat-dropdown" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:20;background:#fff;border:1.5px solid var(--rose-light);border-radius:10px;margin-top:4px;max-height:220px;overflow:auto;box-shadow:0 8px 24px rgba(0,0,0,.15);"></div>
+      </div>`:''}
       <button type="button" class="btn-secondary" style="align-self:flex-start;font-size:12px;padding:6px 10px;" onclick="calToggleDetalhes()"><i class="ti ti-adjustments"></i> Mais detalhes</button>
       <div id="cn-detalhes" style="display:none;flex-direction:column;gap:12px;">
         <div class="form-group"><label>Telefone</label><input type="tel" id="cn-phone" /></div>
@@ -3368,14 +3372,33 @@ function calToggleDetalhes(){
   panel.style.display = panel.style.display==='none' ? 'flex' : 'none';
 }
 
-function cnPatientChange(){
-  const sel=document.getElementById('cn-patient');
+function cnFiltrarPacientes(){
+  const inp=document.getElementById('cn-pat-search');
+  const drop=document.getElementById('cn-pat-dropdown');
+  if(!inp||!drop) return;
+  // Editar o texto de busca desvincula o paciente anterior — só religa ao clicar num resultado.
+  document.getElementById('cn-patient-id').value='';
+  const q=_norm(inp.value.trim());
+  const lista = q ? pacientes.filter(p=>_norm(p.nome).includes(q)).slice(0,8) : pacientes.slice(0,8);
+  if(!lista.length){
+    drop.innerHTML='<div style="padding:12px 14px;text-align:center;color:var(--rose-text);font-size:13px;">Nenhum paciente encontrado</div>';
+  } else {
+    drop.innerHTML=lista.map(p=>`<div onmousedown="cnSelecionarPaciente(${p.id})" style="padding:10px 14px;cursor:pointer;font-size:14px;color:#3a2020;border-bottom:1px solid var(--rose-lighter);">${escapeHtml(p.nome)}${p.telefone?`<div style="font-size:11px;color:var(--rose-text);">${escapeHtml(p.telefone)}</div>`:''}</div>`).join('');
+  }
+  drop.style.display='block';
+}
+
+function cnSelecionarPaciente(id){
+  const p=pacientes.find(x=>x.id===id);
+  if(!p) return;
+  document.getElementById('cn-patient-id').value=p.id;
+  document.getElementById('cn-pat-search').value=p.nome;
   const nome=document.getElementById('cn-nome');
   const ph=document.getElementById('cn-phone');
-  if(!sel) return;
-  const p=pacientes.find(x=>x.id==sel.value);
-  if(nome) nome.value=p?p.nome:'';
-  if(ph) ph.value=p&&p.telefone?p.telefone:'';
+  if(nome) nome.value=p.nome;
+  if(ph) ph.value=p.telefone||'';
+  const drop=document.getElementById('cn-pat-dropdown');
+  if(drop) drop.style.display='none';
 }
 
 function calCloseNew(e){
@@ -13275,8 +13298,8 @@ function wppEnviarManual(){
 
 async function calSaveNewAppt(){
   const nome=document.getElementById('cn-nome').value.trim();
-  const patientSel=document.getElementById('cn-patient');
-  const patientId=patientSel?patientSel.value:'';
+  const patientIdEl=document.getElementById('cn-patient-id');
+  const patientId=patientIdEl?patientIdEl.value:'';
   const paciente=patientId?pacientes.find(p=>p.id==patientId):null;
   const phoneEl=document.getElementById('cn-phone');
   const telefone=phoneEl?phoneEl.value.trim():'';
