@@ -881,6 +881,7 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px soli
   .topnav-brand-name { font-size: 14px !important; }
   .topnav-brand-sub { display: none !important; }
   .topnav-brand-icon { width: 34px !important; height: 34px !important; }
+  .mobile-reload-btn { display: flex !important; }
 }
 :root { --header-h: 58px !important; }
 @media(min-width:769px){ .mobile-bottom-nav { display: none !important; } }
