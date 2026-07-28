@@ -5,10 +5,15 @@
 -- usando as extensões pg_cron (agenda) e pg_net (chamada HTTP). É grátis e não
 -- depende do plano da Vercel.
 --
--- >>> ANTES DE RODAR, troque os DOIS valores abaixo: <<<
---   1. o domínio do seu site (se não for rwdent.vercel.app)
---   2. o SEGREDO — tem que ser IGUALZINHO ao valor que você põe na variável
---      LEMBRETES_SECRET lá na Vercel (Settings → Environment Variables).
+-- >>> ANTES DE RODAR, troque o valor abaixo: <<<
+--   o SEGREDO — tem que ser IGUALZINHO ao valor que você põe na variável
+--   LEMBRETES_SECRET lá na Vercel (Settings → Environment Variables).
+--
+-- Já está com o domínio próprio (rwdent.com.br). Se você rodou este arquivo
+-- ANTES de comprar o domínio (com rwdent.vercel.app), rode de novo — troca o
+-- agendamento antigo por este (mesmo nome, sem duplicar). O endereço antigo
+-- rwdent.vercel.app continua funcionando (a Vercel serve os dois), então nada
+-- quebra até você atualizar; só é bom já apontar pro domínio definitivo.
 --
 -- Rode INTEIRO, 1x. Pra mudar o segredo depois, é só rodar de novo.
 -- ============================================================================
@@ -21,13 +26,13 @@ select cron.unschedule('rwdent-lembretes')
 where exists (select 1 from cron.job where jobname = 'rwdent-lembretes');
 
 -- Agenda: a cada minuto, chama o endpoint com o segredo na URL.
--- ⚠️ TROQUE 'rwdent.vercel.app' e 'TROQUE_ESTE_SEGREDO' abaixo.
+-- ⚠️ TROQUE 'TROQUE_ESTE_SEGREDO' abaixo pelo seu LEMBRETES_SECRET real.
 select cron.schedule(
   'rwdent-lembretes',
   '* * * * *',
   $$
     select net.http_get(
-      url := 'https://rwdent.vercel.app/api/enviar-lembretes?secret=TROQUE_ESTE_SEGREDO'
+      url := 'https://rwdent.com.br/api/enviar-lembretes?secret=TROQUE_ESTE_SEGREDO'
     );
   $$
 );

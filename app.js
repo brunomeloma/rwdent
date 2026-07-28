@@ -12911,6 +12911,17 @@ async function _pushApi(body){
 function _pushSuportado(){
   return ('Notification' in window) && ('serviceWorker' in navigator) && ('PushManager' in window);
 }
+// Diz qual peça exata falta (pra diagnosticar "não suporta" sem adivinhar —
+// no iPhone com iOS novo e já instalado, tudo deveria existir; se algo falta
+// aqui, é sinal de outra coisa, ex: aberto fora do modo instalado mesmo sem
+// parecer, ou uma peça específica do navegador desabilitada).
+function _pushDiagnostico(){
+  const faltando = [];
+  if(!('Notification' in window)) faltando.push('Notification');
+  if(!('serviceWorker' in navigator)) faltando.push('serviceWorker');
+  if(!('PushManager' in window)) faltando.push('PushManager');
+  return faltando;
+}
 function atualizarBotaoNotif(){
   const btn = document.getElementById('btn-notif');
   if(!btn) return;
@@ -12930,6 +12941,13 @@ async function ativarNotificacoes(){
     const _standalone = window.navigator.standalone === true || (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
     if(_iOS && !_standalone){
       showToast('No iPhone: toque em Compartilhar → "Adicionar à Tela de Início" e abra o app pelo ícone. Aí as notificações funcionam.','warn');
+    } else if(_iOS && _standalone){
+      // iOS novo + já instalado, mas falta alguma API específica — mostra
+      // exatamente qual, em vez do aviso genérico (ajuda a diagnosticar de
+      // longe, sem precisar adivinhar).
+      const falt = _pushDiagnostico().join(', ') || '?';
+      showToast('Notificação indisponível aqui — falta: '+falt+'. Feche o app pelo ícone (deslize pra cima e feche) e abra de novo pelo ícone da Tela de Início.','error');
+      console.warn('[push] diagnóstico:', { faltando:_pushDiagnostico(), standalone:_standalone, ua:navigator.userAgent });
     } else {
       showToast('Este navegador não suporta notificações push.','warn');
     }

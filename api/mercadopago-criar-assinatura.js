@@ -23,7 +23,7 @@ module.exports = async function handler(req, res) {
   const supabaseAnon   = cleanStr(process.env.SUPABASE_ANON_KEY);
   const serviceRoleKey = cleanStr(process.env.SUPABASE_SERVICE_ROLE_KEY);
   const mpToken         = cleanStr(process.env.MERCADOPAGO_ACCESS_TOKEN);
-  const appUrl           = cleanStr(process.env.APP_URL) || 'https://rwdent.vercel.app';
+  const appUrl           = cleanStr(process.env.APP_URL) || 'https://rwdent.com.br';
 
   if (!supabaseUrl || !supabaseAnon || !serviceRoleKey) {
     return res.status(500).json({ error: 'Servidor sem SUPABASE_SERVICE_ROLE_KEY configurada.' });
