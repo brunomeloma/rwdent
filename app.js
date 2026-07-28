@@ -1679,9 +1679,9 @@ function renderLista(){
       <div class="appt-time">${(a.horario||'--:--').slice(0,5)}<small>${formatDate(a.data)}</small></div>
       <div class="appt-info" ${a.paciente_id?'onclick="verPacienteHome('+a.paciente_id+')" style="cursor:pointer;"':''}>
         <div class="name">${escapeHtml(a.nome)} ${statusBadge}${a.paciente_id?'<i class="ti ti-chevron-right" style="font-size:10px;opacity:.4;margin-left:3px;"></i>':''}</div>
-        <div class="detail">${escapeHtml(a.procedimento||'Consulta')} · ${escapeHtml(a.prof_nome)} · ${escapeHtml(a.telefone||'Sem telefone')}</div>
+        <div class="detail">${escapeHtml(a.procedimento||'Consulta')}${a.prof_nome?' · '+escapeHtml(a.prof_nome):''} · ${escapeHtml(a.telefone||'Sem telefone')}</div>
       </div>
-      <span class="appt-badge badge-main">${escapeHtml((a.prof_nome||'').split(' ')[0])}</span>
+      ${a.prof_nome?`<span class="appt-badge badge-main">${escapeHtml(a.prof_nome.split(' ')[0])}</span>`:''}
       <button class="btn-secondary" style="padding:6px 10px;background:${status==='confirmado'?'#1e40af':'#fff'};color:${status==='confirmado'?'#fff':'#1e40af'};border-color:#1e40af;" onclick="calMarcarPresenca(${a.id},'confirmado')" title="Confirmar presença"><i class="ti ti-circle-check"></i></button>
       <button class="btn-secondary" style="padding:6px 10px;background:${status==='compareceu'?'#2e7d32':'#fff'};color:${status==='compareceu'?'#fff':'#2e7d32'};border-color:#2e7d32;" onclick="calMarcarPresenca(${a.id},'compareceu')" title="Marcar que veio"><i class="ti ti-check"></i></button>
       <button class="btn-secondary" style="padding:6px 10px;background:${status==='faltou'?'#dc2626':'#fff'};color:${status==='faltou'?'#fff':'#dc2626'};border-color:#dc2626;" onclick="calMarcarPresenca(${a.id},'faltou')" title="Marcar que não veio"><i class="ti ti-x"></i></button>
@@ -3014,7 +3014,7 @@ function renderCalendario(){
             <span class="ev-dot"></span><div class="ev-time">${a.horario}</div>
             <div class="ev-name">${escapeHtml(a.nome)}</div><div class="ev-meta">${escapeHtml(a.procedimento||'Consulta')}</div></div>`;
         }).join('');
-        return`<div class="cal-daycol${iso===today?' is-today':''}" style="height:${height}px;" onclick="calDayColClick(event,'${iso}')">${events}</div>`;
+        return`<div class="cal-daycol${iso===today?' is-today':''}" style="height:${height}px;" onclick="calDayColClick(event,'${iso}',${c.id===null?'null':c.id})">${events}</div>`;
       }).join('')}
       ${iso===today?`<div class="cal-nowline" id="cal-nowline"></div>`:''}
     </div>`;
@@ -3080,7 +3080,7 @@ function renderCalendario(){
 
 function calDayClick(iso){ if(!iso) return; calRef=new Date(iso+'T00:00:00'); calSetView('dia'); }
 
-function calDayColClick(e, iso){
+function calDayColClick(e, iso, profId){
   if(e.target.classList.contains('cal-event')) return;
   const rect=e.currentTarget.getBoundingClientRect();
   const y=e.clientY-rect.top;
@@ -3090,7 +3090,7 @@ function calDayColClick(e, iso){
   min=Math.max(CAL_START_MIN,Math.min(min,CAL_END_MIN-30));
   const hh=String(Math.floor(min/60)).padStart(2,'0');
   const mm=String(min%60).padStart(2,'0');
-  calOpenNewAppt(iso,`${hh}:${mm}`);
+  calOpenNewAppt(iso,`${hh}:${mm}`, profId==null?null:profId);
 }
 
 function calOpenEvent(e, id){
@@ -3118,7 +3118,7 @@ function calOpenEvent(e, id){
     </div>
     <div class="cal-modal-body">
       <div class="row"><i class="ti ti-stethoscope"></i><span>${escapeHtml(a.procedimento||'Consulta')}</span></div>
-      <div class="row"><i class="ti ti-user-check"></i><span>${escapeHtml(a.prof_nome)}</span></div>
+      ${a.prof_nome?`<div class="row"><i class="ti ti-user-check"></i><span>${escapeHtml(a.prof_nome)}</span></div>`:''}
       <div class="row"><i class="ti ti-phone"></i><span>${escapeHtml(a.telefone||'Sem telefone')}</span></div>
       ${agParseObs(a.obs).texto?`<div class="row"><i class="ti ti-notes"></i><span>${escapeHtml(agParseObs(a.obs).texto)}</span></div>`:''}
       <div style="display:flex;gap:6px;margin-top:14px;flex-wrap:wrap;">
@@ -3329,27 +3329,29 @@ function calNewQuick(){
   calOpenNewAppt(calISO(base),'');
 }
 
-function calOpenNewAppt(iso, horario){
-  if(!pacientes.length){ showToast('Cadastre um paciente antes de agendar.','warn'); return; }
-  if(!profissionais.length){ showToast('Cadastre um profissional antes de agendar.','warn'); return; }
+function calOpenNewAppt(iso, horario, profId){
   const bg=document.getElementById('cal-new-bg');
-  const patOpts='<option value="">Selecione o paciente</option>'+pacientes.map(p=>`<option value="${p.id}">${escapeHtml(p.nome)}</option>`).join('');
-  const profOpts=profissionais.map(p=>`<option value="${p.id}">${escapeHtml(p.nome)} — ${escapeHtml(p.especialidade)}</option>`).join('');
+  const patOpts='<option value="">— não vincular cadastro —</option>'+pacientes.map(p=>`<option value="${p.id}">${escapeHtml(p.nome)}</option>`).join('');
+  const profOpts='<option value="">Sem profissional</option>'+profissionais.map(p=>`<option value="${p.id}"${profId&&p.id===profId?' selected':''}>${escapeHtml(p.nome)} — ${escapeHtml(p.especialidade||'')}</option>`).join('');
   bg.innerHTML=`<div class="cal-modal cal-modal-form" onclick="event.stopPropagation()">
     <div class="cal-modal-head" style="background:var(--rose);">
       <div class="mh-time"><i class="ti ti-calendar-plus"></i> Novo agendamento</div>
       <div class="mh-name">${formatDate(iso)}${horario?' · '+horario:''}</div>
     </div>
     <div class="cal-modal-body">
-      <div class="form-group"><label>Paciente</label><select id="cn-patient" onchange="cnPatientChange()">${patOpts}</select></div>
-      <div class="form-group"><label>Telefone</label><input type="tel" id="cn-phone" /></div>
-      <div class="form-group"><label>Profissional</label><select id="cn-prof">${profOpts}</select></div>
+      <div class="form-group"><label>Nome</label><input type="text" id="cn-nome" placeholder="Nome do paciente ou do compromisso" onkeydown="if(event.key==='Enter'){event.preventDefault();calSaveNewAppt();}" /></div>
       <div class="cal-form-row">
         <div class="form-group"><label>Data</label><input type="date" id="cn-data" value="${iso}" /></div>
         <div class="form-group"><label>Horário</label><input type="time" id="cn-horario" step="1800" value="${horario}" /></div>
       </div>
-      <div class="form-group"><label>Procedimento</label><input type="text" id="cn-proc" placeholder="Limpeza, Canal..." /></div>
-      <div class="form-group"><label>Observações</label><textarea id="cn-obs" rows="2"></textarea></div>
+      ${pacientes.length?`<div class="form-group"><label>Vincular paciente cadastrado (opcional)</label><select id="cn-patient" onchange="cnPatientChange()">${patOpts}</select></div>`:''}
+      <button type="button" class="btn-secondary" style="align-self:flex-start;font-size:12px;padding:6px 10px;" onclick="calToggleDetalhes()"><i class="ti ti-adjustments"></i> Mais detalhes</button>
+      <div id="cn-detalhes" style="display:none;flex-direction:column;gap:12px;">
+        <div class="form-group"><label>Telefone</label><input type="tel" id="cn-phone" /></div>
+        <div class="form-group"><label>Profissional</label><select id="cn-prof">${profOpts}</select></div>
+        <div class="form-group"><label>Procedimento</label><input type="text" id="cn-proc" placeholder="Limpeza, Canal..." /></div>
+        <div class="form-group"><label>Observações</label><textarea id="cn-obs" rows="2"></textarea></div>
+      </div>
     </div>
     <div class="cal-modal-foot">
       <button class="btn-secondary" onclick="calCloseNew()">Cancelar</button>
@@ -3357,14 +3359,23 @@ function calOpenNewAppt(iso, horario){
     </div>
   </div>`;
   bg.classList.add('show');
+  setTimeout(()=>{ const inp=document.getElementById('cn-nome'); if(inp) inp.focus(); }, 50);
+}
+
+function calToggleDetalhes(){
+  const panel=document.getElementById('cn-detalhes');
+  if(!panel) return;
+  panel.style.display = panel.style.display==='none' ? 'flex' : 'none';
 }
 
 function cnPatientChange(){
   const sel=document.getElementById('cn-patient');
+  const nome=document.getElementById('cn-nome');
   const ph=document.getElementById('cn-phone');
-  if(!sel||!ph) return;
+  if(!sel) return;
   const p=pacientes.find(x=>x.id==sel.value);
-  ph.value=p&&p.telefone?p.telefone:'';
+  if(nome) nome.value=p?p.nome:'';
+  if(ph) ph.value=p&&p.telefone?p.telefone:'';
 }
 
 function calCloseNew(e){
@@ -13263,35 +13274,46 @@ function wppEnviarManual(){
 }
 
 async function calSaveNewAppt(){
-  const patientId=document.getElementById('cn-patient').value;
-  const paciente=pacientes.find(p=>p.id==patientId);
-  const telefone=document.getElementById('cn-phone').value.trim();
-  const profId=parseInt(document.getElementById('cn-prof').value);
+  const nome=document.getElementById('cn-nome').value.trim();
+  const patientSel=document.getElementById('cn-patient');
+  const patientId=patientSel?patientSel.value:'';
+  const paciente=patientId?pacientes.find(p=>p.id==patientId):null;
+  const phoneEl=document.getElementById('cn-phone');
+  const telefone=phoneEl?phoneEl.value.trim():'';
+  const profEl=document.getElementById('cn-prof');
+  const profId=profEl&&profEl.value?parseInt(profEl.value):null;
   const data=document.getElementById('cn-data').value;
   const horario=document.getElementById('cn-horario').value;
-  const procedimento=document.getElementById('cn-proc').value.trim();
-  const obs=document.getElementById('cn-obs').value.trim();
-  if(!paciente){ showToast('Selecione um paciente.','warn'); return; }
-  if(!profId){ showToast('Selecione um profissional.','warn'); return; }
+  const procEl=document.getElementById('cn-proc');
+  const obsEl=document.getElementById('cn-obs');
+  const procedimento=procEl?procEl.value.trim():'';
+  const obs=obsEl?obsEl.value.trim():'';
+  if(!nome){ showToast('Digite o nome.','warn'); document.getElementById('cn-nome').focus(); return; }
   if(!data){ showToast('Escolha a data.','warn'); return; }
   if(!horario){ showToast('Escolha o horário.','warn'); return; }
-  const conflito=agendamentos.find(a=>a.prof_id===profId&&a.data===data&&a.horario===horario);
-  if(conflito){ showToast('Conflito de horário.','error'); return; }
-  const prof=profissionais.find(p=>p.id===profId);
-  if(!prof){ showToast('Profissional inválido.','warn'); return; }
+  let prof=null;
+  if(profId){
+    prof=profissionais.find(p=>p.id===profId);
+    if(!prof){ showToast('Profissional inválido.','warn'); return; }
+    const conflito=agendamentos.find(a=>a.prof_id===profId&&a.data===data&&a.horario===horario);
+    if(conflito){ showToast('Conflito de horário.','error'); return; }
+  }
   showLoading(true);
-  // Confere de novo direto no banco antes de salvar (mesma proteção do agendamento pela tela normal).
-  const { data: conflitoBanco } = await _sb.from('agendamentos')
-    .select('id').eq('clinica_id', clinicaId).eq('prof_id', profId).eq('data', data).eq('horario', horario).limit(1);
-  if(conflitoBanco && conflitoBanco.length){
-    showLoading(false);
-    showToast('Esse horário acabou de ser ocupado por outro agendamento. Escolha outro horário.','error');
-    return;
+  // Confere de novo direto no banco antes de salvar (mesma proteção do agendamento pela tela normal),
+  // só faz sentido quando tem profissional definido (senão não há como colidir).
+  if(profId){
+    const { data: conflitoBanco } = await _sb.from('agendamentos')
+      .select('id').eq('clinica_id', clinicaId).eq('prof_id', profId).eq('data', data).eq('horario', horario).limit(1);
+    if(conflitoBanco && conflitoBanco.length){
+      showLoading(false);
+      showToast('Esse horário acabou de ser ocupado por outro agendamento. Escolha outro horário.','error');
+      return;
+    }
   }
   const { data:novo, error } = await _sb.from('agendamentos').insert([{
-    paciente_id: paciente.id, nome: paciente.nome,
-    telefone: telefone||paciente.telefone||'',
-    prof_id: profId, prof_nome: prof.nome, prof_cor: prof.cor,
+    paciente_id: paciente?paciente.id:null, nome,
+    telefone: telefone||(paciente&&paciente.telefone)||'',
+    prof_id: profId, prof_nome: prof?prof.nome:null, prof_cor: prof?prof.cor:null,
     data, horario, procedimento, obs,
     clinica_id: clinicaId
   }]).select().single();
@@ -13301,7 +13323,7 @@ async function calSaveNewAppt(){
   agendamentos.sort((a,b)=>(a.data+a.horario).localeCompare(b.data+b.horario));
   document.getElementById('cal-new-bg').classList.remove('show');
   renderCalendario(); renderLista(); renderHomeStats();
-  logAtividade('Agendamento criado (calendário)', `${paciente.nome} — ${data} ${horario}`);
+  logAtividade('Agendamento criado (calendário)', `${nome} — ${data} ${horario}`);
   showToast('Agendamento salvo!');
   // Botão Google Agenda
   mostrarBotaoGoogleAgenda(novo.nome, novo.data, novo.horario, novo.procedimento, novo.prof_nome, novo.obs);
