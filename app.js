@@ -1205,7 +1205,9 @@ function renderHomeStats(){
   const confirmadas = agendamentos.filter(a=>a.data===hoje_str && ['compareceu','confirmado'].includes((agGetStatus(a)||'').toLowerCase())).length;
 
   const _mesStat = hoje_str.slice(0,7);
-  const _fatMes = vendas.filter(v=>v.status==='finalizada'&&(v.data||v.dataFinal||'').slice(0,7)===_mesStat).reduce((a,v)=>a+(Number(v.total)||0),0);
+  // Usa o valor REALMENTE pago (não o total da venda) — uma venda parcelada
+  // com só a entrada paga não deve contar como se tivesse sido paga inteira.
+  const _fatMes = vendas.filter(v=>v.status==='finalizada'&&(v.data||v.dataFinal||'').slice(0,7)===_mesStat).reduce((a,v)=>a+vendaValorPago(v),0);
   // Card de faturamento:
   //  - Dono: faturamento do MÊS, atrás do PIN (cadeado se não verificado).
   //  - Secretária: "Vendas de hoje" — só o dia, zera todo dia. Ela nunca vê o
@@ -1213,7 +1215,7 @@ function renderHomeStats(){
   let _fatCard;
   if(_ehSecretaria()){
     const _vendasHoje = vendas.filter(v=>v.status==='finalizada'&&(v.dataFinal||v.data||'').slice(0,10)===hoje_str)
-                              .reduce((a,v)=>a+(Number(v.total)||0),0);
+                              .reduce((a,v)=>a+vendaValorPago(v),0);
     _fatCard = `<div class="home-hero-stat"><div class="home-hero-stat-val">${fmtBRL(_vendasHoje)}</div><div class="home-hero-stat-lbl">Vendas de hoje</div></div>`;
   } else {
     const _fatMesHtml = _finVerificado
@@ -5846,6 +5848,9 @@ async function salvarLancamentoAvulso(){
   }
   closeModal('modal-lancamento-avulso');
   showToast(`✅ ${fmtBRL(valor)} adicionado ao faturamento!`);
+  // Atualiza a lista de vendas (e o painel de Comissões, se estiver aberto) —
+  // sem isso, o lançamento só aparecia depois de trocar de aba e voltar.
+  renderVendas();
   if(typeof renderFinanceiroDash==='function' && document.getElementById('tab-financeiro')?.style.display!=='none') renderFinanceiroDash();
 }
 
@@ -5891,7 +5896,7 @@ function renderRelatorio(){
   const filtrarAg=a=>{if(ano&&!a.data.startsWith(ano))return false;if(mes&&a.data.slice(5,7)!==mes)return false;return true;};
   const vendasPer=vendas.filter(filtrarDt);
   const finPer=vendasPer.filter(v=>v.status==='finalizada');
-  const fat=finPer.reduce((a,v)=>a+(Number(v.total)||0),0);
+  const fat=finPer.reduce((a,v)=>a+vendaValorPago(v),0);
   const ticket=finPer.length?fat/finPer.length:0;
   const agsPer=agendamentos.filter(filtrarAg);
   const compareceu=agsPer.filter(a=>(agGetStatus(a)||'').toLowerCase()==='compareceu').length;
@@ -6619,7 +6624,8 @@ function renderFinanceiroDash(){
   const _periodo = _labelPeriodo('fin-mes','fin-ano');
   const fin = _filtrarVendasPorPeriodo(vendas.filter(v=>v.status==='finalizada'), 'fin-mes','fin-ano');
   const orc = vendas.filter(v=>v.status==='orcamento');
-  const fat = fin.reduce((a,v)=>a+(Number(v.total)||0),0);
+  // Valor REALMENTE pago, não o total da venda — parcela ainda não recebida não é faturamento.
+  const fat = fin.reduce((a,v)=>a+vendaValorPago(v),0);
   const despFin = _filtrarVendasPorPeriodo(despesas, 'fin-mes','fin-ano');
   const totalDesp = despFin.reduce((a,d)=>a+(Number(d.valor)||0),0);
   const fatLiquido = fat - totalDesp;
@@ -6684,7 +6690,7 @@ function renderChartMensal(){
     const d = new Date(hoje.getFullYear(), hoje.getMonth()-i, 1);
     const key = d.toISOString().slice(0,7);
     const label = d.toLocaleDateString('pt-BR',{month:'short'}).replace('.','');
-    const total = vendas.filter(v=>v.status==='finalizada'&&(v.data||'').startsWith(key)).reduce((a,v)=>a+(v.total||0),0);
+    const total = vendas.filter(v=>v.status==='finalizada'&&(v.data||'').startsWith(key)).reduce((a,v)=>a+vendaValorPago(v),0);
     meses.push({label, total, key});
   }
   const max = Math.max(...meses.map(m=>m.total),1);
@@ -7676,6 +7682,7 @@ function renderVendas(){
     const data = new Date(v.data).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'2-digit'})+' '+new Date(v.data).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
     const itensRes = (v.itens||[]).map(i=>(i.qtd>1?i.qtd+'× ':'')+escapeHtml(i.nome||'')+(i.dente?` (Dente ${i.dente})`:'')+(i.descDente?` — ${escapeHtml(i.descDente)}`:'')).join(', ');
     let acoes = `<button class="btn-secondary" style="padding:4px 8px;font-size:11px;" onclick="toggleVendaMat(${v.id})" title="Ver materiais"><i class="ti ti-box"></i></button>`;
+    if(!_ehSecretaria() && v.status!=='cancelada') acoes += `<button class="btn-secondary" style="padding:4px 8px;font-size:11px;color:#1565c0;" onclick="abrirEditarVenda(${v.id})" title="Editar (corrigir nome/valor)"><i class="ti ti-pencil"></i></button>`;
     if(v.status==='orcamento') acoes += `<button class="btn-secondary" style="padding:4px 8px;font-size:11px;color:#2e7d32;" onclick="finalizarVendaSalva(${v.id})" title="Finalizar venda"><i class="ti ti-circle-check"></i></button>`;
     if(v.status==='finalizada') acoes += `<button class="btn-secondary" style="padding:4px 8px;font-size:11px;color:#2e7d32;" onclick="gerarRecibo(${v.id})" title="Gerar recibo"><i class="ti ti-receipt"></i></button>`;
     if(v.status==='finalizada') acoes += `<button class="btn-secondary" style="padding:4px 8px;font-size:11px;color:#856404;" onclick="cancelarVenda(${v.id})" title="Cancelar venda"><i class="ti ti-arrow-back-up"></i></button>`;
@@ -7699,6 +7706,9 @@ function renderVendas(){
       </td>
     </tr>`;
   }).join('');
+  // Se o painel de Comissões estiver aberto, mantém ele em dia (mesma lista/período).
+  const _cp = document.getElementById('comissoes-panel');
+  if(_cp && _cp.style.display!=='none') renderComissoes();
 }
 function toggleVendaMat(id){ const r=document.getElementById('vd-'+id); if(r) r.style.display=r.style.display==='none'?'':'none'; }
 async function finalizarVendaSalva(id){
@@ -7749,6 +7759,106 @@ async function devolverEstoqueVenda(id){
   renderVendas(); renderEstoque();
   if(!_eED) showToast('Estoque devolvido!');
 }
+// ── EDITAR VENDA (só dono — corrigir nome/valor/data por engano) ──
+let _editVendaId = null;
+
+function abrirEditarVenda(id){
+  if(_ehSecretaria()){ showToast('Só o dono pode editar vendas já lançadas.','warn'); return; }
+  const v = vendas.find(x=>x.id===id); if(!v) return;
+  _editVendaId = id;
+  document.getElementById('ev-paciente').value = v.pacienteNome||'';
+  document.getElementById('ev-data').value = (v.data||'').slice(0,10);
+  document.getElementById('ev-desconto').value = v.desconto||0;
+  document.getElementById('ev-obs').value = v.obs||'';
+  _evRenderItens(v.itens||[]);
+  openModal('modal-editar-venda');
+}
+
+function _evItemRowHtml(i){
+  return `<input type="text" class="ev-item-nome" value="${escapeHtml(i.nome||'')}" placeholder="Procedimento" style="width:100%;margin-bottom:6px;" oninput="_evAtualizarTotal()"/>
+    <div style="display:flex;gap:6px;align-items:center;">
+      <input type="number" class="ev-item-qtd" value="${i.qtd||1}" min="1" style="width:56px;flex-shrink:0;" oninput="_evAtualizarTotal()" title="Quantidade"/>
+      <input type="number" class="ev-item-preco" value="${i.precoUnit||0}" step="0.01" min="0" style="flex:1;min-width:0;" oninput="_evAtualizarTotal()" title="Preço unitário"/>
+      <button type="button" class="btn-secondary" style="flex-shrink:0;width:34px;height:34px;padding:0;display:flex;align-items:center;justify-content:center;" onclick="this.closest('.ev-item-row').remove();_evAtualizarTotal();" title="Remover item"><i class="ti ti-trash"></i></button>
+    </div>`;
+}
+
+function _evRenderItens(itens){
+  const wrap = document.getElementById('ev-itens');
+  wrap.innerHTML = (itens.length?itens:[{nome:'',qtd:1,precoUnit:0}]).map((i,idx)=>
+    `<div class="ev-item-row" data-idx="${idx}" style="border:1px solid var(--rose-light);border-radius:10px;padding:8px;margin-bottom:8px;">${_evItemRowHtml(i)}</div>`
+  ).join('');
+  _evAtualizarTotal();
+}
+
+function evAdicionarItem(){
+  const wrap = document.getElementById('ev-itens');
+  const div = document.createElement('div');
+  div.className = 'ev-item-row';
+  div.style = 'border:1px solid var(--rose-light);border-radius:10px;padding:8px;margin-bottom:8px;';
+  div.innerHTML = _evItemRowHtml({nome:'',qtd:1,precoUnit:0});
+  wrap.appendChild(div);
+}
+
+function _evLerItens(){
+  return [...document.querySelectorAll('#ev-itens .ev-item-row')].map(row=>({
+    procId: null,
+    nome: row.querySelector('.ev-item-nome').value.trim() || 'Item',
+    qtd: parseInt(row.querySelector('.ev-item-qtd').value)||1,
+    precoUnit: parseFloat(row.querySelector('.ev-item-preco').value)||0,
+    dente: '', descDente: ''
+  }));
+}
+
+function _evAtualizarTotal(){
+  const itens = _evLerItens();
+  const subtotal = itens.reduce((s,i)=>s+(i.qtd*i.precoUnit),0);
+  const desconto = parseFloat(document.getElementById('ev-desconto').value)||0;
+  const total = Math.max(0, subtotal-desconto);
+  const el = document.getElementById('ev-total-preview');
+  if(el) el.textContent = fmtBRL(total);
+}
+
+async function salvarEdicaoVenda(){
+  if(_ehSecretaria()){ showToast('Só o dono pode editar vendas já lançadas.','warn'); return; }
+  const v = vendas.find(x=>x.id===_editVendaId); if(!v){ closeModal('modal-editar-venda'); return; }
+  const nome = document.getElementById('ev-paciente').value.trim();
+  const data = document.getElementById('ev-data').value;
+  const desconto = parseFloat(document.getElementById('ev-desconto').value)||0;
+  const obs = document.getElementById('ev-obs').value.trim();
+  const itens = _evLerItens();
+  if(!nome){ showToast('Digite o nome do paciente.','warn'); return; }
+  if(!data){ showToast('Escolha a data.','warn'); return; }
+  if(!itens.length){ showToast('Adicione pelo menos um item.','warn'); return; }
+  const subtotal = itens.reduce((s,i)=>s+(i.qtd*i.precoUnit),0);
+  const total = Math.max(0, subtotal-desconto);
+
+  const antes = JSON.stringify(v); // pra reverter em memória se o save falhar
+  v.pacienteNome = nome;
+  v.itens = itens;
+  v.subtotal = subtotal;
+  v.desconto = desconto;
+  v.total = total;
+  v.obs = obs;
+  // Mantém hora original, só troca a data (evita perder o horário do lançamento).
+  const horaOriginal = (v.data||'').slice(10) || 'T12:00:00.000Z';
+  v.data = data + horaOriginal;
+
+  showLoading(true);
+  const _eEdit = await saveFinanceiro();
+  showLoading(false);
+  if(_eEdit){
+    Object.assign(v, JSON.parse(antes));
+    showToast('Erro ao salvar: '+_eEdit.message,'error');
+    return;
+  }
+  logAtividade('Venda editada', `${nome} — ${fmtBRL(total)}`);
+  closeModal('modal-editar-venda');
+  renderVendas();
+  if(typeof renderFinanceiroDash==='function' && document.getElementById('tab-financeiro')?.style.display!=='none') renderFinanceiroDash();
+  showToast('Venda atualizada!');
+}
+
 async function excluirVenda(id){
   const v=vendas.find(x=>x.id===id); if(!v) return;
   const msg = v.status==='finalizada'?'Venda finalizada — excluir NÃO devolve o estoque (cancele antes). Excluir mesmo assim?':'Excluir este registro?';
