@@ -4393,6 +4393,7 @@ async function pacAlterarStatusPlano(id, status){
       const venda = {
         id: nextVendaId++,
         status: 'orcamento',
+        origem: 'plano_tratamento',
         pacienteId: pacId,
         pacienteNome: pac?.nome||'',
         itens: [{
@@ -7612,6 +7613,19 @@ const STATUS_VENDA = {
   cancelada : {lbl:'Cancelada',  cls:'cancelada',  icon:'ti-circle-x'},
 };
 
+// Como cada venda entrou no sistema — só pra saber de onde veio, não muda nada
+// no cálculo. Vendas antigas (de antes dessa marcação existir) caem em
+// "Orçamento" por padrão, que era o fluxo mais comum.
+const ORIGEM_VENDA = {
+  avulso          : {lbl:'Avulso',            icon:'ti-cash-register',  bg:'#f3e5f5', cor:'#7b1fa2'},
+  orcamento       : {lbl:'Orçamento',         icon:'ti-file-text',      bg:'#e3f2fd', cor:'#1565c0'},
+  odontograma     : {lbl:'Odontograma',       icon:'ti-tooth',          bg:'#e0f7fa', cor:'#00838f'},
+  plano_tratamento: {lbl:'Plano de Tratamento', icon:'ti-clipboard-list', bg:'#efebe9', cor:'#6d4c41'},
+  venda_rapida    : {lbl:'Venda Rápida',      icon:'ti-shopping-cart',  bg:'#e8f5e9', cor:'#2e7d32'},
+  direta          : {lbl:'Venda Direta',      icon:'ti-receipt',        bg:'#fff3e0', cor:'#e08a20'},
+};
+function origemInfo(v){ return ORIGEM_VENDA[v.origem] || ORIGEM_VENDA.orcamento; }
+
 function computeConsumo(itens){
   const map={};
   const addProc=(procId,qtd)=>{ (procInsumos[procId]||[]).forEach(ins=>{ map[ins.matId]=(map[ins.matId]||0)+ins.qtd*qtd; }); };
@@ -7679,6 +7693,7 @@ function renderVendas(){
   if(!list.length){ tb.innerHTML='<tr><td colspan="6" style="text-align:center;color:var(--rose-text);padding:20px;">Nenhuma venda registrada ainda.</td></tr>'; return; }
   tb.innerHTML = list.map(v=>{
     const si = STATUS_VENDA[v.status]||STATUS_VENDA.orcamento;
+    const oi = origemInfo(v);
     const data = new Date(v.data).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'2-digit'})+' '+new Date(v.data).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
     const itensRes = (v.itens||[]).map(i=>(i.qtd>1?i.qtd+'× ':'')+escapeHtml(i.nome||'')+(i.dente?` (Dente ${i.dente})`:'')+(i.descDente?` — ${escapeHtml(i.descDente)}`:'')).join(', ');
     let acoes = `<button class="btn-secondary" style="padding:4px 8px;font-size:11px;" onclick="toggleVendaMat(${v.id})" title="Ver materiais"><i class="ti ti-box"></i></button>`;
@@ -7696,7 +7711,7 @@ function renderVendas(){
       <td data-label="Paciente" style="padding:10px;">${escapeHtml(v.pacienteNome||'—')}</td>
       <td data-label="Itens" style="padding:10px;font-size:12px;color:var(--rose-text);max-width:280px;">${itensRes||'—'}</td>
       <td data-label="Total" style="padding:10px;text-align:right;font-weight:700;color:var(--rose-dark);">${fmtBRL(v.total)}</td>
-      <td data-label="Status" style="padding:10px;"><span class="fin-badge ${si.cls}"><i class="ti ${si.icon}"></i> ${si.lbl}</span></td>
+      <td data-label="Status" style="padding:10px;"><div style="display:flex;flex-direction:column;gap:4px;align-items:flex-start;"><span class="fin-badge ${si.cls}"><i class="ti ${si.icon}"></i> ${si.lbl}</span><span style="display:inline-flex;align-items:center;gap:3px;padding:2px 7px;border-radius:20px;font-size:9.5px;font-weight:600;background:${oi.bg};color:${oi.cor};"><i class="ti ${oi.icon}" style="font-size:10px;"></i> ${oi.lbl}</span></div></td>
       <td data-label="Ações" style="padding:10px;"><div style="display:flex;gap:4px;justify-content:flex-end;">${acoes}</div></td>
     </tr>
     <tr id="vd-${v.id}" style="display:none;background:var(--rose-lighter);">
@@ -7770,8 +7785,23 @@ function abrirEditarVenda(id){
   document.getElementById('ev-data').value = (v.data||'').slice(0,10);
   document.getElementById('ev-desconto').value = v.desconto||0;
   document.getElementById('ev-obs').value = v.obs||'';
+  const selProf = document.getElementById('ev-prof');
+  selProf.innerHTML = '<option value="">— Não informado —</option>' + profissionais.map(p=>`<option value="${p.id}">${escapeHtml(p.nome)}</option>`).join('');
+  selProf.value = v.profissional_id || '';
+  _evAtualizarComissaoInfo();
   _evRenderItens(v.itens||[]);
   openModal('modal-editar-venda');
+}
+
+function _evAtualizarComissaoInfo(){
+  const el = document.getElementById('ev-comissao-info');
+  if(!el) return;
+  const profId = document.getElementById('ev-prof').value;
+  if(!profId){ el.textContent = ''; return; }
+  const pct = Number((cfg.comissoes||{})[profId]) || 0;
+  el.textContent = pct>0
+    ? `Comissão configurada pra esse profissional: ${pct}% (ajustável em Financeiro → Comissões).`
+    : 'Esse profissional ainda não tem % de comissão configurado (Financeiro → Comissões).';
 }
 
 function _evItemRowHtml(i){
@@ -7833,6 +7863,9 @@ async function salvarEdicaoVenda(){
   const subtotal = itens.reduce((s,i)=>s+(i.qtd*i.precoUnit),0);
   const total = Math.max(0, subtotal-desconto);
 
+  const profId = document.getElementById('ev-prof').value;
+  const prof = profId ? profissionais.find(p=>p.id==profId) : null;
+
   const antes = JSON.stringify(v); // pra reverter em memória se o save falhar
   v.pacienteNome = nome;
   v.itens = itens;
@@ -7840,6 +7873,8 @@ async function salvarEdicaoVenda(){
   v.desconto = desconto;
   v.total = total;
   v.obs = obs;
+  v.profissional_id = prof ? prof.id : null;
+  v.profissional_nome = prof ? prof.nome : '';
   // Mantém hora original, só troca a data (evita perder o horário do lançamento).
   const horaOriginal = (v.data||'').slice(10) || 'T12:00:00.000Z';
   v.data = data + horaOriginal;
@@ -8015,7 +8050,7 @@ async function salvarOrcPac(pacId){
   const pac = pacientes.find(p=>p.id===pacId);
   const { subtotal, desconto, total } = calcTotalOrc();
   const venda = {
-    id: nextVendaId++, status:'orcamento',
+    id: nextVendaId++, status:'orcamento', origem: 'orcamento',
     pacienteId: pacId, pacienteNome: pac?.nome||'',
     itens: orcamento.map(it=>({procId:it.procId||null,comboId:it.comboId||null,qtd:it.qtd,nome:it.nome,dente:it.dente||'',descDente:it.descDente||''})),
     subtotal: parseFloat(subtotal.toFixed(2)),
@@ -8058,7 +8093,7 @@ async function finalizarVendaPac(pacId){
   const aplicado = aplicarBaixaEstoque(consumo);
   const _parCredito = forma.startsWith('credito') ? (parseInt(forma.replace('credito',''))||1) : 1;
   const venda = {
-    id: nextVendaId++, status:'finalizada',
+    id: nextVendaId++, status:'finalizada', origem: 'direta',
     formaPagamento: forma,
     pacienteId: pacId, pacienteNome: pac?.nome||'',
     itens: orcamento.map(it=>({procId:it.procId||null,comboId:it.comboId||null,qtd:it.qtd,nome:it.nome,dente:it.dente||'',descDente:it.descDente||''})),
@@ -8685,7 +8720,7 @@ async function vrFinalizarMobile(){
   const consumoAplicado = aplicarBaixaEstoque(consumo);
 
   const venda={
-    id:nextVendaId++, status:'finalizada', formaPagamento:vrPagamentoMobile,
+    id:nextVendaId++, status:'finalizada', origem:'venda_rapida', formaPagamento:vrPagamentoMobile,
     parcelas:vrPagamentoMobile==='credito'?parcelas:1,
     pacienteId:pacId||null, pacienteNome:pac?.nome||'Avulso',
     itens:vrCarrinho.map(i=>({procId:i.procId,qtd:i.qtd,nome:i.nome,precoUnit:i.preco,dente:'',descDente:''})),
@@ -9020,6 +9055,7 @@ async function vrFinalizar(){
   const venda = {
     id: nextVendaId++,
     status: 'finalizada',
+    origem: 'venda_rapida',
     formaPagamento: vrPagamento,
     parcelas: vrPagamento==='credito' ? parcelas : 1,
     pacienteId: pacId||null,
@@ -9502,7 +9538,7 @@ async function pacAprovarOrcamentoPlano(pacId){
     const _validade = _validDias > 0 ? new Date(Date.now()+_validDias*86400000).toISOString() : null;
 
     const venda = {
-      id: nextVendaId++, status:'orcamento', formaPagamento:'',
+      id: nextVendaId++, status:'orcamento', origem:'plano_tratamento', formaPagamento:'',
       pacienteId: pacId, pacienteNome: pac?.nome||'',
       itens: itensVenda,
       subtotal: parseFloat(subtotal.toFixed(2)),
@@ -9824,7 +9860,7 @@ async function pacOdontoSalvarOrc(){
   const total = pacOdontoOrcList.reduce((a,it)=>a+it.total, 0);
   // Salva como orçamento em vendas
   const venda = {
-    id: nextVendaId++, status:'orcamento',
+    id: nextVendaId++, status:'orcamento', origem:'odontograma',
     pacienteId: pacId, pacienteNome: pac?.nome||'',
     itens: pacOdontoOrcList.map(it=>({procId:it.procId,qtd:it.qtd,nome:it.nome,dente:it.dentes,descDente:''})),
     subtotal: parseFloat(total.toFixed(2)),
@@ -10854,7 +10890,7 @@ async function pacFinalizarItensSelecionados(vendaId, pacId){
   } else {
     // Cria nova venda finalizada só com os itens selecionados
     const novaVenda = {
-      id: nextVendaId++, status:'finalizada',
+      id: nextVendaId++, status:'finalizada', origem: v.origem||'orcamento',
       formaPagamento: v.formaPagamento||'',
       pacienteId: pacId, pacienteNome: v.pacienteNome||'',
       itens: itensSel,
@@ -11039,7 +11075,7 @@ async function pacOrcConsolidar(pacId){
   const todosSub   = abertos.reduce((a,v)=>a+(v.subtotal||0),0);
   const pac = pacientes.find(p=>p.id===pacId);
   const novaVenda = {
-    id: nextVendaId++, status:'orcamento', formaPagamento:'',
+    id: nextVendaId++, status:'orcamento', origem:'orcamento', formaPagamento:'',
     pacienteId: pacId, pacienteNome: pac?.nome||'',
     itens: todosItens, subtotal: todosSub, desconto:0, total:todosSub,
     planoIds: abertos.flatMap(v=>v.planoIds||[]),

@@ -2209,7 +2209,7 @@
   <div style="color:var(--rose-text);font-size:14px;">Carregando...</div>
 </div>
 
-<script src="app.js?v=69"></script>
+<script src="app.js?v=70"></script>
 
 <!-- ══ MODAL RELATÓRIO MENSAL ══ -->
 <div class="modal-overlay" id="modal-relatorio" onclick="if(event.target===this)closeModal('modal-relatorio')" style="align-items:flex-start;padding-top:40px;overflow-y:auto;">
@@ -2290,6 +2290,11 @@
     <div class="form-row-2">
       <div class="form-group"><label>Nome do paciente</label><input type="text" id="ev-paciente" /></div>
       <div class="form-group"><label>Data</label><input type="date" id="ev-data" /></div>
+    </div>
+    <div class="form-group">
+      <label>Profissional (quem atendeu)</label>
+      <select id="ev-prof" onchange="_evAtualizarComissaoInfo()"><option value="">— Não informado —</option></select>
+      <div id="ev-comissao-info" style="font-size:11px;color:var(--rose-text);margin-top:3px;"></div>
     </div>
     <div class="form-group">
       <label>Itens</label>
