@@ -4450,19 +4450,63 @@ async function pacDesfazerRealizadoPlano(id){
 }
 
 // Devolver item do plano para Pendente
-async function pacDesaprovarPlano(id){
-  if(!confirm('Devolver para Pendente? O orçamento gerado (se houver) não será removido automaticamente.')) return;
-  showLoading(true);
-  // Tenta limpar data_aprovado; se coluna nao existir, salva so status
+// Devolve um item do plano pra "pendente" — se já existir OUTRO item
+// pendente do MESMO procedimento (ex: "Restauração Posterior" em 11 dentes),
+// junta os dois numa linha só (soma dentes e valor) em vez de deixar duas
+// linhas separadas do mesmo tratamento. Sem item igual pra juntar, só
+// reverte o próprio. Usado tanto pelo botão "↩ Pendente" do plano quanto
+// por remover um item de um orçamento que veio de uma aprovação.
+async function _planoVoltarPendente(id){
+  const item = pacPlanoList.find(i=>i.id===id);
+  if(!item) return { ok:false, error:{message:'Item do plano não encontrado.'} };
+  const alvo = pacPlanoList.find(i=>i.id!==id && i.status==='pendente' && i.procedimento===item.procedimento);
+  const fmt = n => n.toFixed(2).replace('.', ',');
+
+  if(alvo){
+    const dentesSet = new Set(_planoDentesDe(alvo));
+    _planoDentesDe(item).forEach(d=>dentesSet.add(d));
+    const dentesFinal = [...dentesSet].join(',');
+    const valorFinal = _planoParseVal(alvo.valor) + _planoParseVal(item.valor);
+    const qtdFinal = dentesSet.size || 1;
+    const unitFinal = valorFinal / qtdFinal;
+
+    let { error } = await _sb.from('plano_tratamento').update({
+      dente: dentesFinal, valor: fmt(valorFinal), valor_unit: fmt(unitFinal), quantidade_dentes: qtdFinal
+    }).eq('id', alvo.id);
+    if(error && /valor_unit|quantidade_dentes/.test(error.message||'')){
+      ({ error } = await _sb.from('plano_tratamento').update({ dente: dentesFinal, valor: fmt(valorFinal) }).eq('id', alvo.id));
+    }
+    if(error) return { ok:false, error };
+
+    ({ error } = await _sb.from('plano_tratamento').delete().eq('id', id));
+    if(error) return { ok:false, error };
+
+    pacPlanoList = pacPlanoList
+      .filter(i=>i.id!==id)
+      .map(i=> i.id===alvo.id ? {...i, dente:dentesFinal, valor:fmt(valorFinal), valor_unit:fmt(unitFinal), quantidade_dentes:qtdFinal} : i);
+    return { ok:true, mesclado:true };
+  }
+
+  // Sem item pendente igual pra juntar — só reverte o próprio (tenta limpar
+  // data_aprovado; se a coluna não existir, salva só o status).
   let { error } = await _sb.from('plano_tratamento').update({status:'pendente',data_aprovado:null}).eq('id',id);
   if(error && error.message && error.message.includes('data_aprovado')){
     ({ error } = await _sb.from('plano_tratamento').update({status:'pendente'}).eq('id',id));
   }
-  showLoading(false);
-  if(error){ showToast('Erro: '+error.message,'error'); return; }
+  if(error) return { ok:false, error };
   pacPlanoList = pacPlanoList.map(i=> i.id===id ? {...i,status:'pendente',data_aprovado:null} : i);
+  return { ok:true, mesclado:false };
+}
+
+async function pacDesaprovarPlano(id){
+  if(!confirm('Devolver para Pendente? O orçamento gerado (se houver) não será removido automaticamente.')) return;
+  showLoading(true);
+  const { ok, error, mesclado } = await _planoVoltarPendente(id);
+  showLoading(false);
+  if(!ok){ showToast('Erro: '+error.message,'error'); return; }
+  pacRenderPlanoResumo();
   pacRenderPlanoLista();
-  showToast('Item voltou para Pendente.');
+  showToast(mesclado ? 'Item voltou para Pendente — juntado com o que já tinha desse procedimento.' : 'Item voltou para Pendente.');
 }
 
 // Atualiza o valor de um item do plano direto na tela de revisão (sem abrir formulário)
@@ -11061,17 +11105,15 @@ async function pacOrcRemoveItem(vendaId, idx, pacId){
   if(!confirm(_msgConfirm)) return;
 
   showLoading(true);
+  let _mesclado = false;
   if(_planoIdReverter){
-    let { error: errPlano } = await _sb.from('plano_tratamento').update({ status:'pendente', data_aprovado:null }).eq('id', _planoIdReverter);
-    if(errPlano && errPlano.message && errPlano.message.includes('data_aprovado')){
-      ({ error: errPlano } = await _sb.from('plano_tratamento').update({ status:'pendente' }).eq('id', _planoIdReverter));
-    }
-    if(errPlano){
+    const _rv = await _planoVoltarPendente(_planoIdReverter);
+    if(!_rv.ok){
       showLoading(false);
-      showToast('Erro ao devolver item pro plano: '+errPlano.message,'error');
+      showToast('Erro ao devolver item pro plano: '+_rv.error.message,'error');
       return;
     }
-    pacPlanoList = pacPlanoList.map(i=> i.id===_planoIdReverter ? {...i, status:'pendente', data_aprovado:null} : i);
+    _mesclado = _rv.mesclado;
   }
 
   // Mantém planoIds alinhado com itens ao remover
@@ -11095,7 +11137,7 @@ async function pacOrcRemoveItem(vendaId, idx, pacId){
   pacRenderOrcamentos(pacId);
   pacRenderPlanoResumo();
   pacRenderPlanoLista();
-  if(!_eRem) showToast(_planoIdReverter ? 'Item removido — voltou pro plano como pendente.' : 'Item removido.');
+  if(!_eRem) showToast(_planoIdReverter ? (_mesclado ? 'Item removido — juntado com o que já tinha desse procedimento no plano.' : 'Item removido — voltou pro plano como pendente.') : 'Item removido.');
   else showToast('Erro ao remover item: '+_eRem.message,'error');
 }
 
