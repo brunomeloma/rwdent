@@ -11044,22 +11044,58 @@ async function pacOrcConfirmAddItem(vendaId, pacId){
 }
 
 // ── Remover item individual do orçamento ──
+// Se o item veio de uma aprovação do Plano de Tratamento (tem planoId, ou é o
+// único item de uma venda com planoItemId), remover aqui NÃO pode só apagar —
+// tem que devolver o dente pro plano como "pendente", juntando com os outros
+// dentes do mesmo procedimento que já estavam esperando lá. Sem isso, o item
+// some sem deixar rastro: não fica no orçamento nem volta pro plano.
 async function pacOrcRemoveItem(vendaId, idx, pacId){
   const v = vendas.find(x=>x.id===vendaId); if(!v) return;
-  if(!confirm('Remover este item do orçamento?')) return;
-  // Mantém planoIds alinhado com itens ao remover
   const _removido = (v.itens||[])[idx];
+  const _planoIdReverter = (_removido && _removido.planoId)
+    ? _removido.planoId
+    : (v.planoItemId && (v.itens||[]).length===1 ? v.planoItemId : null);
+  const _msgConfirm = _planoIdReverter
+    ? 'Remover este item do orçamento? Ele volta pro Plano de Tratamento como pendente.'
+    : 'Remover este item do orçamento?';
+  if(!confirm(_msgConfirm)) return;
+
+  showLoading(true);
+  if(_planoIdReverter){
+    let { error: errPlano } = await _sb.from('plano_tratamento').update({ status:'pendente', data_aprovado:null }).eq('id', _planoIdReverter);
+    if(errPlano && errPlano.message && errPlano.message.includes('data_aprovado')){
+      ({ error: errPlano } = await _sb.from('plano_tratamento').update({ status:'pendente' }).eq('id', _planoIdReverter));
+    }
+    if(errPlano){
+      showLoading(false);
+      showToast('Erro ao devolver item pro plano: '+errPlano.message,'error');
+      return;
+    }
+    pacPlanoList = pacPlanoList.map(i=> i.id===_planoIdReverter ? {...i, status:'pendente', data_aprovado:null} : i);
+  }
+
+  // Mantém planoIds alinhado com itens ao remover
   if(v.planoIds && v.planoIds.length){
     if(_removido && _removido.planoId) v.planoIds = v.planoIds.filter(p=>p!==_removido.planoId);
     else if(v.planoIds.length === (v.itens||[]).length) v.planoIds = v.planoIds.filter((_,i)=>i!==idx);
   }
   v.itens = (v.itens||[]).filter((_,i)=>i!==idx);
-  // Recalcular subtotal e total
-  v.subtotal = v.itens.reduce((a,it)=>a+(it.precoUnit||0)*(it.qtd||1), 0);
-  v.total = Math.max(0, v.subtotal - (v.desconto||0));
+
+  // Orçamento sem nenhum item não faz sentido continuar existindo — remove
+  // a "casca" vazia em vez de deixar um orçamento fantasma de R$0.
+  if(!v.itens.length){
+    vendas = vendas.filter(x=>x.id!==vendaId);
+  } else {
+    v.subtotal = v.itens.reduce((a,it)=>a+(it.precoUnit||0)*(it.qtd||1), 0);
+    v.total = Math.max(0, v.subtotal - (v.desconto||0));
+  }
+
   const _eRem=await saveFinanceiro();
+  showLoading(false);
   pacRenderOrcamentos(pacId);
-  if(!_eRem) showToast('Item removido.');
+  pacRenderPlanoResumo();
+  pacRenderPlanoLista();
+  if(!_eRem) showToast(_planoIdReverter ? 'Item removido — voltou pro plano como pendente.' : 'Item removido.');
   else showToast('Erro ao remover item: '+_eRem.message,'error');
 }
 
