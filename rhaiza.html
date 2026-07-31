@@ -189,6 +189,28 @@
   .smile-ph.after{background:linear-gradient(150deg,#fdf3ee 0%,var(--terra-100) 100%);}
   .smile-ph svg{width:30px;height:30px;stroke:var(--terra-500);opacity:.55;}
   .smile-ph small{font-size:10px;color:var(--terra-500);opacity:.7;}
+  .smile-ph.photo{padding:0;position:relative;}
+  .smile-ph.photo img{width:100%;height:100%;object-fit:cover;display:block;}
+
+  /* ===== NO CONSULTÓRIO (fotos avulsas de procedimento) ===== */
+  .clinic-scroll{
+    display:flex; gap:12px; overflow-x:auto;
+    scroll-snap-type:x mandatory; padding-bottom:6px;
+    margin:0 -6vw; padding-left:6vw; padding-right:6vw;
+  }
+  .clinic-scroll::-webkit-scrollbar{display:none;}
+  .clinic-card{
+    scroll-snap-align:start;
+    flex:0 0 62%;
+    border-radius:20px;
+    overflow:hidden;
+    border:1px solid var(--terra-100);
+    box-shadow:0 10px 26px rgba(122,48,32,.08);
+    background:#fff;
+  }
+  .clinic-card .ph{aspect-ratio:3/4;}
+  .clinic-card .ph img{width:100%;height:100%;object-fit:cover;display:block;}
+  .clinic-card .cap{padding:10px 12px;font-size:12px;font-weight:600;color:var(--terra-700);}
   .smile-label{
     display:flex;
     font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;
@@ -316,11 +338,20 @@
       <div class="smile-scroll">
         <div class="smile-card">
           <div class="smile-imgs">
-            <div class="smile-ph before"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.6"><path d="M12 21c-1.5-3-3-4-3-8a3 3 0 0 1 3-3 3 3 0 0 1 3 3c0 4-1.5 5-3 8Z"/></svg><small>ANTES</small></div>
-            <div class="smile-ph after"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.6"><path d="m5 13 4 4L19 7"/></svg><small>DEPOIS</small></div>
+            <div class="smile-ph photo before"><img src="assets/casos/facetas-antes.jpg" alt="Antes das facetas"></div>
+            <div class="smile-ph photo after"><img src="assets/casos/facetas-depois.jpg" alt="Depois das facetas"></div>
           </div>
           <div class="smile-label"><span>Antes</span><span>Depois</span></div>
-          <div class="smile-caption">Clareamento dental</div>
+          <div class="smile-caption">Facetas</div>
+        </div>
+
+        <div class="smile-card">
+          <div class="smile-imgs">
+            <div class="smile-ph photo before"><img src="assets/casos/aparelho-antes.jpg" alt="Antes do aparelho"></div>
+            <div class="smile-ph photo after"><img src="assets/casos/aparelho-depois.jpg" alt="Depois do aparelho"></div>
+          </div>
+          <div class="smile-label"><span>Antes</span><span>Depois</span></div>
+          <div class="smile-caption">Ortodontia com aparelho</div>
         </div>
 
         <div class="smile-card">
@@ -329,19 +360,33 @@
             <div class="smile-ph after"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.6"><path d="m5 13 4 4L19 7"/></svg><small>DEPOIS</small></div>
           </div>
           <div class="smile-label"><span>Antes</span><span>Depois</span></div>
-          <div class="smile-caption">Ortodontia com alinhadores</div>
-        </div>
-
-        <div class="smile-card">
-          <div class="smile-imgs">
-            <div class="smile-ph before"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.6"><path d="M12 21c-1.5-3-3-4-3-8a3 3 0 0 1 3-3 3 3 0 0 1 3 3c0 4-1.5 5-3 8Z"/></svg><small>ANTES</small></div>
-            <div class="smile-ph after"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.6"><path d="m5 13 4 4L19 7"/></svg><small>DEPOIS</small></div>
-          </div>
-          <div class="smile-label"><span>Antes</span><span>Depois</span></div>
-          <div class="smile-caption">Reabilitação com prótese</div>
+          <div class="smile-caption">Mais casos em breve</div>
         </div>
       </div>
-      <div class="smile-note">fotos reais dos casos em breve</div>
+      <div class="smile-note">fotos reais dos casos realizados no consultório</div>
+    </section>
+
+    <!-- NO CONSULTÓRIO -->
+    <section class="smiles reveal">
+      <div class="section-head">
+        <div class="eyebrow">Bastidores</div>
+        <h2>No Consultório</h2>
+        <p>Um pouco do cuidado por trás de cada atendimento.</p>
+      </div>
+      <div class="clinic-scroll">
+        <div class="clinic-card">
+          <div class="ph"><img src="assets/casos/procedimento-1.jpg" alt="Procedimento no consultório"></div>
+          <div class="cap">Atendimento em consultório</div>
+        </div>
+        <div class="clinic-card">
+          <div class="ph"><img src="assets/casos/procedimento-2.jpg" alt="Procedimento no consultório"></div>
+          <div class="cap">Cuidado e precisão</div>
+        </div>
+        <div class="clinic-card">
+          <div class="ph"><img src="assets/casos/procedimento-3.jpg" alt="Procedimento no consultório"></div>
+          <div class="cap">Atenção em cada detalhe</div>
+        </div>
+      </div>
     </section>
 
     <!-- CTA FINAL -->
