@@ -1,0 +1,378 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Dra. Rhaiza Barroso — Odontologia</title>
+<meta name="description" content="Consultório Odontológico Rhaiza Barroso — Imperatriz/MA. Prevenção, ortodontia, estética dentária, implantes e muito mais.">
+<meta name="robots" content="noindex">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+
+  :root{
+    --terra-950:#2a1410;
+    --terra-800:#5a2418;
+    --terra-700:#7a3020;
+    --terra-500:#c9704f;
+    --terra-400:#d4735a;
+    --terra-300:#e0a090;
+    --terra-100:#f0cfc4;
+    --cream:#fdf3ee;
+    --cream-2:#fdfaf8;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html{scroll-behavior:smooth;}
+  body{
+    font-family:'Plus Jakarta Sans',system-ui,-apple-system,sans-serif;
+    background:var(--cream);
+    color:var(--terra-950);
+    -webkit-font-smoothing:antialiased;
+    overflow-x:hidden;
+  }
+  img{max-width:100%;display:block;}
+  .serif{font-family:'Instrument Serif',Georgia,serif;}
+  .wrap{max-width:480px;margin:0 auto;position:relative;}
+
+  /* reveal-on-scroll */
+  .reveal{opacity:0;transform:translateY(18px);transition:opacity .7s ease,transform .7s ease;}
+  .reveal.in{opacity:1;transform:none;}
+
+  /* ===== HERO ===== */
+  .hero{
+    position:relative;
+    padding:9vh 6vw 8vh;
+    text-align:center;
+    overflow:hidden;
+    background:linear-gradient(180deg,#fff8f5 0%,var(--cream) 55%,var(--cream) 100%);
+  }
+  .hero-photo{
+    position:absolute; inset:0;
+    opacity:.16;
+    filter:saturate(.65) sepia(.15);
+  }
+  .hero-photo img{width:100%;height:100%;object-fit:cover;object-position:68% 22%;}
+  .hero-inner{position:relative;z-index:1;}
+  .hero .logo{width:56px;height:auto;margin:0 auto 14px;}
+  .hero .kicker{
+    font-size:11px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;
+    color:var(--terra-500);margin-bottom:10px;
+  }
+  .hero h1{
+    font-family:'Instrument Serif',Georgia,serif;
+    font-weight:400;
+    font-size:clamp(30px,8vw,40px);
+    color:var(--terra-800);
+    line-height:1.08;
+  }
+  .hero h1 span{display:block;font-style:italic;color:var(--terra-500);font-size:.72em;margin-top:4px;}
+  .hero p.tagline{
+    font-family:'Instrument Serif',Georgia,serif;
+    font-style:italic;
+    font-size:18px;
+    color:var(--terra-700);
+    margin:18px auto 0;
+    max-width:280px;
+    line-height:1.4;
+  }
+  .cta-row{
+    display:flex; gap:10px; justify-content:center; flex-wrap:wrap;
+    margin-top:28px;
+  }
+  .btn{
+    display:inline-flex; align-items:center; gap:8px;
+    padding:13px 22px;
+    border-radius:999px;
+    font-weight:700; font-size:14.5px;
+    text-decoration:none;
+    transition:transform .15s ease, box-shadow .15s ease;
+  }
+  .btn:active{transform:scale(.97);}
+  .btn-primary{
+    background:linear-gradient(135deg,var(--terra-500),var(--terra-700));
+    color:#fff;
+    box-shadow:0 8px 22px rgba(122,48,32,.28);
+  }
+  .btn-outline{
+    background:#fff;
+    color:var(--terra-700);
+    border:1.5px solid var(--terra-100);
+  }
+  .btn svg{width:17px;height:17px;flex-shrink:0;}
+
+  .scroll-hint{
+    margin-top:40px; font-size:11px; color:var(--terra-300);
+    letter-spacing:1.5px; text-transform:uppercase; font-weight:600;
+  }
+
+  /* ===== SECTION SHELL ===== */
+  section{padding:64px 6vw;}
+  .section-head{text-align:center;margin-bottom:34px;}
+  .section-head .eyebrow{
+    font-size:11px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;
+    color:var(--terra-500);margin-bottom:8px;
+  }
+  .section-head h2{
+    font-family:'Instrument Serif',Georgia,serif;font-weight:400;
+    font-size:30px;color:var(--terra-800);
+  }
+  .section-head p{
+    color:var(--terra-800);opacity:.65;font-size:14.5px;margin-top:8px;
+    max-width:320px;margin-left:auto;margin-right:auto;line-height:1.5;
+  }
+
+  /* ===== SOBRE A DRA ===== */
+  .about{background:var(--cream-2);}
+  .about-card{
+    display:flex; flex-direction:column; align-items:center; text-align:center;
+    gap:16px;
+  }
+  .avatar{
+    width:132px;height:132px;border-radius:50%;
+    background:linear-gradient(150deg,var(--terra-100),var(--terra-300));
+    display:flex;align-items:center;justify-content:center;
+    box-shadow:0 14px 30px rgba(122,48,32,.18);
+    border:4px solid #fff;
+  }
+  .avatar span{
+    font-family:'Instrument Serif',Georgia,serif;font-size:44px;color:#fff;
+  }
+  .avatar-note{font-size:11px;color:var(--terra-300);font-style:italic;}
+  .about h3{font-family:'Instrument Serif',Georgia,serif;font-size:24px;color:var(--terra-800);}
+  .about .role{font-size:13px;color:var(--terra-500);font-weight:600;letter-spacing:.3px;margin-top:2px;}
+  .about p.bio{
+    font-size:14.5px;line-height:1.65;color:var(--terra-950);opacity:.8;
+    max-width:340px;margin-top:6px;
+  }
+
+  /* ===== ESPECIALIDADES ===== */
+  .procs{display:flex;flex-direction:column;gap:10px;}
+  .proc{
+    display:flex; align-items:center; gap:14px;
+    background:#fff;
+    border:1px solid var(--terra-100);
+    border-radius:16px;
+    padding:14px 16px;
+  }
+  .proc-ic{
+    width:42px;height:42px;flex-shrink:0;border-radius:12px;
+    background:linear-gradient(150deg,var(--terra-100),#fff);
+    display:flex;align-items:center;justify-content:center;
+  }
+  .proc-ic svg{width:22px;height:22px;stroke:var(--terra-700);}
+  .proc-t{font-weight:700;font-size:14.5px;color:var(--terra-800);}
+  .proc-d{font-size:12.5px;color:var(--terra-950);opacity:.6;margin-top:1px;}
+
+  /* ===== SORRISOS (ANTES/DEPOIS) ===== */
+  .smiles{background:var(--cream-2);}
+  .smile-scroll{
+    display:flex; gap:12px; overflow-x:auto;
+    scroll-snap-type:x mandatory; padding-bottom:6px;
+    margin:0 -6vw; padding-left:6vw; padding-right:6vw;
+  }
+  .smile-scroll::-webkit-scrollbar{display:none;}
+  .smile-card{
+    scroll-snap-align:start;
+    flex:0 0 78%;
+    background:#fff;
+    border-radius:20px;
+    overflow:hidden;
+    border:1px solid var(--terra-100);
+    box-shadow:0 10px 26px rgba(122,48,32,.08);
+  }
+  .smile-imgs{display:grid;grid-template-columns:1fr 1fr;}
+  .smile-ph{
+    aspect-ratio:4/5;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    gap:6px;
+    background:linear-gradient(150deg,var(--terra-100) 0%,#fdf3ee 100%);
+  }
+  .smile-ph.after{background:linear-gradient(150deg,#fdf3ee 0%,var(--terra-100) 100%);}
+  .smile-ph svg{width:30px;height:30px;stroke:var(--terra-500);opacity:.55;}
+  .smile-ph small{font-size:10px;color:var(--terra-500);opacity:.7;}
+  .smile-label{
+    display:flex;
+    font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;
+    color:var(--terra-500);
+  }
+  .smile-label span{flex:1;text-align:center;padding:9px 0;}
+  .smile-label span:first-child{border-right:1px solid var(--terra-100);}
+  .smile-caption{padding:12px 14px 16px;font-size:12.5px;color:var(--terra-950);opacity:.6;}
+  .smile-note{
+    text-align:center;font-size:12px;color:var(--terra-300);font-style:italic;margin-top:14px;
+  }
+
+  /* ===== CTA FINAL ===== */
+  .final-cta{text-align:center;background:linear-gradient(150deg,var(--terra-500) 0%,#a3543a 55%,var(--terra-700) 120%);color:#fff;}
+  .final-cta h2{font-family:'Instrument Serif',Georgia,serif;font-weight:400;font-size:28px;}
+  .final-cta p{font-size:14px;opacity:.85;margin-top:8px;max-width:280px;margin-left:auto;margin-right:auto;}
+  .final-cta .cta-row{margin-top:26px;}
+  .final-cta .btn-primary{background:#fff;color:var(--terra-700);box-shadow:0 8px 22px rgba(0,0,0,.18);}
+  .final-cta .btn-outline{background:transparent;color:#fff;border-color:rgba(255,255,255,.5);}
+
+  /* ===== FOOTER ===== */
+  footer{padding:38px 6vw 46px;text-align:center;}
+  footer .flogo{width:34px;height:auto;margin:0 auto 10px;opacity:.8;}
+  footer .fname{font-family:'Instrument Serif',Georgia,serif;font-size:17px;color:var(--terra-800);}
+  footer .faddr{font-size:12.5px;color:var(--terra-950);opacity:.55;margin-top:8px;line-height:1.5;max-width:280px;margin-left:auto;margin-right:auto;}
+  footer .fsocial{margin-top:14px;font-size:12.5px;color:var(--terra-500);font-weight:600;}
+</style>
+</head>
+<body>
+
+  <div class="wrap">
+
+    <!-- HERO -->
+    <div class="hero">
+      <div class="hero-photo"><img src="assets/login-hero.png" alt=""/></div>
+      <div class="hero-inner">
+        <img class="logo" src="assets/rhaiza-logo.png" alt="TR">
+        <div class="kicker">Odontologia Especializada</div>
+        <h1>Consultório Odontológico<span>Rhaiza Barroso</span></h1>
+        <p class="tagline">"Nunca desista das coisas que te fazem sorrir"</p>
+        <div class="cta-row">
+          <a class="btn btn-primary" href="https://wa.me/5599982706186" target="_blank" rel="noopener">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.79.47 3.47 1.28 4.94L2 22l5.29-1.39c1.4.77 3.02 1.2 4.75 1.2 5.46 0 9.91-4.45 9.91-9.91C21.95 6.45 17.5 2 12.04 2Zm0 1.6c4.59 0 8.31 3.72 8.31 8.31 0 4.59-3.72 8.31-8.31 8.31a8.25 8.25 0 0 1-4.2-1.15l-.3-.18-3.14.82.84-3.06-.2-.31a8.24 8.24 0 0 1-1.3-4.43c0-4.59 3.72-8.31 8.29-8.31Z"/></svg>
+            Agendar Avaliação
+          </a>
+          <a class="btn btn-outline" href="#especialidades">Ver especialidades</a>
+        </div>
+        <div class="scroll-hint">role pra conhecer ↓</div>
+      </div>
+    </div>
+
+    <!-- SOBRE A DRA -->
+    <section class="about reveal">
+      <div class="about-card">
+        <div class="avatar"><span>RB</span></div>
+        <div class="avatar-note">foto da Dra. em breve</div>
+        <h3>Dra. Rhaiza Barroso</h3>
+        <div class="role">Cirurgiã-Dentista</div>
+        <p class="bio">Cuidando de sorrisos em Imperatriz com atenção, técnica e carinho — do atendimento infantil aos tratamentos mais completos de reabilitação oral.</p>
+      </div>
+    </section>
+
+    <!-- ESPECIALIDADES -->
+    <section id="especialidades" class="reveal">
+      <div class="section-head">
+        <div class="eyebrow">O que tratamos</div>
+        <h2>Especialidades</h2>
+        <p>Um cuidado completo, do check-up de rotina aos procedimentos mais avançados.</p>
+      </div>
+      <div class="procs">
+
+        <div class="proc">
+          <div class="proc-ic"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21c-1.5-3-3-4-3-8a3 3 0 0 1 3-3 3 3 0 0 1 3 3c0 4-1.5 5-3 8Z"/><path d="M7 8c0-3 2-5 5-5s5 2 5 5"/></svg></div>
+          <div><div class="proc-t">Prevenção e Clínica Geral</div><div class="proc-d">Limpeza</div></div>
+        </div>
+
+        <div class="proc">
+          <div class="proc-ic"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16"/><path d="M6 5c0 8 2 13 6 13s6-5 6-13"/><path d="M9 5c0 6 1 9 3 9s3-3 3-9"/></svg></div>
+          <div><div class="proc-t">Ortodontia</div><div class="proc-d">Aparelho convencional e alinhadores invisíveis</div></div>
+        </div>
+
+        <div class="proc">
+          <div class="proc-ic"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M6 21c0-4 3-6 6-6s6 2 6 6"/></svg></div>
+          <div><div class="proc-t">Odontopediatria</div><div class="proc-d">Atendimento infantil</div></div>
+        </div>
+
+        <div class="proc">
+          <div class="proc-ic"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18"/><path d="M7 8h10l-1.5 12h-7L7 8Z"/></svg></div>
+          <div><div class="proc-t">Implantodontia e Prótese</div><div class="proc-d">Reabilitação oral</div></div>
+        </div>
+
+        <div class="proc">
+          <div class="proc-ic"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12c2-6 14-6 16 0"/><path d="M6 12c1 4 11 4 12 0"/><circle cx="12" cy="12" r="1"/></svg></div>
+          <div><div class="proc-t">Estética Dentária</div><div class="proc-d">Dentística restauradora</div></div>
+        </div>
+
+        <div class="proc">
+          <div class="proc-ic"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3c-2 3-2 5 0 7s2 4 0 7"/><circle cx="12" cy="19" r="2"/></svg></div>
+          <div><div class="proc-t">Endodontia</div><div class="proc-d">Tratamento de canal</div></div>
+        </div>
+
+        <div class="proc">
+          <div class="proc-ic"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="5"/><path d="M9 13 6 21l6-3 6 3-3-8"/></svg></div>
+          <div><div class="proc-t">Cirurgia Bucomaxilofacial</div><div class="proc-d">e Estomatologia</div></div>
+        </div>
+
+        <div class="proc">
+          <div class="proc-ic"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-4.35-9.5-9C.5 7.5 3 4 6.5 4 9 4 11 5.7 12 7c1-1.3 3-3 5.5-3C21 4 23.5 7.5 21.5 12 19 16.65 12 21 12 21Z"/></svg></div>
+          <div><div class="proc-t">Harmonização Orofacial</div><div class="proc-d">HOF</div></div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- SORRISOS TRANSFORMADOS -->
+    <section class="smiles reveal">
+      <div class="section-head">
+        <div class="eyebrow">Resultados</div>
+        <h2>Sorrisos Transformados</h2>
+        <p>Alguns dos casos já realizados no consultório.</p>
+      </div>
+
+      <div class="smile-scroll">
+        <div class="smile-card">
+          <div class="smile-imgs">
+            <div class="smile-ph before"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.6"><path d="M12 21c-1.5-3-3-4-3-8a3 3 0 0 1 3-3 3 3 0 0 1 3 3c0 4-1.5 5-3 8Z"/></svg><small>ANTES</small></div>
+            <div class="smile-ph after"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.6"><path d="m5 13 4 4L19 7"/></svg><small>DEPOIS</small></div>
+          </div>
+          <div class="smile-label"><span>Antes</span><span>Depois</span></div>
+          <div class="smile-caption">Clareamento dental</div>
+        </div>
+
+        <div class="smile-card">
+          <div class="smile-imgs">
+            <div class="smile-ph before"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.6"><path d="M12 21c-1.5-3-3-4-3-8a3 3 0 0 1 3-3 3 3 0 0 1 3 3c0 4-1.5 5-3 8Z"/></svg><small>ANTES</small></div>
+            <div class="smile-ph after"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.6"><path d="m5 13 4 4L19 7"/></svg><small>DEPOIS</small></div>
+          </div>
+          <div class="smile-label"><span>Antes</span><span>Depois</span></div>
+          <div class="smile-caption">Ortodontia com alinhadores</div>
+        </div>
+
+        <div class="smile-card">
+          <div class="smile-imgs">
+            <div class="smile-ph before"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.6"><path d="M12 21c-1.5-3-3-4-3-8a3 3 0 0 1 3-3 3 3 0 0 1 3 3c0 4-1.5 5-3 8Z"/></svg><small>ANTES</small></div>
+            <div class="smile-ph after"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.6"><path d="m5 13 4 4L19 7"/></svg><small>DEPOIS</small></div>
+          </div>
+          <div class="smile-label"><span>Antes</span><span>Depois</span></div>
+          <div class="smile-caption">Reabilitação com prótese</div>
+        </div>
+      </div>
+      <div class="smile-note">fotos reais dos casos em breve</div>
+    </section>
+
+    <!-- CTA FINAL -->
+    <section class="final-cta reveal">
+      <h2>Vamos cuidar do seu sorriso?</h2>
+      <p>Fale agora com o consultório e agende sua avaliação.</p>
+      <div class="cta-row">
+        <a class="btn btn-primary" href="https://wa.me/5599982706186" target="_blank" rel="noopener">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.79.47 3.47 1.28 4.94L2 22l5.29-1.39c1.4.77 3.02 1.2 4.75 1.2 5.46 0 9.91-4.45 9.91-9.91C21.95 6.45 17.5 2 12.04 2Zm0 1.6c4.59 0 8.31 3.72 8.31 8.31 0 4.59-3.72 8.31-8.31 8.31a8.25 8.25 0 0 1-4.2-1.15l-.3-.18-3.14.82.84-3.06-.2-.31a8.24 8.24 0 0 1-1.3-4.43c0-4.59 3.72-8.31 8.29-8.31Z"/></svg>
+          Chamar no WhatsApp
+        </a>
+        <a class="btn btn-outline" href="https://instagram.com/rhaiza_bps" target="_blank" rel="noopener">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.2c2.7 0 3 .01 4.12.06 1.11.05 1.87.23 2.53.49.68.27 1.26.62 1.83 1.19.57.57.92 1.15 1.19 1.83.26.66.44 1.42.49 2.53.05 1.12.06 1.42.06 4.12s-.01 3-.06 4.12c-.05 1.11-.23 1.87-.49 2.53-.27.68-.62 1.26-1.19 1.83-.57.57-1.15.92-1.83 1.19-.66.26-1.42.44-2.53.49-1.12.05-1.42.06-4.12.06s-3-.01-4.12-.06c-1.11-.05-1.87-.23-2.53-.49-.68-.27-1.26-.62-1.83-1.19-.57-.57-.92-1.15-1.19-1.83-.26-.66-.44-1.42-.49-2.53C2.21 15 2.2 14.7 2.2 12s.01-3 .06-4.12c.05-1.11.23-1.87.49-2.53.27-.68.62-1.26 1.19-1.83.57-.57 1.15-.92 1.83-1.19.66-.26 1.42-.44 2.53-.49C9.99 2.21 10.3 2.2 12 2.2Zm0 1.8c-2.66 0-2.97.01-4.02.06-.96.04-1.48.2-1.83.34-.46.18-.79.39-1.13.74-.35.34-.56.67-.74 1.13-.14.35-.3.87-.34 1.83-.05 1.05-.06 1.36-.06 4.02s.01 2.97.06 4.02c.04.96.2 1.48.34 1.83.18.46.39.79.74 1.13.34.35.67.56 1.13.74.35.14.87.3 1.83.34 1.05.05 1.36.06 4.02.06s2.97-.01 4.02-.06c.96-.04 1.48-.2 1.83-.34.46-.18.79-.39 1.13-.74.35-.34.56-.67.74-1.13.14-.35.3-.87.34-1.83.05-1.05.06-1.36.06-4.02s-.01-2.97-.06-4.02c-.04-.96-.2-1.48-.34-1.83-.18-.46-.39-.79-.74-1.13a3.06 3.06 0 0 0-1.13-.74c-.35-.14-.87-.3-1.83-.34-1.05-.05-1.36-.06-4.02-.06Zm0 3.05a4.95 4.95 0 1 1 0 9.9 4.95 4.95 0 0 1 0-9.9Zm0 1.8a3.15 3.15 0 1 0 0 6.3 3.15 3.15 0 0 0 0-6.3Zm5.15-1.98a1.16 1.16 0 1 1-2.32 0 1.16 1.16 0 0 1 2.32 0Z"/></svg>
+          @rhaiza_bps
+        </a>
+      </div>
+    </section>
+
+    <!-- FOOTER -->
+    <footer>
+      <img class="flogo" src="assets/rhaiza-logo.png" alt="TR">
+      <div class="fname">Rhaiza Barroso</div>
+      <div class="faddr">Rua Godofredo Viana, 439 — esq. Hermes da Fonseca<br>Centro, Imperatriz/MA</div>
+      <div class="fsocial">@rhaiza_bps &middot; @clinicarb_</div>
+    </footer>
+
+  </div>
+
+<script>
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('in'); });
+  }, { threshold: 0.15 });
+  document.querySelectorAll('.reveal').forEach(el => io.observe(el));
+</script>
+</body>
+</html>
