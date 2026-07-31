@@ -191,6 +191,13 @@
   .smile-ph small{font-size:10px;color:var(--terra-500);opacity:.7;}
   .smile-ph.photo{padding:0;position:relative;}
   .smile-ph.photo img{width:100%;height:100%;object-fit:cover;display:block;}
+  .aligner-ph{
+    aspect-ratio:8/5;
+    display:flex;align-items:center;justify-content:center;
+    padding:18px;
+    background:linear-gradient(150deg,var(--terra-100) 0%,#fdf3ee 100%);
+  }
+  .aligner-ph svg{width:100%;height:100%;}
 
   /* ===== NO CONSULTÓRIO (fotos avulsas de procedimento) ===== */
   .clinic-scroll{
@@ -355,12 +362,27 @@
         </div>
 
         <div class="smile-card">
-          <div class="smile-imgs">
-            <div class="smile-ph before"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.6"><path d="M12 21c-1.5-3-3-4-3-8a3 3 0 0 1 3-3 3 3 0 0 1 3 3c0 4-1.5 5-3 8Z"/></svg><small>ANTES</small></div>
-            <div class="smile-ph after"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.6"><path d="m5 13 4 4L19 7"/></svg><small>DEPOIS</small></div>
+          <div class="aligner-ph">
+            <svg viewBox="0 0 220 150" fill="none">
+              <defs>
+                <linearGradient id="alShine" x1="0" y1="0" x2="1" y2="1">
+                  <stop offset="0%" stop-color="#ffffff" stop-opacity=".85"/>
+                  <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+                </linearGradient>
+              </defs>
+              <!-- banda do alinhador (arco dental estilizado) -->
+              <path d="M28 40 C28 100 65 132 110 132 C155 132 192 100 192 40"
+                    fill="none" stroke="#c9704f" stroke-width="22" stroke-linecap="round" opacity=".22"/>
+              <path d="M28 40 C28 100 65 132 110 132 C155 132 192 100 192 40"
+                    fill="none" stroke="#ffffff" stroke-width="14" stroke-linecap="round"/>
+              <path d="M28 40 C28 100 65 132 110 132 C155 132 192 100 192 40"
+                    fill="none" stroke="#c9704f" stroke-width="22" stroke-linecap="round" opacity=".5"
+                    stroke-dasharray="1 21" stroke-dashoffset="0"/>
+              <!-- brilho -->
+              <path d="M34 45 C36 85 60 112 92 122" fill="none" stroke="url(#alShine)" stroke-width="7" stroke-linecap="round"/>
+            </svg>
           </div>
-          <div class="smile-label"><span>Antes</span><span>Depois</span></div>
-          <div class="smile-caption">Mais casos em breve</div>
+          <div class="smile-caption">Alinhador Invisível</div>
         </div>
       </div>
       <div class="smile-note">fotos reais dos casos realizados no consultório</div>
