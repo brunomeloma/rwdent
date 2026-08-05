@@ -1050,6 +1050,23 @@ async function atualizarFinPinFaturamentoStatus(){
 }
 
 function switchTab(tab){
+  // Segurança: o botão de "tela cheia" do calendário, quando o navegador não
+  // suporta a API nativa de Fullscreen (comum no app instalado no Android),
+  // cai num modo manual que trava a rolagem inteira travando
+  // document.body.style.overflow='hidden' — pra não deixar rolar o fundo por
+  // trás do calendário. Se a pessoa troca de aba sem antes "minimizar" o
+  // calendário, essa trava ficava pra sempre, prendendo a rolagem em TODAS
+  // as outras telas (Início, Vendas, Procedimentos...). Sempre desfaz ao
+  // trocar de aba, não só quando sai explicitamente do calendário.
+  if(tab!=='calendario'){
+    const _calCard = document.getElementById('cal-card');
+    if(_calCard && _calCard.classList.contains('cal-pseudo-fs')){
+      _calCard.classList.remove('cal-pseudo-fs');
+      const _icon = _calCard.querySelector('.cal-full i');
+      if(_icon) _icon.className = 'ti ti-maximize';
+    }
+    document.body.style.overflow = '';
+  }
   if(tab==='invisalign_apresentacao' && !_isRhaizaClinic) tab='home';
   // Secretária nunca entra no Painel Financeiro (nem via PIN — ela não tem).
   if(tab==='financeiro' && _ehSecretaria()){
