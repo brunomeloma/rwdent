@@ -106,12 +106,35 @@ const MONTHS_PT = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho'
 // UI HELPERS
 // ══════════════════════════════════════════════════════
 function showLoading(v){ document.getElementById('loading').style.display = v ? 'flex' : 'none'; }
+// Rede de segurança: dezenas de funções fazem showLoading(true) -> await
+// operação -> showLoading(false), sem try/finally. Se QUALQUER uma dessas
+// operações lançar um erro inesperado (rede caindo no meio, etc.), o
+// showLoading(false) nunca roda e o overlay (tela inteira, z-index alto)
+// fica preso pra sempre — a partir daí NENHUM clique no app funciona mais
+// (inclusive o botão de Assinar), sem nenhum aviso visual óbvio do porquê.
+// Qualquer erro não tratado destrava a tela na hora, em vez de deixar a
+// pessoa presa até recarregar a página.
+window.addEventListener('error', ()=>{
+  const el = document.getElementById('loading');
+  if(el && el.style.display==='flex') el.style.display='none';
+});
+window.addEventListener('unhandledrejection', ()=>{
+  const el = document.getElementById('loading');
+  if(el && el.style.display==='flex') el.style.display='none';
+});
 function showToast(msg, type='success'){
   const t = document.getElementById('toast');
   t.textContent = msg; t.className = `toast show ${type}`;
   setTimeout(()=>{ t.className='toast'; }, 3800);
 }
 function escapeHtml(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+// Pra texto livre inserido dentro de onclick="funcao('...')" (nome de
+// procedimento vindo de um <textarea>, por exemplo): uma quebra de linha no
+// meio do texto quebra o literal JS do atributo (a string nunca fecha) e o
+// clique simplesmente não faz NADA, sem erro nenhum visível pro usuário —
+// então tira quebra de linha/barra invertida ANTES de fazer o escape de
+// HTML de sempre.
+function escapeJsAttr(s){ return escapeHtml(String(s||'').replace(/\\/g,'\\\\').replace(/\r?\n/g,' ')); }
 
 // ── MÁSCARAS DE INPUT ──
 function maskTel(el){
@@ -511,9 +534,13 @@ function renderAdminTable(){
     // acontece sozinha quando o pagamento cair (api/mercadopago-webhook.js).
     actions += ` <button class="admin-btn" style="background:#e8f5e9;color:#2e7d32;border-color:#a5d6a7;" onclick="adminGerarAssinatura('${c.id}',false)" title="Gera o link de assinatura mensal (R$69,90) pra mandar no WhatsApp"><i class="ti ti-credit-card"></i> Assinatura</button>`;
     actions += ` <button class="admin-btn" style="background:#e3f2fd;color:#1565c0;border-color:#90caf9;" onclick="adminGerarAssinatura('${c.id}',true)" title="Gera link de teste grátis (3 dias) — cliente cadastra o cartão mas só é cobrado se não cancelar"><i class="ti ti-gift"></i> Teste grátis</button>`;
+    // Pagamento combinado direto no Pix (fora do Mercado Pago): não tem
+    // webhook nenhum avisando o servidor, então libera manualmente aqui —
+    // mesmo prazo de 31 dias que um ciclo pago de verdade.
+    actions += ` <button class="admin-btn" style="background:#e0f7f5;color:#00695c;border-color:#4db6ac;" onclick="adminLiberarPix('${c.id}')" title="Cliente pagou direto no Pix (fora do Mercado Pago) — libera acesso completo por 31 dias na hora"><i class="ti ti-qrcode"></i> Liberar Pix</button>`;
     // Deletar clínica (irreversível): só admin, pede senha, e o servidor recusa
     // deletar clínica de admin. Não aparece nas clínicas admin (viram "Admin" abaixo).
-    actions += ` <button class="admin-btn" style="background:#fdecea;color:#c0392b;border-color:#f5c6cb;" onclick="adminDeletarClinica('${c.id}','${escapeHtml(c.nome_cli||c.email||'').replace(/'/g,'&#39;')}')" title="Deletar a clínica e TODOS os dados dela (irreversível)"><i class="ti ti-trash"></i> Deletar</button>`;
+    actions += ` <button class="admin-btn" style="background:#fdecea;color:#c0392b;border-color:#f5c6cb;" onclick="adminDeletarClinica('${c.id}','${escapeJsAttr(c.nome_cli||c.email||'')}')" title="Deletar a clínica e TODOS os dados dela (irreversível)"><i class="ti ti-trash"></i> Deletar</button>`;
 
     // Don't show action buttons for admin's own clinics
     if(_ADMIN_IDS.includes(c.user_id)) actions = '<span style="color:var(--rose-text);font-size:11px;">Admin</span>';
@@ -594,6 +621,18 @@ async function adminGerarAssinatura(clinicaId, trial){
     showLoading(false);
     showToast('Erro ao gerar assinatura: '+e.message,'error');
   }
+}
+
+// Libera acesso completo (31 dias, mesmo prazo de um ciclo pago de verdade)
+// pra clínica que pagou direto no Pix, combinado fora do sistema — sem link,
+// sem Mercado Pago, sem esperar webhook nenhum.
+async function adminLiberarPix(id){
+  if(!confirm('Liberar acesso completo por 31 dias pra esta clínica?\n\nUse quando o pagamento foi combinado direto no Pix (fora do Mercado Pago).')) return;
+  const expira = new Date(Date.now() + 31*24*60*60*1000).toISOString();
+  const { error } = await _sb.from('clinicas').update({status:'aprovado', expira_em: expira}).eq('id', id);
+  if(error){ showToast('Erro: '+error.message,'error'); return; }
+  showToast('Acesso liberado por 31 dias (Pix)!','ok');
+  loadAdminPanel();
 }
 
 async function adminRejeitar(id){
@@ -10287,7 +10326,7 @@ function renderSignArea(pacId, atendId, nomeAtend, profNome, profCro, sigExist){
         <div class="sign-preview" style="min-height:60px;">
           ${pacSig ? `<img src="${pacSig}" style="max-height:55px;"/>` : '<span style="font-size:11px;color:var(--rose-text);">Sem assinatura</span>'}
         </div>
-        <button class="btn-secondary" style="width:100%;margin-top:6px;font-size:11px;" onclick="abrirAssinaturaPaciente(${pacId},${atendId},'${escapeHtml(nomeAtend).replace(/'/g,"&#39;")}')">
+        <button class="btn-secondary" style="width:100%;margin-top:6px;font-size:11px;" onclick="abrirAssinaturaPaciente(${pacId},${atendId},'${escapeJsAttr(nomeAtend)}')">
           <i class="ti ti-signature"></i> ${pacSig ? 'Reassinar' : 'Assinar'}
         </button>
       </div>
@@ -10296,7 +10335,7 @@ function renderSignArea(pacId, atendId, nomeAtend, profNome, profCro, sigExist){
         <div class="sign-preview" style="min-height:60px;">
           ${profSig ? `<img src="${profSig}" style="max-height:55px;"/>` : '<span style="font-size:11px;color:var(--rose-text);">Sem assinatura</span>'}
         </div>
-        <button class="btn-secondary" style="width:100%;margin-top:6px;font-size:11px;" onclick="abrirAssinaturaProfissional(${pacId},${atendId},'${escapeHtml(nomeAtend).replace(/'/g,"&#39;")}')">
+        <button class="btn-secondary" style="width:100%;margin-top:6px;font-size:11px;" onclick="abrirAssinaturaProfissional(${pacId},${atendId},'${escapeJsAttr(nomeAtend)}')">
           <i class="ti ti-signature"></i> ${profSig ? 'Reassinar' : 'Assinar'}
         </button>
         ${profNome ? `<div style="font-size:10px;color:var(--rose-text);margin-top:4px;text-align:center;">${escapeHtml(profNome)}${profCro?' · '+escapeHtml(profCro):''}</div>` : ''}
@@ -10368,7 +10407,7 @@ function renderAnamneseSignArea(pacId, nomePaciente, profNome, profCro, sigExist
         <div class="sign-preview" style="min-height:60px;">
           ${pacSig ? `<img src="${pacSig}" style="max-height:55px;"/>` : '<span style="font-size:11px;color:var(--rose-text);">Sem assinatura</span>'}
         </div>
-        <button class="btn-secondary" style="width:100%;margin-top:6px;font-size:11px;" onclick="abrirAssinaturaPacienteAnamnese(${pacId},'${escapeHtml(nomePaciente).replace(/'/g,"&#39;")}')">
+        <button class="btn-secondary" style="width:100%;margin-top:6px;font-size:11px;" onclick="abrirAssinaturaPacienteAnamnese(${pacId},'${escapeJsAttr(nomePaciente)}')">
           <i class="ti ti-signature"></i> ${pacSig ? 'Reassinar' : 'Assinar'}
         </button>
       </div>
@@ -10377,7 +10416,7 @@ function renderAnamneseSignArea(pacId, nomePaciente, profNome, profCro, sigExist
         <div class="sign-preview" style="min-height:60px;">
           ${profSig ? `<img src="${profSig}" style="max-height:55px;"/>` : '<span style="font-size:11px;color:var(--rose-text);">Sem assinatura</span>'}
         </div>
-        <button class="btn-secondary" style="width:100%;margin-top:6px;font-size:11px;" onclick="abrirAssinaturaProfissionalAnamnese(${pacId},'${escapeHtml(nomePaciente).replace(/'/g,"&#39;")}')">
+        <button class="btn-secondary" style="width:100%;margin-top:6px;font-size:11px;" onclick="abrirAssinaturaProfissionalAnamnese(${pacId},'${escapeJsAttr(nomePaciente)}')">
           <i class="ti ti-signature"></i> ${profSig ? 'Reassinar' : 'Assinar'}
         </button>
         ${profNome ? `<div style="font-size:10px;color:var(--rose-text);margin-top:4px;text-align:center;">${escapeHtml(profNome)}${profCro?' · '+escapeHtml(profCro):''}</div>` : ''}
@@ -10450,7 +10489,7 @@ function renderTermoSignArea(pacId, nomePaciente, profNome, profCro, sigExist){
         <div class="sign-preview" style="min-height:60px;">
           ${pacSig ? `<img src="${pacSig}" style="max-height:55px;"/>` : '<span style="font-size:11px;color:var(--rose-text);">Sem assinatura</span>'}
         </div>
-        <button class="btn-secondary" style="width:100%;margin-top:6px;font-size:11px;" onclick="abrirAssinaturaPacienteTermo(${pacId},'${escapeHtml(nomePaciente).replace(/'/g,"&#39;")}')">
+        <button class="btn-secondary" style="width:100%;margin-top:6px;font-size:11px;" onclick="abrirAssinaturaPacienteTermo(${pacId},'${escapeJsAttr(nomePaciente)}')">
           <i class="ti ti-signature"></i> ${pacSig ? 'Reassinar' : 'Assinar'}
         </button>
       </div>
@@ -10459,7 +10498,7 @@ function renderTermoSignArea(pacId, nomePaciente, profNome, profCro, sigExist){
         <div class="sign-preview" style="min-height:60px;">
           ${profSig ? `<img src="${profSig}" style="max-height:55px;"/>` : '<span style="font-size:11px;color:var(--rose-text);">Sem assinatura</span>'}
         </div>
-        <button class="btn-secondary" style="width:100%;margin-top:6px;font-size:11px;" onclick="abrirAssinaturaProfissionalTermo(${pacId},'${escapeHtml(nomePaciente).replace(/'/g,"&#39;")}')">
+        <button class="btn-secondary" style="width:100%;margin-top:6px;font-size:11px;" onclick="abrirAssinaturaProfissionalTermo(${pacId},'${escapeJsAttr(nomePaciente)}')">
           <i class="ti ti-signature"></i> ${profSig ? 'Reassinar' : 'Assinar'}
         </button>
         ${profNome ? `<div style="font-size:10px;color:var(--rose-text);margin-top:4px;text-align:center;">${escapeHtml(profNome)}${profCro?' · '+escapeHtml(profCro):''}</div>` : ''}
