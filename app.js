@@ -6486,8 +6486,12 @@ async function loadFinanceiro(){
 
   const safe = (str, def) => { if(str===null||str===undefined) return def; try{ const v=JSON.parse(str); return (v!==null&&v!==undefined)?v:def; }catch(e){ return def; } };
 
-  const { data } = await _sb.from('financeiro_config')
-    .select('*').eq('clinica_id', clinicaId).single();
+  // Sem .single() (ver comentário em _saveFinanceiroImpl): se houver mais de
+  // uma linha por engano, pega a mais recente em vez de dar erro e cair no
+  // "não tem nada salvo" — que resetava a config pros padrões de fábrica.
+  const { data: _rowsLoad } = await _sb.from('financeiro_config')
+    .select('*').eq('clinica_id', clinicaId).order('updated_at',{ascending:false}).limit(1);
+  const data = _rowsLoad && _rowsLoad[0];
 
   let precisaSalvar = false;
 
@@ -6549,7 +6553,8 @@ async function loadFinanceiro(){
     const _eSvPad=await saveFinanceiro();
     if(_eSvPad) showToast('Erro ao salvar padrões: '+_eSvPad.message,'error');
     // Após salvar, restaura o estoque do banco (pode ter sido importado antes)
-    const { data: _fresh } = await _sb.from('financeiro_config').select('estoque').eq('clinica_id',clinicaId).single();
+    const { data: _freshRows } = await _sb.from('financeiro_config').select('estoque').eq('clinica_id',clinicaId).order('updated_at',{ascending:false}).limit(1);
+    const _fresh = _freshRows && _freshRows[0];
     if(_fresh && _fresh.estoque){
       try {
         const _est = JSON.parse(_fresh.estoque);
@@ -6599,11 +6604,21 @@ async function _saveFinanceiroImpl(){
     combos       : JSON.stringify(combos),
     desc_cfg     : JSON.stringify(descCfg)
   };
-  // Upsert
-  const { data: existing } = await _sb.from('financeiro_config').select('id').eq('clinica_id',clinicaId).single();
+  // Upsert. NÃO usa .single() aqui: .single() dá erro se vier 0 OU 2+ linhas
+  // — e se por qualquer motivo já existir mais de uma linha de
+  // financeiro_config pra essa clínica (ex: duas abas salvando ao mesmo
+  // tempo no passado), esse erro fazia o código achar que "não existe nada"
+  // e criar uma linha nova a cada save, numa bola de neve que deixava tudo
+  // cada vez mais inconsistente — e o load (abaixo) também sofria disso,
+  // fazendo a config voltar pro padrão de vez em quando sem explicação.
+  // Com .limit(1) + array, sempre acha a linha mais recente e atualiza ELA,
+  // em vez de duplicar.
+  const { data: rows } = await _sb.from('financeiro_config')
+    .select('id').eq('clinica_id',clinicaId).order('updated_at',{ascending:false}).limit(1);
+  const existing = rows && rows[0];
   let saveError;
   if(existing){
-    const { error } = await _sb.from('financeiro_config').update(payload).eq('clinica_id',clinicaId);
+    const { error } = await _sb.from('financeiro_config').update(payload).eq('id', existing.id);
     saveError = error;
   } else {
     const { error } = await _sb.from('financeiro_config').insert([payload]);
@@ -8859,17 +8874,12 @@ async function vrFinalizarMobile(){
     }
   }
 
-  const { data: existing } = await _sb.from('financeiro_config').select('id').eq('clinica_id',clinicaId).single();
-  const payload = {
-    clinica_id:clinicaId, procs:JSON.stringify(procs), mats:JSON.stringify(mats),
-    estoque:JSON.stringify(estoque), proc_insumos:JSON.stringify(procInsumos),
-    vendas:JSON.stringify(vendas), despesas:JSON.stringify(despesas), cfg:JSON.stringify(cfg),
-    taxas_cfg:JSON.stringify(taxasCfg), updated_at:new Date().toISOString(),
-    combos:JSON.stringify(combos), desc_cfg:JSON.stringify(descCfg)
-  };
-  const { error: saveErr } = existing
-    ? await _sb.from('financeiro_config').update(payload).eq('clinica_id',clinicaId)
-    : await _sb.from('financeiro_config').insert([payload]);
+  // Usa o saveFinanceiro() central (mesmo lock/proteção contra corrida das
+  // outras telas) em vez de reimplementar o upsert aqui — essa cópia usava
+  // .select(...).single() pra decidir update-ou-insert, o que quebra (e
+  // silenciosamente recomeça do zero) se por qualquer motivo já existirem
+  // duas linhas de financeiro_config pra mesma clínica.
+  const saveErr = await saveFinanceiro();
 
   if(saveErr){
     vendas.pop();
@@ -9200,25 +9210,13 @@ async function vrFinalizar(){
     }
   }
 
-  // Salva tudo (estoque + venda) atomicamente
-  const { data: existing } = await _sb.from('financeiro_config').select('id').eq('clinica_id',clinicaId).single();
-  const payload = {
-    clinica_id   : clinicaId,
-    procs        : JSON.stringify(procs),
-    mats         : JSON.stringify(mats),
-    estoque      : JSON.stringify(estoque),
-    proc_insumos : JSON.stringify(procInsumos),
-    vendas       : JSON.stringify(vendas),
-    despesas     : JSON.stringify(despesas),
-    cfg          : JSON.stringify(cfg),
-    taxas_cfg    : JSON.stringify(taxasCfg),
-    updated_at   : new Date().toISOString(),
-    combos       : JSON.stringify(combos),
-    desc_cfg     : JSON.stringify(descCfg)
-  };
-  const { error: saveErr } = existing
-    ? await _sb.from('financeiro_config').update(payload).eq('clinica_id',clinicaId)
-    : await _sb.from('financeiro_config').insert([payload]);
+  // Salva tudo (estoque + venda) atomicamente. Usa o saveFinanceiro()
+  // central (mesmo lock/proteção contra corrida das outras telas) em vez de
+  // reimplementar o upsert aqui — essa cópia usava .select(...).single()
+  // pra decidir update-ou-insert, o que quebra (e silenciosamente recomeça
+  // do zero) se por qualquer motivo já existirem duas linhas de
+  // financeiro_config pra mesma clínica.
+  const saveErr = await saveFinanceiro();
 
   if(saveErr){
     // ROLLBACK: desfaz venda e estoque na memória para não ficar inconsistente
@@ -11586,7 +11584,8 @@ async function histSalvarEIrOdonto(pacId){
       const denteProcs = histDentesProc[dente]||[];
       const cond = denteProcs[0]?.cond||'restaurado';
       const proc = document.getElementById('hist-proc')?.value||'';
-      const {data:ex}=await _sb.from('procedimentos_dentes').select('id').eq('clinica_id',clinicaId).eq('paciente_id',pacId).eq('dente',dente).single();
+      const {data:_exRows}=await _sb.from('procedimentos_dentes').select('id').eq('clinica_id',clinicaId).eq('paciente_id',pacId).eq('dente',dente).limit(1);
+      const ex = _exRows && _exRows[0];
       if(ex){ const {error:_eU}=await _sb.from('procedimentos_dentes').update({condicao:cond,procedimento:proc}).eq('id',ex.id); if(_eU) console.error('Erro odontograma:',_eU.message); }
       else   { const {error:_eI}=await _sb.from('procedimentos_dentes').insert([{clinica_id:clinicaId,paciente_id:pacId,dente,condicao:cond,procedimento:proc,obs:'',data:document.getElementById('hist-data')?.value||hoje()}]); if(_eI) console.error('Erro odontograma:',_eI.message); }
     }
@@ -11927,8 +11926,9 @@ async function histSalvar(pacId){
   for(const dente of dentes){
     const denteProcs = histDentesProc[dente] || [{cond,qtd:1}];
     const condDente = denteProcs[0]?.cond || cond;
-    const {data:ex,error:errSel}=await _sb.from('procedimentos_dentes').select('id').eq('clinica_id',clinicaId).eq('paciente_id',pacId).eq('dente',dente).single();
-    if(errSel && errSel.code!=='PGRST116'){
+    const {data:_exRows2,error:errSel}=await _sb.from('procedimentos_dentes').select('id').eq('clinica_id',clinicaId).eq('paciente_id',pacId).eq('dente',dente).limit(1);
+    const ex = _exRows2 && _exRows2[0];
+    if(errSel){
       showLoading(false); showToast('Erro ao carregar dente '+dente+': '+errSel.message,'error'); return;
     }
     if(ex){
@@ -12946,6 +12946,22 @@ async function salvarConfiguracoes(){
   if(taxaDebEl){
     taxasCfg.debito = parseFloat(taxaDebEl.value)||0;
     taxasCfg.credito = [1,2,3,4,5,6,7,8,9,10,11,12].map(p=>parseFloat(document.getElementById('cfg-taxa-cred'+p)?.value)||0);
+  }
+  // Precificação (salário/horas/tributos/desperdício/margem/% manutenção)
+  // fica na MESMA tela de Configurações, mas antes só era capturada pelo
+  // botão separado "Salvar precificação" — clicar em "Salvar alterações"
+  // (este botão) enquanto a pessoa tinha acabado de editar, por exemplo, o
+  // campo de imposto, descartava a edição em silêncio (o botão salvava o
+  // resto e reescrevia cfg.trib com o valor antigo, que ainda estava em
+  // memória). Agora captura tudo que estiver visível, não só uma parte.
+  const salarioEl = document.getElementById('cfg-salario');
+  if(salarioEl){
+    cfg.salario   = Number(salarioEl.value)||0;
+    cfg.horas     = Number(document.getElementById('cfg-horas')?.value)||132;
+    cfg.trib      = Number(document.getElementById('cfg-trib')?.value)||0;
+    cfg.desperd   = Number(document.getElementById('cfg-desperd')?.value)||0;
+    cfg.margem    = Number(document.getElementById('cfg-margem')?.value)||100;
+    cfg.pct_manut = Number(document.getElementById('cfg-pct-manut')?.value)||15;
   }
   if(!_financeiroCarregado) await loadFinanceiro();
   const _eCfg=await saveFinanceiro();
