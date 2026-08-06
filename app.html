@@ -2209,7 +2209,7 @@
   <div style="color:var(--rose-text);font-size:14px;">Carregando...</div>
 </div>
 
-<script src="app.js?v=75"></script>
+<script src="app.js?v=76"></script>
 
 <!-- ══ MODAL RELATÓRIO MENSAL ══ -->
 <div class="modal-overlay" id="modal-relatorio" onclick="if(event.target===this)closeModal('modal-relatorio')" style="align-items:flex-start;padding-top:40px;overflow-y:auto;">
@@ -2386,7 +2386,7 @@
       <div class="form-group"><label>Quantidade atual</label><input type="number" id="me-atual" min="0" step="0.01"/></div>
       <div class="form-group"><label>Ponto mínimo</label><input type="number" id="me-min" min="0" step="0.01"/></div>
       <div class="form-group"><label>Ponto de compra</label><input type="number" id="me-compra" min="0" step="0.01"/></div>
-      <div class="form-group"><label>Unidade</label><input type="text" id="me-unid" list="unid-list"/></div>
+      <div class="form-group"><label>Unidade</label><input type="text" id="me-unid" list="unid-list" oninput="meAtualizarPassos()"/></div>
     </div>
     <button type="button" onclick="toggleCalcPacotes()" style="background:none;border:none;color:var(--rose);font-size:11px;cursor:pointer;padding:0;margin:-6px 0 10px;text-decoration:underline;">
       <i class="ti ti-calculator"></i> Prefiro calcular por pacotes fechados + soltos

@@ -7349,6 +7349,22 @@ async function deleteEstSelecionados(){
   renderMats(); renderEstoque(); updateEstDelBtn();
   showToast('Materiais arquivados.');
 }
+// Mesma ideia de mmAtualizarPassos() (cadastro de material), mas pro modal
+// "Atualizar estoque" — esse modal tinha o step fixo em 0.01 direto no HTML,
+// sem levar em conta a unidade do material. Resultado: num material em
+// "unidade" (agulha, seringa...) o campo aceitava fração; e em ml/grama, se
+// o navegador ignorasse o step fixo por qualquer motivo (foco/blur, digitar
+// e usar a setinha), o passo virava 1 inteiro — clicar uma vez na setinha
+// pra cima saltava de 1,99 pra 2,99 em vez de ir pra 2,00.
+function meAtualizarPassos(){
+  const unid = document.getElementById('me-unid')?.value||'';
+  const passo = passoQtd(unid);
+  ['me-atual','me-min','me-compra'].forEach(id=>{
+    const el = document.getElementById(id); if(!el) return;
+    el.step = passo;
+    if(el.value!=='') el.value = arredondarQtd(el.value, unid);
+  });
+}
 function openEstEdit(id){
   const m = mats.find(x=>x.id===id); if(!m) return;
   const e = estoque[id]||{};
@@ -7357,6 +7373,7 @@ function openEstEdit(id){
   document.getElementById('me-min').value    = e.min??0;
   document.getElementById('me-compra').value = e.compra??0;
   document.getElementById('me-unid').value   = m.unid||'';
+  meAtualizarPassos();
   const calcBox = document.getElementById('calc-pacotes-box');
   if(calcBox) calcBox.style.display = 'none'; // não carrega aberto/com dados do material anterior
   openModal('modal-est');

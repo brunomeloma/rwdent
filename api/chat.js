@@ -325,6 +325,25 @@ const TOOLS = [
         required: ['paciente_query', 'data', 'horario']
       }
     }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'adicionar_estoque',
+      description: 'Repõe (soma) quantidade ao estoque de um material já cadastrado — soma ao que já tem, nunca substitui. Aceita informar direto em unidades/ml/g (parâmetro "unidades"), OU em caixas/pacotes fechados mais unidades avulsas (parâmetros "caixas" + "unidades_avulsas" — usa a "quantidade por embalagem" já cadastrada no material pra saber quanto tem em cada caixa, a menos que o usuário informe um número diferente em "unidades_por_caixa"). Ex: "adiciona 50 luvas" (unidades=50), ou "chegaram 3 caixas de sugador, mais 20 soltas" (caixas=3, unidades_avulsas=20). ESCRITA — só chame após o usuário confirmar com "sim", "pode" ou "confirmo".',
+      parameters: {
+        type: 'object',
+        additionalProperties: false,
+        properties: {
+          material:           { type: 'string', description: 'Nome (ou parte do nome) do material já cadastrado no estoque' },
+          unidades:           { type: 'number', description: 'Quantidade a somar ao estoque, direto em unidades/ml/g — use quando o usuário disser um número só, sem falar em caixas' },
+          caixas:             { type: 'number', description: 'Número de caixas/pacotes fechados a somar (use com unidades_avulsas; a quantidade por caixa vem do material, a menos que informe unidades_por_caixa)' },
+          unidades_por_caixa: { type: 'number', description: 'Quantas unidades vêm em cada caixa — só informe se o usuário disser um número diferente do que já está cadastrado no material' },
+          unidades_avulsas:   { type: 'number', description: 'Unidades soltas fora das caixas, somadas junto (usado com caixas)' }
+        },
+        required: ['material']
+      }
+    }
   }
 ];
 
@@ -382,6 +401,7 @@ FERRAMENTAS DISPONÍVEIS:
 • cancelar_consulta   → marca consulta como cancelada, sem apagar (⚠️ ESCRITA — exige confirmação)
 • registrar_venda_avulsa → lança no faturamento um valor recebido de paciente sem cadastro/prontuário, ex: "entrou uma paciente da outra dentista, cobrei 150 de profilaxia no pix" (⚠️ ESCRITA — exige confirmação). Não cadastra paciente nem cria prontuário. Se o usuário pedir vários valores de uma vez (ex: "adiciona 250, 500 e 1000"), depois de confirmado chame essa ferramenta uma vez pra cada valor na mesma resposta — não precisa fazer um por vez em mensagens separadas.
 • registrar_despesa → lança uma saída/despesa (protético, laboratório, material etc.), ex: "paguei 300 pro protético da coroa do Carlos" (⚠️ ESCRITA — exige confirmação). Entra como negativo, descontado só no faturamento líquido.
+• adicionar_estoque → repõe (soma) quantidade no estoque de um material já cadastrado, ex: "adiciona 50 unidades de luva", "chegaram 3 caixas de sugador, 100 por caixa, mais 20 soltas" (⚠️ ESCRITA — exige confirmação). Se o material não existir ou o nome bater com mais de um cadastrado, a ferramenta avisa em vez de adivinhar — nesse caso peça pro usuário confirmar o nome exato.
 
 Converta SEMPRE datas relativas ("hoje", "amanhã", "sexta", "semana que vem") para YYYY-MM-DD usando a data de hoje acima antes de chamar as ferramentas de agenda. Para "esta semana", use data + data_fim.${ctx?.currentPatient ? `
 
@@ -400,7 +420,7 @@ REGRAS OBRIGATÓRIAS:
 7. Se o paciente não for encontrado ou houver vários pacientes parecidos, use os dados reais retornados pela ferramenta e peça para o usuário escolher.
 8. Google Agenda direto AINDA NÃO tem OAuth conectado. Depois de agendar, forneça o link gerado para adicionar ao Google Agenda.
 9. Procedimentos/preços: use apenas a lista segura "PROCEDIMENTOS/PREÇOS" acima. Não invente preço. Se não encontrar, diga para conferir em Financeiro > Procedimentos.
-9.1. Financeiro, vendas, faturamento, lucro, caixa e estoque não têm consulta permitida pela IA; apenas oriente onde ficam.
+9.1. Financeiro, vendas, faturamento, lucro e caixa não têm consulta/leitura permitida pela IA; apenas oriente onde ficam. Estoque é exceção parcial: dá pra ADICIONAR (repor) quantidade via adicionar_estoque, mas não dá pra consultar/listar o estoque atual — se perguntarem "quanto tem de X", oriente a olhar na tela de Estoque.
 10. Nunca apague dados. Nunca acesse dados de outras clínicas.
 
 Responda sempre em português do Brasil. Seja breve e direto.`;
@@ -571,8 +591,12 @@ async function runTool(name, args, sb, clinicId) {
       // vendas vive como JSON dentro de financeiro_config (não é tabela normal) —
       // por isso lê, adiciona e grava só essa coluna (update parcial, não mexe
       // em procs/mats/estoque/cfg que também moram nessa mesma linha).
-      const { data: fc, error: fcErr } = await sb.from('financeiro_config').select('vendas').eq('clinica_id', clinicId).single();
+      // Sem .single(): dá erro em 0 OU 2+ linhas — usa a mais recente em vez
+      // de quebrar se por acaso existir mais de uma (mesma correção do app).
+      const { data: fcRowsV, error: fcErr } = await sb.from('financeiro_config')
+        .select('vendas').eq('clinica_id', clinicId).order('updated_at', { ascending: false }).limit(1);
       if (fcErr) throw new Error(fcErr.message);
+      const fc = fcRowsV && fcRowsV[0];
       let vendasAtuais = [];
       try { vendasAtuais = JSON.parse(fc?.vendas || '[]'); } catch { vendasAtuais = []; }
       const nextId = vendasAtuais.length ? Math.max(...vendasAtuais.map(v => Number(v.id) || 0)) + 1 : 1;
@@ -614,8 +638,11 @@ async function runTool(name, args, sb, clinicId) {
 
       // despesas também vive como JSON dentro de financeiro_config, mesmo
       // esquema de update parcial que registrar_venda_avulsa usa pra vendas.
-      const { data: fc, error: fcErr } = await sb.from('financeiro_config').select('despesas').eq('clinica_id', clinicId).single();
+      // Sem .single() (ver comentário em registrar_venda_avulsa acima).
+      const { data: fcRowsD, error: fcErr } = await sb.from('financeiro_config')
+        .select('despesas').eq('clinica_id', clinicId).order('updated_at', { ascending: false }).limit(1);
       if (fcErr) throw new Error(fcErr.message);
+      const fc = fcRowsD && fcRowsD[0];
       let despesasAtuais = [];
       try { despesasAtuais = JSON.parse(fc?.despesas || '[]'); } catch { despesasAtuais = []; }
       const nextId = despesasAtuais.length ? Math.max(...despesasAtuais.map(d => Number(d.id) || 0)) + 1 : 1;
@@ -880,6 +907,82 @@ async function runTool(name, args, sb, clinicId) {
           obs: novo.obs || '',
           google_calendar_url: buildGoogleCalendarUrl(novo)
         }
+      });
+    }
+
+    case 'adicionar_estoque': {
+      const busca = String(args.material || '').replace(/[,()%]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 100);
+      if (!busca) throw new Error('Informe o nome do material.');
+
+      // mats/estoque vivem como JSON dentro de financeiro_config (não são
+      // tabela normal) — mesmo esquema de update parcial que
+      // registrar_venda_avulsa/registrar_despesa já usam. Sem .single() na
+      // leitura: se por acaso já existir mais de uma linha pra clínica, usa a
+      // mais recente em vez de dar erro (mesma correção aplicada no app).
+      const { data: fcRows, error: fcErr } = await sb.from('financeiro_config')
+        .select('mats, estoque').eq('clinica_id', clinicId)
+        .order('updated_at', { ascending: false }).limit(1);
+      if (fcErr) throw new Error(fcErr.message);
+      const fc = fcRows && fcRows[0];
+      if (!fc) throw new Error('Estoque desta clínica ainda não foi configurado — cadastre materiais em Financeiro > Materiais primeiro.');
+
+      let matsAtuais = [];
+      let estoqueAtual = {};
+      try { matsAtuais = JSON.parse(fc.mats || '[]'); } catch { matsAtuais = []; }
+      try { estoqueAtual = JSON.parse(fc.estoque || '{}'); } catch { estoqueAtual = {}; }
+
+      const norm = s => String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+      const buscaNorm = norm(busca);
+      const encontrados = matsAtuais.filter(m => norm(m.nome).includes(buscaNorm));
+
+      if (!encontrados.length) return JSON.stringify({
+        tool: name, ok: false, kind: 'stock_material_not_found',
+        message: `Não encontrei nenhum material cadastrado com "${busca}". Confira o nome em Financeiro > Materiais.`
+      });
+      if (encontrados.length > 1) return JSON.stringify({
+        tool: name, ok: false, kind: 'stock_material_ambiguous',
+        message: `Encontrei ${encontrados.length} materiais com "${busca}" — peça pra escolher o nome exato.`,
+        opcoes: encontrados.slice(0, 8).map(m => m.nome)
+      });
+
+      const mat = encontrados[0];
+
+      // Mesma regra do app (ver _UNIDADES_INTEIRAS em app.js): unidade,
+      // caixa, seringa, kit... não aceitam fração; ml/g/kg aceitam.
+      const UNIDADES_INTEIRAS = new Set(['unid', 'und', 'unidade', 'uni', 'kit', 'caixa', 'cx',
+        'frasco', 'seringa', 'ampola', 'capsula', 'pacote', 'pote', 'par', 'peca', 'pc', 'rolo', 'placa']);
+      const ehInteira = UNIDADES_INTEIRAS.has(norm(mat.unid));
+      const arred = v => ehInteira ? Math.round(v) : parseFloat(Number(v).toFixed(3));
+
+      let aAdicionar;
+      if (args.caixas != null) {
+        const caixas = Number(args.caixas) || 0;
+        const porCaixa = Number(args.unidades_por_caixa) || Number(mat.qtde) || 0;
+        if (!porCaixa) throw new Error(`Não sei quantas unidades vêm em cada caixa de "${mat.nome}" — informe unidades_por_caixa, ou cadastre a "Qtde por embalagem" desse material em Financeiro > Materiais.`);
+        const avulsas = Number(args.unidades_avulsas) || 0;
+        aAdicionar = caixas * porCaixa + avulsas;
+      } else if (args.unidades != null) {
+        aAdicionar = Number(args.unidades) || 0;
+      } else {
+        throw new Error('Informe a quantidade a adicionar — em unidades, ou em caixas.');
+      }
+      if (!Number.isFinite(aAdicionar) || aAdicionar <= 0) throw new Error('Quantidade inválida — informe um número maior que zero.');
+      aAdicionar = arred(aAdicionar);
+
+      const registroAtual = estoqueAtual[mat.id] || { atual: 0, min: 0, compra: 0 };
+      const estoqueAnterior = Number(registroAtual.atual) || 0;
+      const estoqueNovo = arred(estoqueAnterior + aAdicionar);
+      estoqueAtual[mat.id] = { ...registroAtual, atual: estoqueNovo };
+
+      const { error: updErr } = await sb.from('financeiro_config')
+        .update({ estoque: JSON.stringify(estoqueAtual), updated_at: new Date().toISOString() })
+        .eq('clinica_id', clinicId);
+      if (updErr) throw new Error(updErr.message);
+
+      return JSON.stringify({
+        tool: name, ok: true, kind: 'stock_added',
+        material: mat.nome, unidade: mat.unid || '',
+        adicionado: aAdicionar, estoque_anterior: estoqueAnterior, estoque_novo: estoqueNovo
       });
     }
 
