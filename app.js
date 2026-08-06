@@ -7402,14 +7402,52 @@ async function saveEst(){
 // Foto/print da nota -> Gemini extrai os produtos e já sugere o material
 // cadastrado correspondente -> pessoa confere/ajusta cada linha -> confirma
 // -> soma tudo ao estoque de uma vez. Nunca escreve nada sem essa revisão.
+// Converte cada página de um PDF numa imagem JPEG (pdf.js renderiza em
+// canvas) — assim a nota em PDF entra no MESMO pipeline das fotos, sem
+// precisar a IA lidar com PDF cru.
+async function _pdfParaImagens(file, maxPaginas){
+  if(!window.pdfjsLib) throw new Error('Leitor de PDF não carregou — recarregue a página e tente de novo.');
+  const buf = await file.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+  const imagens = [];
+  const n = Math.min(pdf.numPages, maxPaginas);
+  for(let p=1; p<=n; p++){
+    const page = await pdf.getPage(p);
+    const viewport = page.getViewport({ scale: 2 }); // resolução alta — letra miúda de nota fiscal
+    const canvas = document.createElement('canvas');
+    canvas.width = viewport.width; canvas.height = viewport.height;
+    await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+    const blob = await new Promise(res=>canvas.toBlob(res,'image/jpeg',0.92));
+    if(blob) imagens.push(new File([blob], file.name.replace(/\.pdf$/i,'')+`_p${p}.jpg`, {type:'image/jpeg'}));
+  }
+  return imagens;
+}
+
 async function nfLerArquivos(fileList){
-  const arquivos = [...(fileList||[])].filter(f=>f.type.startsWith('image/'));
+  const brutos = [...(fileList||[])];
   const inputEl = document.getElementById('nf-input');
   if(inputEl) inputEl.value = '';
-  if(!arquivos.length) return;
-  if(arquivos.length > 5){ showToast('Selecione no máximo 5 fotos por vez (páginas da mesma nota).','warn'); return; }
+  if(!brutos.length) return;
 
   showLoading(true);
+  let arquivos;
+  try{
+    // PDFs viram imagem (1 por página) ANTES do limite de 5 — assim uma nota
+    // de 1 página em PDF conta como 1, não como "arquivo PDF inteiro".
+    const partes = await Promise.all(brutos.map(async f=>{
+      if(f.type==='application/pdf') return await _pdfParaImagens(f, 5);
+      if(f.type.startsWith('image/')) return [f];
+      return [];
+    }));
+    arquivos = partes.flat();
+  }catch(e){
+    showLoading(false);
+    showToast('Erro ao ler o PDF: '+e.message,'error');
+    return;
+  }
+  if(!arquivos.length){ showLoading(false); showToast('Selecione uma foto ou PDF da nota fiscal.','warn'); return; }
+  if(arquivos.length > 5){ showLoading(false); showToast('No máximo 5 páginas/fotos por vez.','warn'); return; }
+
   try{
     // Resolução um pouco maior que a da galeria (1800 vs 1600): nota fiscal
     // tem letra miúda, precisa de mais nitidez pra IA conseguir ler.

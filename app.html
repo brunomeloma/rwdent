@@ -27,6 +27,13 @@
 </script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<!-- Leitura de PDF (nota fiscal) — converte cada página em imagem no navegador antes de mandar pra IA -->
+<script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
+<script>
+  if (window.pdfjsLib) {
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
+  }
+</script>
 
 <link rel="stylesheet" href="app.css?v=14"/>
 <link rel="stylesheet" href="premium-design.css"/>
@@ -856,7 +863,7 @@
             <button class="btn-primary" onclick="openAddMat()"><i class="ti ti-plus"></i> Novo material</button>
           </div>
         </div>
-        <input type="file" id="nf-input" accept="image/*" multiple capture="environment" style="display:none;" onchange="nfLerArquivos(this.files)"/>
+        <input type="file" id="nf-input" accept="image/*,application/pdf" multiple style="display:none;" onchange="nfLerArquivos(this.files)"/>
         <div id="est-metrics" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:16px;"></div>
         <div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;">
           <input type="text" id="est-search" placeholder="Buscar..." oninput="filterEstoque()" style="flex:1;min-width:150px;"/>
@@ -2211,7 +2218,7 @@
   <div style="color:var(--rose-text);font-size:14px;">Carregando...</div>
 </div>
 
-<script src="app.js?v=78"></script>
+<script src="app.js?v=79"></script>
 
 <!-- ══ MODAL RELATÓRIO MENSAL ══ -->
 <div class="modal-overlay" id="modal-relatorio" onclick="if(event.target===this)closeModal('modal-relatorio')" style="align-items:flex-start;padding-top:40px;overflow-y:auto;">
