@@ -7398,6 +7398,122 @@ async function saveEst(){
   else showToast('Erro ao salvar estoque: '+_eSvEst.message,'error');
 }
 
+// ── LER NOTA FISCAL (IA) ──────────────────────────────────────────────────
+// Foto/print da nota -> Gemini extrai os produtos e já sugere o material
+// cadastrado correspondente -> pessoa confere/ajusta cada linha -> confirma
+// -> soma tudo ao estoque de uma vez. Nunca escreve nada sem essa revisão.
+async function nfLerArquivos(fileList){
+  const arquivos = [...(fileList||[])].filter(f=>f.type.startsWith('image/'));
+  const inputEl = document.getElementById('nf-input');
+  if(inputEl) inputEl.value = '';
+  if(!arquivos.length) return;
+  if(arquivos.length > 5){ showToast('Selecione no máximo 5 fotos por vez (páginas da mesma nota).','warn'); return; }
+
+  showLoading(true);
+  try{
+    // Resolução um pouco maior que a da galeria (1800 vs 1600): nota fiscal
+    // tem letra miúda, precisa de mais nitidez pra IA conseguir ler.
+    const comprimidas = await Promise.all(arquivos.map(f=>_galeriaCompress(f, 1800)));
+    const base64s = await Promise.all(comprimidas.map(b=>_fileToBase64(b)));
+    const { data:{ session } } = await _sb.auth.getSession();
+    const resp = await fetch('/api/ler-nota-fiscal', {
+      method:'POST',
+      headers:{ 'Content-Type':'application/json', 'Authorization':'Bearer '+(session?.access_token||'') },
+      body: JSON.stringify({ imagesBase64: base64s })
+    });
+    const json = await resp.json();
+    showLoading(false);
+    if(!resp.ok){ showToast(json.error||'Erro ao ler a nota.','error'); return; }
+    if(json.aviso){ showToast(json.aviso,'warn'); return; }
+    if(!json.itens || !json.itens.length){ showToast('Não consegui identificar produtos nessa nota — tente uma foto mais nítida, bem enquadrada.','warn'); return; }
+    nfAbrirRevisao(json.itens);
+  }catch(e){
+    showLoading(false);
+    showToast('Erro ao ler a nota: '+e.message,'error');
+  }
+}
+
+function nfAbrirRevisao(itens){
+  const modal = document.createElement('div');
+  modal.className = 'modal-overlay';
+  modal.style.cssText = 'display:flex;align-items:flex-start;justify-content:center;padding:20px;overflow-y:auto;';
+  modal.innerHTML = `<div class="modal-box" style="max-width:640px;max-height:88vh;overflow-y:auto;padding:24px;">
+    <h3 style="font-size:15px;font-weight:800;color:var(--rose-dark);margin-bottom:6px;"><i class="ti ti-scan"></i> Revisar nota fiscal</h3>
+    <p style="font-size:12px;color:var(--rose-text);margin-bottom:16px;">Confira o material e a quantidade de cada linha antes de somar ao estoque. Linhas com ⚠️ vieram sem material certo — escolha manualmente ou desmarque pra pular.</p>
+    <div id="nf-revisao-lista" style="display:flex;flex-direction:column;gap:10px;margin-bottom:16px;"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;">
+      <button class="btn-secondary" id="nf-revisao-cancelar">Cancelar</button>
+      <button class="btn-primary" id="nf-revisao-confirmar"><i class="ti ti-check"></i> Adicionar ao estoque</button>
+    </div>
+  </div>`;
+  document.body.appendChild(modal);
+
+  const lista = modal.querySelector('#nf-revisao-lista');
+  const matsAtivos = mats.filter(m=>!m.arquivado);
+  lista.innerHTML = itens.map((it,i)=>{
+    const semMatch = !it.material_id;
+    const avisoTxt = it.confianca!=='alta' && it.observacao ? it.observacao : (semMatch ? 'material não identificado — escolha manualmente' : '');
+    const opcoesMats = matsAtivos.map(m=>`<option value="${m.id}" ${m.id===it.material_id?'selected':''}>${escapeHtml(m.nome)} (${escapeHtml(m.unid||'unid')})</option>`).join('');
+    return `<div style="border:1.5px solid ${semMatch?'#f5c6cb':'var(--rose-light)'};border-radius:10px;padding:10px;">
+      <label style="display:flex;align-items:center;gap:6px;">
+        <input type="checkbox" id="nf-inc-${i}" ${it.material_id?'checked':''}/>
+        <span style="font-size:12px;color:var(--rose-text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escapeHtml(it.produto_nota)}">${escapeHtml(it.produto_nota)}${it.valor_unitario?` — ${fmtBRL(it.valor_unitario)}/un`:''}</span>
+      </label>
+      ${avisoTxt ? `<div style="font-size:10.5px;color:${semMatch?'#dc2626':'#856404'};font-weight:600;margin:3px 0 0 22px;">⚠️ ${escapeHtml(avisoTxt)}</div>` : ''}
+      <div style="display:flex;gap:8px;margin-top:6px;flex-wrap:wrap;align-items:center;margin-left:22px;">
+        <select id="nf-mat-${i}" style="flex:1;min-width:160px;padding:6px 8px;border:1.5px solid var(--rose-light);border-radius:8px;font-size:12px;">
+          <option value="">— escolher material —</option>
+          ${opcoesMats}
+        </select>
+        <input type="number" id="nf-qtd-${i}" value="${it.quantidade}" min="0" step="0.01" style="width:80px;padding:6px 8px;border:1.5px solid var(--rose-light);border-radius:8px;font-size:12px;text-align:right;"/>
+      </div>
+    </div>`;
+  }).join('');
+
+  // Ajusta o passo/arredondamento do campo de quantidade conforme a unidade
+  // do material selecionado em cada linha (mesma regra do resto do
+  // sistema — ver passoQtd/arredondarQtd) e auto-marca a linha quando a
+  // pessoa escolhe um material manualmente pra uma linha em dúvida.
+  itens.forEach((it,i)=>{
+    const sel = document.getElementById(`nf-mat-${i}`);
+    const qtdEl = document.getElementById(`nf-qtd-${i}`);
+    const incEl = document.getElementById(`nf-inc-${i}`);
+    const syncPasso = ()=>{
+      const m = mats.find(x=>x.id===Number(sel.value));
+      const passo = passoQtd(m?.unid);
+      qtdEl.step = passo;
+      if(qtdEl.value!=='') qtdEl.value = arredondarQtd(qtdEl.value, m?.unid);
+    };
+    sel?.addEventListener('change', ()=>{ syncPasso(); if(sel.value && incEl) incEl.checked = true; });
+    syncPasso();
+  });
+
+  const fechar = ()=>modal.remove();
+  modal.querySelector('#nf-revisao-cancelar').onclick = fechar;
+  modal.querySelector('#nf-revisao-confirmar').onclick = async ()=>{
+    const aplicar = [];
+    itens.forEach((it,i)=>{
+      if(!document.getElementById(`nf-inc-${i}`)?.checked) return;
+      const matId = Number(document.getElementById(`nf-mat-${i}`)?.value)||0;
+      const qtd = Number(document.getElementById(`nf-qtd-${i}`)?.value)||0;
+      if(matId && qtd>0) aplicar.push({matId, qtd});
+    });
+    if(!aplicar.length){ showToast('Marque ao menos um item com material e quantidade.','warn'); return; }
+    showLoading(true);
+    aplicar.forEach(({matId,qtd})=>{
+      const m = mats.find(x=>x.id===matId);
+      const atual = estoque[matId] || {atual:0,min:0,compra:0};
+      estoque[matId] = {...atual, atual: arredondarQtd((Number(atual.atual)||0) + qtd, m?.unid)};
+    });
+    const err = await saveFinanceiro();
+    showLoading(false);
+    if(err){ showToast('Erro ao salvar estoque: '+err.message,'error'); return; }
+    fechar();
+    renderEstoque(); renderMats();
+    showToast(`Estoque atualizado! ${aplicar.length} ${aplicar.length>1?'itens adicionados':'item adicionado'}.`);
+  };
+}
+
 // Calculadora "pacotes fechados + soltas" dentro do modal de estoque — pra
 // quem compra em caixa/pacote (ex: caixa de máscara com 100, kit de
 // clareador com 6 seringas) poder digitar "2 caixas fechadas + 30 soltas

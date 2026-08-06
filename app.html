@@ -850,11 +850,13 @@
       <div class="card">
         <div class="section-header">
           <h2><i class="ti ti-package"></i> Estoque</h2>
-          <div style="display:flex;gap:8px;">
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
             <button class="btn-secondary" onclick="deleteEstSelecionados()" id="btn-del-est" style="display:none;"><i class="ti ti-trash"></i> Excluir selecionados</button>
+            <button class="btn-secondary" onclick="document.getElementById('nf-input').click()"><i class="ti ti-scan"></i> Ler nota fiscal</button>
             <button class="btn-primary" onclick="openAddMat()"><i class="ti ti-plus"></i> Novo material</button>
           </div>
         </div>
+        <input type="file" id="nf-input" accept="image/*" multiple capture="environment" style="display:none;" onchange="nfLerArquivos(this.files)"/>
         <div id="est-metrics" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:16px;"></div>
         <div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;">
           <input type="text" id="est-search" placeholder="Buscar..." oninput="filterEstoque()" style="flex:1;min-width:150px;"/>
@@ -2209,7 +2211,7 @@
   <div style="color:var(--rose-text);font-size:14px;">Carregando...</div>
 </div>
 
-<script src="app.js?v=77"></script>
+<script src="app.js?v=78"></script>
 
 <!-- ══ MODAL RELATÓRIO MENSAL ══ -->
 <div class="modal-overlay" id="modal-relatorio" onclick="if(event.target===this)closeModal('modal-relatorio')" style="align-items:flex-start;padding-top:40px;overflow-y:auto;">
