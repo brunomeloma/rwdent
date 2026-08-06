@@ -2218,7 +2218,7 @@
   <div style="color:var(--rose-text);font-size:14px;">Carregando...</div>
 </div>
 
-<script src="app.js?v=79"></script>
+<script src="app.js?v=80"></script>
 
 <!-- ══ MODAL RELATÓRIO MENSAL ══ -->
 <div class="modal-overlay" id="modal-relatorio" onclick="if(event.target===this)closeModal('modal-relatorio')" style="align-items:flex-start;padding-top:40px;overflow-y:auto;">
@@ -2378,6 +2378,10 @@
     </div>
     <div style="background:var(--rose-lighter);border-radius:8px;padding:8px 12px;font-size:12px;color:var(--rose-dark);margin-bottom:8px;">
       Custo unitário: <strong id="mm-custo-calc">—</strong>
+    </div>
+    <div id="mm-historico-wrap" style="display:none;margin-bottom:8px;">
+      <div style="font-size:11px;font-weight:700;color:var(--rose-dark);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;"><i class="ti ti-chart-line"></i> Histórico de preço <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--rose-text);">(custo por unidade)</span></div>
+      <div id="mm-historico-lista" style="max-height:120px;overflow-y:auto;border:1px solid var(--rose-light);border-radius:8px;padding:6px 10px;font-size:12px;"></div>
     </div>
     <div class="modal-footer">
       <button class="btn-secondary" onclick="closeModal('modal-mat')">Cancelar</button>

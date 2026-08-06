@@ -122,6 +122,17 @@ window.addEventListener('unhandledrejection', ()=>{
   const el = document.getElementById('loading');
   if(el && el.style.display==='flex') el.style.display='none';
 });
+// Bug clássico do navegador: rolar a página com o mouse EM CIMA de um
+// <input type="number"> focado incrementa/decrementa o valor em vez de
+// rolar a página — em telas com tabela cheia de campos numéricos (estoque,
+// materiais...) é fácil mudar um "Mínimo"/"Atual" sem perceber, e como
+// esses campos salvam sozinhos, o valor errado fica gravado sem aviso
+// nenhum. Tira o foco do campo assim que a rodinha do mouse é usada, o que
+// faz o navegador rolar a página normalmente em vez de mudar o número.
+document.addEventListener('wheel', ()=>{
+  const el = document.activeElement;
+  if(el && el.tagName==='INPUT' && el.type==='number') el.blur();
+}, { passive:true });
 function showToast(msg, type='success'){
   const t = document.getElementById('toast');
   t.textContent = msg; t.className = `toast show ${type}`;
@@ -7199,6 +7210,8 @@ function openAddMat(){
     const el=document.getElementById(id); if(el) el.value='';
   });
   document.getElementById('mm-custo-calc').textContent = '—';
+  const historicoWrap = document.getElementById('mm-historico-wrap');
+  if(historicoWrap) historicoWrap.style.display = 'none';
   updateCatsList();
   mmAtualizarPassos();
   openModal('modal-mat');
@@ -7219,7 +7232,36 @@ function openEditMat(id){
   updateCatsList();
   calcMatCusto();
   mmAtualizarPassos();
+  mmRenderHistorico(m);
   openModal('modal-mat');
+}
+// Lista o histórico de preço (mais recente primeiro) com a variação % em
+// relação ao ponto anterior — mesma fonte que alimenta o badge da tabela de
+// Materiais (matVariacaoPreco). Só aparece se já tiver algum preço
+// registrado (material novo ainda não tem histórico nenhum).
+function mmRenderHistorico(mat){
+  const wrap = document.getElementById('mm-historico-wrap');
+  const lista = document.getElementById('mm-historico-lista');
+  if(!wrap || !lista) return;
+  const h = Array.isArray(mat?.historicoPrecos) ? mat.historicoPrecos : [];
+  if(!h.length){ wrap.style.display='none'; return; }
+  wrap.style.display='';
+  const origemLbl = {manual:'editado', nota_fiscal:'nota fiscal'};
+  const linhas = [...h].reverse().map((p,idx)=>{
+    const real = h.length-1-idx; // índice real na lista original (não invertida)
+    let variacaoHtml = '';
+    if(real>0){
+      const ant = h[real-1].preco;
+      const v = ant ? parseFloat((((p.preco-ant)/ant)*100).toFixed(1)) : null;
+      if(v!==null && v!==0) variacaoHtml = `<span style="color:${v>0?'#c0392b':'#2e7d32'};font-weight:700;margin-left:6px;">${v>0?'↑':'↓'} ${Math.abs(v)}%</span>`;
+    }
+    const dt = p.data ? new Date(p.data+'T12:00:00').toLocaleDateString('pt-BR') : '—';
+    return `<div style="display:flex;justify-content:space-between;padding:3px 0;${real<h.length-1?'border-top:1px solid var(--rose-lighter);':''}">
+      <span style="color:var(--rose-text);">${dt} <span style="opacity:.7;">(${origemLbl[p.origem]||p.origem||'—'})</span></span>
+      <span>${fmtBRL(p.preco)}${variacaoHtml}</span>
+    </div>`;
+  }).join('');
+  lista.innerHTML = linhas;
 }
 function updateCatsList(){
   const dl = document.getElementById('cats-list');
@@ -7230,6 +7272,35 @@ function calcMatCusto(){
   const preco = Number(document.getElementById('mm-preco')?.value)||0;
   const el = document.getElementById('mm-custo-calc');
   if(el) el.textContent = qtde&&preco ? 'R$ '+fmtN2(preco/qtde) : '—';
+}
+// Histórico de preço por material — pra comparar com compras antigas e ver
+// tendência (ex: "esse material subiu 12% desde a última compra"). Cada
+// material guarda a própria lista (mat.historicoPrecos), salva junto no
+// mesmo JSON de mats — não precisa coluna nova no banco. Só registra
+// quando o preço realmente muda, pra não empilhar entrada repetida toda
+// vez que alguém abre e salva sem alterar nada.
+//
+// IMPORTANTE: sempre em CUSTO POR UNIDADE (preço da embalagem ÷ qtde por
+// embalagem), nunca preço da embalagem inteira — é a mesma base que vem da
+// leitura de nota fiscal (api/ler-nota-fiscal.js já converte pra preço por
+// unidade). Misturar as duas bases faria o % de variação sair sem sentido
+// (ex: comparar preço de uma caixa com preço de 1 unidade).
+function matRegistrarPreco(mat, custoUnit, origem){
+  if(!mat || !Number.isFinite(custoUnit) || custoUnit<=0) return;
+  if(!Array.isArray(mat.historicoPrecos)) mat.historicoPrecos = [];
+  const ultimo = mat.historicoPrecos[mat.historicoPrecos.length-1];
+  if(ultimo && Math.abs(ultimo.preco - custoUnit) < 0.0005) return;
+  mat.historicoPrecos.push({ data: hoje(), preco: parseFloat(custoUnit.toFixed(4)), origem });
+  if(mat.historicoPrecos.length > 24) mat.historicoPrecos = mat.historicoPrecos.slice(-24);
+}
+// Variação % do preço atual vs a entrada anterior do histórico — null se
+// não tiver pelo menos 2 pontos ainda pra comparar.
+function matVariacaoPreco(mat){
+  const h = mat?.historicoPrecos;
+  if(!Array.isArray(h) || h.length<2) return null;
+  const anterior = h[h.length-2].preco, atual = h[h.length-1].preco;
+  if(!anterior) return null;
+  return parseFloat((((atual-anterior)/anterior)*100).toFixed(1));
 }
 async function saveMat(){
   const nome = document.getElementById('mm-nome')?.value.trim();
@@ -7244,10 +7315,13 @@ async function saveMat(){
     matId = editMatId;
     const i = mats.findIndex(x=>x.id===editMatId);
     if(i<0){ showToast('Material não encontrado.','error'); return; }
+    matRegistrarPreco(mats[i], custo, 'manual');
     mats[i] = { ...mats[i], ...obj };
   } else {
     matId = nextMatId++;
-    mats.push({ id:matId, ...obj });
+    const novoMat = { id:matId, ...obj };
+    matRegistrarPreco(novoMat, custo, 'manual');
+    mats.push(novoMat);
   }
   const ea = document.getElementById('mm-est-atual')?.value;
   const em = document.getElementById('mm-est-min')?.value;
@@ -7308,12 +7382,15 @@ function renderMats(){
   const tb = document.getElementById('mat-tbody');
   if(!tb) return;
   if(!list.length){ tb.innerHTML='<tr><td colspan="7" style="text-align:center;color:var(--rose-text);padding:20px;">Nenhum material cadastrado.</td></tr>'; return; }
-  tb.innerHTML = list.map(m=>`<tr style="border-bottom:1px solid var(--rose-light);">
+  tb.innerHTML = list.map(m=>{
+    const variacao = matVariacaoPreco(m);
+    const varHtml = variacao===null ? '' : `<div style="font-size:10px;font-weight:700;margin-top:1px;color:${variacao>0?'#c0392b':variacao<0?'#2e7d32':'var(--rose-text)'};">${variacao>0?'↑':variacao<0?'↓':'—'} ${Math.abs(variacao)}%</div>`;
+    return `<tr style="border-bottom:1px solid var(--rose-light);">
     <td data-label="Material" style="padding:10px;font-weight:500;">${escapeHtml(m.nome)}</td>
     <td data-label="Categoria" style="padding:10px;"><span style="background:var(--rose-lighter);color:var(--rose-dark);border-radius:6px;padding:2px 8px;font-size:11px;">${escapeHtml(m.cat||'—')}</span></td>
     <td data-label="Unidade" style="padding:10px;text-align:right;">${escapeHtml(m.unid||'—')}</td>
     <td data-label="Qtde/Emb." style="padding:10px;text-align:right;">${fmtN2(m.qtde||0)}</td>
-    <td data-label="Preço Emb." style="padding:10px;text-align:right;">${fmtBRL(m.preco||0)}</td>
+    <td data-label="Preço Emb." style="padding:10px;text-align:right;">${fmtBRL(m.preco||0)}${varHtml}</td>
     <td data-label="Custo Unit." style="padding:10px;text-align:right;font-weight:700;color:var(--rose-dark);">${m.preco&&m.qtde?fmtN2(m.preco/m.qtde):'—'}</td>
     <td data-label="Ações" style="padding:10px;">
       <div style="display:flex;gap:6px;justify-content:flex-end;">
@@ -7321,7 +7398,8 @@ function renderMats(){
         <button class="btn-danger" style="padding:4px 8px;font-size:11px;" onclick="deleteMat(${m.id})"><i class="ti ti-trash"></i></button>
       </div>
     </td>
-  </tr>`).join('');
+  </tr>`;
+  }).join('');
 }
 
 // ── ESTOQUE ──
@@ -7534,14 +7612,17 @@ function nfAbrirRevisao(itens){
       if(!document.getElementById(`nf-inc-${i}`)?.checked) return;
       const matId = Number(document.getElementById(`nf-mat-${i}`)?.value)||0;
       const qtd = Number(document.getElementById(`nf-qtd-${i}`)?.value)||0;
-      if(matId && qtd>0) aplicar.push({matId, qtd});
+      if(matId && qtd>0) aplicar.push({matId, qtd, valorUnit: it.valor_unitario});
     });
     if(!aplicar.length){ showToast('Marque ao menos um item com material e quantidade.','warn'); return; }
     showLoading(true);
-    aplicar.forEach(({matId,qtd})=>{
+    aplicar.forEach(({matId,qtd,valorUnit})=>{
       const m = mats.find(x=>x.id===matId);
       const atual = estoque[matId] || {atual:0,min:0,compra:0};
       estoque[matId] = {...atual, atual: arredondarQtd((Number(atual.atual)||0) + qtd, m?.unid)};
+      // Guarda o preço da compra no histórico do material — é exatamente
+      // pra isso que serve ler a nota, não só pra somar quantidade.
+      if(m && valorUnit) matRegistrarPreco(m, Number(valorUnit), 'nota_fiscal');
     });
     const err = await saveFinanceiro();
     showLoading(false);

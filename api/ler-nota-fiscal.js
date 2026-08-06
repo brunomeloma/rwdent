@@ -93,12 +93,13 @@ module.exports = async function handler(req, res) {
     aviso: 'Você ainda não tem nenhum material cadastrado em Financeiro > Materiais — cadastre pelo menos os materiais que compra sempre antes de ler notas fiscais, pra IA ter o que casar.'
   });
 
-  const listaMateriais = mats.map(m => `${m.id}|${m.nome}|${m.unid || 'unid'}`).join('\n');
+  const listaMateriais = mats.map(m => `${m.id}|${m.nome}|${m.unid || 'unid'}|${m.qtde || 1}`).join('\n');
 
   const prompt = `Você vai ler uma nota fiscal (ou várias fotos da mesma nota) de uma clínica odontológica e extrair CADA produto comprado.
 
-MATERIAIS JÁ CADASTRADOS NO ESTOQUE DESTA CLÍNICA (formato "id|nome|unidade"):
+MATERIAIS JÁ CADASTRADOS NO ESTOQUE DESTA CLÍNICA (formato "id|nome|unidade|unidades por embalagem"):
 ${listaMateriais}
+"unidades por embalagem" é quantas unidades a clínica considera que tem em CADA caixa/pacote fechado desse material (ex: uma caixa de luvas com 100 = unidade "unid", unidades_por_embalagem 100).
 
 REGRAS DE CASAMENTO (isto é o mais importante):
 1. Para PRODUTOS GENÉRICOS (ex: babador, algodão, gaze, sugador, copo descartável) — a clínica normalmente não compra várias marcas diferentes do mesmo item. Se a nota trouxer um nome de marca/linha comprido (ex: "Babador Descartável Premium Line c/100"), mas já existir um material genérico cadastrado que é claramente a mesma coisa (ex: "Babador"), CASE com esse material genérico existente. NÃO crie/sugira nome novo com a marca completa.
@@ -106,14 +107,17 @@ REGRAS DE CASAMENTO (isto é o mais importante):
 3. Se o nome da nota for parecido mas você não tiver certeza (nome ambíguo, número que pode ser outro, produto que pode ser dois materiais diferentes cadastrados), NÃO adivinhe: deixe material_id null e explique em "observacao" por que ficou em dúvida.
 4. Se o produto da nota claramente não existir em NENHUM material cadastrado, deixe material_id null e diga isso em "observacao" (ex: "material novo, não cadastrado ainda").
 
+REGRA DE QUANTIDADE E PREÇO (muito importante, gente erra fácil aqui):
+A nota fiscal pode vender por CAIXA/PACOTE FECHADO (ex: "3 CX" de luvas) mesmo quando o material é controlado pela clínica em unidades individuais. SEMPRE converta a quantidade pra bater com a UNIDADE cadastrada do material que você casou (coluna "unidade" da lista acima), usando "unidades por embalagem" pra multiplicar quando a nota vender em caixa/pacote/kit. Ex: nota mostra "3 CX" a R$45,00 a caixa, material cadastrado tem unidade "unid" e 100 unidades por embalagem → quantidade = 300, valor_unitario = 45/100 = 0.45 (preço por UNIDADE, não por caixa). Se o material já for vendido e controlado na mesma unidade que a nota mostra (ex: ambos em "ml"), não precisa converter nada. valor_unitario SEMPRE tem que ser o preço de UMA unidade da coluna "unidade" do material — nunca o preço da caixa/pacote inteiro.
+
 Responda APENAS com um array JSON (sem markdown, sem texto antes/depois), um item por produto da nota, neste formato exato:
 [{"produto_nota":"texto exatamente como aparece na nota","quantidade":0,"valor_unitario":0,"material_id":0,"confianca":"alta","observacao":""}]
 
-- quantidade: número comprado (da coluna quantidade/qtd da nota)
-- valor_unitario: preço unitário em reais, se a nota mostrar (senão null)
+- quantidade: já convertida pra unidade do material cadastrado (ver regra acima)
+- valor_unitario: preço de UMA unidade do material (ver regra acima), se a nota permitir calcular (senão null)
 - material_id: o id de MATERIAIS JÁ CADASTRADOS acima que bate com este produto, ou null se não tiver certeza ou não existir
 - confianca: "alta" (nome/especificação bateu claramente), "media" (bateu mas com alguma diferença de nome) ou "baixa" (chute, ou material_id null)
-- observacao: string curta explicando a dúvida, vazio "" se confianca alta
+- observacao: string curta explicando a dúvida (inclua aqui se converteu de caixa pra unidade), vazio "" se confianca alta e sem conversão
 
 Ignore linhas que não são produtos (frete, impostos, totais, dados da empresa). Se não conseguir ler nenhum produto, responda [].`;
 
