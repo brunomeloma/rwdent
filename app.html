@@ -1606,8 +1606,8 @@
         </div>
         <p style="font-size:13px;color:var(--rose-text);margin-bottom:16px;">Cadastre contatos de possíveis pacientes (nome e telefone) e envie mensagem de WhatsApp para cada um. Ideal para listas de indicações ou contatos avulsos.</p>
 
-        <!-- Importar arquivo CSV oficial -->
-        <div style="background:var(--rose-lighter);border:1px solid var(--rose-light);border-radius:14px;padding:14px 16px;margin-bottom:14px;">
+        <!-- Importar arquivo CSV oficial (Lead ST / Connect VIP) — exclusivo da Rhaiza -->
+        <div class="rhaiza-only" style="background:var(--rose-lighter);border:1px solid var(--rose-light);border-radius:14px;padding:14px 16px;margin-bottom:14px;">
           <h3 style="font-size:13px;font-weight:700;color:var(--rose-dark);margin-bottom:6px;"><i class="ti ti-file-upload"></i> Importar arquivo CSV (Lead ST / Connect VIP)</h3>
           <p style="font-size:12px;color:var(--rose-text);margin-bottom:8px;">Selecione o arquivo <code style="background:#fff;padding:1px 5px;border-radius:5px;">contatos_..._CORRIGIDO.csv</code>. Nomes e telefones não são alterados; duplicados são identificados pelo telefone.</p>
           <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
@@ -1645,13 +1645,13 @@
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;" id="cap-filtros-categoria">
           <button class="btn-primary" data-cat="" onclick="capFiltrarCategoria('')">Todos</button>
           <button class="btn-secondary" data-cat="paciente" onclick="capFiltrarCategoria('paciente')">Pacientes</button>
-          <button class="btn-secondary" data-cat="lead_st" onclick="capFiltrarCategoria('lead_st')">Lead ST</button>
-          <button class="btn-secondary" data-cat="connect_vip" onclick="capFiltrarCategoria('connect_vip')">Connect VIP</button>
+          <button class="btn-secondary rhaiza-only" data-cat="lead_st" onclick="capFiltrarCategoria('lead_st')">Lead ST</button>
+          <button class="btn-secondary rhaiza-only" data-cat="connect_vip" onclick="capFiltrarCategoria('connect_vip')">Connect VIP</button>
         </div>
 
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
-          <button class="btn-secondary" style="font-size:11.5px;" onclick="capRedefinirMensagemPadrao('lead_st')"><i class="ti ti-refresh"></i> Usar mensagem padrão atual em todos os Lead ST</button>
-          <button class="btn-secondary" style="font-size:11.5px;" onclick="capRedefinirMensagemPadrao('connect_vip')"><i class="ti ti-refresh"></i> Usar mensagem padrão atual em todos os Connect VIP</button>
+          <button class="btn-secondary rhaiza-only" style="font-size:11.5px;" onclick="capRedefinirMensagemPadrao('lead_st')"><i class="ti ti-refresh"></i> Usar mensagem padrão atual em todos os Lead ST</button>
+          <button class="btn-secondary rhaiza-only" style="font-size:11.5px;" onclick="capRedefinirMensagemPadrao('connect_vip')"><i class="ti ti-refresh"></i> Usar mensagem padrão atual em todos os Connect VIP</button>
         </div>
 
         <!-- Busca, filtro de status e ações em massa -->
@@ -2209,7 +2209,7 @@
   <div style="color:var(--rose-text);font-size:14px;">Carregando...</div>
 </div>
 
-<script src="app.js?v=76"></script>
+<script src="app.js?v=77"></script>
 
 <!-- ══ MODAL RELATÓRIO MENSAL ══ -->
 <div class="modal-overlay" id="modal-relatorio" onclick="if(event.target===this)closeModal('modal-relatorio')" style="align-items:flex-start;padding-top:40px;overflow-y:auto;">

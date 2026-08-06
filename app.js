@@ -12703,14 +12703,23 @@ function capRenderTabela(){
 
   const metrEl = document.getElementById('cap-metrics');
   if(metrEl){
-    metrEl.innerHTML = [
+    // Lead ST / Connect VIP são fontes de captação exclusivas da clínica da
+    // Rhaiza (importação de CSV específica dela) — não fazem sentido, nem
+    // devem aparecer, pra outras clínicas, que só têm captação por contato
+    // adicionado manualmente.
+    const metricas = [
       {lbl:'Total captação', val:lista.length, cor:'var(--rose-dark)'},
-      {lbl:'Lead ST', val:lista.filter(c=>c.categoria==='lead_st').length, cor:CAP_CATEGORIA_COR.lead_st},
-      {lbl:'Connect VIP', val:lista.filter(c=>c.categoria==='connect_vip').length, cor:CAP_CATEGORIA_COR.connect_vip},
+    ];
+    if(_isRhaizaClinic){
+      metricas.push({lbl:'Lead ST', val:lista.filter(c=>c.categoria==='lead_st').length, cor:CAP_CATEGORIA_COR.lead_st});
+      metricas.push({lbl:'Connect VIP', val:lista.filter(c=>c.categoria==='connect_vip').length, cor:CAP_CATEGORIA_COR.connect_vip});
+    }
+    metricas.push(
       {lbl:'Pacientes', val:pacientesComoContatos.length, cor:CAP_CATEGORIA_COR.paciente},
       {lbl:'Contatados', val:lista.filter(c=>c.status==='contatado').length, cor:CAP_STATUS_COR.contatado},
-      {lbl:'Agendaram', val:lista.filter(c=>c.status==='agendou').length, cor:CAP_STATUS_COR.agendou},
-    ].map(s=>`<div style="background:var(--rose-lighter);border:1px solid var(--rose-light);border-radius:12px;padding:12px 16px;">
+      {lbl:'Agendaram', val:lista.filter(c=>c.status==='agendou').length, cor:CAP_STATUS_COR.agendou}
+    );
+    metrEl.innerHTML = metricas.map(s=>`<div style="background:var(--rose-lighter);border:1px solid var(--rose-light);border-radius:12px;padding:12px 16px;">
       <div style="font-size:11px;color:var(--rose-text);">${s.lbl}</div>
       <div style="font-size:22px;font-weight:800;color:${s.cor};">${s.val}</div>
     </div>`).join('');
