@@ -2628,6 +2628,12 @@ function renderPatientDetail(abaAtiva){
                   style="width:90px;padding:6px 8px;border:1px solid var(--rose-light);border-radius:8px;font-size:13px;text-align:right;" />
                 <span id="plano-desc-preview" style="font-size:12px;color:#2e7d32;font-weight:700;"></span>
               </div>
+              ${(_isRhaizaClinic && _convenioMAJ(p.plano)) ? `
+              <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:8px;padding-top:8px;border-top:1px dashed var(--rose-light);">
+                <span style="font-size:11px;font-weight:700;color:#8a5a00;"><i class="ti ti-id-badge-2"></i> Convênio MAJ:</span>
+                <button type="button" class="btn-secondary" style="padding:4px 10px;font-size:11px;" onclick="pacPlanoAplicarConvenio(20)">20% preventivo/funcional</button>
+                <button type="button" class="btn-secondary" style="padding:4px 10px;font-size:11px;" onclick="pacPlanoAplicarConvenio(10)">10% manutenção aparelho</button>
+              </div>` : ''}
             </div>
             <!-- Validade -->
             <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap;">
@@ -9216,6 +9222,7 @@ function vrInitMobile(){
   if(selPac) selPac.innerHTML='<option value="">— Paciente (opcional) —</option>'+pacientes.map(p=>`<option value="${p.id}">${escapeHtml(p.nome)}</option>`).join('');
   const selProf=document.getElementById('vr-prof-m');
   if(selProf) selProf.innerHTML='<option value="">— Quem atendeu —</option>'+profissionais.map(p=>`<option value="${p.id}">${escapeHtml(p.nome)}</option>`).join('');
+  vrConvenioCheckMobile();
 }
 
 function vrInit(){
@@ -9234,6 +9241,7 @@ function vrInit(){
   vrRenderCats();
   vrFiltrar();
   vrRenderCarrinho();
+  vrConvenioCheck();
   vrInitMobile();
 }
 
@@ -9355,6 +9363,37 @@ function vrSelPag(btn, forma){
   const pw = document.getElementById('vr-parcelas-wrap');
   if(pw) pw.style.display = forma==='credito' ? '' : 'none';
   vrCalcTotal();
+}
+
+// Convênio MAJ na Venda Rápida: mostra os botões de desconto rápido quando o
+// paciente selecionado tem "MAJ" no campo Plano/Convênio — só na clínica Rhaiza.
+function vrConvenioCheck(){
+  const pacId = document.getElementById('vr-paciente')?.value||'';
+  const pac = pacId ? pacientes.find(p=>p.id==pacId) : null;
+  const wrap = document.getElementById('vr-convenio-maj');
+  if(wrap) wrap.style.display = (_isRhaizaClinic && pac && _convenioMAJ(pac.plano)) ? 'flex' : 'none';
+}
+function vrConvenioCheckMobile(){
+  const pacId = document.getElementById('vr-paciente-m')?.value||'';
+  const pac = pacId ? pacientes.find(p=>p.id==pacId) : null;
+  const wrap = document.getElementById('vr-convenio-maj-m');
+  if(wrap) wrap.style.display = (_isRhaizaClinic && pac && _convenioMAJ(pac.plano)) ? 'flex' : 'none';
+}
+function vrAplicarConvenio(pct){
+  const tipoEl = document.getElementById('vr-desc-tipo');
+  const valEl  = document.getElementById('vr-desc-val');
+  if(tipoEl) tipoEl.value = 'pct';
+  if(valEl)  valEl.value  = pct;
+  vrCalcTotal();
+  showToast(`Desconto de ${pct}% (Convênio MAJ) aplicado.`);
+}
+function vrAplicarConvenioMobile(pct){
+  const tipoEl = document.getElementById('vr-desc-tipo-m');
+  const valEl  = document.getElementById('vr-desc-val-m');
+  if(tipoEl) tipoEl.value = 'pct';
+  if(valEl)  valEl.value  = pct;
+  vrCalcTotalMobile();
+  showToast(`Desconto de ${pct}% (Convênio MAJ) aplicado.`);
 }
 
 function vrCalcTotal(){
@@ -11621,6 +11660,21 @@ function pacPlanoGetUrgencia(itemId){
 }
 
 // ── Preview de desconto e simulação de parcelas na aba Plano ──
+// Convênio MAJ (parceria exclusiva da clínica Rhaiza): identifica pelo campo
+// livre "Plano / Convênio" do cadastro do paciente conter "MAJ" como palavra
+// inteira (evita bater em nomes que só contenham as letras por acaso).
+function _convenioMAJ(planoTexto){
+  return /\bmaj\b/i.test(planoTexto||'');
+}
+function pacPlanoAplicarConvenio(pct){
+  const tipoEl = document.getElementById('plano-desc-tipo');
+  const valEl  = document.getElementById('plano-desc-val');
+  if(tipoEl) tipoEl.value = 'pct';
+  if(valEl)  valEl.value  = pct;
+  pacPlanoAtualizarPreview();
+  showToast(`Desconto de ${pct}% (Convênio MAJ) aplicado.`);
+}
+
 function pacPlanoAtualizarPreview(){
   const ativos = pacPlanoList.filter(i=>i.status!=='cancelado');
   const total  = ativos.reduce((acc,i)=>acc+parseFloat((i.valor||'0').replace(',','.')),0);

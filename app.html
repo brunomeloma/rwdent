@@ -1292,7 +1292,7 @@
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
               <div>
                 <label style="font-size:10px;font-weight:700;color:var(--rose-text);text-transform:uppercase;letter-spacing:.5px;">Paciente</label>
-                <select id="vr-paciente" style="width:100%;margin-top:4px;padding:7px 8px;border:1.5px solid var(--rose-light);border-radius:8px;font-size:12px;color:var(--rose-dark);background:#fff;">
+                <select id="vr-paciente" onchange="vrConvenioCheck()" style="width:100%;margin-top:4px;padding:7px 8px;border:1.5px solid var(--rose-light);border-radius:8px;font-size:12px;color:var(--rose-dark);background:#fff;">
                   <option value="">— Sem vínculo —</option>
                 </select>
               </div>
@@ -1313,6 +1313,11 @@
                 </select>
                 <input type="number" id="vr-desc-val" value="0" min="0" oninput="vrCalcTotal()"
                   style="width:72px;padding:7px 8px;border:1.5px solid var(--rose-light);border-radius:8px;font-size:13px;font-weight:700;color:var(--rose-dark);text-align:center;background:#fff;"/>
+              </div>
+              <div id="vr-convenio-maj" style="display:none;gap:6px;flex-wrap:wrap;margin-top:6px;">
+                <span style="font-size:10px;font-weight:700;color:#8a5a00;align-self:center;"><i class="ti ti-id-badge-2"></i> Convênio MAJ:</span>
+                <button type="button" class="btn-secondary" style="padding:3px 8px;font-size:10px;" onclick="vrAplicarConvenio(20)">20% prev./func.</button>
+                <button type="button" class="btn-secondary" style="padding:3px 8px;font-size:10px;" onclick="vrAplicarConvenio(10)">10% manut. aparelho</button>
               </div>
             </div>
 
@@ -1411,7 +1416,7 @@
         <!-- Totais + pagamento fixo no mobile -->
         <div style="background:#fff;border-radius:16px;padding:16px;border:1.5px solid var(--rose-light);">
           <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px;">
-            <select id="vr-paciente-m" style="width:100%;padding:10px;border:1.5px solid var(--rose-light);border-radius:10px;font-size:14px;color:var(--rose-dark);">
+            <select id="vr-paciente-m" onchange="vrConvenioCheckMobile()" style="width:100%;padding:10px;border:1.5px solid var(--rose-light);border-radius:10px;font-size:14px;color:var(--rose-dark);">
               <option value="">— Paciente (opcional) —</option>
             </select>
             <select id="vr-prof-m" style="width:100%;padding:10px;border:1.5px solid var(--rose-light);border-radius:10px;font-size:14px;color:var(--rose-dark);">
@@ -1429,6 +1434,11 @@
               </select>
               <input type="number" id="vr-desc-val-m" value="0" min="0" oninput="vrCalcTotalMobile()"
                 style="width:72px;padding:8px;border:1.5px solid var(--rose-light);border-radius:8px;font-size:13px;font-weight:700;color:var(--rose-dark);text-align:center;background:#fff;"/>
+            </div>
+            <div id="vr-convenio-maj-m" style="display:none;gap:6px;flex-wrap:wrap;margin-top:8px;">
+              <span style="font-size:11px;font-weight:700;color:#8a5a00;align-self:center;"><i class="ti ti-id-badge-2"></i> Convênio MAJ:</span>
+              <button type="button" class="btn-secondary" style="padding:4px 10px;font-size:11px;" onclick="vrAplicarConvenioMobile(20)">20% prev./func.</button>
+              <button type="button" class="btn-secondary" style="padding:4px 10px;font-size:11px;" onclick="vrAplicarConvenioMobile(10)">10% manut. aparelho</button>
             </div>
           </div>
 
@@ -2218,7 +2228,7 @@
   <div style="color:var(--rose-text);font-size:14px;">Carregando...</div>
 </div>
 
-<script src="app.js?v=80"></script>
+<script src="app.js?v=81"></script>
 
 <!-- ══ MODAL RELATÓRIO MENSAL ══ -->
 <div class="modal-overlay" id="modal-relatorio" onclick="if(event.target===this)closeModal('modal-relatorio')" style="align-items:flex-start;padding-top:40px;overflow-y:auto;">
