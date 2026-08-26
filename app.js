@@ -5317,8 +5317,11 @@ const fmtN2  = v => isNaN(v)?'—':Number(v).toLocaleString('pt-BR',{minimumFrac
 // ter casas decimais (62,5 ml faz sentido, 62,5 agulha não). Usado pra
 // ajustar o step dos campos de quantidade (estoque, cadastro de material,
 // insumo do procedimento) e arredondar o valor salvo de acordo.
+// OBS: escrito sem acento de propósito (ex: 'pc' em vez de 'pç') — a
+// comparação sempre passa a unidade por _norm() antes, que remove acento;
+// um item acentuado aqui nunca bateria com nada (era o caso de 'pç' antes).
 const _UNIDADES_INTEIRAS = new Set(['unid','und','unidade','uni','kit','caixa','cx','frasco',
-  'seringa','ampola','capsula','pacote','pote','par','peca','pç','rolo','placa']);
+  'seringa','ampola','capsula','pacote','pote','par','peca','pc','rolo','placa']);
 function unidEhInteira(unid){ return _UNIDADES_INTEIRAS.has(_norm(unid)); }
 function passoQtd(unid){ return unidEhInteira(unid) ? '1' : '0.01'; }
 function arredondarQtd(val, unid){
