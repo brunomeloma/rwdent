@@ -8545,6 +8545,7 @@ const TOUR_STEPS_DESKTOP = [
   { title:'Financeiro', text:'Acompanhe faturamento, tabela de preços, materiais e estoque — dá pra proteger o faturamento com um PIN em Configurações.', selector:'#tng-fin .tn-group-btn' },
   { title:'Busca rápida', text:'Aperte Ctrl+K (ou clique na lupa) a qualquer momento pra achar um paciente na hora.', selector:'button[onclick="abrirBuscaGlobal()"]' },
   { title:'Configurações', text:'Ajuste os dados da clínica, os preços dos procedimentos e o PIN do faturamento por aqui.', selector:'.topnav-item[data-tab="configuracoes"]', tab:'configuracoes' },
+  { title:'Assistente IA', text:'Esse botão flutuante conversa em texto normal: agenda consulta, cadastra paciente, lança venda/despesa e repõe estoque — sempre pedindo sua confirmação antes de gravar qualquer coisa.', selector:'#ai-btn' },
   { title:'Pronto!', text:'Se quiser rever esse tour depois, é só clicar em "Rever o tour guiado" lá em Configurações.', selector:null }
 ];
 // Roteiro do celular: segue os botões reais da barra inferior. Financeiro,
@@ -8558,6 +8559,7 @@ const TOUR_STEPS_MOBILE = [
   { title:'Pacientes', text:'Cadastre pacientes, prontuário, odontograma e fotos — tudo dentro do perfil de cada um.', selector:'.mobile-nav-item[data-tab="pacientes"]', tab:'pacientes' },
   { title:'Venda', text:'Registre uma venda rápida de procedimento, tipo um PDV — pra quando o paciente já vai pagar na hora.', selector:'.mobile-nav-item[data-tab="venda_rapida"]', tab:'venda_rapida' },
   { title:'Menu "Mais"', text:'Toque aqui pra achar Financeiro, tabela de preços, materiais, estoque, Calendário, Configurações (com o PIN do faturamento) e a busca rápida de pacientes.', selector:'#mobile-mais-btn' },
+  { title:'Assistente IA', text:'Esse botão flutuante conversa em texto normal: agenda consulta, cadastra paciente, lança venda/despesa e repõe estoque — sempre pedindo sua confirmação antes de gravar qualquer coisa.', selector:'#ai-btn' },
   { title:'Pronto!', text:'Se quiser rever esse tour depois, é só abrir "Mais" → Config. → "Rever o tour guiado".', selector:null }
 ];
 let _tourStepsAtivo = TOUR_STEPS_DESKTOP;
@@ -8599,13 +8601,25 @@ function tourAnterior(){
   _tourStep--;
   tourMostrarPasso();
 }
+// Bolinhas de progresso (a atual fica mais comprida, tipo "pill") em vez do
+// texto cru "3 / 9" — mais fácil de bater o olho e ver quanto falta.
+// aria-label separado mantém a info por extenso pra leitor de tela.
+function _tourRenderProgresso(){
+  const el = document.getElementById('tour-progress');
+  if(!el) return;
+  el.setAttribute('aria-label', `Passo ${_tourStep+1} de ${_tourStepsAtivo.length}`);
+  el.innerHTML = _tourStepsAtivo.map((_,i)=>{
+    const atual = i===_tourStep;
+    return `<span style="display:inline-block;width:${atual?'16px':'6px'};height:6px;border-radius:3px;margin-left:3px;background:${atual?'var(--rose)':'var(--rose-light)'};transition:width .2s,background .2s;vertical-align:middle;"></span>`;
+  }).join('');
+}
 function tourMostrarPasso(){
   const step = _tourStepsAtivo[_tourStep];
   if(step.tab){ try{ switchTab(step.tab); }catch(e){} }
 
   document.getElementById('tour-title').textContent = step.title;
   document.getElementById('tour-text').textContent = step.text;
-  document.getElementById('tour-progress').textContent = (_tourStep+1)+' / '+_tourStepsAtivo.length;
+  _tourRenderProgresso();
   document.getElementById('tour-btn-anterior').style.visibility = _tourStep===0?'hidden':'visible';
   document.getElementById('tour-btn-proximo').textContent = _tourStep===_tourStepsAtivo.length-1 ? 'Concluir' : 'Próximo';
 
