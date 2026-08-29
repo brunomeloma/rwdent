@@ -8528,7 +8528,15 @@ function closeModal(id){ const m=document.getElementById(id); if(m) m.classList.
 // explicando. Roda sozinho no primeiro login de cada usuário — guardado no
 // localStorage por user id, então cada pessoa que loga na clínica vê o tour
 // uma vez — e pode ser refeito a qualquer momento em Configurações.
-const TOUR_STEPS = [
+//
+// IMPORTANTE: a navegação de celular (.mobile-bottom-nav) e a de desktop
+// (.topnav-links) são elementos DIFERENTES no HTML, e cada CSS esconde uma
+// delas (@media max-width:768px) — usar os seletores do desktop com o
+// site aberto no celular apontava pra botões com display:none, então o
+// destaque do tour virava um quadradinho de 0×0 no canto da tela. Por isso
+// dois roteiros separados: escolhido uma vez, no início do tour, conforme a
+// largura da tela (mesmo ponto de corte do CSS).
+const TOUR_STEPS_DESKTOP = [
   { title:'Bem-vinda ao RWDent!', text:'Um tour rápido pelas telas principais — leva menos de 1 minuto. Pode pular a qualquer momento.', selector:null },
   { title:'Início', text:'Aqui você vê um resumo do seu dia: consultas de hoje, faturamento, aniversariantes e pacientes pra dar retorno.', selector:'.topnav-item[data-tab="home"]', tab:'home' },
   { title:'Agenda', text:'Marque novas consultas, veja a agenda do dia ou o calendário do mês inteiro.', selector:'#tng-agenda .tn-group-btn' },
@@ -8539,6 +8547,20 @@ const TOUR_STEPS = [
   { title:'Configurações', text:'Ajuste os dados da clínica, os preços dos procedimentos e o PIN do faturamento por aqui.', selector:'.topnav-item[data-tab="configuracoes"]', tab:'configuracoes' },
   { title:'Pronto!', text:'Se quiser rever esse tour depois, é só clicar em "Rever o tour guiado" lá em Configurações.', selector:null }
 ];
+// Roteiro do celular: segue os botões reais da barra inferior. Financeiro,
+// Configurações e a busca rápida moram todos dentro do menu "Mais" (não tem
+// uma tela própria de cada um na barra), então viram um passo só — 3
+// destaques seguidos no mesmo botão "Mais" ficaria repetitivo à toa.
+const TOUR_STEPS_MOBILE = [
+  { title:'Bem-vinda ao RWDent!', text:'Um tour rápido pelas telas principais — leva menos de 1 minuto. Pode pular a qualquer momento.', selector:null },
+  { title:'Início', text:'Aqui você vê um resumo do seu dia: consultas de hoje, faturamento, aniversariantes e pacientes pra dar retorno.', selector:'.mobile-nav-item[data-tab="home"]', tab:'home' },
+  { title:'Agenda', text:'Marque novas consultas e veja a agenda do dia.', selector:'.mobile-nav-item[data-tab="lista"]', tab:'lista' },
+  { title:'Pacientes', text:'Cadastre pacientes, prontuário, odontograma e fotos — tudo dentro do perfil de cada um.', selector:'.mobile-nav-item[data-tab="pacientes"]', tab:'pacientes' },
+  { title:'Venda', text:'Registre uma venda rápida de procedimento, tipo um PDV — pra quando o paciente já vai pagar na hora.', selector:'.mobile-nav-item[data-tab="venda_rapida"]', tab:'venda_rapida' },
+  { title:'Menu "Mais"', text:'Toque aqui pra achar Financeiro, tabela de preços, materiais, estoque, Calendário, Configurações (com o PIN do faturamento) e a busca rápida de pacientes.', selector:'#mobile-mais-btn' },
+  { title:'Pronto!', text:'Se quiser rever esse tour depois, é só abrir "Mais" → Config. → "Rever o tour guiado".', selector:null }
+];
+let _tourStepsAtivo = TOUR_STEPS_DESKTOP;
 let _tourStep = 0;
 
 function _tourChaveLocalStorage(){
@@ -8556,6 +8578,9 @@ function iniciarTourSePrimeiraVez(){
   setTimeout(()=>iniciarTour(), 700);
 }
 function iniciarTour(){
+  // Escolhido uma vez aqui (não recalcula durante o tour) — mesmo ponto de
+  // corte do CSS que troca topnav por bottom-nav (@media max-width:768px).
+  _tourStepsAtivo = window.innerWidth <= 768 ? TOUR_STEPS_MOBILE : TOUR_STEPS_DESKTOP;
   _tourStep = 0;
   tourMostrarPasso();
 }
@@ -8566,7 +8591,7 @@ function pularTour(){
 }
 function tourProximo(){
   _tourStep++;
-  if(_tourStep >= TOUR_STEPS.length){ pularTour(); return; }
+  if(_tourStep >= _tourStepsAtivo.length){ pularTour(); return; }
   tourMostrarPasso();
 }
 function tourAnterior(){
@@ -8575,14 +8600,14 @@ function tourAnterior(){
   tourMostrarPasso();
 }
 function tourMostrarPasso(){
-  const step = TOUR_STEPS[_tourStep];
+  const step = _tourStepsAtivo[_tourStep];
   if(step.tab){ try{ switchTab(step.tab); }catch(e){} }
 
   document.getElementById('tour-title').textContent = step.title;
   document.getElementById('tour-text').textContent = step.text;
-  document.getElementById('tour-progress').textContent = (_tourStep+1)+' / '+TOUR_STEPS.length;
+  document.getElementById('tour-progress').textContent = (_tourStep+1)+' / '+_tourStepsAtivo.length;
   document.getElementById('tour-btn-anterior').style.visibility = _tourStep===0?'hidden':'visible';
-  document.getElementById('tour-btn-proximo').textContent = _tourStep===TOUR_STEPS.length-1 ? 'Concluir' : 'Próximo';
+  document.getElementById('tour-btn-proximo').textContent = _tourStep===_tourStepsAtivo.length-1 ? 'Concluir' : 'Próximo';
 
   const highlight = document.getElementById('tour-highlight');
   const box = document.getElementById('tour-box');
