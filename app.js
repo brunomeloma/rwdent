@@ -7425,22 +7425,21 @@ function updateEstDelBtn(){
   const btn = document.getElementById('btn-del-est');
   if(btn) btn.style.display = estSelected.size > 0 ? '' : 'none';
 }
-// Zera a quantidade ATUAL de todo mundo — não mexe em mínimo, ponto de
-// compra nem nos materiais em si (só "Atual" volta a 0). Pensado pra quando
-// alguém vai fazer uma contagem física do zero e prefere ir somando cada
-// item conforme conta, em vez de confiar no que já estava salvo antes.
-// Dupla confirmação (é irreversível de fato — não tem "arquivado" pra
-// desfazer, é sobrescrever o número direto) igual o padrão mais grave já
-// usado no site (excluir clínica no admin).
+// Zera atual/mínimo/ponto de compra de todo mundo — não mexe nos materiais
+// em si (nome, categoria, preço). Pensado pra quando alguém vai fazer uma
+// contagem física do zero e prefere ir preenchendo cada item conforme
+// conta, em vez de ficar vendo "Crítico" em tudo por causa de mínimo antigo
+// batendo contra o atual zerado. Dupla confirmação (é irreversível de fato
+// — não tem "arquivado" pra desfazer, é sobrescrever o número direto) igual
+// o padrão mais grave já usado no site (excluir clínica no admin).
 async function zerarTodoEstoque(){
   if(!mats.length){ showToast('Nenhum material cadastrado ainda.','warn'); return; }
   const ativos = mats.filter(m=>!m.arquivado);
-  if(!confirm(`Zerar a quantidade ATUAL de todos os ${ativos.length} materiais (deixar em 0)?\n\nOs mínimos, pontos de compra, preços e os materiais em si NÃO são apagados — só o "Atual" volta a zero, pra você recontar e ir somando cada item do zero.`)) return;
+  if(!confirm(`Zerar Atual, Mínimo e Ponto de compra de todos os ${ativos.length} materiais (deixar tudo em 0)?\n\nOs preços e os materiais em si NÃO são apagados — só os 3 números de estoque voltam a zero, pra você recontar e preencher cada item do zero, sem "Crítico" aparecendo à toa.`)) return;
   const digitado = prompt('Pra confirmar, digite ZERAR (tudo maiúsculo):');
   if((digitado||'').trim().toUpperCase() !== 'ZERAR'){ showToast('Cancelado — nada foi alterado.'); return; }
   ativos.forEach(m=>{
-    const atual = estoque[m.id] || {atual:0,min:0,compra:0};
-    estoque[m.id] = {...atual, atual:0};
+    estoque[m.id] = { atual:0, min:0, compra:0 };
   });
   showLoading(true);
   const err = await saveFinanceiro();
