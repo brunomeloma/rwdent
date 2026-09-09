@@ -2229,7 +2229,7 @@
   <div style="color:var(--rose-text);font-size:14px;">Carregando...</div>
 </div>
 
-<script src="app.js?v=88"></script>
+<script src="app.js?v=89"></script>
 
 <!-- ══ MODAL RELATÓRIO MENSAL ══ -->
 <div class="modal-overlay" id="modal-relatorio" onclick="if(event.target===this)closeModal('modal-relatorio')" style="align-items:flex-start;padding-top:40px;overflow-y:auto;">
@@ -2250,6 +2250,9 @@
 <div class="modal-overlay" id="modal-receituario" onclick="if(event.target===this)closeModal('modal-receituario')">
   <div class="modal-box" style="max-width:520px;">
     <h2 class="modal-title"><i class="ti ti-file-text"></i> Receituário</h2>
+    <div class="form-group"><label>Paciente (nome que sai no receituário)</label>
+      <input type="text" id="rx-paciente" placeholder="Nome do paciente"/>
+    </div>
     <div class="form-group"><label>Profissional (assina o receituário)</label>
       <select id="rx-prof"></select>
     </div>
