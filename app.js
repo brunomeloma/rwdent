@@ -2081,6 +2081,7 @@ function renderPatientDetail(abaAtiva){
         </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
           <button class="btn-secondary" style="background:#e8f5e9;border-color:#a5d6a7;color:#2e7d32;" onclick="agendarDoProntuario(${p.id})"><i class="ti ti-calendar-plus"></i> Agendar</button>
+          <button class="btn-secondary" onclick="abrirReceituario(${p.id})"><i class="ti ti-file-text"></i> Receituário</button>
           <button class="btn-secondary" onclick="editPatient(${p.id})"><i class="ti ti-pencil"></i> Editar</button>
           ${p.arquivado ? `<button class="btn-secondary" style="background:#e8f5e9;border-color:#a5d6a7;color:#2e7d32;" onclick="restaurarPaciente(${p.id})"><i class="ti ti-refresh"></i> Restaurar</button>` : `<button class="btn-secondary" style="color:#dc2626;border-color:#fca5a5;" onclick="arquivarPaciente(${p.id})"><i class="ti ti-archive"></i> Arquivar</button>`}
           <button class="btn-secondary" onclick="voltarListaPacientes()"><i class="ti ti-arrow-left"></i> Voltar</button>
@@ -13818,6 +13819,59 @@ function buscaGlobalNav(e){
   else return;
   items.forEach((it,i)=>it.classList.toggle('active',i===_buscaGlobalIdx));
   items[_buscaGlobalIdx]?.scrollIntoView({block:'nearest'});
+}
+
+// ── RECEITUÁRIO ──
+// Mesmo padrão HTML + window.print() do recibo (não é jsPDF) — abre o
+// modal pra escolher quem assina e digitar a receita, depois gera o
+// documento numa aba nova. O corpo pode ficar em branco de propósito: aí
+// sai só o cabeçalho + linha de assinatura, pra imprimir e escrever à mão.
+let _rxPacId = null;
+function abrirReceituario(pacId){
+  _rxPacId = pacId;
+  const sel = document.getElementById('rx-prof');
+  if(sel){
+    sel.innerHTML = profissionais.length
+      ? profissionais.map(p=>`<option value="${p.id}">${escapeHtml(p.nome)}${p.cro?' — CRO '+escapeHtml(p.cro):''}</option>`).join('')
+      : '<option value="">Nenhum profissional cadastrado</option>';
+    const principal = profissionais.find(p=>p.principal);
+    if(principal) sel.value = principal.id;
+  }
+  const txt = document.getElementById('rx-texto'); if(txt) txt.value = '';
+  openModal('modal-receituario');
+}
+function gerarReceituario(){
+  const pac = pacientes.find(p=>p.id===_rxPacId);
+  if(!pac){ showToast('Paciente não encontrado.','error'); return; }
+  const profId = Number(document.getElementById('rx-prof')?.value)||null;
+  const prof = profissionais.find(p=>p.id===profId);
+  const texto = (document.getElementById('rx-texto')?.value||'').trim();
+  const clinica = clinicaData?.nome_cli || 'Clínica';
+  const rodapeClinica = [clinicaData?.endereco, clinicaData?.telefone && 'Tel: '+clinicaData.telefone].filter(Boolean).join(' — ');
+  const data = new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'});
+  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Receituário - ${escapeHtml(pac.nome)}</title>
+<style>*{margin:0;padding:0;box-sizing:border-box;}body{font-family:'Segoe UI',Arial,sans-serif;padding:36px;color:#3a2020;max-width:620px;margin:0 auto;}
+.header{text-align:center;border-bottom:2px solid #d4735a;padding-bottom:14px;margin-bottom:22px;}
+.header h1{font-size:18px;color:#7a3020;}.header p{font-size:10px;color:#b08070;margin-top:3px;}
+.titulo{text-align:center;font-size:13px;font-weight:700;letter-spacing:.5px;color:#7a3020;margin-bottom:20px;text-transform:uppercase;}
+.linha-info{font-size:13px;margin-bottom:6px;}
+.corpo{min-height:220px;white-space:pre-wrap;font-size:14px;line-height:1.7;margin:24px 0;border-top:1px solid #f0cfc4;border-bottom:1px solid #f0cfc4;padding:20px 0;}
+.assinatura{margin-top:50px;text-align:center;}
+.assinatura .linha{border-top:1px solid #3a2020;width:280px;margin:0 auto 6px;}
+.assinatura p{font-size:12px;}
+.footer{text-align:center;margin-top:30px;font-size:10px;color:#b08070;}
+@media print{body{padding:15px;}}</style></head><body>
+<div class="header"><h1>${escapeHtml(clinica)}</h1>${rodapeClinica?`<p>${escapeHtml(rodapeClinica)}</p>`:''}</div>
+<div class="titulo">Receituário Odontológico</div>
+<p class="linha-info"><strong>Paciente:</strong> ${escapeHtml(pac.nome)}</p>
+<p class="linha-info"><strong>Data:</strong> ${data}</p>
+<div class="corpo">${escapeHtml(texto)}</div>
+<div class="assinatura"><div class="linha"></div><p>${escapeHtml(prof?.nome||'')}${prof?.cro?' — CRO '+escapeHtml(prof.cro):''}</p></div>
+<div class="footer">${escapeHtml(clinica)}</div>
+<`+`script>window.onload=()=>{window.print();}<`+`/script></body></html>`;
+  const w = window.open('','_blank');
+  if(w){ w.document.write(html); w.document.close(); closeModal('modal-receituario'); }
+  else { showToast('Permita pop-ups para gerar o receituário.','warn'); }
 }
 
 // ── RECIBO DE VENDA ──
