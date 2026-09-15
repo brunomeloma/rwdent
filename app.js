@@ -7663,8 +7663,22 @@ function nfAbrirRevisao(itens){
   const fechar = ()=>modal.remove();
   modal.querySelector('#nf-revisao-cancelar').onclick = fechar;
   modal.querySelector('#nf-revisao-confirmar').onclick = async ()=>{
+    // 1ª passada: só VALIDA, não cria nada ainda — se uma linha mais adiante
+    // tiver nome vazio, sair aqui evita deixar material órfão já criado de
+    // uma linha anterior (e duplicado de novo numa segunda tentativa).
+    for(let i=0;i<itens.length;i++){
+      if(!document.getElementById(`nf-inc-${i}`)?.checked) continue;
+      if(document.getElementById(`nf-mat-${i}`)?.value === '__novo__'){
+        const nome = document.getElementById(`nf-novo-nome-${i}`)?.value.trim();
+        if(!nome){ showToast('Preencha o nome do material novo na linha "'+itens[i].produto_nota+'".','warn'); return; }
+      }
+    }
+
     const aplicar = [];
     const materiaisNovos = [];
+    // Duas linhas criando material novo com o MESMO nome (ex: mesmo produto
+    // genérico em 2 páginas da nota) viram um material só, não duplicado.
+    const novosPorNome = new Map();
     for(let i=0;i<itens.length;i++){
       if(!document.getElementById(`nf-inc-${i}`)?.checked) continue;
       const it = itens[i];
@@ -7674,14 +7688,19 @@ function nfAbrirRevisao(itens){
       let matId;
       if(selVal === '__novo__'){
         const nome = document.getElementById(`nf-novo-nome-${i}`)?.value.trim();
-        const unid = document.getElementById(`nf-novo-unid-${i}`)?.value.trim() || 'unid';
-        const cat  = document.getElementById(`nf-novo-cat-${i}`)?.value.trim() || 'Geral';
-        if(!nome){ showToast('Preencha o nome do material novo na linha "'+it.produto_nota+'".','warn'); return; }
-        const custoUnit = Number(it.valor_unitario)||0;
-        matId = nextMatId++;
-        const novoMat = { id:matId, nome, cat, unid, qtde:1, preco:custoUnit, custo:custoUnit };
-        mats.push(novoMat);
-        materiaisNovos.push(novoMat);
+        const chaveNome = _norm(nome);
+        if(novosPorNome.has(chaveNome)){
+          matId = novosPorNome.get(chaveNome);
+        } else {
+          const unid = document.getElementById(`nf-novo-unid-${i}`)?.value.trim() || 'unid';
+          const cat  = document.getElementById(`nf-novo-cat-${i}`)?.value.trim() || 'Geral';
+          const custoUnit = Number(it.valor_unitario)||0;
+          matId = nextMatId++;
+          const novoMat = { id:matId, nome, cat, unid, qtde:1, preco:custoUnit, custo:custoUnit };
+          mats.push(novoMat);
+          materiaisNovos.push(novoMat);
+          novosPorNome.set(chaveNome, matId);
+        }
       } else {
         matId = Number(selVal)||0;
       }
@@ -7699,8 +7718,12 @@ function nfAbrirRevisao(itens){
       // recém-criado já entra com esse mesmo preço como primeiro ponto do
       // histórico (dentro de matRegistrarPreco).
       if(m && valorUnit){
+        // Mesmo material pode aparecer em mais de uma linha da nota (achado
+        // real: luva com preço levemente diferente em 2 linhas da mesma
+        // compra) — cada linha registra seu próprio ponto no histórico,
+        // mas só entra UMA vez na lista do aviso, não duplicado.
         const mudou = matRegistrarPreco(m, Number(valorUnit), 'nota_fiscal');
-        if(mudou) materiaisComMudancaPreco.push(m);
+        if(mudou && !materiaisComMudancaPreco.some(x=>x.id===m.id)) materiaisComMudancaPreco.push(m);
       }
     });
     const err = await saveFinanceiro();
