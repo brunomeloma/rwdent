@@ -30,8 +30,8 @@ function montarCandidatos(clients){
     c.push({ prov:'openrouter', model:'meta-llama/llama-3.3-70b-instruct:free' });
   }
   if (clients.gemini) {
-    c.push({ prov:'gemini', model:'gemini-2.0-flash' });
-    c.push({ prov:'gemini', model:'gemini-1.5-flash' });
+    c.push({ prov:'gemini', model:'gemini-3.5-flash' });
+    c.push({ prov:'gemini', model:'gemini-2.5-flash' });
   }
   return c;
 }

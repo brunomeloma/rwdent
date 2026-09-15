@@ -70,7 +70,7 @@ module.exports = async function handler(req, res) {
       maxRetries: 0
     });
     const resp = await client.chat.completions.create({
-      model: 'gemini-2.0-flash',
+      model: 'gemini-3.5-flash',
       max_tokens: 10,
       messages: [{
         role: 'user',
