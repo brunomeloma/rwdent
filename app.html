@@ -865,12 +865,13 @@
           </div>
         </div>
         <input type="file" id="nf-input" accept="image/*,application/pdf" multiple style="display:none;" onchange="nfLerArquivos(this.files)"/>
-        <div id="est-metrics" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:16px;"></div>
+        <div id="est-metrics" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:12px;"></div>
+        <div id="est-acabando" style="display:none;background:#fff8e1;border:1.5px solid #ffe082;border-radius:12px;padding:12px 14px;margin-bottom:16px;"></div>
         <div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;">
           <input type="text" id="est-search" placeholder="Buscar..." oninput="filterEstoque()" style="flex:1;min-width:150px;"/>
           <select id="est-status-filter" onchange="filterEstoque()">
             <option value="">Todos</option>
-            <option value="danger">Crítico</option>
+            <option value="danger">Acabando</option>
             <option value="warn">Atenção</option>
             <option value="ok">OK</option>
           </select>
@@ -878,7 +879,7 @@
             <option value="az">A→Z</option>
             <option value="za">Z→A</option>
             <option value="cat">Categoria</option>
-            <option value="critico">Críticos primeiro</option>
+            <option value="critico">Acabando primeiro</option>
           </select>
         </div>
         <div style="overflow-x:auto;">
@@ -892,7 +893,6 @@
               <th style="padding:10px;text-align:right;">Mínimo</th>
               <th style="padding:10px;text-align:right;">Compra</th>
               <th style="padding:10px;text-align:left;">Nível</th>
-              <th style="padding:10px;text-align:left;">Status</th>
               <th style="padding:10px;">Ações</th>
             </tr></thead>
             <tbody id="est-tbody"></tbody>
@@ -2229,7 +2229,7 @@
   <div style="color:var(--rose-text);font-size:14px;">Carregando...</div>
 </div>
 
-<script src="app.js?v=90"></script>
+<script src="app.js?v=91"></script>
 
 <!-- ══ MODAL RELATÓRIO MENSAL ══ -->
 <div class="modal-overlay" id="modal-relatorio" onclick="if(event.target===this)closeModal('modal-relatorio')" style="align-items:flex-start;padding-top:40px;overflow-y:auto;">

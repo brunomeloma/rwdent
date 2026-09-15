@@ -1505,7 +1505,7 @@ function renderHomeStats(){
     const atencao = mats.filter(m=>!m.arquivado&&getEstStatus(m.id)==='warn');
     if(criticos.length || atencao.length){
       let html = '<div class="card" style="border:1.5px solid '+(criticos.length?'#fca5a5':'#ffe082')+';"><h3 style="font-size:13px;color:'+(criticos.length?'#dc2626':'#856404')+';margin-bottom:10px;display:flex;align-items:center;gap:6px;"><i class="ti ti-alert-triangle"></i> Estoque com atenção</h3>';
-      if(criticos.length){ html+='<div style="font-size:12px;color:#dc2626;font-weight:600;margin-bottom:6px;">Nível crítico ('+criticos.length+'):</div>'; criticos.slice(0,5).forEach(m=>{ const e=estoque[m.id]||{}; html+='<div style="font-size:12px;padding:4px 0;color:#3a2020;">• '+escapeHtml(m.nome)+' — <strong style="color:#dc2626;">'+(e.atual||0)+' '+(m.unid||'un')+'</strong> (mín: '+(e.min||0)+')</div>'; }); }
+      if(criticos.length){ html+='<div style="font-size:12px;color:#dc2626;font-weight:600;margin-bottom:6px;">Acabando ('+criticos.length+'):</div>'; criticos.slice(0,5).forEach(m=>{ const e=estoque[m.id]||{}; html+='<div style="font-size:12px;padding:4px 0;color:#3a2020;">• '+escapeHtml(m.nome)+' — <strong style="color:#dc2626;">'+(e.atual||0)+' '+(m.unid||'un')+'</strong> (mín: '+(e.min||0)+')</div>'; }); }
       if(atencao.length){ html+='<div style="font-size:12px;color:#856404;font-weight:600;margin-bottom:6px;'+(criticos.length?'margin-top:8px;':'')+'">Atenção ('+atencao.length+'):</div>'; atencao.slice(0,5).forEach(m=>{ const e=estoque[m.id]||{}; html+='<div style="font-size:12px;padding:4px 0;color:#3a2020;">• '+escapeHtml(m.nome)+' — <strong style="color:#856404;">'+(e.atual||0)+' '+(m.unid||'un')+'</strong></div>'; }); }
       html+='<button class="btn-secondary" onclick="switchTab(\'estoque_fin\')" style="margin-top:10px;font-size:11px;padding:6px 12px;"><i class="ti ti-box"></i> Ver estoque completo</button></div>';
       estAlertEl.innerHTML=html; estAlertEl.style.display='';
@@ -6776,7 +6776,7 @@ function renderFinanceiroDash(){
     {lbl:'Vendas finalizadas',val:fin.length,cor:'#2e7d32'},
     {lbl:'Ticket médio',val:fmtBRL(ticket),cor:'#1565c0'},
     {lbl:'Orçamentos abertos',val:orc.length,cor:'#856404'},
-    {lbl:'Estoque crítico',val:criticos,cor:'#dc2626'},
+    {lbl:'Estoque acabando',val:criticos,cor:'#dc2626'},
   ].map(s=>`<div style="background:var(--rose-lighter);border:1px solid var(--rose-light);border-radius:12px;padding:14px 18px;">
     <div style="font-size:11px;color:var(--rose-text);margin-bottom:4px;">${s.lbl}</div>
     <div style="font-size:22px;font-weight:800;color:${s.cor};">${s.val}</div>
@@ -6811,7 +6811,7 @@ function renderFinanceiroDash(){
   document.getElementById('fin-estoque-alerta').innerHTML = crit.length
     ? crit.map(m=>`<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--rose-light);font-size:13px;">
         <span>${escapeHtml(m.nome)}</span>
-        <span class="fin-badge danger">Crítico: ${(estoque[m.id]||{}).atual||0} ${m.unid||''}</span>
+        <span class="fin-badge danger">Acabando: ${(estoque[m.id]||{}).atual||0} ${m.unid||''}</span>
       </div>`).join('')
     : '<div style="color:#2e7d32;font-size:13px;">✓ Estoque OK</div>';
 
@@ -7295,13 +7295,18 @@ function calcMatCusto(){
 // leitura de nota fiscal (api/ler-nota-fiscal.js já converte pra preço por
 // unidade). Misturar as duas bases faria o % de variação sair sem sentido
 // (ex: comparar preço de uma caixa com preço de 1 unidade).
+// Retorna true só quando é uma MUDANÇA de verdade (já tinha preço antes e
+// veio diferente) — usado pra decidir se avisa sobre procedimento afetado.
+// Primeiro registro de um material novo não conta como "mudança".
 function matRegistrarPreco(mat, custoUnit, origem){
-  if(!mat || !Number.isFinite(custoUnit) || custoUnit<=0) return;
+  if(!mat || !Number.isFinite(custoUnit) || custoUnit<=0) return false;
   if(!Array.isArray(mat.historicoPrecos)) mat.historicoPrecos = [];
   const ultimo = mat.historicoPrecos[mat.historicoPrecos.length-1];
-  if(ultimo && Math.abs(ultimo.preco - custoUnit) < 0.0005) return;
+  if(ultimo && Math.abs(ultimo.preco - custoUnit) < 0.0005) return false;
+  const mudou = !!ultimo;
   mat.historicoPrecos.push({ data: hoje(), preco: parseFloat(custoUnit.toFixed(4)), origem });
   if(mat.historicoPrecos.length > 24) mat.historicoPrecos = mat.historicoPrecos.slice(-24);
+  return mudou;
 }
 // Variação % do preço atual vs a entrada anterior do histórico — null se
 // não tiver pelo menos 2 pontos ainda pra comparar.
@@ -7607,6 +7612,7 @@ function nfAbrirRevisao(itens){
     const semMatch = !it.material_id;
     const avisoTxt = it.confianca!=='alta' && it.observacao ? it.observacao : (semMatch ? 'material não identificado — escolha manualmente' : '');
     const opcoesMats = matsAtivos.map(m=>`<option value="${m.id}" ${m.id===it.material_id?'selected':''}>${escapeHtml(m.nome)} (${escapeHtml(m.unid||'unid')})</option>`).join('');
+    const nomeSugerido = String(it.produto_nota||'').replace(/'/g,'').slice(0,80);
     return `<div style="border:1.5px solid ${semMatch?'#f5c6cb':'var(--rose-light)'};border-radius:10px;padding:10px;">
       <label style="display:flex;align-items:center;gap:6px;">
         <input type="checkbox" id="nf-inc-${i}" ${it.material_id?'checked':''}/>
@@ -7616,9 +7622,15 @@ function nfAbrirRevisao(itens){
       <div style="display:flex;gap:8px;margin-top:6px;flex-wrap:wrap;align-items:center;margin-left:22px;">
         <select id="nf-mat-${i}" style="flex:1;min-width:160px;padding:6px 8px;border:1.5px solid var(--rose-light);border-radius:8px;font-size:12px;">
           <option value="">— escolher material —</option>
+          <option value="__novo__" style="font-weight:700;">+ Criar material novo</option>
           ${opcoesMats}
         </select>
         <input type="number" id="nf-qtd-${i}" value="${it.quantidade}" min="0" step="0.01" style="width:80px;padding:6px 8px;border:1.5px solid var(--rose-light);border-radius:8px;font-size:12px;text-align:right;"/>
+      </div>
+      <div id="nf-novo-${i}" style="display:none;margin-top:6px;margin-left:22px;gap:6px;flex-wrap:wrap;background:var(--rose-lighter);border-radius:8px;padding:8px;">
+        <input type="text" id="nf-novo-nome-${i}" value="${escapeHtml(nomeSugerido)}" placeholder="Nome do material" style="flex:2;min-width:140px;padding:6px 8px;border:1.5px solid var(--rose-light);border-radius:8px;font-size:12px;"/>
+        <input type="text" id="nf-novo-unid-${i}" list="unid-list" placeholder="Unidade (ml, unid...)" style="flex:1;min-width:100px;padding:6px 8px;border:1.5px solid var(--rose-light);border-radius:8px;font-size:12px;"/>
+        <input type="text" id="nf-novo-cat-${i}" list="cats-list" placeholder="Categoria (opcional)" style="flex:1;min-width:100px;padding:6px 8px;border:1.5px solid var(--rose-light);border-radius:8px;font-size:12px;"/>
       </div>
     </div>`;
   }).join('');
@@ -7626,18 +7638,25 @@ function nfAbrirRevisao(itens){
   // Ajusta o passo/arredondamento do campo de quantidade conforme a unidade
   // do material selecionado em cada linha (mesma regra do resto do
   // sistema — ver passoQtd/arredondarQtd) e auto-marca a linha quando a
-  // pessoa escolhe um material manualmente pra uma linha em dúvida.
+  // pessoa escolhe um material manualmente pra uma linha em dúvida. Quando
+  // escolhe "criar material novo", mostra o mini-formulário inline em vez
+  // de forçar a pessoa a cancelar, ir em Materiais cadastrar, e voltar.
   itens.forEach((it,i)=>{
     const sel = document.getElementById(`nf-mat-${i}`);
     const qtdEl = document.getElementById(`nf-qtd-${i}`);
     const incEl = document.getElementById(`nf-inc-${i}`);
+    const novoWrap = document.getElementById(`nf-novo-${i}`);
+    const novoUnidEl = document.getElementById(`nf-novo-unid-${i}`);
     const syncPasso = ()=>{
-      const m = mats.find(x=>x.id===Number(sel.value));
-      const passo = passoQtd(m?.unid);
+      const ehNovo = sel.value === '__novo__';
+      novoWrap.style.display = ehNovo ? 'flex' : 'none';
+      const unidRef = ehNovo ? novoUnidEl?.value : mats.find(x=>x.id===Number(sel.value))?.unid;
+      const passo = passoQtd(unidRef);
       qtdEl.step = passo;
-      if(qtdEl.value!=='') qtdEl.value = arredondarQtd(qtdEl.value, m?.unid);
+      if(qtdEl.value!=='') qtdEl.value = arredondarQtd(qtdEl.value, unidRef);
     };
     sel?.addEventListener('change', ()=>{ syncPasso(); if(sel.value && incEl) incEl.checked = true; });
+    novoUnidEl?.addEventListener('input', syncPasso);
     syncPasso();
   });
 
@@ -7645,21 +7664,44 @@ function nfAbrirRevisao(itens){
   modal.querySelector('#nf-revisao-cancelar').onclick = fechar;
   modal.querySelector('#nf-revisao-confirmar').onclick = async ()=>{
     const aplicar = [];
-    itens.forEach((it,i)=>{
-      if(!document.getElementById(`nf-inc-${i}`)?.checked) return;
-      const matId = Number(document.getElementById(`nf-mat-${i}`)?.value)||0;
+    const materiaisNovos = [];
+    for(let i=0;i<itens.length;i++){
+      if(!document.getElementById(`nf-inc-${i}`)?.checked) continue;
+      const it = itens[i];
+      const selVal = document.getElementById(`nf-mat-${i}`)?.value||'';
       const qtd = Number(document.getElementById(`nf-qtd-${i}`)?.value)||0;
-      if(matId && qtd>0) aplicar.push({matId, qtd, valorUnit: it.valor_unitario});
-    });
+      if(!qtd || qtd<=0) continue;
+      let matId;
+      if(selVal === '__novo__'){
+        const nome = document.getElementById(`nf-novo-nome-${i}`)?.value.trim();
+        const unid = document.getElementById(`nf-novo-unid-${i}`)?.value.trim() || 'unid';
+        const cat  = document.getElementById(`nf-novo-cat-${i}`)?.value.trim() || 'Geral';
+        if(!nome){ showToast('Preencha o nome do material novo na linha "'+it.produto_nota+'".','warn'); return; }
+        const custoUnit = Number(it.valor_unitario)||0;
+        matId = nextMatId++;
+        const novoMat = { id:matId, nome, cat, unid, qtde:1, preco:custoUnit, custo:custoUnit };
+        mats.push(novoMat);
+        materiaisNovos.push(novoMat);
+      } else {
+        matId = Number(selVal)||0;
+      }
+      if(matId) aplicar.push({matId, qtd, valorUnit: it.valor_unitario});
+    }
     if(!aplicar.length){ showToast('Marque ao menos um item com material e quantidade.','warn'); return; }
     showLoading(true);
+    const materiaisComMudancaPreco = [];
     aplicar.forEach(({matId,qtd,valorUnit})=>{
       const m = mats.find(x=>x.id===matId);
       const atual = estoque[matId] || {atual:0,min:0,compra:0};
       estoque[matId] = {...atual, atual: arredondarQtd((Number(atual.atual)||0) + qtd, m?.unid)};
       // Guarda o preço da compra no histórico do material — é exatamente
-      // pra isso que serve ler a nota, não só pra somar quantidade.
-      if(m && valorUnit) matRegistrarPreco(m, Number(valorUnit), 'nota_fiscal');
+      // pra isso que serve ler a nota, não só pra somar quantidade. Material
+      // recém-criado já entra com esse mesmo preço como primeiro ponto do
+      // histórico (dentro de matRegistrarPreco).
+      if(m && valorUnit){
+        const mudou = matRegistrarPreco(m, Number(valorUnit), 'nota_fiscal');
+        if(mudou) materiaisComMudancaPreco.push(m);
+      }
     });
     const err = await saveFinanceiro();
     showLoading(false);
@@ -7667,6 +7709,178 @@ function nfAbrirRevisao(itens){
     fechar();
     renderEstoque(); renderMats();
     showToast(`Estoque atualizado! ${aplicar.length} ${aplicar.length>1?'itens adicionados':'item adicionado'}.`);
+    nfAvisarMudancaPreco(materiaisComMudancaPreco, ()=>{
+      if(materiaisNovos.length) nfPerguntarVincularInsumo(materiaisNovos);
+    });
+  };
+}
+
+// ── AVISO DE MUDANÇA DE PREÇO EM INSUMO DE PROCEDIMENTO ────────────────────
+// Some materiais mudam de preço na nota (achado real: o mesmo material em
+// duas linhas diferentes da nota, preço um pouco diferente por lote/época).
+// Se esse material é insumo de algum procedimento, o CUSTO daquele
+// procedimento ficou desatualizado — mas o PREÇO DE VENDA não muda sozinho,
+// só avisa e deixa a pessoa decidir (mesmo raciocínio do vínculo de insumo:
+// nunca mexe em preço de venda sem a pessoa mandar).
+function nfAvisarMudancaPreco(materiaisComMudancaPreco, aoFechar){
+  const afetados = []; // { mat, procNomes:[...] }
+  materiaisComMudancaPreco.forEach(m=>{
+    const procNomes = procs.filter(p=>(procInsumos[p.id]||[]).some(ins=>ins.matId===m.id)).map(p=>p.nome);
+    if(procNomes.length) afetados.push({ mat:m, procNomes });
+  });
+  if(!afetados.length){ if(aoFechar) aoFechar(); return; }
+
+  const modal = document.createElement('div');
+  modal.className = 'modal-overlay';
+  modal.style.cssText = 'display:flex;align-items:flex-start;justify-content:center;padding:20px;overflow-y:auto;';
+  modal.innerHTML = `<div class="modal-box" style="max-width:560px;max-height:88vh;overflow-y:auto;padding:24px;">
+    <h3 style="font-size:15px;font-weight:800;color:var(--rose-dark);margin-bottom:6px;"><i class="ti ti-alert-triangle"></i> Preço mudou em material usado em procedimento</h3>
+    <p style="font-size:12px;color:var(--rose-text);margin-bottom:14px;">O custo de venda dos procedimentos abaixo NÃO mudou sozinho — só o custo do insumo ficou desatualizado. Confira e, se quiser, recalcule o preço manualmente em Financeiro &gt; Procedimentos.</p>
+    <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:16px;">
+      ${afetados.map(({mat,procNomes})=>{
+        const variacao = matVariacaoPreco(mat);
+        const varHtml = variacao===null ? '' : ` <span style="font-weight:700;color:${variacao>0?'#c0392b':'#2e7d32'};">(${variacao>0?'↑':'↓'} ${Math.abs(variacao)}%)</span>`;
+        return `<div style="border:1.5px solid var(--rose-light);border-radius:10px;padding:10px;">
+          <div style="font-size:13px;font-weight:700;color:var(--rose-dark);">${escapeHtml(mat.nome)}${varHtml}</div>
+          <div style="font-size:11.5px;color:var(--rose-text);margin-top:3px;">Usado em: ${procNomes.map(escapeHtml).join(', ')}</div>
+        </div>`;
+      }).join('')}
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;">
+      <button class="btn-secondary" id="nfpv-fechar">Fechar</button>
+      <button class="btn-primary" id="nfpv-ver-procs"><i class="ti ti-list-check"></i> Ver Procedimentos</button>
+    </div>
+  </div>`;
+  document.body.appendChild(modal);
+  const fechar = ()=>{ modal.remove(); if(aoFechar) aoFechar(); };
+  modal.querySelector('#nfpv-fechar').onclick = fechar;
+  modal.querySelector('#nfpv-ver-procs').onclick = ()=>{ modal.remove(); switchTab('procedimentos_fin'); if(aoFechar) aoFechar(); };
+}
+
+// ── VINCULAR MATERIAL NOVO (da nota fiscal) A PROCEDIMENTOS ────────────────
+// Material criado pela leitura de nota não sabe sozinho quais procedimentos
+// consomem ele — isso é decisão de receita da clínica, ninguém adivinha.
+// Em vez de forçar ir depois em Financeiro > Procedimentos > cada um > editar
+// insumos, pergunta na hora, um material de cada vez (fila _nfVincFila).
+// NUNCA mexe no preço de venda do procedimento — só no custo de insumo
+// (igual saveInsumos já fazia pra edição manual); recalcular preço continua
+// sendo ação separada e deliberada (botão "Recalcular preço").
+let _nfVincFila = [];
+let _nfVincAtualMat = null;
+let _nfVincTemp = [];
+function nfPerguntarVincularInsumo(materiaisNovos){
+  _nfVincFila = [...materiaisNovos];
+  _nfVincProximo();
+}
+function _nfVincProximo(){
+  _nfVincAtualMat = _nfVincFila.shift() || null;
+  if(!_nfVincAtualMat){
+    const modalAntigo = document.getElementById('nf-vinc-modal');
+    if(modalAntigo) modalAntigo.remove();
+    return;
+  }
+  _nfVincTemp = [];
+  let modal = document.getElementById('nf-vinc-modal');
+  if(!modal){
+    modal = document.createElement('div');
+    modal.id = 'nf-vinc-modal';
+    modal.className = 'modal-overlay';
+    modal.style.cssText = 'display:flex;align-items:flex-start;justify-content:center;padding:20px;overflow-y:auto;';
+    document.body.appendChild(modal);
+  }
+  modal.innerHTML = `<div class="modal-box" style="max-width:520px;max-height:88vh;overflow-y:auto;padding:24px;">
+    <h3 style="font-size:15px;font-weight:800;color:var(--rose-dark);margin-bottom:4px;"><i class="ti ti-link"></i> Vincular material novo a procedimentos?</h3>
+    <p style="font-size:12px;color:var(--rose-text);margin-bottom:14px;">"<strong>${escapeHtml(_nfVincAtualMat.nome)}</strong>" foi criado agora pela leitura da nota. Se algum procedimento usa esse material, adicione aqui — não muda o preço de venda, só o custo de insumo (o preço só muda se você clicar em "Recalcular preço" depois).</p>
+    <div style="position:relative;margin-bottom:10px;">
+      <input type="text" id="nfv-proc-search" placeholder="Buscar procedimento..." autocomplete="off" style="width:100%;padding:8px 10px;border:1.5px solid var(--rose-light);border-radius:8px;font-size:13px;"/>
+      <div id="nfv-proc-dropdown" style="display:none;position:fixed;z-index:6100;background:#fff;border:1.5px solid var(--rose-light);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.12);overflow-y:auto;"></div>
+    </div>
+    <ul id="nfv-lista" style="list-style:none;margin-bottom:14px;"></ul>
+    <div style="display:flex;justify-content:space-between;gap:8px;">
+      <button class="btn-secondary" id="nfv-pular">Pular este material</button>
+      <button class="btn-primary" id="nfv-salvar"><i class="ti ti-check"></i> Salvar vínculos</button>
+    </div>
+  </div>`;
+
+  const search = modal.querySelector('#nfv-proc-search');
+  const dd = modal.querySelector('#nfv-proc-dropdown');
+  const filtrar = ()=>{
+    const q = _norm(search.value||'').trim();
+    let lista = procs.filter(p=>p.ativo!==false && !_nfVincTemp.some(t=>t.procId===p.id));
+    if(q) lista = lista.filter(p=>_norm(p.nome).includes(q));
+    lista = lista.sort((a,b)=>a.nome.localeCompare(b.nome,'pt-BR')).slice(0,40);
+    if(!lista.length){ dd.style.display='none'; return; }
+    const r = search.getBoundingClientRect();
+    dd.style.left = r.left+'px'; dd.style.width = r.width+'px'; dd.style.top = (r.bottom+4)+'px';
+    dd.style.maxHeight = Math.max(120, Math.min(280, window.innerHeight-r.bottom-16))+'px';
+    dd.style.display = 'block';
+    dd.innerHTML = lista.map(p=>`<div data-pid="${p.id}" style="padding:8px 12px;cursor:pointer;font-size:13px;border-bottom:1px solid var(--rose-light);">${escapeHtml(p.nome)}</div>`).join('');
+    dd.querySelectorAll('[data-pid]').forEach(el=>{
+      el.onmouseover=()=>{el.style.background='var(--rose-lighter)';};
+      el.onmouseout=()=>{el.style.background='#fff';};
+      el.onclick=()=>{
+        const pid = Number(el.dataset.pid);
+        _nfVincTemp.push({procId:pid, qtd:1});
+        search.value=''; dd.style.display='none';
+        renderNfVincLista();
+      };
+    });
+  };
+  search.addEventListener('input', filtrar);
+  search.addEventListener('focus', filtrar);
+  // Listener de scroll registrado só uma vez (não a cada material da fila,
+  // senão acumula um listener novo por material) — busca o dropdown atual
+  // pelo id em vez de fechar sobre uma referência que pode ficar obsoleta
+  // quando o modal é reconstruído pra o próximo material.
+  if(!window._nfVincScrollBound){
+    window._nfVincScrollBound = true;
+    document.addEventListener('scroll', ()=>{
+      const ddAtual = document.getElementById('nfv-proc-dropdown');
+      if(ddAtual) ddAtual.style.display = 'none';
+    }, true);
+  }
+
+  function renderNfVincLista(){
+    const ul = modal.querySelector('#nfv-lista');
+    if(!_nfVincTemp.length){ ul.innerHTML = '<li style="color:var(--rose-text);font-size:12px;padding:4px 0;">Nenhum procedimento vinculado ainda.</li>'; return; }
+    const unid = _nfVincAtualMat.unid;
+    ul.innerHTML = _nfVincTemp.map((t,idx)=>{
+      const p = procs.find(x=>x.id===t.procId);
+      return `<li style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--rose-light);font-size:12px;">
+        <span style="flex:1;">${escapeHtml(p?.nome||'?')}</span>
+        <input type="number" value="${t.qtd}" min="0.001" step="${passoQtd(unid)}" style="width:64px;padding:4px 6px;border:1.5px solid var(--rose-light);border-radius:6px;text-align:center;" onchange="_nfVincAtualizarQtd(${idx},this.value)"/>
+        <span style="color:var(--rose-text);">${escapeHtml(unid||'')}</span>
+        <button class="btn-danger" style="padding:3px 7px;" onclick="_nfVincRemover(${idx})"><i class="ti ti-x"></i></button>
+      </li>`;
+    }).join('');
+  }
+  window._nfVincAtualizarQtd = (idx,val)=>{ _nfVincTemp[idx].qtd = arredondarQtd(val, _nfVincAtualMat.unid)||0.001; renderNfVincLista(); };
+  window._nfVincRemover = (idx)=>{ _nfVincTemp.splice(idx,1); renderNfVincLista(); };
+  renderNfVincLista();
+
+  modal.querySelector('#nfv-pular').onclick = ()=>_nfVincProximo();
+  modal.querySelector('#nfv-salvar').onclick = async ()=>{
+    if(_nfVincTemp.length){
+      _nfVincTemp.forEach(({procId,qtd})=>{
+        const lista = procInsumos[procId] || [];
+        const ex = lista.findIndex(x=>x.matId===_nfVincAtualMat.id);
+        if(ex>=0) lista[ex].qtd = parseFloat((lista[ex].qtd+qtd).toFixed(4));
+        else lista.push({matId:_nfVincAtualMat.id, qtd});
+        procInsumos[procId] = lista;
+        const pi = procs.findIndex(x=>x.id===procId);
+        if(pi>=0){
+          const totalIns = procInsumos[procId].reduce((acc,item)=>{const m=mats.find(x=>x.id===item.matId);return acc+(m?m.custo*item.qtd:0);},0);
+          procs[pi].insumos = parseFloat(totalIns.toFixed(2));
+        }
+      });
+      showLoading(true);
+      const err = await saveFinanceiro();
+      showLoading(false);
+      if(err){ showToast('Erro ao salvar vínculo: '+err.message,'error'); return; }
+      renderProcs();
+      showToast(`"${_nfVincAtualMat.nome}" vinculado a ${_nfVincTemp.length} procedimento(s). Preço de venda não mudou — recalcule manualmente se quiser.`);
+    }
+    _nfVincProximo();
   };
 }
 
@@ -7730,29 +7944,22 @@ function renderEstoque(){
     const ord={danger:0,warn:1,ok:2,'':3};
     list=[...list].sort((a,b)=>(ord[getEstStatus(a.id)]||3)-(ord[getEstStatus(b.id)]||3)||a.nome.localeCompare(b.nome,'pt-BR'));
   } else list=[...list].sort((a,b)=>a.nome.localeCompare(b.nome,'pt-BR'));
-  const ok  = mats.filter(m=>getEstStatus(m.id)==='ok').length;
-  const warn= mats.filter(m=>getEstStatus(m.id)==='warn').length;
-  const dan = mats.filter(m=>getEstStatus(m.id)==='danger').length;
   const estM = document.getElementById('est-metrics');
   if(estM) estM.innerHTML = [
-    {lbl:'Total materiais',val:mats.length,cor:'var(--rose-dark)'},
-    {lbl:'OK',val:ok,cor:'#2e7d32'},
-    {lbl:'Atenção',val:warn,cor:'#856404'},
-    {lbl:'Crítico',val:dan,cor:'#dc2626'},
+    {lbl:'Total materiais',val:mats.filter(m=>!m.arquivado).length,cor:'var(--rose-dark)'},
   ].map(s=>`<div style="background:var(--rose-lighter);border:1px solid var(--rose-light);border-radius:12px;padding:12px 16px;">
     <div style="font-size:11px;color:var(--rose-text);">${s.lbl}</div>
     <div style="font-size:20px;font-weight:800;color:${s.cor};">${s.val}</div>
   </div>`).join('');
+  renderEstAcabando();
   const tb = document.getElementById('est-tbody');
   if(!tb) return;
-  if(!list.length){ tb.innerHTML='<tr><td colspan="10" style="text-align:center;color:var(--rose-text);padding:20px;">Nenhum material no estoque.</td></tr>'; return; }
+  if(!list.length){ tb.innerHTML='<tr><td colspan="9" style="text-align:center;color:var(--rose-text);padding:20px;">Nenhum material no estoque.</td></tr>'; return; }
   tb.innerHTML = list.map(m=>{
     const e   = estoque[m.id]||{atual:0,min:0,compra:0};
     const st  = getEstStatus(m.id);
     const pct = e.compra>0?Math.min(100,Math.round((e.atual/e.compra)*100)):null;
     const barCls = st==='danger'?'prog-danger':st==='warn'?'prog-warn':'prog-ok';
-    const stLbl  = st==='danger'?'Crítico':st==='warn'?'Atenção':st==='ok'?'OK':'—';
-    const stCls  = st==='danger'?'danger':st==='warn'?'warn':st==='ok'?'ok':'';
     const passo = passoQtd(m.unid);
     return `<tr style="border-bottom:1px solid var(--rose-light);">
       <td data-label="Selecionar" style="padding:10px;"><input type="checkbox" ${estSelected.has(m.id)?'checked':''} onchange="toggleEstSel(${m.id},this.checked)"/></td>
@@ -7763,7 +7970,6 @@ function renderEstoque(){
       <td data-label="Mínimo" style="padding:10px;text-align:right;"><input class="edit-input-fin" type="number" min="0" step="${passo}" value="${e.min||0}" onchange="updateEstField(${m.id},'min',this.value,this)" style="width:66px;text-align:right;color:#dc2626;"/></td>
       <td data-label="Compra" style="padding:10px;text-align:right;"><input class="edit-input-fin" type="number" min="0" step="${passo}" value="${e.compra||0}" onchange="updateEstField(${m.id},'compra',this.value,this)" style="width:66px;text-align:right;color:#856404;"/></td>
       <td data-label="Nível" style="padding:10px;">${pct!==null?`<div class="prog-wrap"><div class="prog-bar ${barCls}" style="width:${pct}%;"></div></div> <span style="font-size:11px;color:var(--rose-text);">${pct}%</span>`:'<span style="font-size:11px;color:var(--rose-text);">—</span>'}</td>
-      <td data-label="Status" style="padding:10px;"><span class="fin-badge ${stCls}">${stLbl}</span></td>
       <td data-label="Ações" style="padding:10px;">
         <div style="display:flex;gap:6px;justify-content:flex-end;">
           <button class="btn-secondary" style="padding:4px 8px;font-size:11px;" onclick="openEstEdit(${m.id})"><i class="ti ti-pencil"></i></button>
@@ -7772,6 +7978,23 @@ function renderEstoque(){
       </td>
     </tr>`;
   }).join('');
+}
+// Resumo calmo de "o que tá acabando" (status danger = atual <= mínimo) —
+// no lugar do badge "Crítico" pintando cada linha da tabela de vermelho.
+// Só aparece quando tem algo pra repor; some sozinho quando não tem nada.
+function renderEstAcabando(){
+  const box = document.getElementById('est-acabando');
+  if(!box) return;
+  const acabando = mats.filter(m=>!m.arquivado && getEstStatus(m.id)==='danger');
+  if(!acabando.length){ box.style.display='none'; return; }
+  box.style.display = 'block';
+  box.innerHTML = `<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+      <i class="ti ti-shopping-cart" style="color:#a06c00;font-size:16px;"></i>
+      <strong style="font-size:12.5px;color:#7a5400;">Hora de repor (${acabando.length})</strong>
+    </div>
+    <div style="display:flex;flex-wrap:wrap;gap:6px;">
+      ${acabando.map(m=>`<span style="background:#fff;border:1px solid #ffe082;color:#7a5400;border-radius:20px;padding:3px 10px;font-size:11.5px;">${escapeHtml(m.nome)}</span>`).join('')}
+    </div>`;
 }
 function updateEstField(id, field, val, el){
   if(!estoque[id]) estoque[id]={atual:0,min:0,compra:0};
@@ -7783,8 +8006,10 @@ function updateEstField(id, field, val, el){
   // realmente salvo — evita "62,02 UNID" ficando visível na tela.
   if(el && String(arredondado) !== String(val)) el.value = arredondado;
   // NÃO chama renderEstoque() aqui — evita recriar os inputs e perder o foco
-  // Atualiza só o badge de status inline sem re-renderizar toda a tabela
+  // Atualiza só a barra de nível da linha + o resumo "Acabando" no topo,
+  // sem re-renderizar a tabela toda
   _atualizarStatusEstLinha(id);
+  renderEstAcabando();
   // Autosave com debounce de 2s
   clearTimeout(window._estSaveTimer);
   window._estSaveTimer = setTimeout(async ()=>{
@@ -7793,20 +8018,15 @@ function updateEstField(id, field, val, el){
   }, 2000);
 }
 function _atualizarStatusEstLinha(id){
-  // Atualiza apenas o badge de status e barra de progresso na linha do material
+  // Atualiza só a barra de nível da linha do material (o resumo "Acabando"
+  // é quem mostra o que precisa de atenção agora, não mais um badge por linha)
   const e = estoque[id]||{atual:0,min:0,compra:0};
   const st = getEstStatus(id);
-  const stLbl = st==='danger'?'Crítico':st==='warn'?'Atenção':st==='ok'?'OK':'—';
-  const stCls = st==='danger'?'danger':st==='warn'?'warn':st==='ok'?'ok':'';
-  // Procura na tabela por linhas que contenham o botão de edição desse material
   const btns = document.querySelectorAll(`#est-tbody button[onclick="openEstEdit(${id})"]`);
   btns.forEach(btn=>{
     const tr = btn.closest('tr');
     if(!tr) return;
-    const badge = tr.querySelector('.fin-badge');
-    if(badge){ badge.className=`fin-badge ${stCls}`; badge.textContent=stLbl; }
     const pct = e.compra>0?Math.min(100,Math.round((e.atual/e.compra)*100)):null;
-    const progWrap = tr.querySelector('.prog-wrap');
     const progBar  = tr.querySelector('.prog-bar');
     if(progBar && pct!==null){
       const barCls = st==='danger'?'prog-danger':st==='warn'?'prog-warn':'prog-ok';
