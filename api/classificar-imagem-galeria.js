@@ -71,7 +71,11 @@ module.exports = async function handler(req, res) {
     });
     const resp = await client.chat.completions.create({
       model: 'gemini-3.5-flash',
-      max_tokens: 10,
+      // 10 tokens bastava pra modelo antigo (respondia a palavra direto),
+      // mas esse é "thinking" por padrão — o raciocínio interno consome
+      // tokens antes da resposta final, então 10 cortava tudo no meio e
+      // sempre caía no fallback "foto" lá embaixo.
+      max_tokens: 200,
       messages: [{
         role: 'user',
         content: [

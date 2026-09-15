@@ -119,18 +119,25 @@ Responda APENAS com um array JSON (sem markdown, sem texto antes/depois), um ite
 - confianca: "alta" (nome/especificação bateu claramente), "media" (bateu mas com alguma diferença de nome) ou "baixa" (chute, ou material_id null)
 - observacao: string curta explicando a dúvida (inclua aqui se converteu de caixa pra unidade), vazio "" se confianca alta e sem conversão
 
-Ignore linhas que não são produtos (frete, impostos, totais, dados da empresa). Se não conseguir ler nenhum produto, responda [].`;
+Ignore linhas que não são produtos (frete, impostos, totais, dados da empresa). Se não conseguir ler nenhum produto, responda [].
+
+IMPORTANTE: não pense em voz alta, não escreva raciocínio, análise item a item nem comentário nenhum fora do array — a resposta inteira tem que ser só o array JSON, do "[" inicial ao "]" final, nada antes nem depois.`;
 
   try {
     const client = new OpenAI({
       apiKey: geminiKey,
       baseURL: 'https://generativelanguage.googleapis.com/v1beta/openai/',
-      timeout: 45000,
+      timeout: 55000,
       maxRetries: 0
     });
     const resp = await client.chat.completions.create({
       model: 'gemini-3.5-flash',
-      max_tokens: 4000,
+      // Modelo "thinking" por padrão — o raciocínio interno consome parte
+      // do orçamento de tokens antes de chegar na resposta final. Com
+      // poucos tokens (era 4000), uma nota com muitos itens fazia o
+      // raciocínio comer tudo e cortar a resposta no meio (nem chegava a
+      // gerar o JSON), daí a IA "lia" a nota mas nada era adicionado.
+      max_tokens: 32000,
       messages: [{
         role: 'user',
         content: [

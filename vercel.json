@@ -1,9 +1,9 @@
 {
   "functions": {
     "api/chat.js": { "maxDuration": 60 },
-    "api/classificar-imagem-galeria.js": { "maxDuration": 20 },
+    "api/classificar-imagem-galeria.js": { "maxDuration": 30 },
     "api/enviar-lembretes.js": { "maxDuration": 30 },
-    "api/ler-nota-fiscal.js": { "maxDuration": 45 }
+    "api/ler-nota-fiscal.js": { "maxDuration": 60 }
   },
   "rewrites": [
     {
