@@ -7544,10 +7544,13 @@ async function nfLerArquivos(fileList){
   showLoading(true);
   let arquivos;
   try{
-    // PDFs viram imagem (1 por página) ANTES do limite de 5 — assim uma nota
-    // de 1 página em PDF conta como 1, não como "arquivo PDF inteiro".
+    // PDFs viram imagem (1 por página) ANTES do limite de 8 — assim uma nota
+    // de 1 página em PDF conta como 1, não como "arquivo PDF inteiro". O
+    // limite era 5 e cortava nota grande de fornecedor (achado com nota
+    // real de 8 páginas, tipo DANFE formatado pra impressão frente/verso —
+    // com 5 páginas perdia produtos que só apareciam nas páginas finais).
     const partes = await Promise.all(brutos.map(async f=>{
-      if(f.type==='application/pdf') return await _pdfParaImagens(f, 5);
+      if(f.type==='application/pdf') return await _pdfParaImagens(f, 8);
       if(f.type.startsWith('image/')) return [f];
       return [];
     }));
@@ -7558,7 +7561,7 @@ async function nfLerArquivos(fileList){
     return;
   }
   if(!arquivos.length){ showLoading(false); showToast('Selecione uma foto ou PDF da nota fiscal.','warn'); return; }
-  if(arquivos.length > 5){ showLoading(false); showToast('No máximo 5 páginas/fotos por vez.','warn'); return; }
+  if(arquivos.length > 8){ showLoading(false); showToast('No máximo 8 páginas/fotos por vez.','warn'); return; }
 
   try{
     // Resolução um pouco maior que a da galeria (1800 vs 1600): nota fiscal

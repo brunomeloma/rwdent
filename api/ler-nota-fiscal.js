@@ -53,7 +53,7 @@ module.exports = async function handler(req, res) {
   // várias páginas/fotos) — sempre normaliza pra lista internamente.
   const body = req.body || {};
   let imagens = Array.isArray(body.imagesBase64) ? body.imagesBase64 : (body.imageBase64 ? [body.imageBase64] : []);
-  imagens = imagens.filter(s => typeof s === 'string' && s.length >= 100).slice(0, 5);
+  imagens = imagens.filter(s => typeof s === 'string' && s.length >= 100).slice(0, 8);
   if (!imagens.length) return res.status(400).json({ error: 'Envie ao menos uma foto da nota fiscal.' });
   for (const img of imagens) {
     if (img.length > 4_000_000) return res.status(413).json({ error: 'Uma das imagens está grande demais.' });
