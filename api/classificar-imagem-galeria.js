@@ -76,6 +76,7 @@ module.exports = async function handler(req, res) {
       // tokens antes da resposta final, então 10 cortava tudo no meio e
       // sempre caía no fallback "foto" lá embaixo.
       max_tokens: 200,
+      reasoning_effort: 'low',
       messages: [{
         role: 'user',
         content: [

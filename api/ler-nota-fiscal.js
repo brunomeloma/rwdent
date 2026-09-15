@@ -132,12 +132,15 @@ IMPORTANTE: não pense em voz alta, não escreva raciocínio, análise item a it
     });
     const resp = await client.chat.completions.create({
       model: 'gemini-3.5-flash',
-      // Modelo "thinking" por padrão — o raciocínio interno consome parte
-      // do orçamento de tokens antes de chegar na resposta final. Com
-      // poucos tokens (era 4000), uma nota com muitos itens fazia o
-      // raciocínio comer tudo e cortar a resposta no meio (nem chegava a
-      // gerar o JSON), daí a IA "lia" a nota mas nada era adicionado.
+      // Modelo "thinking" por padrão — mesmo com mais tokens de orçamento,
+      // o raciocínio linha a linha por item deixava uma nota com vários
+      // produtos lenta demais e estourava até os 55s de timeout do
+      // servidor sem nunca terminar. reasoning_effort 'low' (equivalente
+      // ao parâmetro da API OpenAI, suportado pelo endpoint compatível do
+      // Gemini) reduz esse raciocínio interno pra manter a resposta rápida
+      // o bastante pra uma função serverless.
       max_tokens: 32000,
+      reasoning_effort: 'low',
       messages: [{
         role: 'user',
         content: [
