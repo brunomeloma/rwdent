@@ -14090,44 +14090,71 @@ function abrirReceituario(pacId){
 // Sem paciente vinculado é permitido de propósito — nome pode ter sido
 // trocado na mão no campo (ex: receita pra outra pessoa da família, ou
 // grafia diferente do cadastro), então não trava em "paciente não achado".
+// Gera em jsPDF (mesmo padrão do orçamento/recibo) em vez de HTML +
+// window.print() — abrir a aba e mandar imprimir passava pelo sistema de
+// impressão do navegador/celular, que injeta sozinho um rodapé com URL e
+// data (visto num print real: "https://rwdent.com.br/app.html ... Página
+// 1 de 1" no rodapé, sem eu ter colocado isso). Gerando o PDF direto não
+// passa por esse pipeline, então não tem como sobrar lixo do navegador.
 function gerarReceituario(){
-  // Nome do paciente é opcional de propósito: serve pra imprimir um
+  if(!window.jspdf){ showToast('jsPDF não carregado.','error'); return; }
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  // Nome do paciente e data são opcionais de propósito: serve pra gerar um
   // receituário em branco (cabeçalho + linha de assinatura) quando a Dra.
-  // quer preencher/escrever tudo à mão na hora, sem já ter um paciente
-  // definido no sistema.
+  // quer preencher/escrever tudo à mão na hora.
   const nomePaciente = (document.getElementById('rx-paciente')?.value||'').trim();
   const profId = Number(document.getElementById('rx-prof')?.value)||null;
   const prof = profissionais.find(p=>p.id===profId);
   const texto = (document.getElementById('rx-texto')?.value||'').trim();
+  const semData = document.getElementById('rx-sem-data')?.checked;
   const clinica = clinicaData?.nome_cli || 'Clínica';
   const rodapeClinica = [clinicaData?.endereco, clinicaData?.telefone && 'Tel: '+clinicaData.telefone].filter(Boolean).join(' — ');
-  const semData = document.getElementById('rx-sem-data')?.checked;
-  const dataHtml = semData
-    ? '<span style="display:inline-block;border-bottom:1px solid #3a2020;width:160px;">&nbsp;</span>'
-    : escapeHtml(new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'}));
-  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Receituário${nomePaciente?' - '+escapeHtml(nomePaciente):''}</title>
-<style>*{margin:0;padding:0;box-sizing:border-box;}body{font-family:'Segoe UI',Arial,sans-serif;padding:36px;color:#3a2020;max-width:620px;margin:0 auto;}
-.header{text-align:center;border-bottom:2px solid #d4735a;padding-bottom:14px;margin-bottom:22px;}
-.header h1{font-size:18px;color:#7a3020;}.header p{font-size:10px;color:#b08070;margin-top:3px;}
-.titulo{text-align:center;font-size:13px;font-weight:700;letter-spacing:.5px;color:#7a3020;margin-bottom:20px;text-transform:uppercase;}
-.linha-info{font-size:13px;margin-bottom:6px;}
-.corpo{min-height:220px;white-space:pre-wrap;font-size:14px;line-height:1.7;margin:24px 0;border-top:1px solid #f0cfc4;border-bottom:1px solid #f0cfc4;padding:20px 0;}
-.assinatura{margin-top:50px;text-align:center;}
-.assinatura .linha{border-top:1px solid #3a2020;width:280px;margin:0 auto 6px;}
-.assinatura p{font-size:12px;}
-.footer{text-align:center;margin-top:30px;font-size:10px;color:#b08070;}
-@media print{body{padding:15px;}}</style></head><body>
-<div class="header"><h1>${escapeHtml(clinica)}</h1>${rodapeClinica?`<p>${escapeHtml(rodapeClinica)}</p>`:''}</div>
-<div class="titulo">Receituário Odontológico</div>
-<p class="linha-info"><strong>Paciente:</strong> ${nomePaciente?escapeHtml(nomePaciente):'<span style="display:inline-block;border-bottom:1px solid #3a2020;width:260px;">&nbsp;</span>'}</p>
-<p class="linha-info"><strong>Data:</strong> ${dataHtml}</p>
-<div class="corpo">${escapeHtml(texto)}</div>
-<div class="assinatura"><div class="linha"></div><p>${escapeHtml(prof?.nome||'')}${prof?.cro?' — CRO '+escapeHtml(prof.cro):''}</p></div>
-<div class="footer">${escapeHtml(clinica)}</div>
-<`+`script>window.onload=()=>{window.print();}<`+`/script></body></html>`;
-  const w = window.open('','_blank');
-  if(w){ w.document.write(html); w.document.close(); closeModal('modal-receituario'); }
-  else { showToast('Permita pop-ups para gerar o receituário.','warn'); }
+
+  const rose = [212,115,90], dark = [122,48,32], text = [58,32,32];
+
+  doc.setFillColor(...rose); doc.rect(0,0,210,32,'F');
+  doc.setFontSize(18); doc.setTextColor(255,255,255); doc.setFont(undefined,'bold');
+  doc.text(clinica,105,14,{align:'center'});
+  doc.setFontSize(10); doc.setFont(undefined,'normal');
+  doc.text('RECEITUÁRIO ODONTOLÓGICO',105,22,{align:'center'});
+
+  let y = 44;
+  doc.setFontSize(11); doc.setTextColor(...text);
+  doc.setFont(undefined,'bold'); doc.text('Paciente:',14,y);
+  doc.setFont(undefined,'normal');
+  if(nomePaciente) doc.text(nomePaciente,40,y);
+  else { doc.setDrawColor(...text); doc.setLineWidth(0.3); doc.line(40,y+1,180,y+1); }
+  y += 9;
+  doc.setFont(undefined,'bold'); doc.text('Data:',14,y);
+  doc.setFont(undefined,'normal');
+  if(!semData) doc.text(new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'}),40,y);
+  else { doc.setDrawColor(...text); doc.setLineWidth(0.3); doc.line(40,y+1,110,y+1); }
+  y += 8;
+  doc.setDrawColor(...rose); doc.setLineWidth(0.5); doc.line(14,y,196,y);
+  y += 12;
+
+  doc.setFontSize(12); doc.setTextColor(...text); doc.setFont(undefined,'normal');
+  if(texto){
+    const linhas = doc.splitTextToSize(texto,182);
+    linhas.forEach(l=>{ if(y>260){ doc.addPage(); y=20; } doc.text(l,14,y); y+=7; });
+    y += 20;
+  } else {
+    y += 140; // espaço em branco reservado pra escrever a receita à mão
+  }
+
+  y = Math.max(y, 240);
+  if(y > 268){ doc.addPage(); y = 40; }
+  doc.setDrawColor(...text); doc.setLineWidth(0.3);
+  doc.line(55,y,155,y);
+  doc.setFontSize(10); doc.setTextColor(...dark);
+  doc.text(`${prof?.nome||''}${prof?.cro?' — CRO '+prof.cro:''}`,105,y+6,{align:'center'});
+  if(rodapeClinica){ doc.setFontSize(8); doc.setTextColor(150,120,110); doc.text(rodapeClinica,105,285,{align:'center'}); }
+
+  const nomeArq = (nomePaciente||'receituario').replace(/[^a-zA-Z0-9]/g,'_');
+  doc.save(`Receituario_${nomeArq}.pdf`);
+  closeModal('modal-receituario');
+  showToast('Receituário gerado!');
 }
 
 // ── RECIBO DE VENDA ──
