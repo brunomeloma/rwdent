@@ -14084,6 +14084,7 @@ function abrirReceituario(pacId){
     if(principal) sel.value = principal.id;
   }
   const txt = document.getElementById('rx-texto'); if(txt) txt.value = '';
+  const semData = document.getElementById('rx-sem-data'); if(semData) semData.checked = false;
   openModal('modal-receituario');
 }
 // Sem paciente vinculado é permitido de propósito — nome pode ter sido
@@ -14100,7 +14101,10 @@ function gerarReceituario(){
   const texto = (document.getElementById('rx-texto')?.value||'').trim();
   const clinica = clinicaData?.nome_cli || 'Clínica';
   const rodapeClinica = [clinicaData?.endereco, clinicaData?.telefone && 'Tel: '+clinicaData.telefone].filter(Boolean).join(' — ');
-  const data = new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'});
+  const semData = document.getElementById('rx-sem-data')?.checked;
+  const dataHtml = semData
+    ? '<span style="display:inline-block;border-bottom:1px solid #3a2020;width:160px;">&nbsp;</span>'
+    : escapeHtml(new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'}));
   const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Receituário${nomePaciente?' - '+escapeHtml(nomePaciente):''}</title>
 <style>*{margin:0;padding:0;box-sizing:border-box;}body{font-family:'Segoe UI',Arial,sans-serif;padding:36px;color:#3a2020;max-width:620px;margin:0 auto;}
 .header{text-align:center;border-bottom:2px solid #d4735a;padding-bottom:14px;margin-bottom:22px;}
@@ -14116,7 +14120,7 @@ function gerarReceituario(){
 <div class="header"><h1>${escapeHtml(clinica)}</h1>${rodapeClinica?`<p>${escapeHtml(rodapeClinica)}</p>`:''}</div>
 <div class="titulo">Receituário Odontológico</div>
 <p class="linha-info"><strong>Paciente:</strong> ${nomePaciente?escapeHtml(nomePaciente):'<span style="display:inline-block;border-bottom:1px solid #3a2020;width:260px;">&nbsp;</span>'}</p>
-<p class="linha-info"><strong>Data:</strong> ${data}</p>
+<p class="linha-info"><strong>Data:</strong> ${dataHtml}</p>
 <div class="corpo">${escapeHtml(texto)}</div>
 <div class="assinatura"><div class="linha"></div><p>${escapeHtml(prof?.nome||'')}${prof?.cro?' — CRO '+escapeHtml(prof.cro):''}</p></div>
 <div class="footer">${escapeHtml(clinica)}</div>

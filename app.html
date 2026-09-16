@@ -2229,7 +2229,7 @@
   <div style="color:var(--rose-text);font-size:14px;">Carregando...</div>
 </div>
 
-<script src="app.js?v=93"></script>
+<script src="app.js?v=94"></script>
 
 <!-- ══ MODAL RELATÓRIO MENSAL ══ -->
 <div class="modal-overlay" id="modal-relatorio" onclick="if(event.target===this)closeModal('modal-relatorio')" style="align-items:flex-start;padding-top:40px;overflow-y:auto;">
@@ -2253,6 +2253,9 @@
     <div class="form-group"><label>Paciente (opcional)</label>
       <input type="text" id="rx-paciente" placeholder="Deixe em branco pra imprimir e escrever o nome à mão"/>
     </div>
+    <label style="display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--rose-text);margin:-6px 0 14px;cursor:pointer;">
+      <input type="checkbox" id="rx-sem-data" style="accent-color:var(--rose);"/> Não incluir a data (deixar em branco pra preencher depois)
+    </label>
     <div class="form-group"><label>Profissional (assina o receituário)</label>
       <select id="rx-prof"></select>
     </div>
