@@ -14090,15 +14090,18 @@ function abrirReceituario(pacId){
 // trocado na mão no campo (ex: receita pra outra pessoa da família, ou
 // grafia diferente do cadastro), então não trava em "paciente não achado".
 function gerarReceituario(){
+  // Nome do paciente é opcional de propósito: serve pra imprimir um
+  // receituário em branco (cabeçalho + linha de assinatura) quando a Dra.
+  // quer preencher/escrever tudo à mão na hora, sem já ter um paciente
+  // definido no sistema.
   const nomePaciente = (document.getElementById('rx-paciente')?.value||'').trim();
-  if(!nomePaciente){ showToast('Informe o nome do paciente.','warn'); return; }
   const profId = Number(document.getElementById('rx-prof')?.value)||null;
   const prof = profissionais.find(p=>p.id===profId);
   const texto = (document.getElementById('rx-texto')?.value||'').trim();
   const clinica = clinicaData?.nome_cli || 'Clínica';
   const rodapeClinica = [clinicaData?.endereco, clinicaData?.telefone && 'Tel: '+clinicaData.telefone].filter(Boolean).join(' — ');
   const data = new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'});
-  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Receituário - ${escapeHtml(nomePaciente)}</title>
+  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Receituário${nomePaciente?' - '+escapeHtml(nomePaciente):''}</title>
 <style>*{margin:0;padding:0;box-sizing:border-box;}body{font-family:'Segoe UI',Arial,sans-serif;padding:36px;color:#3a2020;max-width:620px;margin:0 auto;}
 .header{text-align:center;border-bottom:2px solid #d4735a;padding-bottom:14px;margin-bottom:22px;}
 .header h1{font-size:18px;color:#7a3020;}.header p{font-size:10px;color:#b08070;margin-top:3px;}
@@ -14112,7 +14115,7 @@ function gerarReceituario(){
 @media print{body{padding:15px;}}</style></head><body>
 <div class="header"><h1>${escapeHtml(clinica)}</h1>${rodapeClinica?`<p>${escapeHtml(rodapeClinica)}</p>`:''}</div>
 <div class="titulo">Receituário Odontológico</div>
-<p class="linha-info"><strong>Paciente:</strong> ${escapeHtml(nomePaciente)}</p>
+<p class="linha-info"><strong>Paciente:</strong> ${nomePaciente?escapeHtml(nomePaciente):'<span style="display:inline-block;border-bottom:1px solid #3a2020;width:260px;">&nbsp;</span>'}</p>
 <p class="linha-info"><strong>Data:</strong> ${data}</p>
 <div class="corpo">${escapeHtml(texto)}</div>
 <div class="assinatura"><div class="linha"></div><p>${escapeHtml(prof?.nome||'')}${prof?.cro?' — CRO '+escapeHtml(prof.cro):''}</p></div>
