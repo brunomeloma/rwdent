@@ -166,11 +166,9 @@ ${fonteNota}`;
   const client = new OpenAI({
     apiKey: geminiKey,
     baseURL: 'https://generativelanguage.googleapis.com/v1beta/openai/',
-    timeout: 55000,
     maxRetries: 0
   });
   const pedido = {
-    model: 'gemini-3.5-flash',
     // Modelo "thinking" por padrão — reasoning_effort 'low' reduz o
     // raciocínio interno pra resposta caber no tempo da função serverless
     // (sem isso, nota com muitos itens estourava 55s).
@@ -185,16 +183,47 @@ ${fonteNota}`;
     }]
   };
 
-  try {
-    let resp;
+  // O Gemini às vezes responde 503 ("sobrecarregado") ou 429. Em vez de
+  // devolver erro na hora, tenta de novo e cai pro modelo reserva — tudo
+  // dentro do limite de 60s da função.
+  const TENTATIVAS = ['gemini-3.5-flash', 'gemini-3.5-flash', 'gemini-2.5-flash', 'gemini-2.5-flash'];
+  const prazoFinal = Date.now() + 56000;
+  const temporario = e => [429, 500, 502, 503, 504].includes(e?.status) || e?.status === 404
+    || /timed? ?out|ECONNRESET|fetch failed/i.test(String(e?.message || ''));
+  const esperar = ms => new Promise(r => setTimeout(r, ms));
+
+  async function chamarGemini(model) {
+    const restante = prazoFinal - Date.now();
+    const opts = { timeout: Math.max(5000, restante) };
     try {
-      resp = await client.chat.completions.create({ ...pedido, response_format: ESQUEMA_RESPOSTA });
+      return await client.chat.completions.create({ ...pedido, model, response_format: ESQUEMA_RESPOSTA }, opts);
     } catch (e) {
       // Se o Gemini recusar o esquema (400), tenta de novo sem ele — o
       // extrairJson abaixo ainda sabe achar a lista no texto solto.
       if (e?.status !== 400) throw e;
       console.error('[LerNotaFiscal] esquema recusado, tentando sem:', e?.message);
-      resp = await client.chat.completions.create(pedido);
+      return await client.chat.completions.create({ ...pedido, model }, { timeout: Math.max(5000, prazoFinal - Date.now()) });
+    }
+  }
+
+  try {
+    let resp, ultimoErro;
+    for (let i = 0; i < TENTATIVAS.length; i++) {
+      if (i > 0 && prazoFinal - Date.now() < 12000) break;
+      try {
+        resp = await chamarGemini(TENTATIVAS[i]);
+        break;
+      } catch (e) {
+        ultimoErro = e;
+        console.error(`[LerNotaFiscal] tentativa ${i + 1} (${TENTATIVAS[i]}) falhou:`, e?.status, e?.message);
+        if (!temporario(e)) throw e;
+        if (i < TENTATIVAS.length - 1) await esperar(1500 * (i + 1));
+      }
+    }
+    if (!resp) {
+      const e = new Error('o serviço de IA do Google está sobrecarregado agora. Tente de novo em 1 ou 2 minutos.');
+      e.causa = ultimoErro?.message;
+      throw e;
     }
     const texto = resp.choices?.[0]?.message?.content || '';
     let itensBrutos;
@@ -226,6 +255,9 @@ ${fonteNota}`;
     return res.status(200).json({ ok: true, itens });
   } catch (err) {
     console.error('[LerNotaFiscal] erro:', err?.message || err);
-    return res.status(502).json({ error: 'Erro ao ler a nota fiscal com a IA: ' + (err?.message || 'tente de novo em instantes.') });
+    const msg = (err?.status >= 429 || /status code|timed? ?out/i.test(String(err?.message || '')))
+      ? 'o serviço de IA do Google está sobrecarregado agora. Tente de novo em 1 ou 2 minutos.'
+      : (err?.message || 'tente de novo em instantes.');
+    return res.status(502).json({ error: 'Erro ao ler a nota fiscal com a IA: ' + msg });
   }
 };
