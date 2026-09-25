@@ -7516,38 +7516,68 @@ async function saveEst(){
 }
 
 // ── LER NOTA FISCAL (IA) ──────────────────────────────────────────────────
-// PDF/foto da nota -> Claude extrai os produtos e já sugere o material
+// Foto/print da nota -> Gemini extrai os produtos e já sugere o material
 // cadastrado correspondente -> pessoa confere/ajusta cada linha -> confirma
 // -> soma tudo ao estoque de uma vez. Nunca escreve nada sem essa revisão.
+// Converte cada página de um PDF numa imagem JPEG (pdf.js renderiza em
+// canvas) — assim a nota em PDF entra no MESMO pipeline das fotos, sem
+// precisar a IA lidar com PDF cru.
+async function _pdfParaImagens(file, maxPaginas){
+  if(!window.pdfjsLib) throw new Error('Leitor de PDF não carregou — recarregue a página e tente de novo.');
+  const buf = await file.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+  const imagens = [];
+  const n = Math.min(pdf.numPages, maxPaginas);
+  for(let p=1; p<=n; p++){
+    const page = await pdf.getPage(p);
+    const viewport = page.getViewport({ scale: 2 }); // resolução alta — letra miúda de nota fiscal
+    const canvas = document.createElement('canvas');
+    canvas.width = viewport.width; canvas.height = viewport.height;
+    await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+    const blob = await new Promise(res=>canvas.toBlob(res,'image/jpeg',0.92));
+    if(blob) imagens.push(new File([blob], file.name.replace(/\.pdf$/i,'')+`_p${p}.jpg`, {type:'image/jpeg'}));
+  }
+  return imagens;
+}
+
 async function nfLerArquivos(fileList){
   const brutos = [...(fileList||[])];
   const inputEl = document.getElementById('nf-input');
   if(inputEl) inputEl.value = '';
   if(!brutos.length) return;
 
-  // PDF vai inteiro, do jeito que está — a IA (Claude) lê o PDF direto,
-  // incluindo o texto da DANFE, que é bem mais preciso do que uma foto da
-  // página. Só foto passa por compressão.
-  const pdfs = brutos.filter(f=>f.type==='application/pdf');
-  const fotos = brutos.filter(f=>f.type.startsWith('image/'));
-  if(!pdfs.length && !fotos.length){ showToast('Selecione uma foto ou PDF da nota fiscal.','warn'); return; }
-  if(pdfs.length > 3){ showToast('No máximo 3 PDFs por vez.','warn'); return; }
-  if(fotos.length > 8){ showToast('No máximo 8 fotos por vez.','warn'); return; }
-  if(pdfs.some(f=>f.size > 2.8*1024*1024)){ showToast('PDF grande demais (máx. ~2,8 MB). Se for nota escaneada, mande fotos das páginas.','warn'); return; }
-
   showLoading(true);
+  let arquivos;
+  try{
+    // PDFs viram imagem (1 por página) ANTES do limite de 8 — assim uma nota
+    // de 1 página em PDF conta como 1, não como "arquivo PDF inteiro". O
+    // limite era 5 e cortava nota grande de fornecedor (achado com nota
+    // real de 8 páginas, tipo DANFE formatado pra impressão frente/verso —
+    // com 5 páginas perdia produtos que só apareciam nas páginas finais).
+    const partes = await Promise.all(brutos.map(async f=>{
+      if(f.type==='application/pdf') return await _pdfParaImagens(f, 8);
+      if(f.type.startsWith('image/')) return [f];
+      return [];
+    }));
+    arquivos = partes.flat();
+  }catch(e){
+    showLoading(false);
+    showToast('Erro ao ler o PDF: '+e.message,'error');
+    return;
+  }
+  if(!arquivos.length){ showLoading(false); showToast('Selecione uma foto ou PDF da nota fiscal.','warn'); return; }
+  if(arquivos.length > 8){ showLoading(false); showToast('No máximo 8 páginas/fotos por vez.','warn'); return; }
+
   try{
     // Resolução um pouco maior que a da galeria (1800 vs 1600): nota fiscal
     // tem letra miúda, precisa de mais nitidez pra IA conseguir ler.
-    const comprimidas = await Promise.all(fotos.map(f=>_galeriaCompress(f, 1800)));
-    const imagesBase64 = await Promise.all(comprimidas.map(b=>_fileToBase64(b)));
-    const pdfsBase64 = await Promise.all(pdfs.map(f=>_fileToBase64(f)));
+    const comprimidas = await Promise.all(arquivos.map(f=>_galeriaCompress(f, 1800)));
+    const base64s = await Promise.all(comprimidas.map(b=>_fileToBase64(b)));
     const { data:{ session } } = await _sb.auth.getSession();
-    showToast('Lendo a nota com IA — pode levar até 1 minuto em nota grande...');
     const resp = await fetch('/api/ler-nota-fiscal', {
       method:'POST',
       headers:{ 'Content-Type':'application/json', 'Authorization':'Bearer '+(session?.access_token||'') },
-      body: JSON.stringify({ imagesBase64, pdfsBase64 })
+      body: JSON.stringify({ imagesBase64: base64s })
     });
     const json = await resp.json();
     showLoading(false);
