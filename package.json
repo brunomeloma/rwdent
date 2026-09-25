@@ -8,6 +8,7 @@
     "format:check": "prettier --check \"**/*.{html,css,js,json,md,sql}\""
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.128.0",
     "@supabase/supabase-js": "^2.110.8",
     "openai": "^4.104.0",
     "web-push": "^3.6.7"
