@@ -7519,25 +7519,55 @@ async function saveEst(){
 // Foto/print da nota -> Gemini extrai os produtos e já sugere o material
 // cadastrado correspondente -> pessoa confere/ajusta cada linha -> confirma
 // -> soma tudo ao estoque de uma vez. Nunca escreve nada sem essa revisão.
-// Converte cada página de um PDF numa imagem JPEG (pdf.js renderiza em
-// canvas) — assim a nota em PDF entra no MESMO pipeline das fotos, sem
-// precisar a IA lidar com PDF cru.
-async function _pdfParaImagens(file, maxPaginas){
+// Remonta o texto de uma página do PDF em linhas (pdf.js devolve pedaços
+// soltos com posição x/y — agrupa pela altura e ordena da esquerda pra
+// direita, pra cada linha da tabela de produtos sair numa linha só).
+function _pdfLinhasTexto(content){
+  const pedacos = content.items
+    .filter(i=>i.str && i.str.trim())
+    .map(i=>({ x:i.transform[4], y:i.transform[5], s:i.str.trim() }))
+    .sort((a,b)=> b.y-a.y || a.x-b.x);
+  const linhas = [];
+  for(const p of pedacos){
+    const ult = linhas[linhas.length-1];
+    if(ult && Math.abs(ult.y-p.y) <= 2.5) ult.partes.push(p);
+    else linhas.push({ y:p.y, partes:[p] });
+  }
+  return linhas.map(l=>l.partes.sort((a,b)=>a.x-b.x).map(p=>p.s).join('  ')).join('\n');
+}
+
+// Lê o PDF da nota. DANFE gerada por sistema tem camada de TEXTO: nome,
+// quantidade e valor saem exatos (testado com nota real de 8 páginas: uma
+// linha por produto, com código, qtd e valor certinhos) — então nesse caso
+// manda só o texto, sem foto. Foto da página só é gerada quando o PDF é
+// escaneado (sem texto de produto), aí a IA precisa ler a imagem.
+// Páginas sem tabela de produto (DANFE frente/verso vem com páginas só de
+// cabeçalho — a nota real tinha produto em 4 das 8) ficam de fora.
+async function _pdfLer(file, maxPaginas){
   if(!window.pdfjsLib) throw new Error('Leitor de PDF não carregou — recarregue a página e tente de novo.');
-  const buf = await file.arrayBuffer();
-  const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
-  const imagens = [];
+  const pdf = await pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise;
   const n = Math.min(pdf.numPages, maxPaginas);
+  const paginas = [];
   for(let p=1; p<=n; p++){
     const page = await pdf.getPage(p);
+    const texto = _pdfLinhasTexto(await page.getTextContent());
+    paginas.push({ p, page, texto, temProduto: /C[ÓO]D\.?\s*PROD|DADOS DOS PRODUTOS/i.test(texto) });
+  }
+  const comProduto = paginas.filter(x=>x.temProduto);
+  if(comProduto.length){
+    const texto = comProduto.map(x=>`--- Página ${x.p} ---\n${x.texto}`).join('\n\n');
+    return { imagens: [], texto };
+  }
+  const imagens = [];
+  for(const { p, page } of paginas.slice(0, 8)){
     const viewport = page.getViewport({ scale: 2 }); // resolução alta — letra miúda de nota fiscal
     const canvas = document.createElement('canvas');
     canvas.width = viewport.width; canvas.height = viewport.height;
     await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
-    const blob = await new Promise(res=>canvas.toBlob(res,'image/jpeg',0.92));
+    const blob = await new Promise(res=>canvas.toBlob(res,'image/jpeg',0.9));
     if(blob) imagens.push(new File([blob], file.name.replace(/\.pdf$/i,'')+`_p${p}.jpg`, {type:'image/jpeg'}));
   }
-  return imagens;
+  return { imagens, texto: '' };
 }
 
 async function nfLerArquivos(fileList){
@@ -7548,14 +7578,16 @@ async function nfLerArquivos(fileList){
 
   showLoading(true);
   let arquivos;
+  let textoPdf = '';
   try{
-    // PDFs viram imagem (1 por página) ANTES do limite de 8 — assim uma nota
-    // de 1 página em PDF conta como 1, não como "arquivo PDF inteiro". O
-    // limite era 5 e cortava nota grande de fornecedor (achado com nota
-    // real de 8 páginas, tipo DANFE formatado pra impressão frente/verso —
-    // com 5 páginas perdia produtos que só apareciam nas páginas finais).
+    // PDF com texto vira só texto; PDF escaneado vira imagem (ver _pdfLer).
+    // Lê até 12 páginas por PDF (nota real de fornecedor chegou a 8).
     const partes = await Promise.all(brutos.map(async f=>{
-      if(f.type==='application/pdf') return await _pdfParaImagens(f, 8);
+      if(f.type==='application/pdf'){
+        const { imagens, texto } = await _pdfLer(f, 12);
+        if(texto.trim()) textoPdf += (textoPdf?'\n\n':'') + texto;
+        return imagens;
+      }
       if(f.type.startsWith('image/')) return [f];
       return [];
     }));
@@ -7565,7 +7597,7 @@ async function nfLerArquivos(fileList){
     showToast('Erro ao ler o PDF: '+e.message,'error');
     return;
   }
-  if(!arquivos.length){ showLoading(false); showToast('Selecione uma foto ou PDF da nota fiscal.','warn'); return; }
+  if(!arquivos.length && !textoPdf.trim()){ showLoading(false); showToast('Selecione uma foto ou PDF da nota fiscal.','warn'); return; }
   if(arquivos.length > 8){ showLoading(false); showToast('No máximo 8 páginas/fotos por vez.','warn'); return; }
 
   try{
@@ -7577,7 +7609,7 @@ async function nfLerArquivos(fileList){
     const resp = await fetch('/api/ler-nota-fiscal', {
       method:'POST',
       headers:{ 'Content-Type':'application/json', 'Authorization':'Bearer '+(session?.access_token||'') },
-      body: JSON.stringify({ imagesBase64: base64s })
+      body: JSON.stringify({ imagesBase64: base64s, textoPdf: textoPdf.slice(0, 80000) })
     });
     const json = await resp.json();
     showLoading(false);

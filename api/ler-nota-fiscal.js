@@ -27,15 +27,54 @@ function isRateLimited(userId) {
   return hits.length > RATE_LIMIT_MAX_REQ;
 }
 
+// Aceita os dois formatos de resposta: {"itens":[...]} (modo com esquema
+// JSON) ou [...] solto (modo antigo, sem esquema). No modo antigo o modelo
+// às vezes envolve em ```json ... ``` — tira a cerca antes de parsear.
 function extrairJson(texto) {
-  // O modelo às vezes envolve a resposta em ```json ... ``` mesmo pedindo
-  // pra não fazer isso — tira a cerca de código antes de tentar parsear.
   const limpo = String(texto || '').replace(/```json/gi, '').replace(/```/g, '').trim();
+  try {
+    const obj = JSON.parse(limpo);
+    if (Array.isArray(obj)) return obj;
+    if (obj && Array.isArray(obj.itens)) return obj.itens;
+  } catch (e) { /* cai pra extração por colchetes abaixo */ }
   const inicio = limpo.indexOf('[');
   const fim = limpo.lastIndexOf(']');
   if (inicio === -1 || fim === -1 || fim < inicio) throw new Error('Resposta da IA não veio em formato de lista.');
   return JSON.parse(limpo.slice(inicio, fim + 1));
 }
+
+// Esquema da resposta — o Gemini (via endpoint compatível com OpenAI)
+// passa a devolver JSON válido garantido, sem texto de raciocínio misturado
+// (era a causa dos erros "resposta não parseável"). Sem campos nulos pra
+// ficar no subconjunto de JSON Schema que o Gemini aceita: valor_unitario
+// 0 = não deu pra calcular; material_id 0 = nenhum material casou.
+const ESQUEMA_RESPOSTA = {
+  type: 'json_schema',
+  json_schema: {
+    name: 'itens_nota_fiscal',
+    schema: {
+      type: 'object',
+      properties: {
+        itens: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              produto_nota:   { type: 'string' },
+              quantidade:     { type: 'number' },
+              valor_unitario: { type: 'number' },
+              material_id:    { type: 'integer' },
+              confianca:      { type: 'string', enum: ['alta', 'media', 'baixa'] },
+              observacao:     { type: 'string' }
+            },
+            required: ['produto_nota', 'quantidade', 'valor_unitario', 'material_id', 'confianca', 'observacao']
+          }
+        }
+      },
+      required: ['itens']
+    }
+  }
+};
 
 module.exports = async function handler(req, res) {
   res.setHeader('Content-Type', 'application/json');
@@ -49,12 +88,13 @@ module.exports = async function handler(req, res) {
   if (!geminiKey) return res.status(500).json({ error: 'Leitura de nota fiscal não configurada (falta GEMINI_API_KEY).' });
   if (!supabaseUrl || !supabaseAnon || !serviceRoleKey) return res.status(500).json({ error: 'Servidor sem chaves do Supabase configuradas.' });
 
-  // Aceita uma imagem só (imageBase64) ou várias (imagesBase64, nota de
-  // várias páginas/fotos) — sempre normaliza pra lista internamente.
+  // Aceita fotos (imagesBase64 / imageBase64) e/ou o texto extraído do PDF
+  // no navegador (textoPdf) — PDF com camada de texto chega só como texto.
   const body = req.body || {};
   let imagens = Array.isArray(body.imagesBase64) ? body.imagesBase64 : (body.imageBase64 ? [body.imageBase64] : []);
   imagens = imagens.filter(s => typeof s === 'string' && s.length >= 100).slice(0, 8);
-  if (!imagens.length) return res.status(400).json({ error: 'Envie ao menos uma foto da nota fiscal.' });
+  const textoPdf = typeof body.textoPdf === 'string' ? body.textoPdf.slice(0, 80000).trim() : '';
+  if (!imagens.length && !textoPdf) return res.status(400).json({ error: 'Envie a nota fiscal (PDF ou foto).' });
   for (const img of imagens) {
     if (img.length > 4_000_000) return res.status(413).json({ error: 'Uma das imagens está grande demais.' });
   }
@@ -93,64 +133,69 @@ module.exports = async function handler(req, res) {
     aviso: 'Você ainda não tem nenhum material cadastrado em Financeiro > Materiais — cadastre pelo menos os materiais que compra sempre antes de ler notas fiscais, pra IA ter o que casar.'
   });
 
-  const listaMateriais = mats.map(m => `${m.id}|${m.nome}|${m.unid || 'unid'}|${m.qtde || 1}`).join('\n');
+  mats = mats.filter(m => !m.arquivado);
+  const listaMateriais = mats.map(m => `${m.id} | ${m.nome} | ${m.unid || 'unid'} | ${m.qtde || 1}`).join('\n');
 
-  const prompt = `Você vai ler uma nota fiscal (ou várias fotos da mesma nota) de uma clínica odontológica e extrair CADA produto comprado.
+  const fonteNota = textoPdf
+    ? `A nota veio em PDF. Abaixo está o TEXTO extraído do PDF, página por página, com uma linha por produto na tabela "DADOS DOS PRODUTOS" (colunas: código, descrição, NCM, CST, CFOP, unidade, quantidade, valor unitário, valor total, e impostos). Descrições longas continuam na(s) linha(s) seguinte(s), sem código na frente — junte com o produto de cima. Números usam vírgula decimal ("1,0000" = 1; "24,08" = 24.08). Esse texto é exato — confie nele pra nome, quantidade e valor.\n\n${textoPdf}`
+    : 'A nota veio como foto(s), anexadas abaixo. Leia a tabela de produtos com atenção à letra miúda.';
 
-MATERIAIS JÁ CADASTRADOS NO ESTOQUE DESTA CLÍNICA (formato "id|nome|unidade|unidades por embalagem"):
+  const prompt = `Você lê notas fiscais de compra de uma clínica odontológica e transforma cada produto comprado num item, casando com os materiais que a clínica já tem cadastrados no estoque. O resultado vai pra uma tela de revisão onde a pessoa confere linha por linha antes de somar ao estoque — então é melhor trazer um item marcado como incerto do que deixar de trazer.
+
+Materiais cadastrados no estoque desta clínica (id | nome | unidade | unidades por embalagem):
 ${listaMateriais}
-"unidades por embalagem" é quantas unidades a clínica considera que tem em CADA caixa/pacote fechado desse material (ex: uma caixa de luvas com 100 = unidade "unid", unidades_por_embalagem 100).
+"Unidades por embalagem" é quantas unidades a clínica considera que vêm em cada caixa/pacote fechado (ex: caixa de luvas com 100 → unidade "unid", 100 por embalagem).
 
-REGRAS DE CASAMENTO (isto é o mais importante):
-1. Para PRODUTOS GENÉRICOS (ex: babador, algodão, gaze, sugador, copo descartável) — a clínica normalmente não compra várias marcas diferentes do mesmo item. Se a nota trouxer um nome de marca/linha comprido (ex: "Babador Descartável Premium Line c/100"), mas já existir um material genérico cadastrado que é claramente a mesma coisa (ex: "Babador"), CASE com esse material genérico existente. NÃO crie/sugira nome novo com a marca completa.
-2. Para PRODUTOS ESPECÍFICOS onde a especificação importa muito (ex: fio ortodôntico NiTi 0.19, agulha gengival curta, anestésico com um princípio ativo específico) — case pelo NÚMERO/ESPECIFICAÇÃO exata, não pelo nome genérico. Pequenas diferenças de formatação no número (ex: "0.19", "0,19", "ponto 19", "19") que claramente se referem ao MESMO valor contam como o mesmo produto.
-3. Se o nome da nota for parecido mas você não tiver certeza (nome ambíguo, número que pode ser outro, produto que pode ser dois materiais diferentes cadastrados), NÃO adivinhe: deixe material_id null e explique em "observacao" por que ficou em dúvida.
-4. Se o produto da nota claramente não existir em NENHUM material cadastrado, deixe material_id null e diga isso em "observacao" (ex: "material novo, não cadastrado ainda").
-5. KITS/COMBOS (nome com "kit", "edição limitada", "combo" ou parecido): a nota NUNCA diz o que tem dentro da caixa — pode ser um produto só, pode ser vários produtos diferentes juntos (ex: um kit de clareador que mistura clareador de consultório com clareador caseiro no mesmo kit). NÃO assuma que é "1 unidade" de um material genérico só porque o nome é parecido. Se não tiver certeza absoluta de que o kit é exatamente igual a um material já cadastrado (mesmo conteúdo, mesma quantidade), deixe confianca "baixa" e escreva em "observacao" algo como "nome sugere kit/combo — confira manualmente quantos itens tem dentro antes de somar ao estoque".
-6. REGRA MAIS IMPORTANTE DE TODAS: incerteza NUNCA é motivo pra OMITIR um produto do array. "Não tenho certeza de qual material é" ou "pode ser kit com mais de um item" significa colocar confianca "baixa" e material_id null (ou o id que achar mais provável) — NUNCA significa deixar o produto de fora da resposta. Todo produto de verdade que aparece na nota (com nome, quantidade e/ou valor) tem que virar um item no array, sempre, mesmo sem saber o material exato. A única coisa que fica de fora do array é o que a regra abaixo já cobre (frete, imposto, total, dados da empresa) — nada além disso.
+Como casar produto da nota com material cadastrado:
+- Produtos genéricos (babador, algodão, gaze, sugador, copo, luva, máscara, touca...): a clínica não costuma separar por marca. Se a nota traz um nome comercial comprido e existe um material genérico cadastrado que é claramente a mesma coisa, case com o genérico.
+- Produtos em que a especificação importa (fio/arco ortodôntico por calibre e arcada, agulha por calibre/comprimento, anestésico por princípio ativo, broca/ponta diamantada por número, braquete por dente): case pela especificação exata. Diferenças só de formatação no número ("0.019", "0,019", "19") valem como o mesmo produto; especificação diferente é outro produto.
+- Se ficar entre dois materiais, ou não tiver certeza, use material_id 0 e explique a dúvida em observacao, com confianca "baixa".
+- Se o produto não existe em nenhum material cadastrado: material_id 0 e observacao "material novo, não cadastrado ainda".
+- Kits e combos ("kit", "edição limitada", "combo"): a nota não diz o que vem dentro — pode ser vários produtos diferentes na mesma caixa (ex: um kit de clareador que junta clareador de consultório e clareador caseiro). Só case com um material se tiver certeza de que é exatamente o mesmo conteúdo; senão confianca "baixa" e observacao avisando que é kit e que a pessoa precisa conferir quantos itens tem dentro.
 
-REGRA DE QUANTIDADE E PREÇO (muito importante, gente erra fácil aqui):
-A nota fiscal pode vender por CAIXA/PACOTE FECHADO (ex: "3 CX" de luvas) mesmo quando o material é controlado pela clínica em unidades individuais. SEMPRE converta a quantidade pra bater com a UNIDADE cadastrada do material que você casou (coluna "unidade" da lista acima), usando "unidades por embalagem" pra multiplicar quando a nota vender em caixa/pacote/kit. Ex: nota mostra "3 CX" a R$45,00 a caixa, material cadastrado tem unidade "unid" e 100 unidades por embalagem → quantidade = 300, valor_unitario = 45/100 = 0.45 (preço por UNIDADE, não por caixa). Se o material já for vendido e controlado na mesma unidade que a nota mostra (ex: ambos em "ml"), não precisa converter nada. valor_unitario SEMPRE tem que ser o preço de UMA unidade da coluna "unidade" do material — nunca o preço da caixa/pacote inteiro.
+Todo produto que aparece na nota vira um item, inclusive os incertos, os kits e os que se repetem em mais de uma linha (cada linha de produto da nota é um item). Só ficam de fora linhas que não são produto: frete, impostos, totais, faturas/duplicatas, dados do emitente, destinatário e transportadora.
 
-Responda APENAS com um array JSON (sem markdown, sem texto antes/depois), um item por produto da nota, neste formato exato:
-[{"produto_nota":"texto exatamente como aparece na nota","quantidade":0,"valor_unitario":0,"material_id":0,"confianca":"alta","observacao":""}]
+Quantidade e preço — sempre na unidade do material cadastrado:
+A nota pode vender em caixa/pacote enquanto a clínica controla em unidade. Quando casar com um material, converta usando "unidades por embalagem": ex. nota com 3 CX a R$45,00, material em "unid" com 100 por embalagem → quantidade 300 e valor_unitario 0.45. Se a nota já está na mesma unidade do material, não converta. valor_unitario é sempre o preço de UMA unidade do material (0 se a nota não permitir calcular). Diga em observacao quando tiver convertido.
+Se o produto não casou com nenhum material, use a quantidade e o preço unitário exatamente como estão na nota.
 
-- quantidade: já convertida pra unidade do material cadastrado (ver regra acima)
-- valor_unitario: preço de UMA unidade do material (ver regra acima), se a nota permitir calcular (senão null)
-- material_id: o id de MATERIAIS JÁ CADASTRADOS acima que bate com este produto, ou null se não tiver certeza ou não existir
-- confianca: "alta" (nome/especificação bateu claramente), "media" (bateu mas com alguma diferença de nome) ou "baixa" (chute, ou material_id null)
-- observacao: string curta explicando a dúvida (inclua aqui se converteu de caixa pra unidade), vazio "" se confianca alta e sem conversão
+Campos de cada item: produto_nota (descrição completa como está na nota), quantidade, valor_unitario, material_id (id da lista acima, ou 0), confianca ("alta" quando nome/especificação bateram claramente, "media" quando bateu com alguma diferença de nome, "baixa" quando é chute ou material_id é 0), observacao ("" quando a confiança é alta e não houve conversão).
 
-Ignore APENAS linhas que não são produtos de verdade (frete, impostos, totais, dados da empresa/transportadora). Todo o resto — incluindo produto ambíguo, kit, combo, produto que você não sabe qual material é — entra no array (ver regra 6 acima). Se a nota realmente não tiver nenhum produto legível, responda [].
+${fonteNota}`;
 
-IMPORTANTE: não pense em voz alta, não escreva raciocínio, análise item a item nem comentário nenhum fora do array — a resposta inteira tem que ser só o array JSON, do "[" inicial ao "]" final, nada antes nem depois.`;
+  const client = new OpenAI({
+    apiKey: geminiKey,
+    baseURL: 'https://generativelanguage.googleapis.com/v1beta/openai/',
+    timeout: 55000,
+    maxRetries: 0
+  });
+  const pedido = {
+    model: 'gemini-3.5-flash',
+    // Modelo "thinking" por padrão — reasoning_effort 'low' reduz o
+    // raciocínio interno pra resposta caber no tempo da função serverless
+    // (sem isso, nota com muitos itens estourava 55s).
+    max_tokens: 32000,
+    reasoning_effort: 'low',
+    messages: [{
+      role: 'user',
+      content: [
+        { type: 'text', text: prompt },
+        ...imagens.map(img => ({ type: 'image_url', image_url: { url: `data:image/jpeg;base64,${img}` } }))
+      ]
+    }]
+  };
 
   try {
-    const client = new OpenAI({
-      apiKey: geminiKey,
-      baseURL: 'https://generativelanguage.googleapis.com/v1beta/openai/',
-      timeout: 55000,
-      maxRetries: 0
-    });
-    const resp = await client.chat.completions.create({
-      model: 'gemini-3.5-flash',
-      // Modelo "thinking" por padrão — mesmo com mais tokens de orçamento,
-      // o raciocínio linha a linha por item deixava uma nota com vários
-      // produtos lenta demais e estourava até os 55s de timeout do
-      // servidor sem nunca terminar. reasoning_effort 'low' (equivalente
-      // ao parâmetro da API OpenAI, suportado pelo endpoint compatível do
-      // Gemini) reduz esse raciocínio interno pra manter a resposta rápida
-      // o bastante pra uma função serverless.
-      max_tokens: 32000,
-      reasoning_effort: 'low',
-      messages: [{
-        role: 'user',
-        content: [
-          { type: 'text', text: prompt },
-          ...imagens.map(img => ({ type: 'image_url', image_url: { url: `data:image/jpeg;base64,${img}` } }))
-        ]
-      }]
-    });
+    let resp;
+    try {
+      resp = await client.chat.completions.create({ ...pedido, response_format: ESQUEMA_RESPOSTA });
+    } catch (e) {
+      // Se o Gemini recusar o esquema (400), tenta de novo sem ele — o
+      // extrairJson abaixo ainda sabe achar a lista no texto solto.
+      if (e?.status !== 400) throw e;
+      console.error('[LerNotaFiscal] esquema recusado, tentando sem:', e?.message);
+      resp = await client.chat.completions.create(pedido);
+    }
     const texto = resp.choices?.[0]?.message?.content || '';
     let itensBrutos;
     try { itensBrutos = extrairJson(texto); }
@@ -161,13 +206,15 @@ IMPORTANTE: não pense em voz alta, não escreva raciocínio, análise item a it
     if (!Array.isArray(itensBrutos)) itensBrutos = [];
 
     const matsById = new Map(mats.map(m => [Number(m.id), m]));
-    const itens = itensBrutos.slice(0, 100).map(it => {
-      const matId = it.material_id != null ? Number(it.material_id) : null;
+    console.log('[LerNotaFiscal] ok', { itens: itensBrutos.length, texto: !!textoPdf, imagens: imagens.length, uso: resp.usage });
+    const itens = itensBrutos.slice(0, 150).map(it => {
+      const matId = it.material_id ? Number(it.material_id) : null;
       const mat = (matId != null && matsById.has(matId)) ? matsById.get(matId) : null;
+      const vu = Number(it.valor_unitario);
       return {
         produto_nota: String(it.produto_nota || '').slice(0, 200),
         quantidade: Number(it.quantidade) || 0,
-        valor_unitario: it.valor_unitario != null && Number.isFinite(Number(it.valor_unitario)) ? Number(it.valor_unitario) : null,
+        valor_unitario: Number.isFinite(vu) && vu > 0 ? vu : null,
         material_id: mat ? mat.id : null,
         material_nome: mat ? mat.nome : null,
         material_unid: mat ? (mat.unid || 'unid') : null,
