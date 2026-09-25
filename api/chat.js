@@ -31,7 +31,7 @@ function montarCandidatos(clients){
   }
   if (clients.gemini) {
     c.push({ prov:'gemini', model:'gemini-3.5-flash' });
-    c.push({ prov:'gemini', model:'gemini-2.5-flash' });
+    c.push({ prov:'gemini', model:'gemini-3.5-flash-lite' });
   }
   return c;
 }

@@ -183,41 +183,38 @@ ${fonteNota}`;
     }]
   };
 
-  // O Gemini às vezes responde 503 ("sobrecarregado") ou 429. Em vez de
-  // devolver erro na hora, tenta de novo e cai pro modelo reserva — tudo
-  // dentro do limite de 60s da função.
-  const TENTATIVAS = ['gemini-3.5-flash', 'gemini-3.5-flash', 'gemini-2.5-flash', 'gemini-2.5-flash'];
+  // O Gemini às vezes responde 503 ("sobrecarregado"). Em vez de devolver
+  // erro na hora, vai tentando: modelo principal, modelo leve (Flash-Lite,
+  // feito pra leitura de documentos) e, por garantia, os dois sem o esquema
+  // JSON — tudo dentro do limite de 60s da função.
+  const TENTATIVAS = [
+    { model: 'gemini-3.5-flash', esquema: true },
+    { model: 'gemini-3.5-flash-lite', esquema: true },
+    { model: 'gemini-3.5-flash', esquema: false },
+    { model: 'gemini-3.5-flash-lite', esquema: false }
+  ];
   const prazoFinal = Date.now() + 56000;
-  const temporario = e => [429, 500, 502, 503, 504].includes(e?.status) || e?.status === 404
-    || /timed? ?out|ECONNRESET|fetch failed/i.test(String(e?.message || ''));
   const esperar = ms => new Promise(r => setTimeout(r, ms));
-
-  async function chamarGemini(model) {
-    const restante = prazoFinal - Date.now();
-    const opts = { timeout: Math.max(5000, restante) };
-    try {
-      return await client.chat.completions.create({ ...pedido, model, response_format: ESQUEMA_RESPOSTA }, opts);
-    } catch (e) {
-      // Se o Gemini recusar o esquema (400), tenta de novo sem ele — o
-      // extrairJson abaixo ainda sabe achar a lista no texto solto.
-      if (e?.status !== 400) throw e;
-      console.error('[LerNotaFiscal] esquema recusado, tentando sem:', e?.message);
-      return await client.chat.completions.create({ ...pedido, model }, { timeout: Math.max(5000, prazoFinal - Date.now()) });
-    }
-  }
 
   try {
     let resp, ultimoErro;
     for (let i = 0; i < TENTATIVAS.length; i++) {
-      if (i > 0 && prazoFinal - Date.now() < 12000) break;
+      const restante = prazoFinal - Date.now();
+      if (i > 0 && restante < 12000) break;
+      const { model, esquema } = TENTATIVAS[i];
       try {
-        resp = await chamarGemini(TENTATIVAS[i]);
+        resp = await client.chat.completions.create(
+          { ...pedido, model, ...(esquema ? { response_format: ESQUEMA_RESPOSTA } : {}) },
+          { timeout: Math.max(5000, restante) }
+        );
+        if (i > 0) console.log(`[LerNotaFiscal] funcionou na tentativa ${i + 1} (${model}, esquema=${esquema})`);
         break;
       } catch (e) {
         ultimoErro = e;
-        console.error(`[LerNotaFiscal] tentativa ${i + 1} (${TENTATIVAS[i]}) falhou:`, e?.status, e?.message);
-        if (!temporario(e)) throw e;
-        if (i < TENTATIVAS.length - 1) await esperar(1500 * (i + 1));
+        console.error(`[LerNotaFiscal] tentativa ${i + 1} (${model}, esquema=${esquema}) falhou:`, e?.status, e?.message);
+        // Chave inválida/sem permissão: não adianta insistir.
+        if (e?.status === 401 || e?.status === 403) throw e;
+        if (i < TENTATIVAS.length - 1 && (e?.status === 429 || e?.status >= 500)) await esperar(1000);
       }
     }
     if (!resp) {
